@@ -15,7 +15,13 @@ import {
   deleteBranding,
   uploadBranding,
   type AdminState,
+  setBrandingBlob,
 } from './api'
+import { CROP_SOURCE_LIMIT, ImageCropDialog } from './ImageCropDialog'
+import { useSigner } from './signer-context'
+import { uploadBlob } from './upload/blossom-upload'
+import { sha256File } from './upload/sha256-file'
+import { signChecked } from './upload/sign'
 
 export interface BrandingProps {
   branding: AdminState['branding']
@@ -58,6 +64,8 @@ function SlotRow({
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [source, setSource] = useState<File | null>(null)
+  const { signer, pubkey } = useSigner()
   const label = t(`studio.branding.slots.${slot}`)
 
   const run = async (action: () => Promise<string | null>) => {
@@ -75,9 +83,36 @@ function SlotRow({
   const pick = (file: File | undefined) => {
     if (input.current) input.current.value = ''
     if (!file) return
-    const problem = brandingProblem(slot, file)
-    if (problem) setError(problem)
-    else void run(() => uploadBranding(slot, file))
+    setError(null)
+    if (slot === 'favicon') {
+      const problem = brandingProblem(slot, file)
+      if (problem) setError(problem)
+      else void run(() => uploadBranding(slot, file))
+    } else if (!BRANDING_LIMITS[slot].types.includes(file.type)) {
+      setError(t('studio.branding.errors.wrongType'))
+    } else if (file.size > CROP_SOURCE_LIMIT) {
+      setError(t('studio.branding.errors.tooBig', { size: '20 MB' }))
+    } else {
+      setSource(file)
+    }
+  }
+
+  const uploadCrop = async (file: File) => {
+    if (!signer || !pubkey) throw new Error(t('studio.errors.noSigner'))
+    setBusy(true)
+    try {
+      const sha256 = await sha256File(file)
+      await uploadBlob({
+        file,
+        fileName: file.name,
+        sha256,
+        type: file.type,
+        sign: event => signChecked(signer, event, pubkey),
+      })
+      onChange(await setBrandingBlob(slot, sha256))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -100,7 +135,9 @@ function SlotRow({
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">
-          {t(`studio.branding.hints.${slot}`, { size: BRANDING_LIMITS[slot].size })}
+          {t(`studio.branding.hints.${slot}`, {
+            size: slot === 'favicon' ? BRANDING_LIMITS[slot].size : '20 MB',
+          })}
         </p>
         {error && (
           <p role="alert" className="text-xs text-destructive">
@@ -144,6 +181,14 @@ function SlotRow({
           </Button>
         )}
       </div>
+      {source && slot !== 'favicon' && (
+        <ImageCropDialog
+          file={source}
+          slot={slot}
+          onConfirm={uploadCrop}
+          onClose={() => setSource(null)}
+        />
+      )}
     </div>
   )
 }

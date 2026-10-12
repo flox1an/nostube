@@ -136,6 +136,18 @@
         "favicon": "ブラウザのタブに表示されるアイコンです。PNG、JPEG、WebP、SVG、ICO、最大 {{size}}。",
         "banner": "トップページの動画の上に表示される横長の画像です。PNG、JPEG、WebP、SVG、最大 {{size}}。"
       },
+      "crop": {
+        "title": "{{image}}を切り抜く",
+        "description": "ドラッグで位置を調整し、ズームしてください。切り抜いた画像だけをアップロードします。WebP、最大 {{width}} × {{height}} px、{{kilobytes}} KB。",
+        "preview": "切り抜きプレビュー",
+        "zoom": "ズーム",
+        "x": "横の位置",
+        "y": "縦の位置",
+        "confirm": "切り抜いてアップロード",
+        "saving": "最適化してアップロード中…",
+        "loadError": "画像を開けませんでした。PNG、JPEG、WebPをお試しください。",
+        "encodeError": "WebPとして書き出せませんでした。別の画像かブラウザーをお試しください。"
+      },
       "none": "なし",
       "upload": "アップロード",
       "replace": "差し替え",

@@ -136,6 +136,18 @@
         "favicon": "Das Symbol im Browser-Tab. PNG, JPEG, WebP, SVG oder ICO, höchstens {{size}}.",
         "banner": "Ein breites Bild über den Videos auf der Startseite. PNG, JPEG, WebP oder SVG, höchstens {{size}}."
       },
+      "crop": {
+        "title": "{{image}} zuschneiden",
+        "description": "Zum Positionieren ziehen und zoomen. Nur der Ausschnitt wird hochgeladen: WebP, höchstens {{width}} × {{height}} px und {{kilobytes}} KB.",
+        "preview": "Vorschau des Ausschnitts",
+        "zoom": "Zoom",
+        "x": "Horizontale Position",
+        "y": "Vertikale Position",
+        "confirm": "Zuschneiden und hochladen",
+        "saving": "Optimieren und hochladen…",
+        "loadError": "Dieses Bild konnte nicht geöffnet werden. Versuche PNG, JPEG oder WebP.",
+        "encodeError": "Dieses Bild konnte nicht als WebP exportiert werden. Versuche ein anderes Bild oder einen anderen Browser."
+      },
       "none": "Keins",
       "upload": "Hochladen",
       "replace": "Ersetzen",

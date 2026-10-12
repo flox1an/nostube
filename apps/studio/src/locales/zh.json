@@ -136,6 +136,18 @@
         "favicon": "浏览器标签页上的图标。PNG、JPEG、WebP、SVG 或 ICO，最大 {{size}}。",
         "banner": "首页视频上方的宽幅图片。PNG、JPEG、WebP 或 SVG，最大 {{size}}。"
       },
+      "crop": {
+        "title": "裁剪{{image}}",
+        "description": "拖动调整位置，再缩放。仅上传裁剪后的图片：WebP，最大 {{width}} × {{height}} 像素和 {{kilobytes}} KB。",
+        "preview": "裁剪预览",
+        "zoom": "缩放",
+        "x": "水平位置",
+        "y": "垂直位置",
+        "confirm": "裁剪并上传",
+        "saving": "正在优化并上传…",
+        "loadError": "无法打开此图片。请尝试 PNG、JPEG 或 WebP。",
+        "encodeError": "无法导出为 WebP。请尝试其他图片或浏览器。"
+      },
       "none": "无",
       "upload": "上传",
       "replace": "替换",

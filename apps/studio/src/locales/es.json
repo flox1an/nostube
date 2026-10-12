@@ -136,6 +136,18 @@
         "favicon": "El icono de la pestaña del navegador. PNG, JPEG, WebP, SVG o ICO, hasta {{size}}.",
         "banner": "Una imagen ancha sobre los vídeos de la página de inicio. PNG, JPEG, WebP o SVG, hasta {{size}}."
       },
+      "crop": {
+        "title": "Recortar {{image}}",
+        "description": "Arrastra para posicionar y ajusta el zoom. Solo se sube el recorte: WebP, como máximo {{width}} × {{height}} px y {{kilobytes}} KB.",
+        "preview": "Vista previa del recorte",
+        "zoom": "Zoom",
+        "x": "Posición horizontal",
+        "y": "Posición vertical",
+        "confirm": "Recortar y subir",
+        "saving": "Optimizando y subiendo…",
+        "loadError": "No se pudo abrir esta imagen. Prueba PNG, JPEG o WebP.",
+        "encodeError": "No se pudo exportar esta imagen como WebP. Prueba otra imagen o navegador."
+      },
       "none": "Ninguno",
       "upload": "Subir",
       "replace": "Reemplazar",

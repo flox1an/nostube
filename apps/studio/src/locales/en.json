@@ -136,6 +136,18 @@
         "favicon": "The icon in the browser tab. PNG, JPEG, WebP, SVG or ICO, up to {{size}}.",
         "banner": "A wide image above the videos on the start page. PNG, JPEG, WebP or SVG, up to {{size}}."
       },
+      "crop": {
+        "title": "Crop {{image}}",
+        "description": "Drag to position, then zoom. Only the crop is uploaded: WebP, at most {{width}} × {{height}} px and {{kilobytes}} KB.",
+        "preview": "Crop preview",
+        "zoom": "Zoom",
+        "x": "Horizontal position",
+        "y": "Vertical position",
+        "confirm": "Crop and upload",
+        "saving": "Optimizing and uploading…",
+        "loadError": "This image could not be opened. Try PNG, JPEG or WebP.",
+        "encodeError": "This image could not be exported as WebP. Try another image or browser."
+      },
       "none": "None",
       "upload": "Upload",
       "replace": "Replace",

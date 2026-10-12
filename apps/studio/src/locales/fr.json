@@ -136,6 +136,18 @@
         "favicon": "L'icône de l'onglet du navigateur. PNG, JPEG, WebP, SVG ou ICO, jusqu'à {{size}}.",
         "banner": "Une image large au-dessus des vidéos de la page d'accueil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}."
       },
+      "crop": {
+        "title": "Recadrer {{image}}",
+        "description": "Faites glisser pour positionner, puis zoomez. Seul le recadrage est envoyé : WebP, au maximum {{width}} × {{height}} px et {{kilobytes}} Ko.",
+        "preview": "Aperçu du recadrage",
+        "zoom": "Zoom",
+        "x": "Position horizontale",
+        "y": "Position verticale",
+        "confirm": "Recadrer et envoyer",
+        "saving": "Optimisation et envoi…",
+        "loadError": "Impossible d'ouvrir cette image. Essayez PNG, JPEG ou WebP.",
+        "encodeError": "Impossible d'exporter cette image en WebP. Essayez une autre image ou un autre navigateur."
+      },
       "none": "Aucun",
       "upload": "Téléverser",
       "replace": "Remplacer",

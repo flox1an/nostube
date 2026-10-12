@@ -1,0 +1,232 @@
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@nostube/widgets/components/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@nostube/widgets/components/dialog'
+import { cropRect } from './image-crop'
+
+export const CROP_SOURCE_LIMIT = 20 * 1024 * 1024
+const SIZES = {
+  logo: { width: 512, height: 512, bytes: 128 * 1024 },
+  banner: { width: 1500, height: 500, bytes: 300 * 1024 },
+}
+
+/** The source stays in the browser; only a confirmed, resized WebP leaves this dialog. */
+export function ImageCropDialog({
+  file,
+  slot,
+  onConfirm,
+  onClose,
+}: {
+  file: File
+  slot: 'logo' | 'banner'
+  onConfirm: (file: File) => Promise<void>
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const [loaded, setLoaded] = useState<{ url: string; image: HTMLImageElement } | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [position, setPosition] = useState({ x: 0.5, y: 0.5 })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const saving = useRef(false)
+  const drag = useRef<{ x: number; y: number; position: typeof position } | null>(null)
+  const size = SIZES[slot]
+  const aspect = size.width / size.height
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => setLoaded({ url, image })
+    image.onerror = () => setError(t('studio.branding.crop.loadError'))
+    image.src = url
+    return () => {
+      image.onload = image.onerror = null
+      URL.revokeObjectURL(url)
+    }
+  }, [file, t])
+
+  const crop =
+    loaded &&
+    cropRect(loaded.image.naturalWidth, loaded.image.naturalHeight, aspect, zoom, position)
+  const confirm = async () => {
+    if (!loaded || !crop || saving.current) return
+    saving.current = true
+    setBusy(true)
+    setError(null)
+    try {
+      const canvas = document.createElement('canvas')
+      // Do not upscale small source images.
+      let width = Math.max(1, Math.min(size.width, Math.floor(crop.width)))
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error(t('studio.branding.crop.encodeError'))
+      let blob: Blob | null = null
+      while (width >= 1) {
+        canvas.width = width
+        canvas.height = Math.max(1, Math.round(width / aspect))
+        context.imageSmoothingQuality = 'high'
+        context.drawImage(
+          loaded.image,
+          crop.x,
+          crop.y,
+          crop.width,
+          crop.height,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        )
+        for (const quality of [0.85, 0.7, 0.5]) {
+          blob = await new Promise<Blob | null>(resolve =>
+            canvas.toBlob(resolve, 'image/webp', quality)
+          )
+          if (!blob || blob.type !== 'image/webp')
+            throw new Error(t('studio.branding.crop.encodeError'))
+          if (blob.size <= size.bytes) break
+        }
+        if (blob && blob.size <= size.bytes) break
+        width = Math.floor(width * 0.75)
+      }
+      if (!blob || blob.size > size.bytes) throw new Error(t('studio.branding.crop.encodeError'))
+      await onConfirm(new File([blob], `${slot}.webp`, { type: 'image/webp' }))
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      saving.current = false
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={open => {
+        if (!open && !saving.current) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90dvh] flex-col overflow-y-auto sm:max-w-xl"
+        onEscapeKeyDown={e => {
+          if (busy) e.preventDefault()
+        }}
+        onPointerDownOutside={e => {
+          if (busy) e.preventDefault()
+        }}
+      >
+        <DialogTitle>
+          {t('studio.branding.crop.title', { image: t(`studio.branding.slots.${slot}`) })}
+        </DialogTitle>
+        <DialogDescription>
+          {t('studio.branding.crop.description', { ...size, kilobytes: size.bytes / 1024 })}
+        </DialogDescription>
+        <div
+          className={`relative mx-auto shrink-0 touch-none overflow-hidden rounded-md bg-muted ${busy ? '' : 'cursor-grab active:cursor-grabbing'}`}
+          style={{ aspectRatio: aspect, width: `min(100%, ${40 * aspect}dvh)` }}
+          onPointerDown={e => {
+            if (!crop || busy) return
+            e.currentTarget.setPointerCapture(e.pointerId)
+            drag.current = { x: e.clientX, y: e.clientY, position }
+          }}
+          onPointerMove={e => {
+            if (!drag.current || !loaded || !crop) return
+            const scale = crop.width / e.currentTarget.getBoundingClientRect().width
+            const xSpace = loaded.image.naturalWidth - crop.width
+            const ySpace = loaded.image.naturalHeight - crop.height
+            const start = drag.current
+            setPosition({
+              x:
+                xSpace > 0
+                  ? Math.max(
+                      0,
+                      Math.min(1, start.position.x - ((e.clientX - start.x) * scale) / xSpace)
+                    )
+                  : 0.5,
+              y:
+                ySpace > 0
+                  ? Math.max(
+                      0,
+                      Math.min(1, start.position.y - ((e.clientY - start.y) * scale) / ySpace)
+                    )
+                  : 0.5,
+            })
+          }}
+          onPointerUp={() => {
+            drag.current = null
+          }}
+          onPointerCancel={() => {
+            drag.current = null
+          }}
+        >
+          {loaded && crop && (
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox={`${crop.x} ${crop.y} ${crop.width} ${crop.height}`}
+              role="img"
+              aria-label={t('studio.branding.crop.preview')}
+            >
+              <image
+                href={loaded.url}
+                width={loaded.image.naturalWidth}
+                height={loaded.image.naturalHeight}
+              />
+              <path
+                d={`M ${crop.x + crop.width / 3} ${crop.y} v ${crop.height} M ${crop.x + (crop.width * 2) / 3} ${crop.y} v ${crop.height} M ${crop.x} ${crop.y + crop.height / 3} h ${crop.width} M ${crop.x} ${crop.y + (crop.height * 2) / 3} h ${crop.width}`}
+                stroke="white"
+                strokeOpacity="0.35"
+                strokeWidth={crop.width / 600}
+                fill="none"
+                pointerEvents="none"
+              />
+            </svg>
+          )}
+        </div>
+        <div className="space-y-3">
+          <label className="grid gap-1 text-sm">
+            {t('studio.branding.crop.zoom')}
+            <input
+              type="range"
+              min="1"
+              max="4"
+              step="0.01"
+              value={zoom}
+              disabled={!loaded || busy}
+              onChange={e => setZoom(Number(e.target.value))}
+            />
+          </label>
+          {(['x', 'y'] as const).map(axis => (
+            <label key={axis} className="grid gap-1 text-sm">
+              {t(`studio.branding.crop.${axis}`)}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={position[axis]}
+                disabled={!loaded || busy}
+                onChange={e => setPosition(p => ({ ...p, [axis]: Number(e.target.value) }))}
+              />
+            </label>
+          ))}
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+            {t('studio.videos.cancel')}
+          </Button>
+          <Button type="button" disabled={!loaded || busy} onClick={() => void confirm()}>
+            {t(busy ? 'studio.branding.crop.saving' : 'studio.branding.crop.confirm')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

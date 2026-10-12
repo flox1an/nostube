@@ -76,6 +76,21 @@ export async function uploadBranding(slot: BrandingSlot, file: File): Promise<st
   throw new Error(i18n.t('studio.errors.serverStatus', { status: res.status }))
 }
 
+/** Activates an image already uploaded to this instance's Blossom, without sending it twice. */
+export async function setBrandingBlob(slot: BrandingSlot, sha256: string): Promise<string> {
+  const res = await fetch(`/api/admin/branding/${slot}`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sha256 }),
+  })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  const body: unknown = await res.json()
+  if (body && typeof body === 'object' && 'url' in body && typeof body.url === 'string')
+    return body.url
+  throw new Error(i18n.t('studio.errors.serverStatus', { status: res.status }))
+}
+
 export async function deleteBranding(slot: BrandingSlot): Promise<void> {
   const res = await fetch(`/api/admin/branding/${slot}`, {
     method: 'DELETE',

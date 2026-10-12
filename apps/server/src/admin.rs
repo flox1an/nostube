@@ -805,8 +805,8 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
 
 // ── Branding ────────────────────────────────────────────────────────────────
 
-/// Replaces the logo, favicon or banner (`PUT /api/admin/branding/<slot>`, the image as the raw
-/// body). Takes effect at once: the public config is rebuilt, nothing restarts.
+/// Replaces a branding image with a raw image (favicon) or `{ "sha256": "<local Blossom hash>" }`.
+/// Takes effect at once: the public config is rebuilt, nothing restarts.
 async fn branding_put(
     State(state): State<Arc<AdminState>>,
     axum::extract::Path(name): axum::extract::Path<String>,
@@ -814,22 +814,57 @@ async fn branding_put(
     body: axum::body::Body,
 ) -> Response {
     use crate::branding::{Kind, Slot};
-    if let Some(refusal) = refuse_write_as(&state, &headers, "image/*") {
-        return refusal;
-    }
+    let from_blossom = headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.split(';').next().unwrap_or("").trim() == "application/json");
+    let refusal = if from_blossom { refuse_write(&state, &headers) } else { refuse_write_as(&state, &headers, "image/*") };
+    if let Some(refusal) = refusal { return refusal; }
     let Some(slot) = Slot::parse(&name) else {
         return json_error(StatusCode::NOT_FOUND, "no such branding slot");
     };
     let max = slot.max_bytes();
     let too_big = || json_error(StatusCode::PAYLOAD_TOO_LARGE, &format!("the {} may be at most {} KiB", slot.name(), max / 1024));
-    let declared = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
-    if declared.is_some_and(|n| n > max) {
-        return too_big();
-    }
-    // Stops reading at the limit. A broken connection also lands here; nobody reads that answer.
-    let Ok(bytes) = axum::body::to_bytes(body, max).await else {
-        return too_big();
+    // Order activation against video cleanup; only indexed local blobs can become branding.
+    let _media_guard = if from_blossom { Some(crate::outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
+    let bytes = if from_blossom {
+        use almond::services::file_storage;
+        use tokio::io::AsyncReadExt;
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct BlobBody { sha256: String }
+        let Ok(body) = axum::body::to_bytes(body, 256).await else {
+            return json_error(StatusCode::BAD_REQUEST, "invalid branding blob reference");
+        };
+        let Ok(BlobBody { sha256 }) = serde_json::from_slice(&body) else {
+            return json_error(StatusCode::BAD_REQUEST, "expected a Blossom sha256");
+        };
+        if file_storage::validate_sha256_format(&sha256).is_err() {
+            return json_error(StatusCode::BAD_REQUEST, "invalid Blossom sha256");
+        }
+        let Some(metadata) = file_storage::get_file_metadata(&state.stores.blossom, &sha256).await else {
+            return json_error(StatusCode::NOT_FOUND, "branding blob is not on this instance");
+        };
+        if metadata.size > max as u64 { return too_big(); }
+        let Some(path) = file_storage::local_path(&metadata) else {
+            return json_error(StatusCode::BAD_REQUEST, "branding requires a local Blossom image");
+        };
+        let mut bytes = Vec::with_capacity(metadata.size as usize);
+        let Ok(file) = tokio::fs::File::open(path).await else {
+            return json_error(StatusCode::NOT_FOUND, "branding blob is missing");
+        };
+        if file.take((max + 1) as u64).read_to_end(&mut bytes).await.is_err() {
+            return json_error(StatusCode::INTERNAL_SERVER_ERROR, "cannot read branding blob");
+        }
+        if bytes.len() > max { return too_big(); }
+        axum::body::Bytes::from(bytes)
+    } else {
+        let declared = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
+        if declared.is_some_and(|n| n > max) { return too_big(); }
+        // Stops reading at the limit. A broken connection also lands here.
+        let Ok(bytes) = axum::body::to_bytes(body, max).await else { return too_big(); };
+        bytes
     };
+    // Profile publication ingests through the relay, which also takes MEDIA_LIFECYCLE.
+    drop(_media_guard);
     let Some(kind) = Kind::sniff(&bytes).filter(|k| slot.accepts(*k)) else {
         let message = format!("the {} must be a {} image", slot.name(), slot.types());
         return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &message);
@@ -2103,6 +2138,55 @@ mod tests {
         assert!(site["logo"].is_null(), "{site}");
         assert!(site["favicon"].as_str().is_some_and(|u| u.starts_with("/branding/favicon?v=")));
         assert!(!dir.join("branding").join("logo.png").exists());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn branding_activates_only_valid_local_blossom_images_without_reuploading() {
+        use sha2::{Digest, Sha256};
+        let hash = format!("{:x}", Sha256::digest(PNG));
+        let (_, dir, cookie, _, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let keys = Keys::generate();
+        let mut live = stores(&dir).await;
+        live.relay = Relay::open(&dir.join("managed-relay.sqlite"), crate::relay::RelayConfig {
+            writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
+        }).unwrap();
+        let relay = live.relay.clone();
+        let blossom = live.blossom.clone();
+        let branding = live.branding.clone();
+        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()],
+            "https://flox-mac.local", "boot".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        *state.managed.lock() = Some(Ok(keys.clone()));
+        let app = router(state);
+        let path = dir.join("blossom").join(&hash);
+        tokio::fs::write(&path, PNG).await.unwrap();
+        blossom.file_index.insert(hash.clone(), almond::models::FileMetadata {
+            location: almond::models::FileLocation::Local(path.clone()), extension: Some("png".into()),
+            mime_type: Some("image/png".into()), size: PNG.len() as u64, created_at: 1, pubkey: None,
+            expiration: None, origin: Default::default(),
+        }).await;
+        let body = serde_json::json!({ "sha256": hash }).to_string().into_bytes();
+        let json = Some("application/json");
+        let c = Some(cookie.as_str());
+        assert_eq!(branding_call(&app, "PUT", "logo", None, json, body.clone()).await.0, StatusCode::UNAUTHORIZED);
+        for bad in [r#"{"sha256":"../../secrets.toml"}"#.to_owned(), serde_json::json!({ "sha256": "ab".repeat(32) }).to_string()] {
+            assert!(!branding_call(&app, "PUT", "logo", c, json, bad.into_bytes()).await.0.is_success());
+            assert!(public_site(&branding)["logo"].is_null());
+        }
+        let (status, response) = tokio::time::timeout(Duration::from_secs(2),
+            branding_call(&app, "PUT", "logo", c, json, body.clone())).await.expect("branding activation must not deadlock profile publication");
+        assert_eq!(status, StatusCode::OK, "{response}");
+        assert_eq!(public_site(&branding)["logo"], response["url"]);
+        assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
+        let profile = relay.stored(nostr::prelude::Filter::new().author(keys.public_key()).kind(nostr::prelude::Kind::Metadata)).await.unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&profile[0].content).unwrap()["picture"],
+            format!("https://flox-mac.local{}", response["url"].as_str().unwrap()));
+        // Refused replacements leave the existing branding untouched, regardless of declared MIME/size.
+        tokio::fs::write(&path, b"<html>").await.unwrap();
+        assert_eq!(branding_call(&app, "PUT", "logo", c, json, body.clone()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        tokio::fs::write(&path, vec![0; 512 * 1024 + 1]).await.unwrap();
+        assert_eq!(branding_call(&app, "PUT", "logo", c, json, body).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
         std::fs::remove_dir_all(&dir).ok();
     }
 

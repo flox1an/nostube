@@ -45,10 +45,6 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
   const [copied, setCopied] = useState(false)
   const signerRef = useRef<NostrConnectSigner | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-  // Distinguishes an abort WE triggered (regenerate, unmount — expected, silent)
-  // from one that surfaces unprompted (e.g. an underlying transport timeout),
-  // which the viewer should actually see instead of the QR silently resetting.
-  const intentionalAbortRef = useRef(false)
 
   if (!accountManager) {
     throw new Error('QRCodeLogin must be used within AccountsProvider')
@@ -56,10 +52,10 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
 
   const generateQRCode = useCallback(async () => {
     // Cleanup previous signer/controller
-    if (abortControllerRef.current) {
-      intentionalAbortRef.current = true
-      abortControllerRef.current.abort()
-    }
+    abortControllerRef.current?.abort()
+    // This attempt's own controller: a later attempt or the unmount aborts it, never a timeout
+    // (applesauce rejects the wait with "Aborted" only on our signal).
+    const controller = new AbortController()
 
     try {
       // Create a new signer for client-initiated connection; the transport comes from the
@@ -78,8 +74,6 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
 
       setNostrConnectUri(uri)
 
-      // Create abort controller for cancellation
-      const controller = new AbortController()
       abortControllerRef.current = controller
 
       // Wait for signer to connect
@@ -107,14 +101,9 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
 
       onLogin()
     } catch (error) {
-      // An abort we triggered ourselves (regenerate, unmount) is expected and silent —
-      // the UI already reflects it (fresh QR, or the component is gone). Anything else
-      // that surfaces as an abort (e.g. a transport-level timeout) is unexpected and
-      // should tell the viewer instead of silently resetting.
-      if (intentionalAbortRef.current) {
-        intentionalAbortRef.current = false
-        return
-      }
+      // Aborted by a newer attempt or the unmount: the UI already shows that (fresh QR, or the
+      // tab is gone), so stay silent.
+      if (controller.signal.aborted) return
       console.error('QR code login failed:', error)
       onError(error instanceof Error ? error.message : 'Connection failed')
     }
@@ -126,10 +115,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
 
     return () => {
       // Cleanup on unmount
-      if (abortControllerRef.current) {
-        intentionalAbortRef.current = true
-        abortControllerRef.current.abort()
-      }
+      abortControllerRef.current?.abort()
     }
   }, [generateQRCode])
 

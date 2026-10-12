@@ -36,13 +36,7 @@ import { useSigner } from './signer-context'
 import { publishChecked, signChecked } from './upload/sign'
 
 /** The comments on the owner's videos, and the owner's mute list that hides some of them on the site. */
-export default function ModerationPage({
-  state,
-  banner,
-}: {
-  state: AdminState
-  banner: ReactNode
-}) {
+export default function ModerationPage({ state }: { state: AdminState }) {
   const { t } = useTranslation()
   const { pubkey } = useSigner()
   const [booted, setBooted] = useState<InstanceClient | Error | null>(null)
@@ -54,7 +48,7 @@ export default function ModerationPage({
 
   let body: ReactNode = null
   if (pubkey === null || !isKeyConnected(state.config, pubkey)) {
-    // Before onboarding: the banner sets up the first key.
+    // A creator that may not write (or a signer error): nothing to moderate with.
   } else if (booted === null) {
     body = <Skeleton className="h-40 w-full" />
   } else if (booted instanceof Error) {
@@ -73,7 +67,6 @@ export default function ModerationPage({
 
   return (
     <div className="space-y-6">
-      {banner}
       <Card>
         <CardHeader>
           <CardTitle>{t('studio.moderation.title')}</CardTitle>

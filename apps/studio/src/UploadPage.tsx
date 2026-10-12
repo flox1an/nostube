@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
@@ -54,7 +54,7 @@ const titleFromName = (name: string) =>
     .trim()
 
 /** Choose a video, describe it, and publish it to this instance. */
-export default function UploadPage({ state, banner }: { state: AdminState; banner: ReactNode }) {
+export default function UploadPage({ state }: { state: AdminState }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage
   const { signer, pubkey } = useSigner()
@@ -221,7 +221,6 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
 
   return (
     <div className="space-y-6">
-      {banner}
       <Card>
         <CardHeader>
           <CardTitle>{t('studio.upload.title')}</CardTitle>

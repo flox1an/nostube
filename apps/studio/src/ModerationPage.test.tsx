@@ -103,7 +103,7 @@ afterEach(() => {
 const renderPage = () =>
   render(
     <SignerProvider creatorKey={owner}>
-      <ModerationPage state={state} banner={null} />
+      <ModerationPage state={state} />
     </SignerProvider>
   )
 

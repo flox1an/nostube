@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Upload } from 'lucide-react'
 import { Button } from '@nostube/widgets/components/button'
@@ -19,16 +19,13 @@ const HiddenVideosPicker = lazy(() => import('./HiddenVideosPicker'))
 export function VideosPage({
   hiddenText,
   onHiddenChange,
-  banner,
 }: {
   hiddenText: string
   onHiddenChange: (hiddenText: string) => Promise<void>
-  banner: ReactNode
 }) {
   const { t } = useTranslation()
   return (
     <div className="space-y-6">
-      {banner}
       <Card>
         <CardHeader className="flex-row flex-wrap items-start justify-between gap-4 space-y-0">
           <div className="space-y-1.5">

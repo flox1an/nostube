@@ -145,19 +145,6 @@
         "wrongType": "This file type is not allowed here. See the formats above."
       }
     },
-    "connect": {
-      "neededTitle": "Connect your Nostr key to publish",
-      "neededBody": "The instance has no creator and no one allowed to upload yet. Connect the key of your Nostr signer to become both.",
-      "noSigner": "No Nostr signer was found in this browser. Install a NIP-07 extension (nos2x, Alby, …) and reload this page.",
-      "connect": "Connect my key",
-      "chooseTitle": "Choose how your videos are signed",
-      "chooseBody": "Every video is signed with a key, your identity on Nostr. Let this server keep one for you, or use a key you already have. You choose once; switching later is not possible yet.",
-      "managedTitle": "Managed key (default)",
-      "managedBody": "This server creates a key, keeps it encrypted and signs for you: your password is all you need. Whoever takes over the server gets the key too. You can export it at any time under Account.",
-      "createManaged": "Create a managed key",
-      "ownTitle": "Use my own key (NIP-07)",
-      "ownBody": "Your browser's signer extension signs. The server never sees your key."
-    },
     "videos": {
       "title": "Videos",
       "description": "The site shows every video of your creators except the ones you hide here. New uploads appear on their own.",
@@ -406,6 +393,56 @@
         "reserve": "Free-space reserve",
         "mirrorRelays": "Mirror relays",
         "mirrorBlossom": "Mirror Blossom servers"
+      }
+    },
+    "onboarding": {
+      "title": "Set up your instance",
+      "stepOf": "Step {{step}} of {{total}}",
+      "steps": {
+        "identity": "Identity",
+        "publishing": "Publishing",
+        "site": "Site",
+        "summary": "Summary"
+      },
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "finishing": "Setting up…",
+      "identity": {
+        "intro": "Every video is signed with a Nostr key. Choose whose key it is.",
+        "ownTitle": "Own identity",
+        "ownBody": "Videos are published under your own Nostr key, signed by your browser extension (NIP-07). The key also becomes your login key; your password keeps working.",
+        "channelTitle": "Channel identity",
+        "channelBody": "This server creates a key for the channel and keeps it encrypted. Your password is all you need; you can export the key later under Account.",
+        "loginWithNostr": "I log in with my Nostr key",
+        "noExtension": "Already have a Nostr key? Install an extension such as nos2x or Alby and reload."
+      },
+      "publishing": {
+        "intro": "Where should your videos go? Nothing is copied elsewhere unless you choose it.",
+        "localTitle": "Only this instance",
+        "localBody": "Nothing leaves this server. Profiles are looked up only here.",
+        "networkTitle": "Into the Nostr network",
+        "networkBody": "Video events are copied to public relays, and profiles are looked up on public relays.",
+        "networkChannel": "Video files are copied to public Blossom servers too.",
+        "networkOwn": "Video files stay on this instance; only the video events are distributed (copying files needs the channel identity).",
+        "advanced": "Advanced",
+        "mirrorRelays": "Mirror relays",
+        "mirrorBlossom": "Blossom mirror servers",
+        "profileRelays": "Profile lookup relays",
+        "oneLine": "One per line."
+      },
+      "site": {
+        "appearance": "After setup, set <link>colors, font and branding</link> on the Appearance page."
+      },
+      "summary": {
+        "identity": "Identity",
+        "login": "Login",
+        "loginNostr": "Password or Nostr key",
+        "loginPassword": "Password",
+        "none": "none",
+        "localOnly": "this instance only",
+        "freeDisk": "Free disk space",
+        "hint": "Finish creates the key if needed, saves everything at once and restarts the server for a few seconds."
       }
     }
   }

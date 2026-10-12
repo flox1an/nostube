@@ -1,11 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import { processEvent } from '@nostube/core/video-event'
 import { TooltipProvider } from '@nostube/widgets/components/tooltip'
-import type { AdminConfig, SignerInfo } from './api'
-import { ConnectKey } from './ConnectKey'
+import type { SignerInfo } from './api'
 import type { InstanceClient } from './instance-client'
 import { SignerProvider, useSigner, type SignerState } from './signer-context'
 import { VideoActions } from './VideoActions'
@@ -145,75 +143,5 @@ describe('video actions without a connect step', () => {
     expect(screen.getByRole('menuitem', { name: 'Replace video file' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Delete video' })).toBeTruthy()
     expect(extension.getPublicKey).not.toHaveBeenCalled()
-  })
-})
-
-describe('ConnectKey onboarding', () => {
-  const fresh: AdminConfig = {
-    title: 'T',
-    creators: [],
-    allowedWriters: [],
-    videoSources: [],
-    interactionRelays: [],
-    profileRelays: [],
-    mirror: { relays: [], blossom: [] },
-    search: { mode: 'off' },
-    storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
-    site: {
-      tagline: '',
-      theme: { accent: '#6d28d9', font: 'sans' },
-      videos: { hidden: [] },
-      links: DEFAULT_SITE_LINKS,
-      pages: noSitePages(),
-    },
-  }
-  const renderBanner = (onConnected: (pubkey: string) => Promise<void>) =>
-    render(
-      <SignerProvider creatorKey={null}>
-        <ConnectKey config={fresh} onConnected={onConnected} busy={false} />
-      </SignerProvider>
-    )
-
-  it('offers both keys on a new instance; the managed one is created on the server', async () => {
-    const fetch = serve({ mode: 'none', pubkey: null })
-    const onConnected = vi.fn(async () => {})
-    renderBanner(onConnected)
-    const managed = await screen.findByRole('button', { name: 'Create a managed key' })
-    expect(screen.getByText('Managed key (default)')).toBeTruthy()
-    expect(screen.getByText('Use my own key (NIP-07)')).toBeTruthy()
-    await waitFor(() =>
-      expect(
-        (screen.getByRole('button', { name: 'Connect my key' }) as HTMLButtonElement).disabled
-      ).toBe(false)
-    )
-    fireEvent.click(managed)
-    await waitFor(() => expect(onConnected).toHaveBeenCalledWith(MANAGED))
-    expect(fetch).toHaveBeenCalledWith(
-      '/api/admin/signer',
-      expect.objectContaining({ method: 'POST' })
-    )
-    expect(extension.getPublicKey).not.toHaveBeenCalled()
-  })
-
-  it('adds the extension key when the owner picks their own', async () => {
-    const fetch = serve({ mode: 'none', pubkey: null })
-    const onConnected = vi.fn(async () => {})
-    renderBanner(onConnected)
-    const own = await screen.findByRole('button', { name: 'Connect my key' })
-    await waitFor(() => expect((own as HTMLButtonElement).disabled).toBe(false))
-    fireEvent.click(own)
-    await waitFor(() => expect(onConnected).toHaveBeenCalledWith(OWN))
-    expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
-  })
-
-  it('does not offer a second key once the managed one exists', async () => {
-    serve({ mode: 'managed', pubkey: MANAGED })
-    const onConnected = vi.fn(async () => {})
-    renderBanner(onConnected)
-    const connect = await screen.findByRole('button', { name: 'Connect my key' })
-    await waitFor(() => expect((connect as HTMLButtonElement).disabled).toBe(false))
-    expect(screen.queryByRole('button', { name: 'Create a managed key' })).toBeNull()
-    fireEvent.click(connect)
-    await waitFor(() => expect(onConnected).toHaveBeenCalledWith(MANAGED))
   })
 })

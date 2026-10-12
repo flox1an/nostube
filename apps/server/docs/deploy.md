@@ -65,10 +65,11 @@ says so, because the server cannot know under which address it is published.
 
 ## Restart policy
 
-Saving in the studio ends the process on purpose (it then starts again on the new config). The
-container therefore needs a restart policy that also restarts a clean exit: **`restart: always`**
-or `unless-stopped`. `on-failure` would leave the instance down after the first save. The studio
-waits up to 90 s for the new start and says so when nothing came back.
+Most studio saves apply while the instance runs. A save that changes who may publish, the storage
+limits or the mirror targets ends the process on purpose (it then starts again on the new config,
+ADR 0010). The container therefore needs a restart policy that also restarts a clean exit:
+**`restart: always`** or `unless-stopped`. `on-failure` would leave the instance down after such a
+save. The studio waits up to 90 s for the new start and says so when nothing came back.
 
 A SIGTERM (`docker stop`, a redeploy) stops it the same way: no new connections, running
 requests get up to 30 s, exit status 0. Use `stop_grace_period: 40s` if you upload large files.

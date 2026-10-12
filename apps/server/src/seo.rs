@@ -87,9 +87,14 @@ impl Public {
     }
 }
 
-/// The app shell with the head for `path`.
+/// Where the site reads the public config from instead of `/api/config` (`INLINE_CONFIG_ID` in
+/// `apps/site/src/site-config.ts`).
+const INLINE_CONFIG_ID: &str = "nostube-config";
+
+/// The app shell with the head for `path` and the public config inlined, so the site starts
+/// without another request.
 pub async fn shell(relay: &Relay, public: &[u8], path: &str, shell: &str) -> String {
-    let Some(p) = Public::parse(public) else { return shell.to_owned() };
+    let (Some(p), Ok(json)) = (Public::parse(public), std::str::from_utf8(public)) else { return shell.to_owned() };
     let video = match path.strip_prefix("/v/") {
         Some(id) => find_video(relay, &p, id).await,
         None => None,
@@ -101,11 +106,13 @@ pub async fn shell(relay: &Relay, public: &[u8], path: &str, shell: &str) -> Str
         }
         None => None,
     };
-    inject(shell, &head(&p, canonical.as_deref(), video.as_ref()))
+    let mut head = head(&p, canonical.as_deref(), video.as_ref());
+    let _ = write!(head, "<script type=\"application/json\" id=\"{INLINE_CONFIG_ID}\">{}</script>", script_json(json));
+    inject(shell, &head)
 }
 
 /// `/sitemap.xml`: the start page, the pages that exist and every video of the creators in the
-/// instance's relay.
+/// instance's relay, each with Google's video entry when it has a thumbnail.
 pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
     let Some(p) = Public::parse(public) else { return StatusCode::INTERNAL_SERVER_ERROR.into_response() };
     let videos = match creator_videos(relay, &p).await {
@@ -115,16 +122,43 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:video=\"http://www.google.com/schemas/sitemap-video/1.1\">\n",
+    );
     let _ = writeln!(xml, "<url><loc>{}/</loc></url>", Esc(&p.origin));
     for page in PAGES.into_iter().filter(|name| p.has_page(name)) {
         let _ = writeln!(xml, "<url><loc>{}/{page}</loc></url>", Esc(&p.origin));
     }
-    for ev in videos.iter().filter(|ev| p.shows(ev)) {
-        let Some(link) = link(ev) else { continue };
-        let _ = write!(xml, "<url><loc>{}/v/{link}</loc>", Esc(&p.origin));
-        if let Ok(at) = time::OffsetDateTime::from_unix_timestamp(ev.created_at.as_secs() as i64) {
-            let _ = write!(xml, "<lastmod>{}</lastmod>", at.date());
+    for v in videos.iter().filter(|ev| p.shows(ev)).map(Video::from_event) {
+        if v.link.is_empty() {
+            continue;
+        }
+        let _ = write!(xml, "<url><loc>{}/v/{}</loc>", Esc(&p.origin), v.link);
+        let published = iso_datetime(v.created_at);
+        if let Some(at) = &published {
+            let _ = write!(xml, "<lastmod>{at}</lastmod>");
+        }
+        // Google's video entry needs a thumbnail, a title, a description and a file or player.
+        if let Some(image) = v.image.as_deref().and_then(|i| p.absolute(i)) {
+            let description = if v.description.is_empty() { &v.title } else { &v.description };
+            let _ = write!(
+                xml,
+                "<video:video><video:thumbnail_loc>{}</video:thumbnail_loc><video:title>{}</video:title><video:description>{}</video:description>",
+                Esc(&image),
+                Esc(&v.title),
+                Esc(description)
+            );
+            if let Some(url) = v.media.as_ref().and_then(|(u, _)| p.absolute(u)) {
+                let _ = write!(xml, "<video:content_loc>{}</video:content_loc>", Esc(&url));
+            }
+            let _ = write!(xml, "<video:player_loc>{}</video:player_loc>", Esc(&embed_url(&p, &v.link)));
+            if let Some(secs) = v.duration.filter(|s| (1..=28_800).contains(s)) {
+                let _ = write!(xml, "<video:duration>{secs}</video:duration>");
+            }
+            if let Some(at) = &published {
+                let _ = write!(xml, "<video:publication_date>{at}</video:publication_date>");
+            }
+            xml.push_str("</video:video>");
         }
         xml.push_str("</url>\n");
     }
@@ -199,6 +233,9 @@ struct Video {
     image: Option<String>,
     /// The first video file and its MIME type.
     media: Option<(String, Option<String>)>,
+    created_at: u64,
+    /// Whole seconds, from `imeta` or the `duration` tag.
+    duration: Option<u64>,
 }
 
 impl Video {
@@ -227,12 +264,21 @@ impl Video {
             if words.is_empty() { UNTITLED.to_owned() } else { words.join(" ") }
         });
         let description = if content.is_empty() { tag(ev, "description").unwrap_or("") } else { content };
+        let duration = imeta
+            .iter()
+            .find_map(|e| field(e, "duration"))
+            .or_else(|| tag(ev, "duration"))
+            .and_then(|d| d.parse::<f64>().ok())
+            .filter(|d| d.is_finite() && *d >= 0.5)
+            .map(|d| d.round() as u64);
         Video {
             link: link(ev).unwrap_or_default(),
             title,
             description: clip(description),
             image: image.map(str::to_owned),
             media,
+            created_at: ev.created_at.as_secs(),
+            duration,
         }
     }
 }
@@ -244,6 +290,21 @@ fn clip(text: &str) -> String {
         Some((end, _)) => format!("{}…", line[..end].trim_end()),
         None => line,
     }
+}
+
+fn embed_url(p: &Public, link: &str) -> String {
+    format!("{}/embed.html?v={link}", p.origin)
+}
+
+/// `2026-10-12T08:30:00Z` (W3C datetime, as sitemaps and schema.org take it).
+fn iso_datetime(secs: u64) -> Option<String> {
+    let at = time::OffsetDateTime::from_unix_timestamp(secs as i64).ok()?;
+    Some(format!("{}T{:02}:{:02}:{:02}Z", at.date(), at.hour(), at.minute(), at.second()))
+}
+
+/// JSON for a `<script>` element: `<` as `\u003c`, so nothing in it can end the element early.
+fn script_json(json: &str) -> String {
+    json.replace('<', "\\u003c")
 }
 
 fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
@@ -272,16 +333,42 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     }
     match video {
         Some(v) => {
-            if let Some((url, mime)) = v.media.as_ref().and_then(|(u, m)| Some((p.absolute(u)?, m))) {
-                meta("property", "og:video", &url);
+            let media = v.media.as_ref().and_then(|(u, m)| Some((p.absolute(u)?, m)));
+            if let Some((url, mime)) = &media {
+                meta("property", "og:video", url);
                 if let Some(mime) = mime {
                     meta("property", "og:video:type", mime);
                 }
             }
+            let embed = embed_url(p, &v.link);
             meta("name", "twitter:card", "player");
-            meta("name", "twitter:player", &format!("{}/embed.html?v={}", p.origin, v.link));
+            meta("name", "twitter:player", &embed);
             meta("name", "twitter:player:width", "640");
             meta("name", "twitter:player:height", "360");
+            // schema.org VideoObject for Google's video results; it needs a thumbnail.
+            if let Some(image) = &image {
+                let mut ld = serde_json::json!({
+                    "@context": "https://schema.org",
+                    "@type": "VideoObject",
+                    "name": v.title,
+                    "thumbnailUrl": [image],
+                    "uploadDate": iso_datetime(v.created_at),
+                    "embedUrl": embed,
+                });
+                if !description.is_empty() {
+                    ld["description"] = description.as_str().into();
+                }
+                if let Some(url) = canonical {
+                    ld["url"] = url.into();
+                }
+                if let Some((url, _)) = &media {
+                    ld["contentUrl"] = url.as_str().into();
+                }
+                if let Some(secs) = v.duration {
+                    ld["duration"] = format!("PT{secs}S").into();
+                }
+                let _ = write!(h, "<script type=\"application/ld+json\">{}</script>", script_json(&ld.to_string()));
+            }
         }
         None => meta("name", "twitter:card", if image.is_some() { "summary_large_image" } else { "summary" }),
     }
@@ -348,7 +435,7 @@ mod tests {
         let path = std::env::temp_dir().join(format!("nostube-seo-test-{}.sqlite", creator.public_key().to_hex()));
         let writers = vec![creator.public_key(), other.public_key()];
         let relay = Relay::open(&path, RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays: vec![] }).unwrap();
-        let shown = video(&creator, 34235, "Tom & \"Jerry\"", &[&["d", "intro"], &["imeta", "url https://cdn.example/v.mp4", "m video/mp4", "image https://cdn.example/t.jpg"]]);
+        let shown = video(&creator, 34235, "Tom & \"Jerry\"", &[&["d", "intro"], &["imeta", "url https://cdn.example/v.mp4", "m video/mp4", "image https://cdn.example/t.jpg", "duration 61.4"]]);
         let hidden = video(&creator, 21, "Secret", &[]);
         let foreign = video(&other, 34235, "Not ours", &[&["d", "x"]]);
         for e in [&shown, &hidden, &foreign] {
@@ -382,12 +469,26 @@ mod tests {
         assert!(page.contains(&format!("<link rel=\"canonical\" href=\"https://videos.example/v/{naddr}\" />")), "{page}");
         assert!(page.ends_with("<script src=\"/a.js\"></script></head><body></body></html>"), "{page}");
 
+        // The public config goes along as it is, with nothing in it that could end the element.
+        let inline = page.split("id=\"nostube-config\">").nth(1).unwrap().split("</script>").next().unwrap();
+        assert!(!inline.contains('<'), "{inline}");
+        assert_eq!(serde_json::from_str::<serde_json::Value>(inline).unwrap(), serde_json::from_slice::<serde_json::Value>(&public).unwrap());
+        let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
+        let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
+        assert_eq!(ld["@type"], "VideoObject");
+        assert_eq!(ld["name"], "Tom & \"Jerry\"");
+        assert_eq!(ld["thumbnailUrl"][0], "https://cdn.example/t.jpg");
+        assert_eq!(ld["uploadDate"], "2025-10-09T08:53:20Z");
+        assert_eq!(ld["contentUrl"], "https://cdn.example/v.mp4");
+        assert_eq!(ld["duration"], "PT61S");
+
         // Hidden, someone else's, or not a video link: the site's head, no canonical URL.
         let hidden = link(&hidden).unwrap();
         for path in [format!("/v/{hidden}"), format!("/v/{}", link(&foreign).unwrap()), "/v/nope".into(), "/elsewhere".into()] {
             let page = shell(&relay, &public, &path, SHELL).await;
             assert!(page.contains("<title>My &lt;Site&gt;</title>"), "{path}: {page}");
-            assert!(!page.contains("canonical"), "{path}: {page}");
+            assert!(!page.contains("canonical") && !page.contains("ld+json"), "{path}: {page}");
+            assert!(page.contains("id=\"nostube-config\""), "{path}: {page}");
         }
 
         let home = shell(&relay, &public, "/", SHELL).await;
@@ -406,6 +507,8 @@ mod tests {
         let locs: Vec<&str> = xml.split("<loc>").skip(1).map(|s| s.split("</loc>").next().unwrap()).collect();
         let video = format!("https://videos.example/v/{}", link(&shown).unwrap());
         assert_eq!(locs, ["https://videos.example/", "https://videos.example/about", video.as_str()], "{xml}");
-        assert!(xml.contains("<lastmod>2025-10-09</lastmod>"), "{xml}");
+        assert!(xml.contains("<lastmod>2025-10-09T08:53:20Z</lastmod>"), "{xml}");
+        assert!(xml.contains("<video:video><video:thumbnail_loc>https://cdn.example/t.jpg</video:thumbnail_loc><video:title>Tom &amp; &quot;Jerry&quot;</video:title><video:description>A &lt;b&gt;long&lt;/b&gt; description</video:description><video:content_loc>https://cdn.example/v.mp4</video:content_loc>"), "{xml}");
+        assert!(xml.contains("<video:duration>61</video:duration><video:publication_date>2025-10-09T08:53:20Z</video:publication_date></video:video>"), "{xml}");
     }
 }

@@ -102,8 +102,13 @@ export async function loadAdmin(): Promise<AdminState | null> {
   return (await res.json()) as AdminState
 }
 
-/** Validates, keeps the previous config and restarts the instance on the new one. */
-export async function saveConfig(config: AdminConfig): Promise<{ revision: number }> {
+/**
+ * Validates, keeps the previous config and applies the new one: at once, or (`restart`) by
+ * restarting the instance when writers, storage or mirrors change.
+ */
+export async function saveConfig(
+  config: AdminConfig
+): Promise<{ revision: number; restart: boolean }> {
   const res = await fetch('/api/admin/config', {
     method: 'PUT',
     credentials: 'same-origin',
@@ -111,7 +116,7 @@ export async function saveConfig(config: AdminConfig): Promise<{ revision: numbe
     body: JSON.stringify(config),
   })
   if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as { revision: number }
+  return (await res.json()) as { revision: number; restart: boolean }
 }
 
 /** A studio write the server only accepts as JSON (`POST`); answers the JSON reply. */

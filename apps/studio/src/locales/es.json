@@ -17,7 +17,7 @@
       "restarting": "Reiniciando el servidor…",
       "save": "Guardar y aplicar",
       "discard": "Descartar cambios",
-      "saveHint": "Al guardar, el servidor se reinicia durante unos segundos. La configuración anterior se conserva."
+      "saveHint": "La mayoría de los cambios se aplican al instante. Cambiar quién puede publicar, el almacenamiento o los espejos reinicia el servidor durante unos segundos. La configuración anterior se conserva."
     },
     "nav": {
       "sections": "Secciones",
@@ -101,7 +101,6 @@
       "profileHint": "Una dirección https:// con {nip19} donde va el identificador.",
       "preview": "Vista previa",
       "previewTitle": "Tu título",
-      "previewVideo": "Un título de video",
       "previewButton": "Botón principal"
     },
     "pages": {

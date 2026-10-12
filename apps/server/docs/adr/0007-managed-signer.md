@@ -10,7 +10,7 @@ Whoever controls the server owns the identity in managed mode: the process holds
 
 ## Considered Options
 
-- **Encrypt with the admin password**: rejected. The key would be locked after every restart (each config save restarts the process) until the next password login, the NIP-07 login could not unlock it at all, and `admin reset` would destroy the identity.
+- **Encrypt with the admin password**: rejected. The key would be locked after every restart (updates, and config saves that change writers, storage or mirrors, ADR 0010) until the next password login, the NIP-07 login could not unlock it at all, and `admin reset` would destroy the identity.
 - **Plain key in `secrets.toml`**: rejected. No better against a server compromise, worse when that file travels alone.
 - **Derive the encryption key from the session secret**: rejected. Same file, and `admin reset` rotates that secret.
 - **OS keychain or an operator-supplied environment secret**: rejected for the first cut. No keychain in the container image, and an environment secret would have to be kept outside the data folder by every operator, with the identity lost when it is.

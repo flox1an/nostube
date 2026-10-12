@@ -8,7 +8,7 @@
 services:
   nostube:
     image: ghcr.io/flox1an/nostube-server:main
-    restart: always # not on-failure: saving in the studio ends the process on purpose
+    restart: always # not on-failure: some studio saves end the process on purpose (ADR 0010)
     stop_grace_period: 40s # running uploads get up to 30 s to finish
     environment:
       NOSTUBE_ORIGIN: ${NOSTUBE_ORIGIN:?set NOSTUBE_ORIGIN, e.g. https://videos.example.org}

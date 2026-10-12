@@ -1,8 +1,9 @@
 //! Admin area (/admin, ADR 0002): one admin with a mandatory password (argon2id),
 //! an optional bound NIP-07 key, one server-side session; setup via the one-time
 //! setup token. The registered admin may edit the config (#17) and apply it:
-//! validate + preflight, config.prev, then the process exits so the supervisor
-//! (launchd) restarts it (#7).
+//! validate + preflight, config.prev, then the public config and the relay's name change
+//! while running; writers, storage and mirror changes exit the process so the supervisor
+//! restarts it (#7).
 
 use std::{
     path::{Path, PathBuf},
@@ -738,7 +739,8 @@ fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
     Ok(s.f_bavail as u64 * s.f_frsize as u64)
 }
 
-/// Saves the edited config: validates everything, keeps `config.prev`, restarts the instance.
+/// Saves the edited config: validates everything, keeps `config.prev`, applies it (`restart` in
+/// the answer says whether the instance restarts for it, see `Config::needs_restart`).
 /// The body must be JSON (see `refuse_write`). Origin, TLS and the revision are not editable.
 async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
@@ -783,10 +785,11 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Ok(c) => c,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &e.to_string()),
     };
-    if let Err(e) = apply(&state, &next) {
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e);
-    }
-    Json(serde_json::json!({ "ok": true, "revision": next.revision })).into_response()
+    let restart = match apply(&state, &current, &next) {
+        Ok(restart) => restart,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    };
+    Json(serde_json::json!({ "ok": true, "revision": next.revision, "restart": restart })).into_response()
 }
 
 // ── Branding ────────────────────────────────────────────────────────────────
@@ -1011,9 +1014,10 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
 
 // ── Config apply ────────────────────────────────────────────────────────────
 
-/// Writes the validated config (keeping `config.prev`) and stops the listener so the supervisor
-/// restarts the process on it. Used by the studio endpoint.
-fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
+/// Writes the validated config (keeping `config.prev`) and applies it: while running when only
+/// the public config and the title change, else by stopping the listener so the supervisor
+/// restarts the process on it. Answers whether it restarts. Used by the studio endpoint.
+fn apply(state: &AdminState, current: &Config, next: &Config) -> Result<bool, String> {
     if let Some(e) = preflight(state, &next.tls) {
         return Err(format!("preflight failed: {e}"));
     }
@@ -1021,6 +1025,12 @@ fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
     std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
     let text = next.to_toml().map_err(|e| e.to_string())?;
     std::fs::write(&path, text).map_err(|e| format!("cannot write config: {e}"))?;
+    if !current.needs_restart(next) {
+        state.stores.branding.set_base(next.public_json());
+        state.stores.relay.set_title(&next.title);
+        tracing::info!("admin: config revision {} applied while running", next.revision);
+        return Ok(false);
+    }
     tracing::info!("admin: config revision {} applied; restarting", next.revision);
     // The response must reach the browser before the listener stops accepting.
     let handle = state.handle.clone();
@@ -1029,7 +1039,7 @@ fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
         // New connections are refused immediately; in-flight uploads keep up to 30 s (#7).
         handle.graceful_shutdown(Some(Duration::from_secs(30)));
     });
-    Ok(())
+    Ok(true)
 }
 
 /// The studio cannot change listeners; startup validates their bind addresses.
@@ -1482,6 +1492,8 @@ mod tests {
         let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["revision"], 5);
+        // Writers stay, but storage and mirror change: the instance restarts for it.
+        assert_eq!(body["restart"], true);
         assert!(dir.join("config.prev").exists());
         let after = Config::load(&dir.join("config.toml")).unwrap();
         assert_eq!((after.revision, after.title.as_str()), (5, "Renamed"));
@@ -1501,6 +1513,31 @@ mod tests {
         // Not editable: origin and TLS.
         assert_eq!(after.origin, before.origin);
         assert!(matches!(after.tls, config::Tls::LocalCa { .. }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_public_only_edit_applies_while_running_and_a_storage_change_restarts() {
+        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let json = Some("application/json");
+        let public = || serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap();
+        let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
+        let mut edit = read["config"].clone();
+        edit["title"] = "Live".into();
+        edit["site"]["tagline"] = "Now".into();
+        edit["videoSources"] = serde_json::json!(["wss://other.example"]);
+        let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
+        let live = public();
+        assert_eq!((&live["revision"], &live["title"], &live["site"]["tagline"]), (&5.into(), &"Live".into(), &"Now".into()));
+        assert_eq!(live["videoSources"], serde_json::json!(["wss://other.example"]));
+
+        edit["storage"]["quotaGib"] = 8.into();
+        let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(true)), "{body}");
+        // Saved for the next start; the running instance keeps serving the last live revision.
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().revision, 6);
+        assert_eq!(public()["revision"], 5);
         std::fs::remove_dir_all(&dir).ok();
     }
 

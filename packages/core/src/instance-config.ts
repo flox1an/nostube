@@ -315,7 +315,12 @@ export async function loadInstanceConfig(fetchImpl: typeof fetch = fetch): Promi
     const detail = await response.text().catch(() => '')
     throw new Error(`/api/config answered ${response.status}${detail ? `: ${detail}` : ''}`)
   }
-  const parsed = parseInstanceConfig(await response.json())
+  return applyInstanceConfig(await response.json())
+}
+
+/** Validates and registers a public config the page already has (the same rules as a load). */
+export function applyInstanceConfig(json: unknown): InstanceConfig {
+  const parsed = parseInstanceConfig(json)
   if (!parsed.ok) throw new Error(`Invalid instance config: ${parsed.errors.join('; ')}`)
   setInstanceConfig(parsed.config)
   return parsed.config

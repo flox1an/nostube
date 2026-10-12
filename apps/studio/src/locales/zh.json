@@ -17,7 +17,7 @@
       "restarting": "正在重启服务器…",
       "save": "保存并应用",
       "discard": "放弃更改",
-      "saveHint": "保存会让服务器重启几秒钟。之前的设置会被保留。"
+      "saveHint": "大多数更改会立即生效。更改可发布者、存储或镜像时，服务器会重启几秒钟。之前的设置会被保留。"
     },
     "nav": {
       "sections": "分区",
@@ -101,7 +101,6 @@
       "profileHint": "一个 https:// 地址，用 {nip19} 表示标识符所在位置。",
       "preview": "预览",
       "previewTitle": "你的标题",
-      "previewVideo": "视频标题",
       "previewButton": "主按钮"
     },
     "pages": {

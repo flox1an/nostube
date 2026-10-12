@@ -144,21 +144,24 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
 
   const update = (patch: Partial<Draft>) => setDraft(d => ({ ...d, ...patch }))
 
-  /** Saves a whole config: the server checks it, keeps the old one, restarts, and we wait for it. */
+  /** Saves a whole config: the server checks it, keeps the old one and applies it, at once or by
+   * restarting (then we wait for it). */
   const apply = async (config: AdminConfig) => {
     setSaveError(null)
     setSaving('saving')
+    let restart: boolean
     try {
-      await saveConfig(config)
+      ;({ restart } = await saveConfig(config))
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e))
       setSaving(null)
       return
     }
+    // A fresh page: the admin data, the draft and the public config the video list was built
+    // on all come from the new revision (the address, and with it the page, stays).
+    if (!restart) return location.reload()
     setSaving('restarting')
     if (await waitForRestart(state.bootId)) {
-      // A fresh page: the admin data, the draft and the public config the video list was built
-      // on all come from the new revision (the address, and with it the page, stays).
       location.reload()
     } else {
       setSaving('stalled')

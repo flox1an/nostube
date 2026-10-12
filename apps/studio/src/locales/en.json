@@ -17,7 +17,7 @@
       "restarting": "Restarting the server…",
       "save": "Save and apply",
       "discard": "Discard changes",
-      "saveHint": "Saving restarts the server for a few seconds. The previous settings are kept."
+      "saveHint": "Most changes apply at once. Changing who may publish, storage or mirrors restarts the server for a few seconds. The previous settings are kept."
     },
     "nav": {
       "sections": "Sections",
@@ -101,7 +101,6 @@
       "profileHint": "An https:// address with {nip19} where the identifier goes.",
       "preview": "Preview",
       "previewTitle": "Your title",
-      "previewVideo": "A video title",
       "previewButton": "Primary button"
     },
     "pages": {

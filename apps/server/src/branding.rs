@@ -134,14 +134,14 @@ impl Asset {
 }
 
 struct State {
+    /// `Config::public_json` of the applied config; the branding URLs go into its `site`.
+    base: serde_json::Value,
     assets: [Option<Asset>; 3],
     public_config: Bytes,
 }
 
 pub struct Branding {
     dir: PathBuf,
-    /// `Config::public_json` of this run; the branding URLs go into its `site`.
-    base: serde_json::Value,
     state: RwLock<State>,
 }
 
@@ -152,12 +152,19 @@ impl Branding {
         let dir = data.join("branding");
         let assets = Slot::ALL.map(|slot| load(&dir, slot));
         let public_config = build(&public_json, &assets);
-        Branding { dir, base: public_json, state: RwLock::new(State { assets, public_config }) }
+        Branding { dir, state: RwLock::new(State { base: public_json, assets, public_config }) }
     }
 
     /// The serialized public config (`/api/config`) with the current branding URLs.
     pub fn public_config(&self) -> Bytes {
         self.state.read().public_config.clone()
+    }
+
+    /// Takes the public config of a config applied while running (no restart).
+    pub fn set_base(&self, public_json: serde_json::Value) {
+        let mut state = self.state.write();
+        state.public_config = build(&public_json, &state.assets);
+        state.base = public_json;
     }
 
     /// `{logo, favicon, banner}`: each the URL, or null when the slot is empty.
@@ -182,7 +189,7 @@ impl Branding {
         let asset = Asset::new(kind, bytes);
         let url = asset.url(slot);
         state.assets[slot as usize] = Some(asset);
-        state.public_config = build(&self.base, &state.assets);
+        state.public_config = build(&state.base, &state.assets);
         Ok(url)
     }
 
@@ -196,7 +203,7 @@ impl Branding {
             }
         }
         state.assets[slot as usize] = None;
-        state.public_config = build(&self.base, &state.assets);
+        state.public_config = build(&state.base, &state.assets);
         Ok(())
     }
 

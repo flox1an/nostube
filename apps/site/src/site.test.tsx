@@ -11,7 +11,7 @@ import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-con
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { browserLanguage } from './i18n'
 import i18n from './i18n'
-import { loadSiteConfig } from './site-config'
+import { INLINE_CONFIG_ID, loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
 import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
 
@@ -84,6 +84,25 @@ describe('loadSiteConfig', () => {
 
   it('reports a server error with its status', async () => {
     await expect(loadSiteConfig(() => jsonResponse({ error: 'down' }, 503))).rejects.toThrow(/503/)
+  })
+
+  it('takes the config the server put into the page, validated, without a request', async () => {
+    const inline = document.createElement('script')
+    inline.type = 'application/json'
+    inline.id = INLINE_CONFIG_ID
+    inline.textContent = JSON.stringify(config)
+    document.head.append(inline)
+    const fetchImpl = vi.fn()
+    try {
+      const loaded = await loadSiteConfig(fetchImpl)
+      expect(loaded.title).toBe('Site title')
+      expect(getInstanceConfig()).toEqual(loaded)
+      expect(fetchImpl).not.toHaveBeenCalled()
+      inline.textContent = JSON.stringify({ ...config, creators: ['nope'] })
+      await expect(loadSiteConfig(fetchImpl)).rejects.toThrow(/creators must be a list/)
+    } finally {
+      inline.remove()
+    }
   })
 })
 

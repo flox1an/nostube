@@ -134,7 +134,8 @@ struct Inner {
     readers: Mutex<Vec<Connection>>,
     writers: Vec<PublicKey>,
     mirror_relays: Vec<String>,
-    nip11: String,
+    /// Its name follows the instance title, which the studio changes while running.
+    nip11: parking_lot::RwLock<String>,
     live: broadcast::Sender<Arc<Event>>,
 }
 
@@ -188,7 +189,7 @@ impl Relay {
             readers: Mutex::new(Vec::new()),
             writers: cfg.writers,
             mirror_relays: cfg.mirror_relays,
-            nip11: nip11_doc(cfg.name, cfg.description),
+            nip11: parking_lot::RwLock::new(nip11_doc(cfg.name, cfg.description)),
             live: broadcast::channel(1024).0,
         }));
         tokio::spawn(purge_expired(Arc::downgrade(&relay.0)));
@@ -281,6 +282,11 @@ impl Relay {
             Ok(events)
         })
         .await?
+    }
+
+    /// The NIP-11 name and description for a new instance title (as `main` sets them at start).
+    pub fn set_title(&self, title: &str) {
+        *self.0.nip11.write() = nip11_doc(title.to_owned(), format!("Relay of {title}"));
     }
 
     /// Event counts and database size for the admin overview, read on a read connection.
@@ -1082,7 +1088,7 @@ pub async fn handle(relay: Relay, req: Request<Body>) -> Response {
                 (header::ACCESS_CONTROL_ALLOW_HEADERS, "*"),
                 (header::ACCESS_CONTROL_ALLOW_METHODS, "GET"),
             ],
-            relay.0.nip11.clone(),
+            relay.0.nip11.read().clone(),
         )
             .into_response();
     }

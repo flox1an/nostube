@@ -17,7 +17,7 @@
       "restarting": "Redémarrage du serveur…",
       "save": "Enregistrer et appliquer",
       "discard": "Annuler les modifications",
-      "saveHint": "L'enregistrement redémarre le serveur pendant quelques secondes. Les réglages précédents sont conservés."
+      "saveHint": "La plupart des modifications s'appliquent immédiatement. Changer qui peut publier, le stockage ou les miroirs redémarre le serveur pendant quelques secondes. Les réglages précédents sont conservés."
     },
     "nav": {
       "sections": "Sections",
@@ -101,7 +101,6 @@
       "profileHint": "Une adresse https:// avec {nip19} à la place de l'identifiant.",
       "preview": "Aperçu",
       "previewTitle": "Votre titre",
-      "previewVideo": "Un titre de vidéo",
       "previewButton": "Bouton principal"
     },
     "pages": {

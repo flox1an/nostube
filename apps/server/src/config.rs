@@ -75,7 +75,7 @@ fn http_port() -> u16 {
     80
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields, default)]
 pub struct Storage {
     /// Storage quota in GiB; 0 = unlimited (#14 default).
@@ -466,6 +466,13 @@ impl Config {
                 },
             },
         })
+    }
+
+    /// True when `next` changes what the process wired up at start: the writers (relay and
+    /// Blossom), the storage limits (Blossom) or the mirror targets (relay and outbox). Everything
+    /// else the studio edits is the public config and the relay's name, which apply while running.
+    pub fn needs_restart(&self, next: &Config) -> bool {
+        self.allowed_writers != next.allowed_writers || self.storage != next.storage || self.mirror != next.mirror
     }
 }
 

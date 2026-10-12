@@ -194,19 +194,41 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
         <p className="mb-2 text-sm font-medium">{t('studio.appearance.preview')}</p>
         <div
           ref={preview}
-          className="space-y-3 rounded-lg border border-border bg-background p-4 text-foreground"
+          className="overflow-hidden rounded-lg border border-border bg-background text-foreground"
         >
-          <div>
-            <p className="text-2xl font-semibold">
-              {draft.title || t('studio.appearance.previewTitle')}
-            </p>
-            {draft.tagline && <p className="text-sm text-muted-foreground">{draft.tagline}</p>}
+          {branding.banner ? (
+            <img src={branding.banner} alt="" className="aspect-[5/1] w-full object-cover" />
+          ) : (
+            <div className="aspect-[5/1] border-b border-border bg-muted" />
+          )}
+          <div className="space-y-3 p-4">
+            <div className="flex items-center gap-3">
+              {branding.logo ? (
+                <img src={branding.logo} alt="" className="h-12 w-auto max-w-[40%] object-contain" />
+              ) : (
+                <div className="h-12 w-12 shrink-0 rounded-full bg-muted" />
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-lg font-semibold">
+                  {draft.title || t('studio.appearance.previewTitle')}
+                </p>
+                {draft.tagline && (
+                  <p className="truncate text-sm text-muted-foreground">{draft.tagline}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[0, 1, 2, 3].map(n => (
+                <div key={n} className="space-y-1">
+                  <div className="aspect-video rounded-md bg-muted" />
+                  <div className="h-2 w-3/4 rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+            <Button type="button" size="sm">
+              {t('studio.appearance.previewButton')}
+            </Button>
           </div>
-          <div className="aspect-video rounded-md bg-muted" />
-          <p className="text-sm font-medium">{t('studio.appearance.previewVideo')}</p>
-          <Button type="button" size="sm">
-            {t('studio.appearance.previewButton')}
-          </Button>
         </div>
       </aside>
     </div>

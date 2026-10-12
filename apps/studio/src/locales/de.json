@@ -17,7 +17,7 @@
       "restarting": "Server wird neu gestartet…",
       "save": "Speichern und anwenden",
       "discard": "Änderungen verwerfen",
-      "saveHint": "Beim Speichern startet der Server für ein paar Sekunden neu. Die vorherigen Einstellungen bleiben erhalten."
+      "saveHint": "Die meisten Änderungen gelten sofort. Ändern sich Schreibberechtigte, Speicher oder Spiegel, startet der Server für ein paar Sekunden neu. Die vorherigen Einstellungen bleiben erhalten."
     },
     "nav": {
       "sections": "Bereiche",
@@ -101,7 +101,6 @@
       "profileHint": "Eine https://-Adresse mit {nip19} an der Stelle der Kennung.",
       "preview": "Vorschau",
       "previewTitle": "Dein Titel",
-      "previewVideo": "Ein Videotitel",
       "previewButton": "Hauptschaltfläche"
     },
     "pages": {

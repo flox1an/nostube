@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
 import {
   LINK_PRESETS,
-  addKeyToConfig,
   fromDraft,
   isKeyConnected,
   isRefHidden,
@@ -164,22 +163,9 @@ describe('link presets', () => {
   })
 })
 
-describe('connecting a key', () => {
+describe('a connected key', () => {
   const empty: AdminConfig = { ...config, creators: [], allowedWriters: [] }
   const KEY = 'b'.repeat(64)
-
-  it('makes the key creator and writer of an empty instance', () => {
-    const next = addKeyToConfig(empty, KEY)
-    expect(next.creators).toEqual([KEY])
-    expect(next.allowedWriters).toEqual([KEY])
-    expect(isKeyConnected(next, KEY)).toBe(true)
-  })
-
-  it('adds a key once and keeps the first creator first', () => {
-    const next = addKeyToConfig(addKeyToConfig(config, KEY), KEY)
-    expect(next.creators).toEqual([PK, KEY])
-    expect(next.allowedWriters).toEqual([PK, KEY])
-  })
 
   it('knows when a key still has to be connected', () => {
     expect(isKeyConnected(empty, KEY)).toBe(false)

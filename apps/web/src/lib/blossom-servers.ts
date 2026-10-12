@@ -1,7 +1,7 @@
 /**
  * Blossom server information and utilities for onboarding
  */
-import { getInstanceConfig } from '@nostube/core/instance-config'
+import { DEFAULT_BLOSSOM_SERVERS, getInstanceConfig } from '@nostube/core/instance-config'
 
 export interface BlossomServerInfo {
   url: string
@@ -125,9 +125,7 @@ const instanceOrigin = getInstanceConfig()?.origin
  * Default upload servers for new users. Instance build: only the instance's own Blossom
  * (same origin, ADR 0004), never a public server.
  */
-export const DEFAULT_UPLOAD_SERVERS = instanceOrigin
-  ? [instanceOrigin]
-  : ['https://blossom.primal.net', 'https://nostr.download', 'https://almond.slidestr.net']
+export const DEFAULT_UPLOAD_SERVERS = instanceOrigin ? [instanceOrigin] : DEFAULT_BLOSSOM_SERVERS
 
 /**
  * Default mirror servers for new users

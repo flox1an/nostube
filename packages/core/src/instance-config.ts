@@ -111,6 +111,16 @@ export const fillLinkTemplate = (template: string, nip19: string) =>
  */
 export const DEFAULT_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://index.hzrd149.com']
 
+/** Where the outbox mirrors an instance set up "into the Nostr network" (server ADR 0009). */
+export const NETWORK_MIRROR_RELAYS = ['wss://relay.nostu.be', 'wss://relay.primal.net', 'wss://nos.lol']
+
+/** The app's default Blossom upload servers; also the mirror preset of a channel identity. */
+export const DEFAULT_BLOSSOM_SERVERS = [
+  'https://blossom.primal.net',
+  'https://nostr.download',
+  'https://almond.slidestr.net',
+]
+
 export interface InstanceConfig {
   version: 1
   revision: number

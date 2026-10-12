@@ -145,19 +145,6 @@
         "wrongType": "Dieser Dateityp ist hier nicht erlaubt. Siehe die Formate oben."
       }
     },
-    "connect": {
-      "neededTitle": "Verbinde deinen Nostr-Schlüssel, um zu veröffentlichen",
-      "neededBody": "Die Instanz hat noch keinen Creator und niemanden, der hochladen darf. Verbinde den Schlüssel deines Nostr-Signers, um beides zu werden.",
-      "noSigner": "In diesem Browser wurde kein Nostr-Signer gefunden. Installiere eine NIP-07-Erweiterung (nos2x, Alby, …) und lade diese Seite neu.",
-      "connect": "Meinen Schlüssel verbinden",
-      "chooseTitle": "Wähle, wie deine Videos signiert werden",
-      "chooseBody": "Jedes Video wird mit einem Schlüssel signiert, deiner Identität auf Nostr. Lass diesen Server einen für dich verwahren oder nutze einen Schlüssel, den du schon hast. Du wählst einmal; ein späterer Wechsel ist noch nicht möglich.",
-      "managedTitle": "Verwalteter Schlüssel (Standard)",
-      "managedBody": "Dieser Server erzeugt einen Schlüssel, speichert ihn verschlüsselt und signiert für dich: Du brauchst nur dein Passwort. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls. Unter Konto kannst du ihn jederzeit exportieren.",
-      "createManaged": "Verwalteten Schlüssel erstellen",
-      "ownTitle": "Eigenen Schlüssel verwenden (NIP-07)",
-      "ownBody": "Die Signer-Erweiterung deines Browsers signiert. Der Server sieht deinen Schlüssel nie."
-    },
     "videos": {
       "title": "Videos",
       "description": "Die Website zeigt alle Videos deiner Creator außer denen, die du hier ausblendest. Neue Uploads erscheinen von selbst.",
@@ -406,6 +393,56 @@
         "reserve": "Freier Speicher als Reserve",
         "mirrorRelays": "Spiegel-Relays",
         "mirrorBlossom": "Spiegel-Blossom-Server"
+      }
+    },
+    "onboarding": {
+      "title": "Instanz einrichten",
+      "stepOf": "Schritt {{step}} von {{total}}",
+      "steps": {
+        "identity": "Identität",
+        "publishing": "Veröffentlichen",
+        "site": "Seite",
+        "summary": "Übersicht"
+      },
+      "back": "Zurück",
+      "next": "Weiter",
+      "finish": "Fertigstellen",
+      "finishing": "Wird eingerichtet…",
+      "identity": {
+        "intro": "Jedes Video wird mit einem Nostr-Schlüssel signiert. Wähle, wessen Schlüssel das ist.",
+        "ownTitle": "Eigene Identität",
+        "ownBody": "Videos erscheinen unter deinem eigenen Nostr-Schlüssel, signiert von deiner Browser-Erweiterung (NIP-07). Der Schlüssel wird auch dein Login-Schlüssel; dein Passwort funktioniert weiter.",
+        "channelTitle": "Kanal-Identität",
+        "channelBody": "Dieser Server erzeugt einen Schlüssel für den Kanal und bewahrt ihn verschlüsselt auf. Du brauchst nur dein Passwort; unter Konto kannst du den Schlüssel später exportieren.",
+        "loginWithNostr": "Ich melde mich mit meinem Nostr-Schlüssel an",
+        "noExtension": "Du hast schon einen Nostr-Schlüssel? Installiere eine Erweiterung wie nos2x oder Alby und lade neu."
+      },
+      "publishing": {
+        "intro": "Wohin sollen deine Videos? Nichts wird anderswohin kopiert, wenn du es nicht wählst.",
+        "localTitle": "Nur diese Instanz",
+        "localBody": "Nichts verlässt diesen Server. Profile werden nur hier nachgeschlagen.",
+        "networkTitle": "Ins Nostr-Netzwerk",
+        "networkBody": "Video-Events werden auf öffentliche Relays kopiert, Profile auf öffentlichen Relays nachgeschlagen.",
+        "networkChannel": "Auch die Videodateien werden auf öffentliche Blossom-Server kopiert.",
+        "networkOwn": "Die Videodateien bleiben auf dieser Instanz; nur die Video-Events werden verteilt (Dateien kopieren braucht die Kanal-Identität).",
+        "advanced": "Erweitert",
+        "mirrorRelays": "Spiegel-Relays",
+        "mirrorBlossom": "Blossom-Spiegelserver",
+        "profileRelays": "Relays für Profilsuche",
+        "oneLine": "Einer pro Zeile."
+      },
+      "site": {
+        "appearance": "Nach der Einrichtung legst du <link>Farben, Schrift und Branding</link> auf der Seite Aussehen fest."
+      },
+      "summary": {
+        "identity": "Identität",
+        "login": "Anmeldung",
+        "loginNostr": "Passwort oder Nostr-Schlüssel",
+        "loginPassword": "Passwort",
+        "none": "keine",
+        "localOnly": "nur diese Instanz",
+        "freeDisk": "Freier Speicherplatz",
+        "hint": "Fertigstellen erzeugt bei Bedarf den Schlüssel, speichert alles auf einmal und startet den Server für ein paar Sekunden neu."
       }
     }
   }

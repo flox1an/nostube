@@ -71,6 +71,14 @@ _Avoid_: setup link, invite, setup password
 The creator key the instance generates, keeps encrypted and signs with for the studio (ADR 0007). Only the admin session can have it sign; it is a creator and allowed writer only through the config, like any other key, and gives no admin rights. Its profile (kind 0) is derived by the server from the site title, tagline, logo and banner and republished only when that content changes; with the owner's own key the server never signs a profile.
 _Avoid_: server key, instance key, admin key
 
+**Own identity** (eigene Identität):
+The creator identity in which videos are published under the owner's own Nostr key, signed in the browser (NIP-07). The first-run wizard makes that key creator, allowed writer and bound login key, and copies the owner's existing profile (kind 0) unchanged to the instance relay. Blobs are not mirrored: that needs the managed key (ADR 0009). Code: `own`.
+_Avoid_: own key mode, external signer
+
+**Channel identity** (Kanal-Identität):
+The creator identity in which videos are published under the managed key; its profile is derived from the site settings. Logging in with a Nostr key is optional and binds the owner's key as login key only. Code: `managed`.
+_Avoid_: server identity, managed mode
+
 **Public config**:
 The versioned JSON of non-secret instance settings the frontend loads before building loaders.
 _Avoid_: runtime env, settings file

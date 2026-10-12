@@ -145,19 +145,6 @@
         "wrongType": "Este tipo de archivo no está permitido aquí. Consulta los formatos de arriba."
       }
     },
-    "connect": {
-      "neededTitle": "Conecta tu clave Nostr para publicar",
-      "neededBody": "La instancia aún no tiene creador ni nadie con permiso para subir. Conecta la clave de tu firmante Nostr para ser ambas cosas.",
-      "noSigner": "No se encontró ningún firmante Nostr en este navegador. Instala una extensión NIP-07 (nos2x, Alby, …) y recarga esta página.",
-      "connect": "Conectar mi clave",
-      "chooseTitle": "Elige cómo se firman tus videos",
-      "chooseBody": "Cada video se firma con una clave, tu identidad en Nostr. Deja que este servidor guarde una por ti o usa una clave que ya tengas. Eliges una vez; todavía no se puede cambiar después.",
-      "managedTitle": "Clave gestionada (predeterminada)",
-      "managedBody": "Este servidor crea una clave, la guarda cifrada y firma por ti: solo necesitas tu contraseña. Quien se apodere del servidor también obtiene la clave. Puedes exportarla en cualquier momento en Cuenta.",
-      "createManaged": "Crear una clave gestionada",
-      "ownTitle": "Usar mi propia clave (NIP-07)",
-      "ownBody": "Firma la extensión de firma de tu navegador. El servidor nunca ve tu clave."
-    },
     "videos": {
       "title": "Videos",
       "description": "El sitio muestra todos los videos de tus creadores excepto los que ocultes aquí. Las nuevas subidas aparecen solas.",
@@ -407,6 +394,56 @@
         "reserve": "Reserva de espacio libre",
         "mirrorRelays": "Relays de réplica",
         "mirrorBlossom": "Servidores Blossom de réplica"
+      }
+    },
+    "onboarding": {
+      "title": "Configura tu instancia",
+      "stepOf": "Paso {{step}} de {{total}}",
+      "steps": {
+        "identity": "Identidad",
+        "publishing": "Publicación",
+        "site": "Sitio",
+        "summary": "Resumen"
+      },
+      "back": "Atrás",
+      "next": "Siguiente",
+      "finish": "Finalizar",
+      "finishing": "Configurando…",
+      "identity": {
+        "intro": "Cada vídeo se firma con una clave Nostr. Elige de quién es la clave.",
+        "ownTitle": "Identidad propia",
+        "ownBody": "Los vídeos se publican con tu propia clave Nostr, firmados por la extensión de tu navegador (NIP-07). La clave también será tu clave de acceso; tu contraseña sigue funcionando.",
+        "channelTitle": "Identidad de canal",
+        "channelBody": "Este servidor crea una clave para el canal y la guarda cifrada. Solo necesitas tu contraseña; puedes exportar la clave más tarde en Cuenta.",
+        "loginWithNostr": "Inicio sesión con mi clave Nostr",
+        "noExtension": "¿Ya tienes una clave Nostr? Instala una extensión como nos2x o Alby y recarga la página."
+      },
+      "publishing": {
+        "intro": "¿A dónde deben ir tus vídeos? Nada se copia a otro sitio si no lo eliges.",
+        "localTitle": "Solo esta instancia",
+        "localBody": "Nada sale de este servidor. Los perfiles se buscan solo aquí.",
+        "networkTitle": "A la red Nostr",
+        "networkBody": "Los eventos de vídeo se copian a relays públicos y los perfiles se buscan en relays públicos.",
+        "networkChannel": "Los archivos de vídeo también se copian a servidores Blossom públicos.",
+        "networkOwn": "Los archivos de vídeo se quedan en esta instancia; solo se distribuyen los eventos de vídeo (copiar archivos requiere la identidad de canal).",
+        "advanced": "Avanzado",
+        "mirrorRelays": "Relays espejo",
+        "mirrorBlossom": "Servidores espejo Blossom",
+        "profileRelays": "Relays para buscar perfiles",
+        "oneLine": "Uno por línea."
+      },
+      "site": {
+        "appearance": "Tras la configuración, ajusta <link>colores, fuente e imagen de marca</link> en la página Apariencia."
+      },
+      "summary": {
+        "identity": "Identidad",
+        "login": "Inicio de sesión",
+        "loginNostr": "Contraseña o clave Nostr",
+        "loginPassword": "Contraseña",
+        "none": "ninguno",
+        "localOnly": "solo esta instancia",
+        "freeDisk": "Espacio libre en disco",
+        "hint": "Finalizar crea la clave si hace falta, guarda todo de una vez y reinicia el servidor unos segundos."
       }
     }
   }

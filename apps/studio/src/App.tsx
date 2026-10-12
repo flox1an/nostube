@@ -6,7 +6,8 @@ import { Button } from '@nostube/widgets/components/button'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AccountPage } from './AccountPage'
 import { AppearancePage } from './AppearancePage'
-import { ConnectKey } from './ConnectKey'
+import { Onboarding } from './OnboardingWizard'
+import { needsOnboarding } from './onboarding-config'
 import { InstancePage } from './InstancePage'
 import { Nav } from './Nav'
 import { OverviewPage } from './OverviewPage'
@@ -23,7 +24,7 @@ import {
   type AdminConfig,
   type AdminState,
 } from './api'
-import { addKeyToConfig, fromDraft, toDraft, type Draft } from './draft'
+import { fromDraft, toDraft, type Draft } from './draft'
 import { PAGES, useRoute } from './route'
 import { SignerProvider } from './signer-context'
 
@@ -90,7 +91,13 @@ export function App() {
       : (config.creators[0] ?? null)
   return (
     <SignerProvider creatorKey={creatorKey}>
-      <Studio state={phase.state} reload={load} />
+      {needsOnboarding(config) ? (
+        <Shell onLogout={() => void signOut()}>
+          <Onboarding state={phase.state} onFinished={() => location.reload()} />
+        </Shell>
+      ) : (
+        <Studio state={phase.state} reload={load} />
+      )}
     </SignerProvider>
   )
 }
@@ -188,15 +195,6 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
     setConfig(next)
     setDraft(d => ({ ...d, hiddenText }))
   }
-
-  // Pending edits go along (this is a save like any other, with one more entry in two lists);
-  // if they do not validate, only the key is added to what is saved.
-  const connectKey = (pubkey: string) => apply(addKeyToConfig(result.config ?? config, pubkey))
-
-  const banner = (
-    <ConnectKey config={state.config} onConnected={connectKey} busy={saving !== null} />
-  )
-
   return (
     <Shell onLogout={() => void signOut()}>
       <Nav page={page} onNavigate={navigate} />
@@ -217,11 +215,11 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       )}
 
       {page === 'videos' && (
-        <VideosPage hiddenText={draft.hiddenText} onHiddenChange={saveHidden} banner={banner} />
+        <VideosPage hiddenText={draft.hiddenText} onHiddenChange={saveHidden} />
       )}
       {page === 'upload' && (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <UploadPage state={state} banner={banner} />
+          <UploadPage state={state} />
         </Suspense>
       )}
       {page === 'appearance' && (
@@ -238,7 +236,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       {page === 'overview' && <OverviewPage />}
       {page === 'moderation' && (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <ModerationPage state={state} banner={banner} />
+          <ModerationPage state={state} />
         </Suspense>
       )}
 

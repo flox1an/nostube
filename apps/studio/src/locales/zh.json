@@ -145,19 +145,6 @@
         "wrongType": "此处不允许该文件类型。请参见上方的格式。"
       }
     },
-    "connect": {
-      "neededTitle": "连接你的 Nostr 密钥以发布",
-      "neededBody": "该实例还没有创作者，也没有人被允许上传。连接你的 Nostr 签名器密钥，即可同时成为两者。",
-      "noSigner": "此浏览器中未找到 Nostr 签名器。请安装 NIP-07 扩展（nos2x、Alby 等）并重新加载此页面。",
-      "connect": "连接我的密钥",
-      "chooseTitle": "选择视频的签名方式",
-      "chooseBody": "每个视频都用一个密钥签名，它就是你在 Nostr 上的身份。可以让此服务器为你保管密钥，也可以使用你已有的密钥。只需选择一次；目前还不能在之后切换。",
-      "managedTitle": "托管密钥（默认）",
-      "managedBody": "此服务器生成密钥，加密保存并替你签名：你只需要密码。控制了服务器的人也会得到这个密钥。你可以随时在“账户”中导出它。",
-      "createManaged": "创建托管密钥",
-      "ownTitle": "使用我自己的密钥（NIP-07）",
-      "ownBody": "由浏览器的签名扩展签名。服务器永远看不到你的密钥。"
-    },
     "videos": {
       "title": "视频",
       "description": "网站会显示你的创作者的所有视频，除了你在这里隐藏的视频。新上传的视频会自动出现。",
@@ -405,6 +392,56 @@
         "reserve": "预留可用空间",
         "mirrorRelays": "镜像中继",
         "mirrorBlossom": "镜像 Blossom 服务器"
+      }
+    },
+    "onboarding": {
+      "title": "设置你的实例",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "steps": {
+        "identity": "身份",
+        "publishing": "发布",
+        "site": "站点",
+        "summary": "概览"
+      },
+      "back": "返回",
+      "next": "下一步",
+      "finish": "完成",
+      "finishing": "正在设置…",
+      "identity": {
+        "intro": "每个视频都用一个 Nostr 密钥签名。请选择使用谁的密钥。",
+        "ownTitle": "自有身份",
+        "ownBody": "视频以你自己的 Nostr 密钥发布，由浏览器扩展（NIP-07）签名。该密钥也会成为你的登录密钥；密码依然有效。",
+        "channelTitle": "频道身份",
+        "channelBody": "此服务器为频道创建一个密钥并加密保存。你只需要密码；之后可在“账户”中导出该密钥。",
+        "loginWithNostr": "我使用我的 Nostr 密钥登录",
+        "noExtension": "已经有 Nostr 密钥？请安装 nos2x 或 Alby 等扩展后重新加载。"
+      },
+      "publishing": {
+        "intro": "你的视频要发布到哪里？除非你选择，否则不会复制到其他地方。",
+        "localTitle": "仅此实例",
+        "localBody": "所有内容都不离开此服务器。仅在此处查找个人资料。",
+        "networkTitle": "发布到 Nostr 网络",
+        "networkBody": "视频事件会复制到公共中继，并在公共中继上查找个人资料。",
+        "networkChannel": "视频文件也会复制到公共 Blossom 服务器。",
+        "networkOwn": "视频文件保留在此实例上；只分发视频事件（复制文件需要频道身份）。",
+        "advanced": "高级",
+        "mirrorRelays": "镜像中继",
+        "mirrorBlossom": "Blossom 镜像服务器",
+        "profileRelays": "个人资料查找中继",
+        "oneLine": "每行一个。"
+      },
+      "site": {
+        "appearance": "设置完成后，可在“外观”页面设置<link>颜色、字体和品牌</link>。"
+      },
+      "summary": {
+        "identity": "身份",
+        "login": "登录",
+        "loginNostr": "密码或 Nostr 密钥",
+        "loginPassword": "密码",
+        "none": "无",
+        "localOnly": "仅此实例",
+        "freeDisk": "可用磁盘空间",
+        "hint": "“完成”会在需要时创建密钥，一次性保存所有设置，并让服务器重启几秒钟。"
       }
     }
   }

@@ -145,19 +145,6 @@
         "wrongType": "Ce type de fichier n'est pas autorisé ici. Voir les formats ci-dessus."
       }
     },
-    "connect": {
-      "neededTitle": "Connectez votre clé Nostr pour publier",
-      "neededBody": "L'instance n'a encore aucun créateur ni personne autorisée à mettre en ligne. Connectez la clé de votre signataire Nostr pour devenir les deux.",
-      "noSigner": "Aucun signataire Nostr n'a été trouvé dans ce navigateur. Installez une extension NIP-07 (nos2x, Alby, …) et rechargez cette page.",
-      "connect": "Connecter ma clé",
-      "chooseTitle": "Choisissez comment vos vidéos sont signées",
-      "chooseBody": "Chaque vidéo est signée avec une clé, votre identité sur Nostr. Laissez ce serveur en garder une pour vous, ou utilisez une clé que vous avez déjà. Vous choisissez une fois ; changer plus tard n'est pas encore possible.",
-      "managedTitle": "Clé gérée (par défaut)",
-      "managedBody": "Ce serveur crée une clé, la garde chiffrée et signe pour vous : votre mot de passe suffit. Quiconque prend le contrôle du serveur obtient aussi la clé. Vous pouvez l'exporter à tout moment dans Compte.",
-      "createManaged": "Créer une clé gérée",
-      "ownTitle": "Utiliser ma propre clé (NIP-07)",
-      "ownBody": "L'extension de signature de votre navigateur signe. Le serveur ne voit jamais votre clé."
-    },
     "videos": {
       "title": "Vidéos",
       "description": "Le site affiche toutes les vidéos de vos créateurs, sauf celles que vous masquez ici. Les nouvelles mises en ligne apparaissent d'elles-mêmes.",
@@ -407,6 +394,56 @@
         "reserve": "Réserve d'espace libre",
         "mirrorRelays": "Relais miroirs",
         "mirrorBlossom": "Serveurs Blossom miroirs"
+      }
+    },
+    "onboarding": {
+      "title": "Configurer votre instance",
+      "stepOf": "Étape {{step}} sur {{total}}",
+      "steps": {
+        "identity": "Identité",
+        "publishing": "Publication",
+        "site": "Site",
+        "summary": "Résumé"
+      },
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "finishing": "Configuration…",
+      "identity": {
+        "intro": "Chaque vidéo est signée avec une clé Nostr. Choisissez à qui appartient cette clé.",
+        "ownTitle": "Identité propre",
+        "ownBody": "Les vidéos sont publiées sous votre propre clé Nostr, signées par l'extension de votre navigateur (NIP-07). La clé devient aussi votre clé de connexion ; votre mot de passe reste valable.",
+        "channelTitle": "Identité de chaîne",
+        "channelBody": "Ce serveur crée une clé pour la chaîne et la conserve chiffrée. Votre mot de passe suffit ; vous pourrez exporter la clé plus tard sous Compte.",
+        "loginWithNostr": "Je me connecte avec ma clé Nostr",
+        "noExtension": "Vous avez déjà une clé Nostr ? Installez une extension comme nos2x ou Alby et rechargez la page."
+      },
+      "publishing": {
+        "intro": "Où vos vidéos doivent-elles aller ? Rien n'est copié ailleurs sans votre choix.",
+        "localTitle": "Uniquement cette instance",
+        "localBody": "Rien ne quitte ce serveur. Les profils sont recherchés uniquement ici.",
+        "networkTitle": "Dans le réseau Nostr",
+        "networkBody": "Les événements vidéo sont copiés vers des relais publics et les profils sont recherchés sur des relais publics.",
+        "networkChannel": "Les fichiers vidéo sont aussi copiés vers des serveurs Blossom publics.",
+        "networkOwn": "Les fichiers vidéo restent sur cette instance ; seuls les événements vidéo sont diffusés (copier les fichiers nécessite l'identité de chaîne).",
+        "advanced": "Avancé",
+        "mirrorRelays": "Relais miroirs",
+        "mirrorBlossom": "Serveurs miroirs Blossom",
+        "profileRelays": "Relais de recherche de profils",
+        "oneLine": "Un par ligne."
+      },
+      "site": {
+        "appearance": "Après la configuration, réglez <link>couleurs, police et image de marque</link> sur la page Apparence."
+      },
+      "summary": {
+        "identity": "Identité",
+        "login": "Connexion",
+        "loginNostr": "Mot de passe ou clé Nostr",
+        "loginPassword": "Mot de passe",
+        "none": "aucun",
+        "localOnly": "cette instance uniquement",
+        "freeDisk": "Espace disque libre",
+        "hint": "Terminer crée la clé si nécessaire, enregistre tout en une fois et redémarre le serveur quelques secondes."
       }
     }
   }

@@ -16,7 +16,7 @@ import { loadStats, type AdminStats } from './api'
 const UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'] as const
 
 /** Binary steps with the usual unit names, as the upload page shows file sizes. */
-function bytesText(bytes: number, locale?: string) {
+export function bytesText(bytes: number, locale?: string) {
   let value = bytes
   let unit = 0
   while (value >= 1024 && unit < UNITS.length - 1) {

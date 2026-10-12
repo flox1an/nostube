@@ -79,7 +79,7 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
 async function renderPage(state: AdminState) {
   render(
     <SignerProvider creatorKey={state.config.creators[0] ?? null}>
-      <UploadPage state={state} banner={null} />
+      <UploadPage state={state} />
     </SignerProvider>
   )
   const input = (await screen.findByLabelText('Video file')) as HTMLInputElement

@@ -12,12 +12,12 @@ import {
 } from '@/lib/blossom-upload'
 import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
 import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
-import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
+import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import {
   rewriteHlsPlaylists,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
-} from '@/lib/video-transcode'
+} from '@nostube/core/video-transcode'
 import {
   getBrowserTranscodeJob,
   removeBrowserTranscodeJob,

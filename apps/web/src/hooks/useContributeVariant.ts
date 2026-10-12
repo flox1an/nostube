@@ -8,8 +8,8 @@ import {
   availableResolutions,
   buildVariants,
   type BrowserTranscodeVariant,
-} from '@/lib/video-transcode'
-import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
+} from '@nostube/core/video-transcode'
+import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import { uploadAndProcessFile } from '@/lib/transcode-upload'
 import type { VideoVariant as UploadedVideoVariant } from '@/lib/video-processing'
 import type { VideoVariant } from '@nostube/core/video-event'

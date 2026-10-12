@@ -1,4 +1,3 @@
-import { getCodecsFromFile } from './codec-detection'
 import type { VideoCodec } from 'mediabunny'
 
 export const BITRATE_CUTOFF_MBPS = 8
@@ -43,65 +42,6 @@ export interface BrowserTranscodeVariant {
   label: string
   passthrough?: boolean
   qualityPreset?: BrowserTranscodeQualityPreset
-}
-
-export async function probeTranscodeSource(file: File): Promise<TranscodeSourceMeta> {
-  const { width, height, duration } = await probeVideoDimensions(file)
-
-  let videoCodec: string | undefined
-  let bitrateMbps = duration > 0 ? (file.size * 8) / (duration * 1_000_000) : 0
-
-  try {
-    const codecInfo = await getCodecsFromFile(file)
-    videoCodec = codecInfo.videoCodec
-    if (codecInfo.bitrate && codecInfo.bitrate > 0) {
-      bitrateMbps = codecInfo.bitrate / 1_000_000
-    }
-  } catch {
-    // Codec probing only works reliably for MP4; dimensions/duration above still guide the UI.
-  }
-
-  return {
-    width,
-    height,
-    duration,
-    sizeMB: file.size / (1024 * 1024),
-    bitrateMbps,
-    videoCodec,
-    mimeType: file.type,
-  }
-}
-
-async function probeVideoDimensions(
-  file: File
-): Promise<{ width: number; height: number; duration: number }> {
-  const url = URL.createObjectURL(file)
-  const video = document.createElement('video')
-  video.muted = true
-  video.preload = 'metadata'
-  video.src = url
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error('Video metadata timeout')), 10_000)
-      video.onloadedmetadata = () => {
-        window.clearTimeout(timeout)
-        resolve()
-      }
-      video.onerror = () => {
-        window.clearTimeout(timeout)
-        reject(new Error('Failed to read video metadata'))
-      }
-    })
-
-    return {
-      width: video.videoWidth,
-      height: video.videoHeight,
-      duration: video.duration,
-    }
-  } finally {
-    URL.revokeObjectURL(url)
-  }
 }
 
 function isCompatibleCodec(codec: string | undefined): boolean {
@@ -334,6 +274,62 @@ export function defaultSelectedTargetHeights(
 
 export function isWebCodecsSupported(): boolean {
   return typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined'
+}
+
+/** The one MP4 the studio turns a file into that it cannot publish as it is. */
+export const MP4_CONVERSION_VARIANT: BrowserTranscodeVariant = {
+  codec: 'avc',
+  targetHeight: PRIMARY_TARGET_HEIGHT,
+  format: 'mp4',
+  label: `${PRIMARY_TARGET_HEIGHT}p H.264`,
+}
+
+/** Why `probeMp4Conversion` rejected: its error's message. */
+export type Mp4ConversionProblem =
+  'noWebCodecs' | 'unreadableVideo' | 'cannotDecode' | 'cannotEncode'
+
+const conversionProblem = (problem: Mp4ConversionProblem) => new Error(problem)
+
+/**
+ * Reads a file with mediabunny rather than a `<video>` element, so containers the browser does not
+ * play (MOV, MKV, AVI) work too, and checks that this browser can decode it and encode
+ * `MP4_CONVERSION_VARIANT`. Rejects with an Error whose message is an `Mp4ConversionProblem`.
+ */
+export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMeta> {
+  if (!isWebCodecsSupported()) throw conversionProblem('noWebCodecs')
+  // Lazy: mediabunny is a large chunk that only files needing conversion load.
+  const { Input, ALL_FORMATS, BlobSource, canEncodeVideo } = await import('mediabunny')
+  const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) })
+  try {
+    const read = await input
+      .getPrimaryVideoTrack()
+      .then(async track => track && { track, duration: await input.computeDuration() })
+      .catch(() => null)
+    if (!read || !(read.duration > 0)) throw conversionProblem('unreadableVideo')
+    const { track, duration } = read
+    if (!(await track.canDecode())) throw conversionProblem('cannotDecode')
+    const meta: TranscodeSourceMeta = {
+      width: track.displayWidth,
+      height: track.displayHeight,
+      duration,
+      sizeMB: file.size / (1024 * 1024),
+      bitrateMbps: (file.size * 8) / (duration * 1_000_000),
+      videoCodec: (await track.getCodecParameterString()) ?? undefined,
+      mimeType: file.type,
+    }
+    const { width, height } = computeTargetDimensions(
+      meta.width,
+      meta.height,
+      MP4_CONVERSION_VARIANT.targetHeight
+    )
+    const bitrate = computeBrowserTranscodeVideoBitrate(width, height, 'balanced', meta)
+    if (!(await canEncodeVideo('avc', { width, height, bitrate }))) {
+      throw conversionProblem('cannotEncode')
+    }
+    return meta
+  } finally {
+    input.dispose()
+  }
 }
 
 export async function transcodeFile(

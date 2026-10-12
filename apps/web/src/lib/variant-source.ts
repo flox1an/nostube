@@ -1,4 +1,5 @@
-import { probeTranscodeSource, type TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
+import { probeTranscodeSource } from '@/lib/codec-detection'
 import type { VideoVariant } from '@nostube/core/video-event'
 
 /**

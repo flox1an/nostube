@@ -9,7 +9,7 @@ import type { BrowserTranscodeState, OriginalVideoInfo } from '@/types/upload-dr
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
 import type { UploadInfo } from '@/hooks/useVideoUpload'
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
 
 export interface UploadSourceScreenProps {
   draftId: string

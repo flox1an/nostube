@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUPPORTED_TYPES, fitWithin, probeVideo, thumbnailTime } from './probe-video'
+import { fitWithin, inspectVideo, thumbnailTime } from './probe-video'
 
 describe('thumbnailTime', () => {
   it('is a second in, a tenth of a short clip, and never negative', () => {
@@ -18,12 +18,10 @@ describe('fitWithin', () => {
   })
 })
 
-describe('probeVideo', () => {
-  it('names the formats that are not published yet before it reads anything', async () => {
-    expect(SUPPORTED_TYPES).toEqual(['video/mp4', 'video/webm'])
+describe('inspectVideo', () => {
+  it('says so when a file needs converting and the browser has no WebCodecs', async () => {
     await expect(
-      probeVideo(new File(['x'], 'clip.mov', { type: 'video/quicktime' }))
-    ).rejects.toThrow(/Only MP4 and WebM/)
-    await expect(probeVideo(new File(['x'], 'clip', { type: '' }))).rejects.toThrow(/unknown type/)
+      inspectVideo(new File(['x'], 'clip.mov', { type: 'video/quicktime' }))
+    ).rejects.toThrow(/cannot convert videos \(no WebCodecs\)/)
   })
 })

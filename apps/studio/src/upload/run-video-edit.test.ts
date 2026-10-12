@@ -20,6 +20,7 @@ const input: VideoEditInput = { title: 'Updated', description: 'Description', ta
 function deps(): UploadDeps {
   return {
     probe: vi.fn().mockResolvedValue({ width: 720, height: 1280, duration: 9 }),
+    convert: vi.fn(),
     hash: vi.fn().mockResolvedValue('newhash'),
     upload: vi
       .fn()

@@ -23,7 +23,7 @@ import { PeoplePickerSection } from './PeoplePickerSection'
 import { OriginManager } from './OriginManager'
 import { ProcessingRail } from './ProcessingRail'
 import { BrowserTranscodeStep } from './BrowserTranscodeStep'
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { UploadServer } from '../UploadServer'
 import { useToast } from '@/hooks/useToast'
 

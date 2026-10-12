@@ -3,7 +3,7 @@ import {
   transcodeToHls,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
-} from '@/lib/video-transcode'
+} from './video-transcode'
 
 type WorkerRequest =
   | {

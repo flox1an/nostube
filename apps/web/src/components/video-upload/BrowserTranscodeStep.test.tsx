@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { BrowserTranscodeStep } from './BrowserTranscodeStep'
-import type { TranscodeSourceMeta, ResolutionOption } from '@/lib/video-transcode'
+import type { TranscodeSourceMeta, ResolutionOption } from '@nostube/core/video-transcode'
 
 vi.mock('./TranscodeVariantPicker', () => ({
   TranscodeVariantPicker: () => <div data-testid="variant-picker" />,

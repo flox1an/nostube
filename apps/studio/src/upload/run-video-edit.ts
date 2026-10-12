@@ -2,6 +2,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { buildVideoUpdate, type VideoUpdateInput } from '@nostube/core/video-lifecycle'
 import { prepareSubtitleFile } from '@nostube/core/subtitle-utils'
 import type { UploadedBlob } from '@nostube/core/video-publish'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import type { UploadDeps } from './run-upload'
 import type { VideoProbe } from './probe-video'
 import i18n from '../i18n'
@@ -18,6 +19,8 @@ export interface VideoEditInput extends Omit<
   'video' | 'subtitles' | 'thumbnail'
 > {
   file?: File
+  /** Set when `file` is converted to MP4 before it is uploaded: what was read from it. */
+  convert?: TranscodeSourceMeta
   thumbnail?: Blob | null
   subtitles?: EditSubtitle[]
 }
@@ -26,6 +29,7 @@ interface CachedAsset {
   uploaded?: UploadedBlob
   offset?: number
   prepared?: File
+  converted?: File
   probe?: VideoProbe
 }
 /** Keyed by file identity: changing metadata never invalidates successful uploads. */
@@ -37,7 +41,8 @@ export async function runVideoEdit(
   input: VideoEditInput,
   deps: UploadDeps,
   cache: VideoEditCache,
-  onProgress: (done: number, total: number) => void = () => {}
+  onProgress: (done: number, total: number) => void = () => {},
+  signal?: AbortSignal
 ) {
   // Author/coordinate checks precede expensive work and are repeated on the latest event at publish.
   buildVideoUpdate(getCurrent(), pubkey, { ...input, thumbnail: undefined, subtitles: undefined })
@@ -51,7 +56,7 @@ export async function runVideoEdit(
   }
   const upload = async (key: Blob, blob: Blob, name: string, type: string) => {
     const entry = asset(key)
-    entry.hash ??= await deps.hash(blob, onProgress)
+    entry.hash ??= await deps.hash(blob, onProgress, signal)
     entry.uploaded ??= await deps.upload({
       blob,
       name,
@@ -62,19 +67,24 @@ export async function runVideoEdit(
       onOffset: offset => {
         entry.offset = offset
       },
+      signal,
     })
     return entry.uploaded
   }
   let video: VideoUpdateInput['video']
   if (input.file) {
     const entry = asset(input.file)
-    entry.probe ??= await deps.probe(input.file)
-    const uploaded = await upload(input.file, input.file, input.file.name, input.file.type)
+    if (input.convert) {
+      entry.converted ??= await deps.convert(input.file, input.convert, onProgress, signal)
+    }
+    const file = entry.converted ?? input.file
+    entry.probe ??= await deps.probe(file)
+    const uploaded = await upload(file, file, file.name, file.type)
     video = {
       ...uploaded,
-      sha256: entry.hash!,
-      size: input.file.size,
-      type: uploaded.type || input.file.type,
+      sha256: asset(file).hash!,
+      size: file.size,
+      type: uploaded.type || file.type,
       width: entry.probe.width,
       height: entry.probe.height,
       duration: entry.probe.duration,

@@ -6,7 +6,7 @@ import {
   computeTargetDimensions,
   type ResolutionOption,
   type TranscodeSourceMeta,
-} from '@/lib/video-transcode'
+} from '@nostube/core/video-transcode'
 
 function estimateVariantSizeMB(height: number, sourceMeta: TranscodeSourceMeta): number {
   const { width, height: h } = computeTargetDimensions(sourceMeta.width, sourceMeta.height, height)

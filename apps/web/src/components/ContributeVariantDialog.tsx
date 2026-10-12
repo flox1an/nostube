@@ -30,7 +30,7 @@ import {
   isWebCodecsSupported,
   type ResolutionOption,
   type TranscodeSourceMeta,
-} from '@/lib/video-transcode'
+} from '@nostube/core/video-transcode'
 import { isMp4VideoVariant, type VideoEvent, type VideoVariant } from '@nostube/core/video-event'
 
 function normalizeServerUrl(url: string): string {

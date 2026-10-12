@@ -17,6 +17,7 @@ import { FileDropzone } from '@nostube/widgets/components/FileDropzone'
 import { ThumbnailSection } from '@nostube/widgets/components/ThumbnailSection'
 import { SubtitleSection } from '@nostube/widgets/components/SubtitleSection'
 import { detectLanguageFromFilename, generateSubtitleId } from '@nostube/core/subtitle-utils'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { Input } from '@nostube/widgets/components/input'
 import { Progress } from '@nostube/widgets/components/progress'
 import { Textarea } from '@nostube/widgets/components/textarea'
@@ -26,7 +27,7 @@ import { Field } from './fields'
 import { fromLocalInput, isFuture } from './datetime'
 import { hashFor } from './route'
 import { useSigner } from './signer-context'
-import { probeVideo, type VideoProbe } from './upload/probe-video'
+import { inspectVideo, VIDEO_ACCEPT, type VideoProbe } from './upload/probe-video'
 import { makeUploadDeps } from './upload/make-deps'
 import {
   isDone,
@@ -63,6 +64,8 @@ export default function UploadPage({ state }: { state: AdminState }) {
   const { signer, pubkey, mode } = useSigner()
   const [file, setFile] = useState<File | null>(null)
   const [probe, setProbe] = useState<VideoProbe | null>(null)
+  /** Set instead of `probe` for a file that is converted to MP4 before the upload. */
+  const [convert, setConvert] = useState<TranscodeSourceMeta | null>(null)
   const [probeError, setProbeError] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -73,6 +76,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
   const [running, setRunning] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const busy = useRef(false)
+  const abort = useRef<AbortController | null>(null)
   const selection = useRef(0)
   const [videoUrl, setVideoUrl] = useState<string>()
   const [thumbnail, setThumbnail] = useState<Blob | null>(null)
@@ -102,6 +106,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
     setJob(null)
     setNotice(null)
     setProbe(null)
+    setConvert(null)
     setProbeError(null)
     setThumbnail(null)
     setThumbnailSource('generated')
@@ -111,10 +116,11 @@ export default function UploadPage({ state }: { state: AdminState }) {
     setFile(chosen)
     setTitle(titleFromName(chosen.name))
     try {
-      const probed = await probeVideo(chosen)
+      const inspected = await inspectVideo(chosen)
       if (version !== selection.current) return
-      setThumbnail(probed.thumbnail)
-      setProbe(probed)
+      if (inspected.convert) return setConvert(inspected.convert)
+      setThumbnail(inspected.probe.thumbnail)
+      setProbe(inspected.probe)
     } catch (e) {
       if (version === selection.current) setProbeError(e instanceof Error ? e.message : String(e))
     }
@@ -125,7 +131,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
   const dateOk = isFuture(publishAt)
 
   const start = async () => {
-    if (!file || !probe || busy.current) return
+    if (!file || !(probe || convert) || busy.current) return
     busy.current = true
     setRunning(true)
     setNotice(null)
@@ -139,14 +145,18 @@ export default function UploadPage({ state }: { state: AdminState }) {
         description,
         tags,
         contentWarning: warning ? reason : undefined,
-        thumbnail,
+        // A converted file's still is taken from the MP4 made of it.
+        thumbnail: probe ? thumbnail : undefined,
         subtitles,
         publishAt,
+        convert: convert ?? undefined,
       }
+      abort.current = new AbortController()
       await runUpload(
-        job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe),
+        job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe ?? undefined),
         deps,
-        setJob
+        setJob,
+        abort.current.signal
       )
     } finally {
       busy.current = false
@@ -241,7 +251,12 @@ export default function UploadPage({ state }: { state: AdminState }) {
 
   const failed = job && STEPS.find(s => job.steps[s.id].status === 'error')
   const canStart =
-    !!file && !!probe && title.trim() !== '' && !running && dateOk && subtitles.every(s => s.lang)
+    !!file &&
+    !!(probe || convert) &&
+    title.trim() !== '' &&
+    !running &&
+    dateOk &&
+    subtitles.every(s => s.lang)
   // Why the button is disabled, next to it; a file still being read says so at the file.
   const missing = !file
     ? t('studio.upload.needFile')
@@ -266,7 +281,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
           <Field id="file" label={t('studio.upload.file')}>
             <FileDropzone
               id="file"
-              accept={{ 'video/mp4': ['.mp4'], 'video/webm': ['.webm'] }}
+              accept={VIDEO_ACCEPT}
               disabled={running}
               onDrop={files => void choose(files[0])}
             />
@@ -277,9 +292,11 @@ export default function UploadPage({ state }: { state: AdminState }) {
               {probe &&
                 ` · ${probe.width}×${probe.height} · ${formatDuration(probe.duration)}` +
                   (probe.height > probe.width ? ` · ${t('studio.upload.vertical')}` : '')}
+              {convert &&
+                ` · ${convert.width}×${convert.height} · ${formatDuration(convert.duration)} · ${t('studio.upload.willConvert')}`}
             </p>
           )}
-          {file && !probeError && !probe && (
+          {file && !probeError && !probe && !convert && (
             <p className="text-sm text-muted-foreground">{t('studio.upload.reading')}</p>
           )}
           {probeError && (
@@ -414,7 +431,8 @@ export default function UploadPage({ state }: { state: AdminState }) {
         <Card>
           <CardContent className="space-y-3 pt-6">
             <ol className="space-y-2" aria-label={t('studio.upload.progress')}>
-              {STEPS.map(step => {
+              {/* The conversion only shows for a file that is converted. */}
+              {STEPS.filter(step => step.id !== 'convert' || job.input.convert).map(step => {
                 const s = job.steps[step.id]
                 const skipped =
                   s.status === 'done' &&
@@ -475,6 +493,11 @@ export default function UploadPage({ state }: { state: AdminState }) {
               ? t('studio.upload.retry')
               : t(publishAt ? 'studio.upload.schedule' : 'studio.upload.start')}
         </Button>
+        {running && (
+          <Button type="button" variant="outline" onClick={() => abort.current?.abort()}>
+            {t('studio.videos.cancel')}
+          </Button>
+        )}
         {!running && missing ? (
           <p className="text-sm text-muted-foreground">{missing}</p>
         ) : (

@@ -1,15 +1,17 @@
 import type { EventTemplate } from 'nostr-tools'
 import { buildVideoEvent, type UploadedBlob } from '@nostube/core/video-publish'
 import { prepareSubtitleFile } from '@nostube/core/subtitle-utils'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import i18n from '../i18n'
 import type { VideoProbe } from './probe-video'
 import { PublishError } from './sign'
 
-export type StepId = 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
+export type StepId = 'convert' | 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
 export type StepStatus = 'pending' | 'running' | 'done' | 'error'
 
 /** In order; the names shown are translated at render (`studio.upload.steps.*`). */
 export const STEPS: { id: StepId }[] = [
+  { id: 'convert' },
   { id: 'check' },
   { id: 'hash' },
   { id: 'video' },
@@ -30,6 +32,8 @@ export interface UploadInput {
   subtitles?: { id: string; file: File; lang: string }[]
   /** Unix seconds in the future: the server holds the signed event until then. */
   publishAt?: number
+  /** Set when the file is converted to MP4 before it is uploaded: what was read from it. */
+  convert?: TranscodeSourceMeta
 }
 
 export interface StepState {
@@ -57,6 +61,8 @@ export interface UploadJob {
   identifier: string
   steps: Record<StepId, StepState>
   probe?: VideoProbe
+  /** The MP4 made from a file that is converted; uploaded instead of it. */
+  converted?: File
   sha256?: string
   video?: UploadedBlob
   /** How many bytes of the video the server has (a chunked upload that failed halfway). */
@@ -71,7 +77,17 @@ export interface UploadJob {
 /** What the pipeline needs from the outside: the browser, the network and the signer. */
 export interface UploadDeps {
   probe(file: File): Promise<VideoProbe>
-  hash(blob: Blob, onProgress: (done: number, total: number) => void): Promise<string>
+  convert(
+    file: File,
+    source: TranscodeSourceMeta,
+    onProgress: (done: number, total: number) => void,
+    signal?: AbortSignal
+  ): Promise<File>
+  hash(
+    blob: Blob,
+    onProgress: (done: number, total: number) => void,
+    signal?: AbortSignal
+  ): Promise<string>
   upload(args: {
     blob: Blob
     name: string
@@ -81,12 +97,14 @@ export interface UploadDeps {
     /** Where a chunked upload continues (a retry), and where to report how far it got. */
     resumeFrom?: number
     onOffset?: (offset: number) => void
+    signal?: AbortSignal
   }): Promise<UploadedBlob>
   publish(template: EventTemplate): Promise<PublishedVideo>
   newIdentifier(): string
 }
 
 const pending = (): StepState => ({ status: 'pending' })
+const done = (): StepState => ({ status: 'done', progress: 1 })
 
 /** `probe`: the file was already checked when it was chosen, so that step starts out done. */
 export function newJob(
@@ -98,7 +116,8 @@ export function newJob(
     input,
     identifier: deps.newIdentifier(),
     steps: {
-      check: probe ? { status: 'done', progress: 1 } : pending(),
+      convert: input.convert ? pending() : done(),
+      check: probe ? done() : pending(),
       hash: pending(),
       video: pending(),
       thumbnail: pending(),
@@ -115,9 +134,11 @@ export function updateJobInput(job: UploadJob, input: UploadInput): UploadJob {
   const changed: UploadJob = { ...job, input, steps, published: undefined }
   if (input.file !== job.input.file) {
     changed.probe = undefined
+    changed.converted = undefined
     changed.sha256 = undefined
     changed.video = undefined
     changed.videoOffset = undefined
+    steps.convert = input.convert ? pending() : done()
     steps.check = pending()
     steps.hash = pending()
     steps.video = pending()
@@ -163,12 +184,14 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
 /**
  * Runs the steps that are not done yet, in order, and stops at the first one that fails (its
  * error is in the job). Run it again with the same job to continue: finished steps are not
- * repeated, so a failed publish does not upload the video a second time.
+ * repeated, so a failed publish does not upload the video a second time. `signal` cancels: the
+ * running step fails as cancelled, and a run again continues there.
  */
 export async function runUpload(
   job: UploadJob,
   deps: UploadDeps,
-  onChange: (job: UploadJob) => void
+  onChange: (job: UploadJob) => void,
+  signal?: AbortSignal
 ): Promise<UploadJob> {
   let current = job
   const set = (id: StepId, state: StepState) => {
@@ -186,37 +209,51 @@ export async function runUpload(
     if (current.steps[id].status === 'done') return true
     set(id, { status: 'running', progress: 0 })
     try {
+      signal?.throwIfAborted()
       await work()
       set(id, { status: 'done', progress: 1 })
       return true
     } catch (error) {
       set(id, {
         status: 'error',
-        error: messageOf(error),
+        error: signal?.aborted ? i18n.t('studio.upload.cancelled') : messageOf(error),
         detail: error instanceof PublishError ? error.detail : undefined,
       })
       return false
     }
   }
 
-  const { file } = current.input
+  const { file, convert } = current.input
 
-  if (!(await step('check', async () => update({ probe: await deps.probe(file) })))) return current
   if (
-    !(await step('hash', async () => update({ sha256: await deps.hash(file, progress('hash')) })))
+    !(await step('convert', async () =>
+      update({ converted: await deps.convert(file, convert!, progress('convert'), signal) })
+    ))
+  ) {
+    return current
+  }
+  const upload = current.converted ?? file
+  if (!(await step('check', async () => update({ probe: await deps.probe(upload) })))) {
+    return current
+  }
+  if (
+    !(await step('hash', async () =>
+      update({ sha256: await deps.hash(upload, progress('hash'), signal) })
+    ))
   ) {
     return current
   }
   if (
     !(await step('video', async () => {
       const video = await deps.upload({
-        blob: file,
-        name: file.name,
-        type: file.type,
+        blob: upload,
+        name: upload.name,
+        type: upload.type,
         sha256: current.sha256!,
         onProgress: progress('video'),
         resumeFrom: current.videoOffset,
         onOffset: offset => update({ videoOffset: offset }),
+        signal,
       })
       update({ video })
     }))
@@ -238,6 +275,7 @@ export async function runUpload(
         type,
         sha256,
         onProgress: progress('thumbnail'),
+        signal,
       })
       update({ thumbnail })
     }))
@@ -261,6 +299,7 @@ export async function runUpload(
           resumeFrom: current.subtitleOffsets?.[subtitle.id],
           onOffset: offset =>
             update({ subtitleOffsets: { ...current.subtitleOffsets, [subtitle.id]: offset } }),
+          signal,
         })
         update({ subtitles: { ...current.subtitles, [subtitle.id]: uploaded } })
       }
@@ -280,8 +319,8 @@ export async function runUpload(
       video: {
         ...video!,
         // The server's description should carry these; the file itself is the fallback.
-        size: video!.size || file.size,
-        type: video!.type || file.type,
+        size: video!.size || upload.size,
+        type: video!.type || upload.type,
         width: probe!.width,
         height: probe!.height,
         duration: probe!.duration,

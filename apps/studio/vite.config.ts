@@ -10,6 +10,8 @@ const proxied = { target: server, changeOrigin: true, secure: false }
 export default defineConfig({
   base: '/studio/',
   plugins: [react(), tailwindcss()],
+  // The conversion worker loads mediabunny as a chunk; only ES workers can split chunks.
+  worker: { format: 'es' },
   server: server
     ? {
         proxy: {

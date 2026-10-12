@@ -1,4 +1,7 @@
 import { generateEventLink } from '@nostube/core/video-event'
+import { MP4_CONVERSION_VARIANT } from '@nostube/core/video-transcode'
+import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
+import i18n from '../i18n'
 import { bootInstanceClient } from '../instance-client'
 import { scheduleVideo } from '../api'
 import type { Signer } from '../signer'
@@ -38,8 +41,27 @@ export function makeUploadDeps({
 }): UploadDeps {
   return {
     probe: probeVideo,
-    hash: (blob, onProgress) => sha256File(blob, onProgress),
-    upload: ({ blob, name, type, sha256, onProgress, resumeFrom, onOffset }) =>
+    convert: async (file, source, onProgress, signal = new AbortController().signal) => {
+      let failure: string | undefined
+      const result = await runBrowserTranscodeJob(
+        file,
+        [MP4_CONVERSION_VARIANT],
+        source,
+        ({ progress }) => onProgress(progress, 1),
+        (_, message) => (failure = message),
+        signal
+      ).catch((error: unknown) => {
+        if (failure === undefined || signal.aborted) throw error
+        throw new Error(i18n.t('studio.errors.conversionFailed', { reason: failure }))
+      })
+      // One MP4 variant: the worker answers with that one file.
+      const [converted] = result as File[]
+      return new File([converted], `${file.name.replace(/\.[^.]+$/, '')}.mp4`, {
+        type: 'video/mp4',
+      })
+    },
+    hash: (blob, onProgress, signal) => sha256File(blob, onProgress, signal),
+    upload: ({ blob, name, type, sha256, onProgress, resumeFrom, onOffset, signal }) =>
       uploadBlob({
         file: blob,
         fileName: name,
@@ -48,6 +70,7 @@ export function makeUploadDeps({
         onProgress,
         resumeFrom,
         onOffset,
+        signal,
         sign: template => signChecked(signer, template, pubkey),
       }),
     publish: async template => {

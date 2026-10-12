@@ -15,7 +15,7 @@ import { Field } from './fields'
 import { fromLocalInput, isFuture, toLocalInput } from './datetime'
 import { useSigner } from './signer-context'
 import { makeUploadDeps } from './upload/make-deps'
-import { probeVideo, type VideoProbe } from './upload/probe-video'
+import { inspectVideo, VIDEO_ACCEPT, type ChosenVideo } from './upload/probe-video'
 import type { PublishedVideo } from './upload/run-upload'
 import { runVideoEdit, type EditSubtitle, type VideoEditCache } from './upload/run-video-edit'
 import { PublishError } from './upload/sign'
@@ -46,7 +46,7 @@ export function VideoEditor({
   const [warning, setWarning] = useState(!!oldWarning)
   const [reason, setReason] = useState(oldWarning?.[1] ?? '')
   const [file, setFile] = useState<File | null>(null)
-  const [probe, setProbe] = useState<VideoProbe | null>(null)
+  const [inspected, setInspected] = useState<ChosenVideo | null>(null)
   const [reading, setReading] = useState(false)
   const [thumbnail, setThumbnail] = useState<Blob | null | undefined>()
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('upload')
@@ -70,6 +70,7 @@ export function VideoEditor({
   const [preview, setPreview] = useState<string>()
   const cache = useRef<VideoEditCache>(new Map())
   const busy = useRef(false)
+  const abort = useRef<AbortController | null>(null)
   const selection = useRef(0)
   const imeta = event.tags.filter(tag => tag[0] === 'imeta').flatMap(tag => tag.slice(1))
   const oldThumbnail =
@@ -96,15 +97,15 @@ export function VideoEditor({
     if (!chosen || busy.current) return
     const version = ++selection.current
     setFile(chosen)
-    setProbe(null)
+    setInspected(null)
     setReading(true)
     setError(null)
     setErrorDetail(undefined)
     try {
-      const result = await probeVideo(chosen)
+      const result = await inspectVideo(chosen)
       if (version !== selection.current) return
-      cache.current.set(chosen, { probe: result })
-      setProbe(result)
+      if (result.probe) cache.current.set(chosen, { probe: result.probe })
+      setInspected(result)
     } catch (e) {
       if (version === selection.current) setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -117,6 +118,7 @@ export function VideoEditor({
     setRunning(true)
     setError(null)
     setErrorDetail(undefined)
+    abort.current = new AbortController()
     try {
       const deps = makeUploadDeps({ signer, pubkey, title })
       await runVideoEdit(
@@ -128,6 +130,7 @@ export function VideoEditor({
           tags,
           contentWarning: warning ? reason : undefined,
           file: file ?? undefined,
+          convert: inspected?.convert,
           thumbnail,
           subtitles: subtitlesChanged ? subtitles : undefined,
         },
@@ -146,11 +149,16 @@ export function VideoEditor({
             ),
         },
         cache.current,
-        (done, total) => setProgress(total > 0 ? done / total : 0)
+        (done, total) => setProgress(total > 0 ? done / total : 0),
+        abort.current.signal
       )
       onClose()
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e)
+      const message = abort.current.signal.aborted
+        ? t('studio.upload.cancelled')
+        : e instanceof Error
+          ? e.message
+          : String(e)
       setError(
         ['authorMismatch', 'notAddressable', 'eventMissing'].includes(message)
           ? t(`studio.videos.${message}`)
@@ -168,7 +176,7 @@ export function VideoEditor({
     title.trim() !== '' &&
     !running &&
     !reading &&
-    (!replace || (!!file && !!probe)) &&
+    (!replace || (!!file && !!inspected)) &&
     subtitles.every(subtitle => subtitle.lang) &&
     (dueAt === undefined || (due !== undefined && isFuture(due)))
 
@@ -181,15 +189,17 @@ export function VideoEditor({
         <Field id={`${fieldPrefix}-file`} label={t('studio.upload.file')}>
           <FileDropzone
             id={`${fieldPrefix}-file`}
-            accept={{ 'video/mp4': ['.mp4'], 'video/webm': ['.webm'] }}
+            accept={VIDEO_ACCEPT}
             disabled={running}
             selectedFile={file}
             onDrop={files => void choose(files[0])}
           />
           {reading && <p role="status">{t('studio.upload.reading')}</p>}
-          {probe && (
+          {inspected && (
             <p className="text-sm text-muted-foreground">
-              {probe.width}×{probe.height} · {Math.round(probe.duration)}s
+              {inspected.probe
+                ? `${inspected.probe.width}×${inspected.probe.height} · ${Math.round(inspected.probe.duration)}s`
+                : `${inspected.convert.width}×${inspected.convert.height} · ${Math.round(inspected.convert.duration)}s · ${t('studio.upload.willConvert')}`}
             </p>
           )}
           <p className="text-sm text-muted-foreground">{t('studio.videos.replaceHint')}</p>
@@ -322,7 +332,11 @@ export function VideoEditor({
         <Button type="button" disabled={!canSave} onClick={() => void save()}>
           {error ? t('studio.upload.retry') : t('studio.videos.save')}
         </Button>
-        <Button type="button" variant="outline" disabled={running} onClick={onClose}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => (running ? abort.current?.abort() : onClose())}
+        >
           {t('studio.videos.cancel')}
         </Button>
       </div>

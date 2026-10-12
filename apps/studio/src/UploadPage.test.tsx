@@ -18,15 +18,19 @@ import './i18n'
 
 // The browser parts (decoding a video, hashing, the network) are replaced; the page, the signer
 // and the pipeline between them are the real ones.
-vi.mock('./upload/probe-video', async importOriginal => ({
-  ...(await importOriginal<typeof import('./upload/probe-video')>()),
-  probeVideo: vi.fn(async () => ({
+vi.mock('./upload/probe-video', async importOriginal => {
+  const probe = {
     width: 640,
     height: 360,
     duration: 3,
     thumbnail: new Blob(['jpeg'], { type: 'image/jpeg' }),
-  })),
-}))
+  }
+  return {
+    ...(await importOriginal<typeof import('./upload/probe-video')>()),
+    probeVideo: vi.fn(async () => probe),
+    inspectVideo: vi.fn(async () => ({ probe })),
+  }
+})
 vi.mock('./upload/sha256-file', () => ({ sha256File: vi.fn(async () => 'a'.repeat(64)) }))
 vi.mock('./upload/blossom-upload', () => ({
   uploadBlob: vi.fn(async ({ sha256, type }: { sha256: string; type: string }) => ({

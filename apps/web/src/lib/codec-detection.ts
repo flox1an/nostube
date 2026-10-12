@@ -1,5 +1,6 @@
 import * as MP4Box from 'mp4box'
 import type { Movie } from 'mp4box'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 
 export interface CodecInfo {
   videoCodec?: string
@@ -300,4 +301,63 @@ async function tryParseFromRange(
       }
     }
   })
+}
+
+export async function probeTranscodeSource(file: File): Promise<TranscodeSourceMeta> {
+  const { width, height, duration } = await probeVideoDimensions(file)
+
+  let videoCodec: string | undefined
+  let bitrateMbps = duration > 0 ? (file.size * 8) / (duration * 1_000_000) : 0
+
+  try {
+    const codecInfo = await getCodecsFromFile(file)
+    videoCodec = codecInfo.videoCodec
+    if (codecInfo.bitrate && codecInfo.bitrate > 0) {
+      bitrateMbps = codecInfo.bitrate / 1_000_000
+    }
+  } catch {
+    // Codec probing only works reliably for MP4; dimensions/duration above still guide the UI.
+  }
+
+  return {
+    width,
+    height,
+    duration,
+    sizeMB: file.size / (1024 * 1024),
+    bitrateMbps,
+    videoCodec,
+    mimeType: file.type,
+  }
+}
+
+async function probeVideoDimensions(
+  file: File
+): Promise<{ width: number; height: number; duration: number }> {
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.muted = true
+  video.preload = 'metadata'
+  video.src = url
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('Video metadata timeout')), 10_000)
+      video.onloadedmetadata = () => {
+        window.clearTimeout(timeout)
+        resolve()
+      }
+      video.onerror = () => {
+        window.clearTimeout(timeout)
+        reject(new Error('Failed to read video metadata'))
+      }
+    })
+
+    return {
+      width: video.videoWidth,
+      height: video.videoHeight,
+      duration: video.duration,
+    }
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }

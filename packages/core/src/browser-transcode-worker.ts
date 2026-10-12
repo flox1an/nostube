@@ -1,4 +1,4 @@
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from './video-transcode'
 
 export interface BrowserTranscodeJobProgress {
   variant?: BrowserTranscodeVariant
@@ -127,7 +127,7 @@ class BrowserTranscodeWorkerQueue {
 
   private getWorker() {
     if (!this.worker) {
-      this.worker = new Worker(new URL('../workers/browserTranscode.worker.ts', import.meta.url), {
+      this.worker = new Worker(new URL('./browser-transcode.worker.ts', import.meta.url), {
         type: 'module',
       })
       this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {

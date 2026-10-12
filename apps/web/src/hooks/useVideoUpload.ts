@@ -32,7 +32,7 @@ import {
   startBrowserTranscodeUploadJob,
   subscribeToBrowserTranscodeUploads,
 } from '@/lib/browser-transcode-upload-manager'
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import {
   detectLanguageFromFilename,

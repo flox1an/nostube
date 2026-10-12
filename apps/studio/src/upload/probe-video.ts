@@ -1,3 +1,4 @@
+import { probeMp4Conversion, type TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import i18n from '../i18n'
 
 /** What the page learns from a video file before it is uploaded. */
@@ -9,8 +10,11 @@ export interface VideoProbe {
   thumbnail: Blob
 }
 
-/** Which formats the first version publishes: the ones every browser plays without conversion. */
+/** Published as they are when this browser plays them; anything else is converted to MP4 first. */
 export const SUPPORTED_TYPES = ['video/mp4', 'video/webm']
+
+/** What the file picker offers: any video, plus extensions some systems give no video type. */
+export const VIDEO_ACCEPT = { 'video/*': ['.mp4', '.m4v', '.webm', '.mov', '.mkv', '.avi'] }
 
 const THUMBNAIL_WIDTH = 640
 const STEP_TIMEOUT_MS = 20_000
@@ -57,13 +61,6 @@ function once(target: HTMLVideoElement, event: string): Promise<void> {
  * message, and not after a long upload.
  */
 export async function probeVideo(file: File): Promise<VideoProbe> {
-  if (!SUPPORTED_TYPES.includes(file.type)) {
-    throw new Error(
-      file.type
-        ? i18n.t('studio.errors.unsupportedType', { type: file.type })
-        : i18n.t('studio.errors.unknownType')
-    )
-  }
   const url = URL.createObjectURL(file)
   const video = document.createElement('video')
   video.muted = true
@@ -98,4 +95,29 @@ export async function probeVideo(file: File): Promise<VideoProbe> {
     video.removeAttribute('src')
     video.load()
   }
+}
+
+/** A chosen file: published as it is (`probe`), or converted to MP4 first (`convert`). */
+export type ChosenVideo =
+  { probe: VideoProbe; convert?: undefined } | { probe?: undefined; convert: TranscodeSourceMeta }
+
+/**
+ * Decides how a chosen file is published. MP4 and WebM this browser plays go as they are; other
+ * containers (MOV, MKV, AVI) and codecs it cannot play (HEVC on some systems) are converted, which
+ * is checked here so that a browser that cannot convert says so before the upload.
+ */
+export async function inspectVideo(file: File): Promise<ChosenVideo> {
+  if (SUPPORTED_TYPES.includes(file.type)) {
+    try {
+      return { probe: await probeVideo(file) }
+    } catch {
+      // Not playable here: converting may still work.
+    }
+  }
+  const convert = await probeMp4Conversion(file).catch((error: unknown) => {
+    // The message is an Mp4ConversionProblem; anything else (a chunk that failed to load) as it is.
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(i18n.t(`studio.errors.${message}`, { defaultValue: message }))
+  })
+  return { convert }
 }

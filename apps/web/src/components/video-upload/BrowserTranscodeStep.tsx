@@ -11,7 +11,7 @@ import {
 import { Progress } from '@nostube/widgets/components/progress'
 import { ToggleGroup, ToggleGroupItem } from '@nostube/widgets/components/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
-import type { TranscodeSourceMeta } from '@/lib/video-transcode'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { formatDuration } from '@nostube/core/formatDuration'
 import {
   BROWSER_TRANSCODE_AUDIO_BITRATE,
@@ -23,8 +23,8 @@ import {
   defaultSelectedTargetHeights,
   type BrowserTranscodeQualityPreset,
   type ResolutionOption,
-} from '@/lib/video-transcode'
-import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
+} from '@nostube/core/video-transcode'
+import type { BrowserTranscodeVariant } from '@nostube/core/video-transcode'
 import { TranscodeVariantPicker } from '@/components/video-upload/TranscodeVariantPicker'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'

@@ -6,13 +6,13 @@ import {
   availableResolutions,
   defaultResolutions,
   isWebCodecsSupported,
-  probeTranscodeSource,
   type BrowserTranscodeVariant,
   type ResolutionOption,
   type TranscodeRecommendation,
   type TranscodeSourceMeta,
-} from '@/lib/video-transcode'
-import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
+} from '@nostube/core/video-transcode'
+import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
+import { probeTranscodeSource } from '@/lib/codec-detection'
 
 export type VideoTranscodeStatus =
   'idle' | 'analyzing' | 'waiting' | 'transcoding' | 'done' | 'error'

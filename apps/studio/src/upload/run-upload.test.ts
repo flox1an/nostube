@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
+import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import type { VideoProbe } from './probe-video'
 import {
   isDone,
@@ -21,11 +22,23 @@ const probe: VideoProbe = {
 }
 const file = new File(['video-bytes'], 'clip.mp4', { type: 'video/mp4' })
 const input = { file, title: 'A clip', description: 'About it', tags: ['travel'] }
+const mov = new File(['mov-bytes'], 'clip.mov', { type: 'video/quicktime' })
+const converted = new File(['mp4-bytes'], 'clip.mp4', { type: 'video/mp4' })
+const source: TranscodeSourceMeta = {
+  width: 3840,
+  height: 2160,
+  duration: 61.2,
+  sizeMB: 300,
+  bitrateMbps: 40,
+  videoCodec: 'hvc1.2.4.L153.B0',
+  mimeType: 'video/quicktime',
+}
 
 function deps(overrides: Partial<UploadDeps> = {}) {
   const calls: string[] = []
   const d: UploadDeps = {
     probe: vi.fn(async () => (calls.push('probe'), probe)),
+    convert: vi.fn(async () => (calls.push('convert'), converted)),
     hash: vi.fn(async blob => (calls.push('hash'), blob === probe.thumbnail ? THUMB_HASH : HASH)),
     upload: vi.fn(async ({ sha256, type }) => {
       calls.push(`upload:${type}`)
@@ -61,7 +74,9 @@ describe('runUpload', () => {
       'upload:image/jpeg',
       'publish',
     ])
-    expect(seen).toEqual(STEPS.map(s => s.id))
+    // A file published as it is has nothing to convert.
+    expect(seen).toEqual(STEPS.map(s => s.id).filter(id => id !== 'convert'))
+    expect(job.steps.convert.status).toBe('done')
     expect(isDone(job)).toBe(true)
     expect(job.published?.link).toBe('naddr1xyz')
     expect(job.video?.sha256).toBe(HASH)
@@ -262,5 +277,39 @@ describe('runUpload', () => {
     expect(template.tags).toContainEqual(['t', 'travel'])
     expect(template.tags).toContainEqual(['content-warning', 'nudity'])
     expect(template.tags.find((t: string[]) => t[0] === 'd')).toEqual(['d', 'clip-1'])
+  })
+
+  it('converts a file that needs it first, then checks and uploads the MP4', async () => {
+    const { d, calls } = deps()
+    const job = await run(newJob({ ...input, file: mov, convert: source }, d), d)
+    expect(calls.slice(0, 3)).toEqual(['convert', 'probe', 'hash'])
+    expect(d.convert).toHaveBeenCalledWith(mov, source, expect.any(Function), undefined)
+    expect(d.probe).toHaveBeenCalledWith(converted)
+    expect(vi.mocked(d.upload).mock.calls[0][0]).toMatchObject({
+      blob: converted,
+      name: 'clip.mp4',
+      type: 'video/mp4',
+    })
+    expect(isDone(job)).toBe(true)
+  })
+
+  it('marks the running step cancelled, and a run again continues there', async () => {
+    const controller = new AbortController()
+    const { d } = deps({
+      convert: vi.fn(async () => {
+        controller.abort()
+        throw new DOMException('Aborted', 'AbortError')
+      }),
+    })
+    const first = await runUpload(
+      newJob({ ...input, file: mov, convert: source }, d),
+      d,
+      () => {},
+      controller.signal
+    )
+    expect(first.steps.convert).toMatchObject({ status: 'error', error: 'Cancelled.' })
+    expect(first.steps.check.status).toBe('pending')
+    vi.mocked(d.convert).mockResolvedValueOnce(converted)
+    expect(isDone(await run(first, d))).toBe(true)
   })
 })

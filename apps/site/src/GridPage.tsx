@@ -127,10 +127,13 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
 export function SearchPage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
   const { t } = useTranslation()
   const query = (useSearchParams()[0].get('q') ?? '').trim()
-  const { videos, error, hasMore, fetching, loadMore } = useCreatorVideos(config)
+  const { videos, error, hasMore, pagesLoaded, loadMore } = useCreatorVideos(config)
+  // Page in the whole catalog, one page after the other (loadMore does nothing while one loads).
+  // Keyed on the page count, not on a loading flag: a page that starts and ends in one render
+  // batch never shows the flag, and paging would stop.
   useEffect(() => {
-    if (hasMore && !fetching && !error) loadMore()
-  }, [hasMore, fetching, error, loadMore])
+    if (hasMore && !error) loadMore()
+  }, [hasMore, error, loadMore, pagesLoaded])
   const found = useMemo(
     () => searchVideos(videos, query, v => (gate.isLocked(v) ? v.title : v.searchText)),
     [videos, query, gate]

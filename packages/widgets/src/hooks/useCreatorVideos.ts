@@ -10,8 +10,8 @@ export interface CreatorVideos {
   loading: boolean
   error: boolean
   hasMore: boolean
-  /** A page request is open (also after the first videos of it are shown). */
-  fetching: boolean
+  /** Finished page loads so far; changes after every page (to drive loading the whole catalog). */
+  pagesLoaded: number
   loadMore: () => void
 }
 
@@ -35,7 +35,7 @@ export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorV
         : undefined,
     [creator, tag]
   )
-  const { videos, isInitialLoading, phase, hasMore, subscriptionActive, loadMore } = useTimeline(
+  const { videos, isInitialLoading, phase, hasMore, pagesLoaded, loadMore } = useTimeline(
     filters,
     {
       relays: config.videoSources,
@@ -49,7 +49,7 @@ export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorV
     loading: isInitialLoading,
     error: phase === 'error',
     hasMore,
-    fetching: subscriptionActive,
+    pagesLoaded,
     loadMore,
   }
 }

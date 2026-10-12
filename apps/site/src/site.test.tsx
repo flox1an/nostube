@@ -4,7 +4,7 @@ import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
 import { nip19 } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
-import { EMPTY, NEVER, delay, of } from 'rxjs'
+import { EMPTY, NEVER, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
 import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
@@ -346,7 +346,9 @@ describe('SiteHome', () => {
         ['imeta', 'url https://media.example/d.mp4', 'm video/mp4', 'duration 30'],
       ],
     }
-    // Two pages, then nothing: a match on the second page is found too. Async, like relays.
+    // Two pages, then nothing: a match on the second page is found too. The pages complete
+    // synchronously (like a cache), so a page starts and ends within one render batch: paging
+    // must not wait for a loading flag to flip, or it stops after the first page.
     const pagedClient = () =>
       ({
         eventStore: makeStore(),
@@ -354,7 +356,7 @@ describe('SiteHome', () => {
           const pages = [[fresh()], [cafe, secret, gated]]
           return () => {
             const page = pages.shift()
-            return page ? of(...page).pipe(delay(1)) : EMPTY.pipe(delay(1))
+            return page ? of(...page) : EMPTY
           }
         },
         relayPool: { request: () => of(profile), subscription: () => NEVER },

@@ -12,14 +12,16 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import { Label } from '@nostube/widgets/components/label'
 import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
 import { useTranslation } from 'react-i18next'
+import { buildReportTags, type ReportReason } from '@nostube/core/reports'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
 
-type ReportReason = 'spam' | 'nudity' | 'profanity' | 'illegal' | 'impersonation' | 'harassment'
+/** This dialog's own reasons, a subset of the shared `ReportReason` union (no `other` here). */
+type WebReportReason = Exclude<ReportReason, 'other'>
 
-const REPORT_REASONS: Record<ReportReason, string> = {
+const REPORT_REASONS: Record<WebReportReason, string> = {
   spam: 'report.reasons.spam',
   nudity: 'report.reasons.nudity',
   profanity: 'report.reasons.profanity',
@@ -48,19 +50,13 @@ export function ReportDialog({
   const { publish, isPending } = useNostrPublish()
   const { updateConfig } = useAppContext()
   const { toast } = useToast()
-  const [reason, setReason] = useState<ReportReason>('spam')
+  const [reason, setReason] = useState<WebReportReason>('spam')
   const [details, setDetails] = useState('')
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // NIP-56: a profile report carries only the `p` tag, content reports tag
-    // the event and its author.
-    const tags: string[][] =
-      reportType === 'profile' ? [['p', contentId, reason]] : [['e', contentId, reason]]
-    if (reportType !== 'profile' && contentAuthor) {
-      tags.push(['p', contentAuthor, reason])
-    }
+    const tags = buildReportTags({ type: reportType, id: contentId, author: contentAuthor }, reason)
 
     try {
       await publish({
@@ -123,7 +119,10 @@ export function ReportDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>{t('report.reasonLabel')}</Label>
-              <RadioGroup value={reason} onValueChange={value => setReason(value as ReportReason)}>
+              <RadioGroup
+                value={reason}
+                onValueChange={value => setReason(value as WebReportReason)}
+              >
                 {Object.entries(REPORT_REASONS).map(([key, translationKey]) => (
                   <div key={key} className="flex items-center space-x-2">
                     <RadioGroupItem value={key} id={key} />

@@ -1,4 +1,4 @@
-//! The instance's own Nostr relay (ADR 0001, tickets #4 and #11): NIP-01, NIP-09 (`e` tags),
+//! The instance's own Nostr relay (ADR 0001, tickets #4 and #11): NIP-01, NIP-09 (`e`/`a` tags),
 //! NIP-11, NIP-40. Writes from the allowed writers, reads open. Visitors may not publish
 //! arbitrary events, but the relay acts as an interaction inbox for its own videos: NIP-22
 //! comments (kind 1111, replies included), NIP-10 legacy replies (kind 1), NIP-25 reactions
@@ -14,7 +14,7 @@
 //! and rusqlite.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Write as _,
     path::{Path, PathBuf},
     sync::{Arc, Weak},
@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS video_version (
   event_hash BLOB PRIMARY KEY,
   author BLOB NOT NULL,
   kind INTEGER NOT NULL,
-  d_tag TEXT
+  d_tag TEXT,
+  created_at INTEGER NOT NULL DEFAULT 0
 );
 -- Events the relay accepted from a visitor (comment/reply/reaction), so a NIP-09 deletion
 -- can prove its targets were the sender's own accepted interactions, and so a repeated
@@ -105,6 +106,19 @@ CREATE TABLE IF NOT EXISTS visitor_event (
   event_hash BLOB PRIMARY KEY,
   author BLOB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS deleted_coordinate (
+  author BLOB NOT NULL,
+  kind INTEGER NOT NULL,
+  d_tag TEXT NOT NULL,
+  deleted_at INTEGER NOT NULL,
+  PRIMARY KEY (author, kind, d_tag)
+);
+CREATE TABLE IF NOT EXISTS media_ref (
+  event_hash BLOB NOT NULL REFERENCES event(event_hash) ON DELETE CASCADE,
+  hash TEXT NOT NULL,
+  PRIMARY KEY (event_hash, hash)
+);
+CREATE INDEX IF NOT EXISTS media_ref_hash ON media_ref(hash);
 ";
 
 /// Per-connection pragmas (upstream `STARTUP_SQL`).
@@ -182,7 +196,30 @@ impl Relay {
     pub fn open(db: &Path, cfg: RelayConfig) -> Result<Relay, BoxError> {
         let writer = connect(db)?;
         writer.execute_batch(SCHEMA)?;
-        writer.execute_batch(crate::outbox::SCHEMA)?;
+        crate::outbox::initialize(&writer)?;
+        // Older databases did not record historical timestamps. Superseded versions predate
+        // the active version; the conservative migration value is zero.
+        let has_timestamp = writer.prepare("PRAGMA table_info(video_version)")?
+            .query_map([], |r| r.get::<_, String>(1))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .iter().any(|name| name == "created_at");
+        if !has_timestamp {
+            writer.execute_batch("ALTER TABLE video_version ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")?;
+        }
+        writer.execute_batch(
+            "UPDATE video_version SET created_at = COALESCE(
+               (SELECT created_at FROM event WHERE event.event_hash = video_version.event_hash), created_at)
+             WHERE created_at = 0;"
+        )?;
+        {
+            let mut rows = writer.prepare("SELECT event_hash, content FROM event WHERE kind IN (21,22,34235,34236)")?;
+            for row in rows.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)))? {
+                let (id, content) = row?;
+                for hash in media_hashes(&content) {
+                    writer.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
+                }
+            }
+        }
         let relay = Relay(Arc::new(Inner {
             path: db.to_owned(),
             writer: Mutex::new(writer),
@@ -217,6 +254,7 @@ impl Relay {
         if ev.is_expired() {
             return RelayMessage::ok(id, false, "invalid: event has expired");
         }
+        let _media_guard = crate::outbox::MEDIA_LIFECYCLE.lock().await;
         let ev = Arc::new(ev);
         if !ev.kind.is_ephemeral() {
             let inner = self.0.clone();
@@ -853,6 +891,82 @@ fn admit(
     Ok(Ok(saved))
 }
 
+/// NIP-09 coordinates split only twice: identifiers may themselves contain colons.
+fn parse_coordinate(value: &str) -> Option<(u16, PublicKey, &str)> {
+    let mut parts = value.splitn(3, ':');
+    let kind = parts.next()?.parse::<u16>().ok()?;
+    if !(30000..40000).contains(&kind) { return None; }
+    Some((kind, PublicKey::from_hex(parts.next()?).ok()?, parts.next()?))
+}
+
+/// Only declared media fields count. URLs are parsed for their hash filename, never fetched.
+pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
+    let mut hashes = HashSet::new();
+    let mut add_hash = |value: &str| {
+        if almond::services::file_storage::validate_sha256_format(value).is_ok() {
+            hashes.insert(value.to_ascii_lowercase());
+        }
+    };
+    let tags = stored_tags(json);
+    for tag in &tags {
+        if tag.first().is_some_and(|name| name == "imeta") {
+            for field in tag.iter().skip(1) {
+                if let Some(hash) = field.strip_prefix("x ") { add_hash(hash); }
+            }
+        } else if tag.first().is_some_and(|name| name == "x") {
+            if let Some(hash) = tag.get(1) { add_hash(hash); }
+        }
+    }
+    let mut add_url = |value: &str| {
+        if let Ok(url) = nostr::prelude::Url::parse(value) {
+            if let Some(filename) = url.path_segments().and_then(|mut p| p.next_back()) {
+                if let Some(hash) = almond::services::file_storage::extract_sha256_from_filename(filename) {
+                    hashes.insert(hash.to_ascii_lowercase());
+                }
+            }
+        }
+    };
+    for tag in &tags {
+        match tag.first().map(String::as_str) {
+            Some("imeta") => {
+                for field in tag.iter().skip(1) {
+                    for prefix in ["url ", "image ", "thumb ", "fallback "] {
+                        if let Some(url) = field.strip_prefix(prefix) { add_url(url); }
+                    }
+                }
+            }
+            Some("url" | "image" | "thumb" | "text-track") => {
+                if let Some(url) = tag.get(1) { add_url(url); }
+            }
+            _ => {}
+        }
+    }
+    hashes
+}
+
+fn queue_removed_media(
+    conn: &Connection, sql: &str, args: impl rusqlite::Params, retained: &HashSet<String>,
+) -> rusqlite::Result<()> {
+    let mut stmt = conn.prepare(sql)?;
+    let events = stmt.query_map(args, |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .into_iter().filter_map(|json| Event::from_json(json).ok())
+        .filter(|event| is_video_kind(event.kind.as_u16())).collect::<Vec<_>>();
+    let removed: HashSet<_> = events.iter().map(|event| event.id.as_bytes().to_vec()).collect();
+    let mut refs = conn.prepare("SELECT event_hash FROM media_ref WHERE hash = ?")?;
+    for event in events {
+        for hash in media_hashes(&event.as_json()).difference(retained) {
+            let referenced_elsewhere = refs.query_map([hash], |r| r.get::<_, Vec<u8>>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?
+                .iter().any(|id| !removed.contains(id));
+            if !referenced_elsewhere {
+                crate::outbox::enqueue_cleanup(conn, &event.pubkey, hash)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 
 /// Upstream `persist_event`, minus NIP-26 and with deletion as real deletes: keeps only the
 /// newest replaceable/addressable version (tie: lowest id), applies kind-5 `e` deletions of
@@ -878,6 +992,15 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         if deleted.is_some() {
             return Ok(Saved::Deleted);
         }
+        if let Some(d) = &d_tag {
+            let deleted = tx.query_row(
+                "SELECT 1 FROM deleted_coordinate WHERE author = ? AND kind = ? AND d_tag = ? AND deleted_at >= ?",
+                params![author, kind, d, created_at], |_| Ok(()),
+            ).optional()?;
+            if deleted.is_some() {
+                return Ok(Saved::Deleted);
+            }
+        }
     }
 
     // Replaceable and addressable share one rule; `d_tag IS ?` is NULL IS NULL for replaceable.
@@ -896,6 +1019,7 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         }
     }
 
+    let json = ev.as_json();
     let inserted = tx.execute(
         "INSERT OR IGNORE INTO event (event_hash, created_at, expires_at, author, kind, d_tag, content)
          VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -906,21 +1030,27 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
             author,
             kind,
             d_tag,
-            ev.as_json()
+            json
         ],
     )?;
     if inserted == 0 {
         return Ok(Saved::Duplicate);
     }
     let row = tx.last_insert_rowid();
+    let retained = if is_video_kind(kind) { media_hashes(&json) } else { HashSet::new() };
 
     // Remember this video version so interactions referencing its id keep resolving after a
     // newer version replaces it.
     if is_video_kind(kind) {
         tx.execute(
-            "INSERT OR IGNORE INTO video_version (event_hash, author, kind, d_tag) VALUES (?, ?, ?, ?)",
-            params![id, author, kind, d_tag],
+            "INSERT OR IGNORE INTO video_version (event_hash, author, kind, d_tag, created_at) VALUES (?, ?, ?, ?, ?)",
+            params![id, author, kind, d_tag, created_at],
         )?;
+    }
+    if is_video_kind(kind) {
+        for hash in &retained {
+            tx.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
+        }
     }
 
     {
@@ -934,6 +1064,9 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
     }
 
     if versioned {
+        queue_removed_media(&tx,
+            "SELECT content FROM event WHERE author = ?1 AND kind = ?2 AND d_tag IS ?3 AND id != ?4",
+            params![author, kind, d_tag, row], &retained)?;
         tx.execute(
             "DELETE FROM event WHERE author = ? AND kind = ? AND d_tag IS ? AND id != ?",
             params![author, kind, d_tag, row],
@@ -941,14 +1074,34 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
     }
 
     if kind == 5 {
-        // A deletion of a deletion has no effect (NIP-09).
-        let mut delete = tx.prepare_cached("DELETE FROM event WHERE event_hash = ? AND author = ? AND kind != 5")?;
+        // An e deletion affects only the named event, never a foreign author's history.
         for target in ev.tags.event_ids() {
-            delete.execute(params![target.as_bytes().as_slice(), author])?;
-            // A deleted video stops being a valid interaction target, even by historical id.
+            queue_removed_media(&tx,
+                "SELECT content FROM event WHERE event_hash = ?1 AND author = ?2 AND kind != 5",
+                params![target.as_bytes().as_slice(), author], &HashSet::new())?;
+            tx.execute("DELETE FROM event WHERE event_hash = ? AND author = ? AND kind != 5",
+                params![target.as_bytes().as_slice(), author])?;
+            tx.execute("DELETE FROM video_version WHERE event_hash = ? AND author = ?",
+                params![target.as_bytes().as_slice(), author])?;
+        }
+        for tag in tags_named(&tag_list(ev), "a") {
+            let Some((target_kind, target_author, identifier)) = parse_coordinate(&tag[1]) else { continue };
+            if target_author != ev.pubkey { continue; }
             tx.execute(
-                "DELETE FROM video_version WHERE event_hash = ?",
-                params![target.as_bytes().as_slice()],
+                "INSERT INTO deleted_coordinate VALUES (?, ?, ?, ?)
+                 ON CONFLICT(author,kind,d_tag) DO UPDATE SET deleted_at = MAX(deleted_at, excluded.deleted_at)",
+                params![author, target_kind, identifier, created_at],
+            )?;
+            queue_removed_media(&tx,
+                "SELECT content FROM event WHERE author = ?1 AND kind = ?2 AND d_tag = ?3 AND created_at <= ?4",
+                params![author, target_kind, identifier, created_at], &HashSet::new())?;
+            tx.execute(
+                "DELETE FROM event WHERE author = ? AND kind = ? AND d_tag = ? AND created_at <= ?",
+                params![author, target_kind, identifier, created_at],
+            )?;
+            tx.execute(
+                "DELETE FROM video_version WHERE author = ? AND kind = ? AND d_tag = ? AND created_at <= ?",
+                params![author, target_kind, identifier, created_at],
             )?;
         }
     }
@@ -1251,6 +1404,65 @@ mod tests {
         let late = ev(&a, 1, 40, "late", &[]);
         assert_eq!(put(&relay, &ev(&a, 5, 50, "", &[&["e", &late.id.to_hex()]])), Saved::Stored);
         assert_eq!(put(&relay, &late), Saved::Deleted);
+    }
+
+    #[tokio::test]
+    async fn coordinate_deletion_scopes_author_time_and_historical_versions() {
+        let relay = open(vec![]);
+        let (a, b) = (Keys::generate(), Keys::generate());
+        let address = format!("34235:{}:clip:part", a.public_key());
+        let old = ev(&a, 34235, 10, "old", &[&["d", "clip:part"]]);
+        let current = ev(&a, 34235, 20, "current", &[&["d", "clip:part"]]);
+        let other = ev(&b, 34235, 10, "other", &[&["d", "clip:part"]]);
+        put(&relay, &old);
+        put(&relay, &current);
+        put(&relay, &other);
+        put(&relay, &ev(&b, 5, 30, "", &[&["a", &address]]));
+        assert!(video_by_id(&relay.0.writer.lock(), &current.id).is_some());
+        put(&relay, &ev(&a, 5, 15, "", &[&["a", &address]]));
+        assert!(video_by_id(&relay.0.writer.lock(), &old.id).is_none());
+        assert!(video_by_id(&relay.0.writer.lock(), &current.id).is_some());
+        put(&relay, &ev(&a, 5, 30, "", &[&["a", &address], &["e", &current.id.to_hex()]]));
+        assert!(video_by_id(&relay.0.writer.lock(), &current.id).is_none());
+        assert!(video_by_id(&relay.0.writer.lock(), &other.id).is_some());
+        assert_eq!(put(&relay, &old), Saved::Deleted);
+        assert_eq!(put(&relay, &ev(&a, 34235, 30, "stale", &[&["d", "clip:part"]])), Saved::Deleted);
+        assert_eq!(put(&relay, &ev(&a, 34235, 31, "new", &[&["d", "clip:part"]])), Saved::Stored);
+        // Even a foreign e target cannot erase another author's history.
+        put(&relay, &ev(&a, 5, 40, "", &[&["e", &other.id.to_hex()]]));
+        assert!(video_by_id(&relay.0.writer.lock(), &other.id).is_some());
+    }
+
+    #[tokio::test]
+    async fn accepted_video_changes_queue_only_removed_unshared_media() {
+        let relay = open(vec![]);
+        let key = Keys::generate();
+        let (video, old_thumb, subtitle, new_video) = ("a".repeat(64), "b".repeat(64), "c".repeat(64), "d".repeat(64));
+        let url = format!("url https://media.example/{video}.mp4");
+        let thumb = format!("image https://media.example/{old_thumb}.jpg");
+        let track = format!("https://media.example/{subtitle}.vtt");
+        let original = ev(&key, 34235, 10, "first", &[&["d", "clip"], &["imeta", &url, &thumb], &["text-track", &track, "en"]]);
+        put(&relay, &original);
+        let unchanged = ev(&key, 34235, 20, "metadata only", &[&["d", "clip"], &["imeta", &url, &thumb], &["text-track", &track, "de"]]);
+        put(&relay, &unchanged);
+        let cleanup_hashes = || {
+            let conn = relay.0.writer.lock();
+            let mut stmt = conn.prepare("SELECT ref_id FROM outbox WHERE kind='cleanup' ORDER BY ref_id").unwrap();
+            let hashes = stmt.query_map([], |r| r.get::<_, String>(0)).unwrap().collect::<rusqlite::Result<Vec<_>>>().unwrap();
+            hashes
+        };
+        assert!(cleanup_hashes().is_empty(), "title/description/language edits retain bytes");
+        // The old video is also referenced by another active coordinate.
+        put(&relay, &ev(&key, 34235, 21, "shared", &[&["d", "other"], &["imeta", &url]]));
+        let replacement = format!("url https://media.example/{new_video}.mp4");
+        put(&relay, &ev(&key, 34235, 30, "replacement", &[&["d", "clip"], &["imeta", &replacement]]));
+        assert_eq!(cleanup_hashes(), vec![old_thumb, subtitle]);
+        assert_eq!(put(&relay, &original), Saved::Superseded);
+        assert_eq!(cleanup_hashes().len(), 2, "rejected stale events queue nothing");
+        let address = format!("34235:{}:clip", key.public_key());
+        put(&relay, &ev(&key, 5, 40, "", &[&["a", &address]]));
+        assert_eq!(cleanup_hashes().len(), 3);
+        assert!(!cleanup_hashes().contains(&video), "shared hash never gets a cleanup job");
     }
 
     #[tokio::test]

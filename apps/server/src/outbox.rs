@@ -27,7 +27,7 @@ use crate::config::Mirror;
 pub const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS outbox (
   id INTEGER PRIMARY KEY,
-  kind TEXT NOT NULL CHECK (kind IN ('event', 'blob')),
+  kind TEXT NOT NULL CHECK (kind IN ('event', 'blob', 'cleanup', 'blob-delete')),
   target TEXT NOT NULL,
   -- Event id or blob sha256, hex.
   ref_id TEXT NOT NULL,
@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS outbox (
   UNIQUE (kind, target, ref_id)
 );
 CREATE INDEX IF NOT EXISTS outbox_due ON outbox(status, next_attempt_at);
+CREATE TABLE IF NOT EXISTS blob_owner (
+  hash TEXT PRIMARY KEY,
+  author TEXT NOT NULL,
+  mirrored INTEGER NOT NULL CHECK (mirrored IN (0,1))
+);
 ";
 
 /// Sent with every delivery. A nostube-server receiving it does not pass the item on: copies
@@ -66,6 +71,40 @@ const MIRROR_TIMEOUT: Duration = Duration::from_secs(600);
 pub const NEEDS_KEY: &str = "mirroring blobs needs the managed signing key";
 /// Recent problems shown in the studio.
 const PROBLEMS: i64 = 50;
+
+// ponytail: one media lifecycle lock orders uploads, accepted video edits and cleanup.
+// Use per-hash locks plus coordinate locking if concurrent large mirror deliveries matter.
+pub(crate) static MEDIA_LIFECYCLE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
+    let existing: Option<String> = conn.query_row(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'", [], |r| r.get(0),
+    ).optional()?;
+    if existing.is_some_and(|sql| !sql.contains("'cleanup'")) {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch("DROP INDEX IF EXISTS outbox_due; ALTER TABLE outbox RENAME TO outbox_old;")?;
+        tx.execute_batch(SCHEMA)?;
+        tx.execute_batch("INSERT INTO outbox SELECT * FROM outbox_old; DROP TABLE outbox_old;")?;
+        tx.commit()?;
+    } else {
+        conn.execute_batch(SCHEMA)?;
+    }
+    Ok(())
+}
+
+/// Queued inside the accepted event transaction; ownership is proved by the worker.
+pub(crate) fn enqueue_cleanup(
+    conn: &Connection, author: &nostr::prelude::PublicKey, hash: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO outbox (kind,target,ref_id,next_attempt_at,created_at,updated_at)
+         VALUES ('cleanup',?1,?2,?3,?3,?3)
+         ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending', attempts=0,
+         next_attempt_at=excluded.next_attempt_at, last_error=NULL, updated_at=excluded.updated_at",
+        params![author.to_hex(), hash, now()],
+    )?;
+    Ok(())
+}
 
 /// True when the request comes from another instance's outbox.
 pub fn is_mirror_delivery(headers: &HeaderMap) -> bool {
@@ -128,13 +167,45 @@ pub struct Outbox(Arc<Inner>);
 struct Inner {
     conn: Mutex<Connection>,
     mirror: Mirror,
+    storage: parking_lot::RwLock<Option<almond::models::AppState>>,
 }
 
 impl Outbox {
     pub fn open(db: &Path, mirror: Mirror) -> rusqlite::Result<Outbox> {
         let conn = crate::relay::connect(db)?;
-        conn.execute_batch(SCHEMA)?;
-        Ok(Outbox(Arc::new(Inner { conn: Mutex::new(conn), mirror })))
+        initialize(&conn)?;
+        Ok(Outbox(Arc::new(Inner {
+            conn: Mutex::new(conn), mirror, storage: parking_lot::RwLock::new(None),
+        })))
+    }
+
+    pub fn attach_storage(&self, state: almond::models::AppState) {
+        *self.0.storage.write() = Some(state);
+    }
+
+    /// Called only after Almond accepted an upload. Its index does not retain auth authors.
+    pub async fn record_owner(&self, hash: String, author: nostr::prelude::PublicKey, mirrored: bool) -> Result<(), String> {
+        almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            let hash = hash.to_ascii_lowercase();
+            let author = author.to_hex();
+            tx.execute(
+                "INSERT INTO blob_owner VALUES (?1,?2,?3)
+                 ON CONFLICT(hash) DO UPDATE SET mirrored = blob_owner.mirrored AND excluded.mirrored
+                 WHERE blob_owner.author = excluded.author",
+                params![hash, author, mirrored],
+            )?;
+            // A newly accepted publication supersedes cleanup intents for the previous
+            // copy, even when its content hash is identical. Never transfer ownership.
+            tx.execute(
+                "UPDATE outbox SET status='done',last_error=NULL,updated_at=?1
+                 WHERE ref_id=?2 AND (kind='blob-delete' OR (kind='cleanup' AND target=?3))
+                 AND EXISTS (SELECT 1 FROM blob_owner WHERE hash=?2 AND author=?3)",
+                params![now(), hash, author],
+            )?;
+            tx.commit()
+        }).await
     }
 
     async fn db<T: Send + 'static>(
@@ -178,7 +249,11 @@ impl Outbox {
                     let now = now();
                     let mut add = conn.prepare_cached(
                         "INSERT OR IGNORE INTO outbox (kind, target, ref_id, size, source_url, next_attempt_at, created_at, updated_at)
-                         VALUES ('blob', ?1, ?2, ?3, ?4, ?5, ?5, ?5)",
+                         VALUES ('blob', ?1, ?2, ?3, ?4, ?5, ?5, ?5)
+                         ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending', attempts=0,
+                         size=excluded.size, source_url=excluded.source_url, next_attempt_at=excluded.next_attempt_at,
+                         last_error=NULL, updated_at=excluded.updated_at
+                         WHERE outbox.status != 'pending'",
                     )?;
                     for target in &targets {
                         add.execute(params![target, d.sha256, d.size as i64, d.url, now])?;
@@ -257,15 +332,18 @@ impl Outbox {
         .await
     }
 
-    /// Up to `limit` pending jobs that are due, for configured targets only: a target removed
-    /// from the config keeps its rows, but nothing is sent there.
+    /// Due cleanup jobs always run; outbound jobs run for configured targets only.
+    /// A target removed from config keeps its rows, but nothing is sent there.
     async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
         let targets: Vec<String> = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
         self.db(move |conn| {
             let marks = vec!["?"; targets.len()].join(",");
             let mut stmt = conn.prepare(&format!(
                 "SELECT id, kind, target, ref_id, size, source_url, attempts FROM outbox
-                 WHERE status = 'pending' AND next_attempt_at <= ? AND target IN ({marks})
+                 WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks}))
+                 AND (kind != 'blob-delete' OR NOT EXISTS (
+                   SELECT 1 FROM outbox c JOIN blob_owner b ON b.hash=c.ref_id AND b.author=c.target
+                   WHERE c.kind='cleanup' AND c.ref_id=outbox.ref_id AND c.status!='done'))
                  ORDER BY next_attempt_at, id LIMIT {limit}"
             ))?;
             let args = std::iter::once(rusqlite::types::Value::from(now()))
@@ -344,13 +422,8 @@ fn http_client() -> reqwest::Client {
         .expect("static reqwest client config")
 }
 
-/// Starts the worker; `None` (and no background work at all) without mirror targets. Abort the
-/// handle to stop: running deliveries are dropped and stay `pending`, the next start sends them
-/// again.
+/// Local cleanup runs even without mirror targets. Aborting leaves work pending for restart.
 pub fn spawn(outbox: Outbox, keys: crate::signer::Shared) -> Option<tokio::task::JoinHandle<()>> {
-    if outbox.0.mirror.relays.is_empty() && outbox.0.mirror.blossom.is_empty() {
-        return None;
-    }
     tracing::info!(
         "outbox: mirroring to {} relay(s) and {} Blossom server(s)",
         outbox.0.mirror.relays.len(),
@@ -392,6 +465,14 @@ pub fn spawn(outbox: Outbox, keys: crate::signer::Shared) -> Option<tokio::task:
 
 /// Delivers one job and records the outcome.
 async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Client, job: &Job) {
+    let _media_guard = if job.kind != "event" { Some(MEDIA_LIFECYCLE.lock().await) } else { None };
+    // A selected upload may have been canceled by cleanup while it waited for the lock.
+    let id = job.id;
+    match outbox.db(move |conn| conn.query_row("SELECT status FROM outbox WHERE id = ?", [id], |r| r.get::<_, String>(0))).await {
+        Ok(status) if status == "pending" => {}
+        Ok(_) => return,
+        Err(e) => { outbox.record(job, Outcome::Retry(e)).await; return; }
+    }
     let outcome = match job.kind.as_str() {
         "event" => match outbox.event_json(&job.ref_id).await {
             Ok(Some(json)) => match tokio::time::timeout(RELAY_TIMEOUT, publish(&job.target, &json, &job.ref_id)).await {
@@ -401,6 +482,23 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
             },
             Ok(None) => Outcome::Done,
             Err(e) => Outcome::Retry(e),
+        },
+        "cleanup" => match cleanup(outbox, job).await {
+            Ok(()) => Outcome::Done,
+            Err(Outcome::Fail(e)) => Outcome::Fail(e),
+            Err(Outcome::Retry(e)) => Outcome::Retry(e),
+            Err(Outcome::Done) => unreachable!(),
+        },
+        "blob-delete" => match retained_hashes(outbox).await {
+            Err(e) => Outcome::Retry(e),
+            Ok(retained) if retained.contains(&job.ref_id) => Outcome::Done,
+            Ok(_) => match mirror_key(keys) {
+                Err(e) => Outcome::Fail(e),
+                Ok(k) => match delete_mirror(http, &k, &job.target, &job.ref_id).await {
+                    Ok(()) => Outcome::Done,
+                    Err(e) => Outcome::Retry(e),
+                },
+            },
         },
         _ => match mirror_key(keys) {
             Err(e) => Outcome::Fail(e),
@@ -417,6 +515,132 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
         tracing::info!("outbox: {} {} to {}: {e}", job.kind, job.ref_id, job.target);
     }
     outbox.record(job, outcome).await;
+}
+
+fn storage(outbox: &Outbox) -> Result<almond::models::AppState, String> {
+    outbox.0.storage.read().clone().ok_or_else(|| "local Blossom storage is unavailable".into())
+}
+
+/// Walk only indexed local playlists. Read errors and excessive graphs are not absence.
+async fn media_tree(state: &almond::models::AppState, roots: HashSet<String>) -> Result<HashSet<String>, String> {
+    use almond::services::{file_storage, hls};
+    let mut seen = HashSet::new();
+    let mut pending: Vec<_> = roots.into_iter().collect();
+    while let Some(hash) = pending.pop() {
+        if !seen.insert(hash.clone()) { continue; }
+        if seen.len() > 1024 { return Err("local HLS graph exceeds 1024 blobs".into()); }
+        let Some(metadata) = file_storage::get_file_metadata(state, &hash).await else { continue };
+        if metadata.extension.as_deref() != Some("m3u8")
+            && !metadata.mime_type.as_deref().is_some_and(hls::is_hls_playlist) { continue; }
+        if metadata.size > 1 << 20 { return Err(format!("local playlist {hash} exceeds 1 MiB")); }
+        let text = file_storage::read_text(state, &metadata).await
+            .map_err(|e| format!("cannot read local playlist {hash}: {e}"))?;
+        pending.extend(hls::parse_playlist_references(&text).into_iter().map(|r| r.sha256.to_ascii_lowercase()));
+        // Initialization segments and encryption keys use URI attributes on comment lines.
+        for part in text.split("URI=\"").skip(1) {
+            let value = part.split('"').next().unwrap_or_default();
+            let filename = nostr::prelude::Url::parse(value).ok()
+                .and_then(|url| url.path_segments().and_then(|mut p| p.next_back()).map(str::to_owned))
+                .unwrap_or_else(|| value.to_owned());
+            if let Some(hash) = file_storage::extract_sha256_from_filename(&filename) {
+                pending.push(hash.to_ascii_lowercase());
+            }
+        }
+    }
+    Ok(seen)
+}
+
+async fn retained_hashes(outbox: &Outbox) -> Result<HashSet<String>, String> {
+    let roots = outbox.db(|conn| {
+        let mut stmt = conn.prepare("SELECT DISTINCT hash FROM media_ref")?;
+        let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
+        rows.collect::<rusqlite::Result<HashSet<_>>>()
+    }).await?;
+    let state = outbox.0.storage.read().clone();
+    match state {
+        Some(state) => media_tree(&state, roots).await,
+        None => Ok(roots),
+    }
+}
+
+async fn cleanup(outbox: &Outbox, job: &Job) -> Result<(), Outcome> {
+    use almond::services::file_storage::{self, Removal};
+    file_storage::validate_sha256_format(&job.ref_id).map_err(|e| Outcome::Fail(e.to_string()))?;
+    let retained = retained_hashes(outbox).await.map_err(Outcome::Retry)?;
+    if retained.contains(&job.ref_id) { return Ok(()); }
+    let hash = job.ref_id.clone();
+    let owner = outbox.db(move |conn| {
+        conn.query_row("SELECT author, mirrored FROM blob_owner WHERE hash = ?", [hash],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?))).optional()
+    }).await.map_err(Outcome::Retry)?;
+    let Some((author, mirrored)) = owner else {
+        // ponytail: Almond-mirrored HLS children have no owner and no cancel hook; they
+        // stay as safe leaks until Almond exposes child ownership/cancellation.
+        return Err(Outcome::Fail("blob has no recorded owner; not deleting".into()));
+    };
+    if author != job.target {
+        return Err(Outcome::Fail("blob owner differs from video author; not deleting".into()));
+    }
+    let state = storage(outbox).map_err(Outcome::Retry)?;
+    let metadata = file_storage::get_file_metadata(&state, &job.ref_id).await;
+    if metadata.as_ref().is_some_and(|m| m.pubkey.is_some_and(|owner| owner.to_hex() != author)) {
+        return Err(Outcome::Fail("indexed blob owner differs from video author; not deleting".into()));
+    }
+    let tree = media_tree(&state, HashSet::from([job.ref_id.clone()])).await.map_err(Outcome::Retry)?;
+    let descendants: Vec<_> = tree.difference(&retained).filter(|hash| *hash != &job.ref_id).cloned().collect();
+    let public_key = nostr::prelude::PublicKey::from_hex(&author).map_err(|e| Outcome::Fail(e.to_string()))?;
+    let targets = if mirrored { vec![] } else { outbox.0.mirror.blossom.clone() };
+    let hash = job.ref_id.clone();
+    // Persist children before removing their parent, and DELETE intents before touching bytes:
+    // either crash point can be resumed without losing the playlist or the mirror work.
+    outbox.db(move |conn| {
+        let tx = conn.unchecked_transaction()?;
+        for child in descendants { enqueue_cleanup(&tx, &public_key, &child)?; }
+        tx.execute("UPDATE outbox SET status='done',last_error=NULL,updated_at=? WHERE kind='blob' AND ref_id=?",
+            params![now(), hash])?;
+        for target in targets {
+            tx.execute(
+                "INSERT INTO outbox (kind,target,ref_id,next_attempt_at,created_at,updated_at)
+                 VALUES ('blob-delete',?1,?2,?3,?3,?3)
+                 ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending',attempts=0,
+                 next_attempt_at=excluded.next_attempt_at,last_error=NULL,updated_at=excluded.updated_at",
+                params![target, hash, now()],
+            )?;
+        }
+        tx.commit()
+    }).await.map_err(Outcome::Retry)?;
+    if let Some(metadata) = metadata {
+        let removed = file_storage::remove_indexed_blob(&state, &job.ref_id, Removal::Requested, Some(&metadata))
+            .await.map_err(|e| Outcome::Retry(format!("cannot remove local blob: {e}")))?;
+        if !removed && file_storage::get_file_metadata(&state, &job.ref_id).await.is_some() {
+            return Err(Outcome::Retry("local blob changed during cleanup".into()));
+        }
+    }
+    Ok(())
+}
+
+async fn delete_mirror(http: &reqwest::Client, keys: &Keys, target: &str, hash: &str) -> Result<(), String> {
+    almond::services::file_storage::validate_sha256_format(hash).map_err(|e| e.to_string())?;
+    let expiration = (Timestamp::now().as_secs() + 600).to_string();
+    let auth = EventBuilder::new(Kind::Custom(24242), "Delete blob")
+        .tags([
+            Tag::parse(["t", "delete"]).map_err(|e| e.to_string())?,
+            Tag::parse(["x", hash]).map_err(|e| e.to_string())?,
+            Tag::parse(["expiration", expiration.as_str()]).map_err(|e| e.to_string())?,
+        ]).finalize(keys).map_err(|e| format!("cannot sign delete token: {e}"))?;
+    let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
+    let res = http.delete(format!("{}/{hash}", target.trim_end_matches('/')))
+        .header(header::AUTHORIZATION, format!("Nostr {token}"))
+        .send().await.map_err(|e| format!("delete request failed: {e}"))?;
+    let status = res.status();
+    // Almond's delete is idempotent and answers 204 even for an absent blob. Other
+    // targets' 404s are not success: a wrong route must remain visible.
+    if !status.is_success() {
+        let reason = res.headers().get("x-reason").and_then(|v| v.to_str().ok()).map(str::to_owned);
+        let reason = match reason { Some(r) => r, None => res.text().await.unwrap_or_default() };
+        return Err(format!("{status}: {}", short(&reason)));
+    }
+    Ok(())
 }
 
 /// NIP-01 `EVENT` to `target`, done at its `OK`. `OK false` with `duplicate:` means the relay
@@ -726,5 +950,305 @@ mod tests {
             assert!(error.unwrap().starts_with("the target confirmed sha256"));
         }
         std::fs::remove_file(path).ok();
+    }
+
+    async fn lifecycle_fixture(keys: &Keys, mirror: Mirror) -> (Outbox, crate::relay::Relay, almond::models::AppState) {
+        let (outbox, old_relay, path) = fixture(mirror.clone());
+        drop(old_relay);
+        let relay = crate::relay::Relay::open(&path, crate::relay::RelayConfig {
+            writers: vec![keys.public_key()], name: "test".into(), description: "test".into(),
+            mirror_relays: mirror.relays,
+        }).unwrap();
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = path.with_extension("blossom");
+        cfg.public_url = Some("https://instance.example".into());
+        cfg.allowed_npubs = vec![keys.public_key()];
+        cfg.storage_min_free = 0;
+        cfg.homepage_enabled = false;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        outbox.attach_storage(state.clone());
+        (outbox, relay, state)
+    }
+
+    async fn stored(
+        outbox: &Outbox, state: &almond::models::AppState, keys: &Keys,
+        bytes: &[u8], extension: &str, mirrored: bool,
+    ) -> (String, std::path::PathBuf) {
+        use sha2::Digest;
+        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let path = state.storage.uploads.join(format!("{hash}.{extension}"));
+        tokio::fs::create_dir_all(&state.storage.uploads).await.unwrap();
+        tokio::fs::write(&path, bytes).await.unwrap();
+        state.file_index.insert(hash.clone(), almond::models::FileMetadata {
+            location: almond::models::FileLocation::Local(path.clone()), extension: Some(extension.into()),
+            mime_type: Some(mime_guess::from_ext(extension).first_or_octet_stream().to_string()),
+            size: bytes.len() as u64, created_at: now() as u64, pubkey: None, expiration: None,
+            origin: Default::default(),
+        }).await;
+        outbox.record_owner(hash.clone(), keys.public_key(), mirrored).await.unwrap();
+        (hash, path)
+    }
+
+    fn video_event(keys: &Keys, at: u64, d: &str, hashes: &[(&str, &str)]) -> nostr::prelude::Event {
+        let mut tags = vec![Tag::parse(["d", d]).unwrap(), Tag::parse(["title", "clip"]).unwrap()];
+        tags.extend(hashes.iter().map(|(tag, hash)| {
+            let url = format!("https://instance.example/{hash}");
+            if *tag == "imeta" {
+                Tag::parse(["imeta", format!("url {url}").as_str(), format!("x {hash}").as_str()]).unwrap()
+            } else { Tag::parse([*tag, url.as_str()]).unwrap() }
+        }));
+        EventBuilder::new(Kind::Custom(34235), "description").tags(tags)
+            .custom_created_at(Timestamp::from(at)).finalize(keys).unwrap()
+    }
+
+    async fn accepted(relay: &crate::relay::Relay, event: nostr::prelude::Event) {
+        assert!(matches!(relay.ingest(event).await, nostr::prelude::RelayMessage::Ok { status: true, .. }));
+    }
+
+    #[tokio::test]
+    async fn replacement_cleans_real_storage_and_hls_children_then_delivers_mirror_deletes() {
+        let keys = Keys::generate();
+        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (segment, segment_path) = stored(&outbox, &state, &keys, b"shared segment", "ts", false).await;
+        let (init, init_path) = stored(&outbox, &state, &keys, b"init bytes", "mp4", false).await;
+        let playlist = format!("#EXTM3U\n#EXT-X-MAP:URI=\"{init}.mp4\"\n{segment}.ts\n");
+        let (old, old_path) = stored(&outbox, &state, &keys, playlist.as_bytes(), "m3u8", false).await;
+        let (thumb, thumb_path) = stored(&outbox, &state, &keys, b"old thumbnail", "jpg", false).await;
+        let (track, track_path) = stored(&outbox, &state, &keys, b"WEBVTT\nold", "vtt", false).await;
+        let (new, new_path) = stored(&outbox, &state, &keys, b"replacement", "mp4", false).await;
+        for (bytes, ext) in [
+            (b"shared segment".as_slice(), "ts"), (b"init bytes".as_slice(), "mp4"),
+            (playlist.as_bytes(), "m3u8"), (b"old thumbnail".as_slice(), "jpg"), (b"WEBVTT\nold".as_slice(), "vtt"),
+        ] { stored(&remote_outbox, &remote, &keys, bytes, ext, true).await; }
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)])).await;
+        accepted(&relay, video_event(&keys, 11, "shared", &[("imeta", &segment)])).await;
+        accepted(&relay, video_event(&keys, 20, "clip", &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)])).await;
+        let queued: i64 = outbox.0.conn.lock().query_row("SELECT COUNT(*) FROM outbox WHERE kind='cleanup'", [], |r| r.get(0)).unwrap();
+        assert_eq!(queued, 0, "metadata update cannot delete media");
+        // A pending mirror upload selected before deletion cannot run after cleanup.
+        outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
+            "sha256": old, "size": playlist.len(), "url": format!("https://instance.example/{old}.m3u8")
+        }))).into_response()).await;
+        let selected_upload = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "blob").unwrap();
+        accepted(&relay, video_event(&keys, 30, "clip", &[("imeta", &new)])).await;
+        let cleanup_jobs: Vec<_> = outbox.due(100).await.unwrap().into_iter().filter(|j| j.kind == "cleanup").collect();
+        for job in cleanup_jobs { work(&outbox, &shared(Some(keys.clone())), &http_client(), &job).await; }
+        work(&outbox, &shared(Some(keys.clone())), &http_client(), &selected_upload).await;
+        assert_eq!(row(&outbox, "blob", &target).0, "done");
+        assert!(!old_path.exists() && !thumb_path.exists() && !track_path.exists());
+        assert!(segment_path.exists() && new_path.exists());
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        assert!(!init_path.exists(), "HLS URI attributes are cleaned too");
+        for hash in [&old, &thumb, &track, &init] {
+            assert!(state.file_index.get(hash).await.is_none());
+            assert!(remote.file_index.get(hash).await.is_none(), "real Almond DELETE removed {hash}");
+        }
+        assert!(remote.file_index.get(&segment).await.is_some(), "shared active segment remains on mirror");
+        assert!(outbox.due(100).await.unwrap().is_empty());
+        let count: i64 = outbox.0.conn.lock().query_row(
+            "SELECT COUNT(*) FROM outbox WHERE kind IN ('cleanup','blob-delete') AND ref_id=?", [&segment], |r| r.get(0),
+        ).unwrap();
+        assert_eq!(count, 0);
+        // The coordinate deletion cleans the replacement, too.
+        let coordinate = format!("34235:{}:clip", keys.public_key());
+        let deletion = EventBuilder::new(Kind::EventDeletion, "")
+            .tags([Tag::parse(["a", &coordinate]).unwrap()])
+            .custom_created_at(Timestamp::from(40)).finalize(&keys).unwrap();
+        accepted(&relay, deletion).await;
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        run_due(&outbox, &shared(Some(keys))).await;
+        assert!(!new_path.exists());
+    }
+
+    #[tokio::test]
+    async fn cleanup_requires_ownership_and_mirrored_blobs_never_chain_deletion() {
+        let keys = Keys::generate();
+        let foreign = Keys::generate();
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
+            relays: vec![], blossom: vec!["http://unreachable.invalid".into()],
+        }).await;
+        let (mirrored, mirrored_path) = stored(&outbox, &state, &keys, b"mirrored copy", "mp4", true).await;
+        let (wrong_owner, wrong_owner_path) = stored(&outbox, &state, &foreign, b"foreign copy", "mp4", false).await;
+        let (unowned, unowned_path) = stored(&outbox, &state, &keys, b"old unowned copy", "mp4", false).await;
+        outbox.0.conn.lock().execute("DELETE FROM blob_owner WHERE hash=?", [&unowned]).unwrap();
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &mirrored), ("thumb", &wrong_owner), ("text-track", &unowned)])).await;
+        let coordinate = format!("34235:{}:clip", keys.public_key());
+        let deletion = EventBuilder::new(Kind::EventDeletion, "")
+            .tags([Tag::parse(["a", &coordinate]).unwrap()])
+            .custom_created_at(Timestamp::from(20)).finalize(&keys).unwrap();
+        accepted(&relay, deletion).await;
+        run_due(&outbox, &shared(None)).await;
+        assert!(!mirrored_path.exists());
+        assert!(wrong_owner_path.exists() && unowned_path.exists());
+        let status = outbox.status().await.unwrap();
+        let problems = status["problems"].as_array().unwrap();
+        assert_eq!(problems.len(), 2);
+        assert!(problems.iter().all(|p| p["status"] == "failed"));
+        assert!(problems.iter().any(|p| p["lastError"] == "blob has no recorded owner; not deleting"));
+        assert!(problems.iter().any(|p| p["lastError"] == "blob owner differs from video author; not deleting"));
+        let outbound: i64 = outbox.0.conn.lock().query_row(
+            "SELECT COUNT(*) FROM outbox WHERE kind IN ('blob','blob-delete')", [], |r| r.get(0),
+        ).unwrap();
+        assert_eq!(outbound, 0, "mirrored-origin cleanup must not chain to this instance's targets");
+    }
+
+    #[tokio::test]
+    async fn durable_delete_missing_key_and_remote_errors_remain_real_failures() {
+        let keys = Keys::generate();
+        let target = format!("http://{}", serve(Router::new().route("/{hash}", axum::routing::delete(|| async {
+            (axum::http::StatusCode::SERVICE_UNAVAILABLE, "disk unavailable")
+        }))).await);
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (hash, path) = stored(&outbox, &state, &keys, b"delete copy", "mp4", false).await;
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
+        accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
+        run_due(&outbox, &shared(None)).await;
+        assert!(!path.exists());
+        run_due(&outbox, &shared(None)).await;
+        assert_eq!(row(&outbox, "blob-delete", &target).3.as_deref(), Some(NEEDS_KEY));
+        assert_eq!(outbox.retry(None).await.unwrap(), 1);
+        run_due(&outbox, &shared(Some(keys))).await;
+        let (status, _, _, error) = row(&outbox, "blob-delete", &target);
+        assert_eq!(status, "pending");
+        assert!(error.unwrap().contains("disk unavailable"));
+    }
+
+    #[tokio::test]
+    async fn inflight_mirror_finishes_before_cleanup_and_cannot_resurrect_a_removed_blob() {
+        let keys = Keys::generate();
+        let started = Arc::new(tokio::sync::Notify::new());
+        let release = Arc::new(tokio::sync::Notify::new());
+        let present = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let bytes = b"inflight bytes";
+        use sha2::Digest;
+        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let upload = {
+            let (started, release, present, order, hash) = (started.clone(), release.clone(), present.clone(), order.clone(), hash.clone());
+            put(move || {
+                let (started, release, present, order, hash) = (started.clone(), release.clone(), present.clone(), order.clone(), hash.clone());
+                async move {
+                    started.notify_one();
+                    release.notified().await;
+                    present.store(true, Ordering::SeqCst);
+                    order.lock().push("upload");
+                    Json(serde_json::json!({"sha256": hash, "size": bytes.len()}))
+                }
+            })
+        };
+        let delete = {
+            let (present, order) = (present.clone(), order.clone());
+            axum::routing::delete(move || {
+                let (present, order) = (present.clone(), order.clone());
+                async move {
+                    present.store(false, Ordering::SeqCst);
+                    order.lock().push("delete");
+                    axum::http::StatusCode::NO_CONTENT
+                }
+            })
+        };
+        let target = format!("http://{}", serve(Router::new().route("/mirror", upload).route("/{hash}", delete)).await);
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (_, path) = stored(&outbox, &state, &keys, bytes, "mp4", false).await;
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
+        outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
+            "sha256": hash, "size": bytes.len(), "url": format!("https://instance.example/{hash}.mp4")
+        }))).into_response()).await;
+        let job = outbox.due(1).await.unwrap().remove(0);
+        let sending = {
+            let (outbox, keys) = (outbox.clone(), keys.clone());
+            tokio::spawn(async move { work(&outbox, &shared(Some(keys)), &http_client(), &job).await })
+        };
+        started.notified().await;
+        let mut editing = {
+            let relay = relay.clone();
+            let update = video_event(&keys, 20, "clip", &[]);
+            tokio::spawn(async move { accepted(&relay, update).await })
+        };
+        assert!(tokio::time::timeout(Duration::from_millis(20), &mut editing).await.is_err());
+        release.notify_one();
+        sending.await.unwrap();
+        editing.await.unwrap();
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        run_due(&outbox, &shared(Some(keys))).await;
+        assert!(!path.exists() && !present.load(Ordering::SeqCst));
+        assert_eq!(*order.lock(), ["upload", "delete"]);
+    }
+
+    #[tokio::test]
+    async fn cleanup_and_delete_intents_survive_reopening_the_database() {
+        let keys = Keys::generate();
+        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        stored(&remote_outbox, &remote, &keys, b"durable bytes", "mp4", true).await;
+        let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
+        let mirror = Mirror { relays: vec![], blossom: vec![target] };
+        let (outbox, relay, state) = lifecycle_fixture(&keys, mirror.clone()).await;
+        let (hash, path) = stored(&outbox, &state, &keys, b"durable bytes", "mp4", false).await;
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
+        accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
+        let db = state.storage.root.with_extension("sqlite");
+        drop(outbox);
+        drop(relay);
+        let reopened = Outbox::open(&db, mirror.clone()).unwrap();
+        reopened.attach_storage(state.clone());
+        run_due(&reopened, &shared(Some(keys.clone()))).await;
+        assert!(!path.exists() && state.file_index.get(&hash).await.is_none());
+        assert!(remote.file_index.get(&hash).await.is_some());
+        drop(reopened);
+        let reopened = Outbox::open(&db, mirror).unwrap();
+        reopened.attach_storage(state);
+        run_due(&reopened, &shared(Some(keys))).await;
+        assert!(remote.file_index.get(&hash).await.is_none());
+        assert!(reopened.due(100).await.unwrap().is_empty());
+    }
+
+    #[test]
+    fn old_outbox_schema_migrates_without_losing_delivery_state() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE outbox (
+              id INTEGER PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('event','blob')),
+              target TEXT NOT NULL, ref_id TEXT NOT NULL, size INTEGER, source_url TEXT,
+              status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+              next_attempt_at INTEGER NOT NULL, last_error TEXT, created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL, UNIQUE(kind,target,ref_id));
+             INSERT INTO outbox VALUES (7,'blob','https://mirror.example','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+               42,'https://instance.example/a','failed',3,99,'offline',1,2);"
+        ).unwrap();
+        initialize(&conn).unwrap();
+        let preserved: (i64, String, u32, String) = conn.query_row(
+            "SELECT id,status,attempts,last_error FROM outbox", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)),
+        ).unwrap();
+        assert_eq!(preserved, (7, "failed".into(), 3, "offline".into()));
+        enqueue_cleanup(&conn, &Keys::generate().public_key(), SHA).unwrap();
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn authenticated_republication_cancels_old_cleanup_and_delete_intents_for_the_same_hash() {
+        let keys = Keys::generate();
+        let target = "http://unreachable.invalid".to_owned();
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (hash, path) = stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
+        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
+        accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
+        let selected = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "cleanup").unwrap();
+        // Republish before cleanup starts: a previously selected job is now stale.
+        stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
+        work(&outbox, &shared(None), &http_client(), &selected).await;
+        assert!(path.exists());
+        enqueue_cleanup(&outbox.0.conn.lock(), &keys.public_key(), &hash).unwrap();
+        run_due(&outbox, &shared(None)).await;
+        assert!(!path.exists());
+        assert!(outbox.due(100).await.unwrap().iter().any(|j| j.kind == "blob-delete"));
+        // A successful fresh upload also invalidates old pending mirror deletion.
+        stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
+        assert!(path.exists());
+        assert_eq!(row(&outbox, "blob-delete", &target).0, "done");
+        assert!(outbox.due(100).await.unwrap().is_empty());
     }
 }

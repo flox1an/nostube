@@ -10,4 +10,31 @@ describe('studio translations', () => {
     expect(i18n.resolvedLanguage).toBe('en')
     expect(document.documentElement.lang).toBe('en')
   })
+  it('provides video lifecycle actions and errors in every Studio locale', () => {
+    const keys = [
+      'connect',
+      'edit',
+      'replace',
+      'replaceHint',
+      'delete',
+      'deleteConfirm',
+      'deleteHint',
+      'confirmDelete',
+      'deleting',
+      'cancel',
+      'save',
+      'saving',
+      'authorMismatch',
+      'notAddressable',
+      'eventMissing',
+      'assetMissing',
+    ]
+    for (const language of ['en', 'de', 'fr', 'es', 'ru', 'zh', 'ja']) {
+      for (const key of keys) {
+        expect(i18n.getResource(language, 'translation', `studio.videos.${key}`)).toBeTypeOf(
+          'string'
+        )
+      }
+    }
+  })
 })

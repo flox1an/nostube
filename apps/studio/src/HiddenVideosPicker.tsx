@@ -11,6 +11,8 @@ import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { isRefHidden, setRefHidden } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
+import { VideoActions } from './VideoActions'
+import { useSigner } from './signer-context'
 
 interface PickerProps {
   hiddenText: string
@@ -37,18 +39,21 @@ export default function HiddenVideosPicker(props: PickerProps) {
   }
   return (
     <InstanceProviders client={booted.client} config={booted.config}>
-      <VideoList config={booted.config} {...props} />
+      <VideoList instance={booted} config={booted.config} {...props} />
     </InstanceProviders>
   )
 }
 
 function VideoList({
   config,
+  instance,
   hiddenText,
   onChange,
-}: PickerProps & { config: InstanceClient['config'] }) {
+}: PickerProps & { config: InstanceClient['config']; instance: InstanceClient }) {
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
+  const { signer, pubkey, connect } = useSigner()
+  const [connectError, setConnectError] = useState<string | null>(null)
 
   if (!config.startPage) {
     return <p className="text-sm text-muted-foreground">{t('studio.videos.addCreator')}</p>
@@ -61,11 +66,29 @@ function VideoList({
 
   return (
     <div className="space-y-3">
+      {signer && !pubkey && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setConnectError(null)
+            void connect().catch(e => setConnectError(e instanceof Error ? e.message : String(e)))
+          }}
+        >
+          {t('studio.videos.connect')}
+        </Button>
+      )}
+      {connectError && (
+        <p role="alert" className="text-sm text-destructive">
+          {connectError}
+        </p>
+      )}
       <ul className="divide-y divide-border rounded-md border border-border">
         {videos.map(video => (
           <Row
-            key={video.id}
+            key={videoRef(video)}
             video={video}
+            instance={instance}
             hidden={isRefHidden(hiddenText, videoRef(video)) || isRefHidden(hiddenText, video.id)}
             onToggle={on => onChange(setRefHidden(hiddenText, [videoRef(video), video.id], on))}
           />
@@ -82,17 +105,19 @@ function VideoList({
 
 function Row({
   video,
+  instance,
   hidden,
   onToggle,
 }: {
   video: VideoEvent
+  instance: InstanceClient
   hidden: boolean
   onToggle: (hidden: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   return (
-    <li className="flex items-center gap-3 p-2">
+    <li className="flex flex-wrap items-center gap-3 p-2">
       <div className="h-12 w-20 shrink-0 overflow-hidden rounded bg-muted">
         {thumbnail && !video.contentWarning && (
           <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -117,6 +142,7 @@ function Row({
           aria-label={t('studio.videos.hide', { title: video.title })}
         />
       </label>
+      <VideoActions video={video} instance={instance} />
     </li>
   )
 }

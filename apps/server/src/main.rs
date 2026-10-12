@@ -311,6 +311,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     )?;
     // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
     let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
+    outbox.attach_storage(state.clone());
 
     let branding = Arc::new(branding::Branding::open(&data, cfg.public_json()));
     // Broken secrets only disable the admin area, never the instance (#7).
@@ -443,11 +444,39 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         };
     }
     if is_blossom(req.method(), &path) {
-        // A stored upload is queued for the mirrors, unless another instance's outbox sent it.
-        let stored = matches!((req.method(), path.as_str()), (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"))
-            && !outbox::is_mirror_delivery(req.headers());
+        let upload = matches!((req.method(), path.as_str()),
+            (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"));
+        let mirrored = outbox::is_mirror_delivery(req.headers());
+        // Almond already validates/consumes this auth in its handler. Retain the verified
+        // identity only when the resulting descriptor confirms storage succeeded.
+        let auth = req.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok())
+            .and_then(|h| almond::services::auth::parse_auth_header(h).ok())
+            .filter(|event| event.verify().is_ok());
+        let _media_guard = if upload { Some(outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
         let res = app.blossom.oneshot(req).await.into_response();
-        return if stored { app.outbox.after_upload(res).await } else { res };
+        if !upload || !res.status().is_success() { return res; }
+        let (parts, body) = res.into_parts();
+        let bytes = match axum::body::to_bytes(body, 1 << 20).await {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                tracing::warn!("cannot record upload ownership: {error}");
+                return StatusCode::SERVICE_UNAVAILABLE.into_response();
+            }
+        };
+        if let Ok(descriptor) = serde_json::from_slice::<serde_json::Value>(&bytes) {
+            if let Some(hash) = descriptor["sha256"].as_str() {
+                let Some(auth) = auth else {
+                    tracing::warn!("stored upload has no verified auth author");
+                    return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                };
+                if let Err(error) = app.outbox.record_owner(hash.to_owned(), auth.pubkey, mirrored).await {
+                    tracing::warn!("cannot persist upload ownership: {error}");
+                    return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                }
+            }
+        }
+        let res = Response::from_parts(parts, Body::from(bytes));
+        return if mirrored { res } else { app.outbox.after_upload(res).await };
     }
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
         return StatusCode::METHOD_NOT_ALLOWED.into_response();
@@ -589,5 +618,82 @@ mod tests {
         assert_eq!(revision(Some("unknown".into())), None);
         assert_eq!(revision(Some("  ".into())), None);
         assert_eq!(revision(None), None);
+    }
+
+    #[tokio::test]
+    async fn successful_uploads_record_auth_ownership_and_mirror_delivery_never_requeues() {
+        use base64::Engine;
+        use nostr::prelude::{EventBuilder, FinalizeEvent, Keys, Kind, Tag, Timestamp};
+        use sha2::Digest;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static N: AtomicUsize = AtomicUsize::new(0);
+        let dir = std::env::temp_dir().join(format!("nostube-upload-owner-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let key = Keys::generate();
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://instance.example".into());
+        cfg.allowed_npubs = vec![key.public_key()];
+        cfg.storage_min_free = 0;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
+            writers: vec![key.public_key()], name: "test".into(), description: "test".into(), mirror_relays: vec![],
+        }).unwrap();
+        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror {
+            relays: vec![], blossom: vec!["https://mirror.example".into()],
+        }).unwrap();
+        outbox.attach_storage(state.clone());
+        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let app = App {
+            blossom: almond::create_app(state.clone()), relay, branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "test".into(), admin: None, outbox: outbox.clone(),
+        };
+        let upload = |bytes: &'static [u8], mirrored: bool| {
+            let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+            let expiration = (Timestamp::now().as_secs() + 600).to_string();
+            let auth = EventBuilder::new(Kind::Custom(24242), hash.clone()).tags([
+                Tag::parse(["t", "upload"]).unwrap(), Tag::parse(["x", &hash]).unwrap(),
+                Tag::parse(["expiration", &expiration]).unwrap(),
+            ]).finalize(&key).unwrap();
+            let req = Request::builder().method(Method::PUT).uri("/upload")
+                .header(header::AUTHORIZATION, format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(auth.as_json())))
+                .header(header::CONTENT_TYPE, "video/mp4").header("x-sha-256", &hash)
+                .header(header::USER_AGENT, if mirrored { "nostube-outbox/test" } else { "studio/test" })
+                .body(Body::from(bytes)).unwrap();
+            (req, hash)
+        };
+        let (request, local_hash) = upload(b"local uploaded bytes", false);
+        let response = dispatch(State(app.clone()), request).await;
+        assert!(response.status().is_success());
+        assert!(state.file_index.get(&local_hash).await.is_some());
+        let (request, mirrored_hash) = upload(b"mirrored uploaded bytes", true);
+        let response = dispatch(State(app.clone()), request).await;
+        assert!(response.status().is_success());
+        assert!(state.file_index.get(&mirrored_hash).await.is_some());
+        let conn = relay::connect(&dir.join("relay.sqlite")).unwrap();
+        let owner = |hash: &str| conn.query_row("SELECT author,mirrored FROM blob_owner WHERE hash=?", [hash],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?))).unwrap();
+        assert_eq!(owner(&local_hash), (key.public_key().to_hex(), false));
+        assert_eq!(owner(&mirrored_hash), (key.public_key().to_hex(), true));
+        let count = |hash: &str| conn.query_row("SELECT COUNT(*) FROM outbox WHERE kind='blob' AND ref_id=?", [hash],
+            |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!(count(&local_hash), 1);
+        assert_eq!(count(&mirrored_hash), 0);
+        // The dispatch seam is identical for a successful PUT /mirror descriptor. Keep
+        // this boundary test offline: Almond's fetching/SSRF policy is not replaced here.
+        conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash]).unwrap();
+        let metadata = state.file_index.get(&mirrored_hash).await.unwrap();
+        let descriptor = serde_json::to_value(state.create_blob_descriptor(&mirrored_hash, &metadata)).unwrap();
+        let mut mirror_app = app;
+        mirror_app.blossom = Router::new().route("/mirror", axum::routing::put(move || {
+            let descriptor = descriptor.clone();
+            async move { Json(descriptor) }
+        }));
+        let (mut request, _) = upload(b"mirrored uploaded bytes", true);
+        *request.uri_mut() = "/mirror".parse().unwrap();
+        let response = dispatch(State(mirror_app), request).await;
+        assert!(response.status().is_success());
+        assert_eq!(owner(&mirrored_hash), (key.public_key().to_hex(), true));
+        assert_eq!(count(&mirrored_hash), 0);
     }
 }

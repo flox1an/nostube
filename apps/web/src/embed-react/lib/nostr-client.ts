@@ -1,5 +1,5 @@
 import { matchFilter, verifyEvent, type Filter, type NostrEvent } from 'nostr-tools'
-import { EventCache } from './event-cache'
+import { isDeletedByEvent } from '@nostube/core/deletions'
 import type { DecodedIdentifier } from './nostr-decoder'
 
 interface Subscription {
@@ -63,162 +63,114 @@ export class NostrClient {
    * Fetch a video event by ID or address
    */
   async fetchEvent(identifier: DecodedIdentifier): Promise<NostrEvent> {
-    // Generate cache key
-    let cacheKey: string
-    if (identifier.type === 'event') {
-      cacheKey = identifier.data.id
-    } else {
-      cacheKey = EventCache.getAddressableKey(
-        identifier.data.kind,
-        identifier.data.pubkey,
-        identifier.data.identifier
-      )
-    }
-
-    // Check cache first
-    const cached = EventCache.getCachedEvent(cacheKey)
-    if (cached) {
-      return cached
-    }
-
     const subId = `embed-${Date.now()}`
 
-    // Build filter
-    let filter: Record<string, unknown>
+    // Always ask the relays (no local cache): an edit must show and a deletion must stop playback.
+    // The author's deletions ride in the same REQ; only signed ones by the author count.
+    let filter: Filter
+    let deletions: Filter
     if (identifier.type === 'event') {
       filter = { ids: [identifier.data.id] }
+      deletions = { kinds: [5], '#e': [identifier.data.id] }
     } else {
-      filter = {
-        kinds: [identifier.data.kind],
-        authors: [identifier.data.pubkey],
-        '#d': [identifier.data.identifier],
+      const { kind, pubkey, identifier: d } = identifier.data
+      filter = { kinds: [kind], authors: [pubkey], '#d': [d] }
+      deletions = { kinds: [5], authors: [pubkey], '#a': [`${kind}:${pubkey}:${d}`] }
+    }
+
+    const { promise, resolve, reject } = Promise.withResolvers<NostrEvent>()
+    let resolved = false
+    const collectedEvents: NostrEvent[] = []
+    const deletionEvents: NostrEvent[] = []
+    let eoseCount = 0
+    let connectedCount = 0
+    let failedCount = 0
+    let earlyReturnTimer: ReturnType<typeof setTimeout> | undefined
+
+    const settle = () => {
+      resolved = true
+      clearTimeout(timeout)
+      clearTimeout(earlyReturnTimer)
+      this.closeSubscription(subId)
+      if (collectedEvents.length === 0) {
+        reject(new Error('Event not found on any relay'))
+        return
+      }
+      const newest = collectedEvents.reduce((prev, current) =>
+        current.created_at > prev.created_at ? current : prev
+      )
+      if (deletionEvents.some(deletion => isDeletedByEvent(deletion, newest))) {
+        reject(new Error('This video was deleted by its author'))
+      } else {
+        resolve(newest)
       }
     }
 
-    const isAddressable = identifier.type === 'address'
+    const timeout = setTimeout(() => {
+      if (!resolved) settle()
+    }, 6000)
 
-    return new Promise((resolve, reject) => {
-      let resolved = false
-      const collectedEvents: NostrEvent[] = []
-      let eoseCount = 0
-      let connectedCount = 0
-      let failedCount = 0
-      const totalRelays = this.relays.length
-      let earlyReturnTimer: ReturnType<typeof setTimeout> | null = null
+    const handleMessage = (event: MessageEvent) => {
+      if (resolved) return
 
-      // Overall timeout
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          if (earlyReturnTimer) clearTimeout(earlyReturnTimer)
-          this.closeSubscription(subId)
+      try {
+        const message = JSON.parse(event.data)
 
-          if (collectedEvents.length > 0) {
-            const newest = collectedEvents.reduce((prev, current) =>
-              current.created_at > prev.created_at ? current : prev
-            )
-            EventCache.setCachedEvent(cacheKey, newest)
-            resolve(newest)
-          } else {
-            reject(new Error('Event not found (timeout)'))
+        if (message[0] === 'EVENT' && message[1] === subId) {
+          const nostrEvent = message[2] as NostrEvent
+          if (nostrEvent.kind === 5) {
+            // A forged deletion must not hide a video.
+            if (verifyEvent(nostrEvent)) deletionEvents.push(nostrEvent)
+            return
+          }
+          collectedEvents.push(nostrEvent)
+          // Give the other relays a moment to answer with a newer version or a deletion.
+          earlyReturnTimer ??= setTimeout(() => {
+            if (!resolved) settle()
+          }, 200)
+        }
+
+        if (message[0] === 'EOSE' && message[1] === subId) {
+          eoseCount++
+          if (!resolved && (collectedEvents.length > 0 || eoseCount === connectedCount)) {
+            settle()
           }
         }
-      }, 6000)
-
-      const handleMessage = (event: MessageEvent) => {
-        if (resolved) return
-
-        try {
-          const message = JSON.parse(event.data)
-
-          if (message[0] === 'EVENT' && message[1] === subId) {
-            const nostrEvent = message[2] as NostrEvent
-
-            if (isAddressable) {
-              collectedEvents.push(nostrEvent)
-
-              if (!earlyReturnTimer && collectedEvents.length === 1) {
-                earlyReturnTimer = setTimeout(() => {
-                  if (!resolved && collectedEvents.length > 0) {
-                    resolved = true
-                    clearTimeout(timeout)
-                    this.closeSubscription(subId)
-                    const newest = collectedEvents.reduce((prev, current) =>
-                      current.created_at > prev.created_at ? current : prev
-                    )
-                    EventCache.setCachedEvent(cacheKey, newest)
-                    resolve(newest)
-                  }
-                }, 200)
-              }
-            } else {
-              resolved = true
-              clearTimeout(timeout)
-              if (earlyReturnTimer) clearTimeout(earlyReturnTimer)
-              this.closeSubscription(subId)
-              EventCache.setCachedEvent(cacheKey, nostrEvent)
-              resolve(nostrEvent)
-            }
-          }
-
-          if (message[0] === 'EOSE' && message[1] === subId) {
-            eoseCount++
-
-            if (isAddressable && !resolved) {
-              if (collectedEvents.length > 0) {
-                resolved = true
-                clearTimeout(timeout)
-                if (earlyReturnTimer) clearTimeout(earlyReturnTimer)
-                this.closeSubscription(subId)
-                const newest = collectedEvents.reduce((prev, current) =>
-                  current.created_at > prev.created_at ? current : prev
-                )
-                EventCache.setCachedEvent(cacheKey, newest)
-                resolve(newest)
-              } else if (eoseCount === connectedCount) {
-                resolved = true
-                clearTimeout(timeout)
-                if (earlyReturnTimer) clearTimeout(earlyReturnTimer)
-                this.closeSubscription(subId)
-                reject(new Error('Addressable event not found on any relay'))
-              }
-            }
-          }
-        } catch (error) {
-          console.error('[Nostr Client] Failed to parse message:', error)
-        }
+      } catch (error) {
+        console.error('[Nostr Client] Failed to parse message:', error)
       }
+    }
 
-      const subscribeToRelay = (ws: WebSocket) => {
-        ws.addEventListener('message', handleMessage)
+    const subscribeToRelay = (ws: WebSocket) => {
+      ws.addEventListener('message', handleMessage)
 
-        if (!this.subscriptions.has(subId)) {
-          this.subscriptions.set(subId, [])
-        }
-        this.subscriptions.get(subId)!.push({ ws, handler: handleMessage })
-
-        const reqMessage = JSON.stringify(['REQ', subId, filter])
-        ws.send(reqMessage)
+      if (!this.subscriptions.has(subId)) {
+        this.subscriptions.set(subId, [])
       }
+      this.subscriptions.get(subId)!.push({ ws, handler: handleMessage })
 
-      this.relays.forEach(url => {
-        this.connectRelay(url)
-          .then(ws => {
-            if (resolved) return
-            connectedCount++
-            subscribeToRelay(ws)
-          })
-          .catch(() => {
-            failedCount++
-            if (failedCount === totalRelays && !resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              if (earlyReturnTimer) clearTimeout(earlyReturnTimer)
-              reject(new Error('Failed to connect to any relay'))
-            }
-          })
-      })
+      ws.send(JSON.stringify(['REQ', subId, filter, deletions]))
+    }
+
+    this.relays.forEach(url => {
+      this.connectRelay(url)
+        .then(ws => {
+          if (resolved) return
+          connectedCount++
+          subscribeToRelay(ws)
+        })
+        .catch(() => {
+          failedCount++
+          if (failedCount === this.relays.length && !resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            clearTimeout(earlyReturnTimer)
+            reject(new Error('Failed to connect to any relay'))
+          }
+        })
     })
+
+    return promise
   }
 
   /**

@@ -26,6 +26,7 @@ import { RichTextContent, type RichTextLinks } from '@nostube/widgets/components
 import { useTimelineContext } from '@nostube/widgets/timeline'
 import { formatDate } from '@nostube/widgets'
 import { SiteAuthDialog } from './AuthArea'
+import { SiteReport } from './SiteReport'
 import { useVisitorProfile } from './use-visitor-profile'
 
 const RELAY_HINT = ''
@@ -274,6 +275,7 @@ export function Comments({
             <SiteComment
               comment={comment}
               links={links}
+              relays={relays}
               signedIn={!!account}
               ownPubkey={account?.pubkey}
               viewer={viewer}
@@ -302,6 +304,7 @@ export function Comments({
 function SiteComment({
   comment,
   links,
+  relays,
   signedIn,
   ownPubkey,
   viewer,
@@ -316,6 +319,7 @@ function SiteComment({
 }: {
   comment: Comment
   links: RichTextLinks
+  relays: string[]
   signedIn: boolean
   ownPubkey?: string
   viewer?: Viewer
@@ -358,7 +362,7 @@ function SiteComment({
               >
                 {t('site.comments.reply')}
               </Button>
-              {isOwn && (
+              {isOwn ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -368,6 +372,11 @@ function SiteComment({
                 >
                   {t('site.comments.delete')}
                 </Button>
+              ) : (
+                <SiteReport
+                  target={{ type: 'comment', id: comment.id, author: comment.pubkey }}
+                  relays={relays}
+                />
               )}
             </>
           )}
@@ -403,6 +412,7 @@ function SiteComment({
                 key={reply.id}
                 comment={reply}
                 links={links}
+                relays={relays}
                 signedIn={signedIn}
                 ownPubkey={ownPubkey}
                 viewer={viewer}

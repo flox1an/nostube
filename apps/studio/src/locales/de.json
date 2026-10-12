@@ -334,7 +334,16 @@
       "unmuteComment": "Kommentar nicht mehr stummschalten",
       "muteList": "Stummgeschaltet",
       "emptyList": "Niemand und nichts ist stummgeschaltet.",
-      "unknownComment": "Kommentar {{id}}"
+      "unknownComment": "Kommentar {{id}}",
+      "reports": "Meldungen",
+      "noReports": "Noch keine Meldungen.",
+      "reportTargetVideo": "Gemeldetes Video: {{title}}",
+      "reportTargetComment": "Gemeldeter Kommentar",
+      "reportTargetProfile": "Gemeldetes Konto",
+      "reportReason": "Grund: {{reason}}",
+      "reportHandled": "bereits erledigt",
+      "reportVideoNote": "Das ist eines deiner eigenen Videos. Blende es aus oder lösche es auf der Videos-Seite.",
+      "reportSelfNote": "Das ist das eigene Konto oder eine eigene Antwort des Creators; hier gibt es nichts zum Stummschalten."
     },
     "overview": {
       "description": "Was das eingebaute Relay und der Blossom-Server gerade enthalten. Hier wird nichts verändert.",

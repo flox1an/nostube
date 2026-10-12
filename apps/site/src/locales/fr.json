@@ -75,6 +75,32 @@
       "noRelays": "aucun relais ne l’a confirmé",
       "failed": "Le j’aime n’a pas pu être publié : {{reason}}"
     },
+    "report": {
+      "action": "Signaler",
+      "titleVideo": "Signaler la vidéo",
+      "titleComment": "Signaler le commentaire",
+      "titleProfile": "Signaler le compte",
+      "description": "Votre signalement est envoyé comme une note signée que le créateur peut consulter ; il n’est pas anonyme.",
+      "reasonLabel": "Motif",
+      "reasons": {
+        "spam": "Spam ou trompeur",
+        "nudity": "Nudité ou contenu sexuel",
+        "profanity": "Grossièretés ou langage offensant",
+        "illegal": "Contenu illégal",
+        "impersonation": "Usurpation d’identité",
+        "harassment": "Harcèlement ou abus",
+        "other": "Autre"
+      },
+      "detailsLabel": "Détails supplémentaires (optionnel)",
+      "detailsPlaceholder": "Ajoutez du contexte pour le créateur…",
+      "cancel": "Annuler",
+      "submit": "Envoyer le signalement",
+      "submitting": "Envoi en cours…",
+      "sent": "Signalement envoyé. Merci.",
+      "refused": "refusé",
+      "noRelays": "aucun relais ne l’a confirmé",
+      "failed": "Le signalement n’a pas pu être envoyé : {{reason}}"
+    },
     "zap": {
       "button": "Zap",
       "totalTitle": "Sats zappés : {{sats}}",

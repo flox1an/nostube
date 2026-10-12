@@ -71,6 +71,32 @@
       "noRelays": "どのリレーも確認しませんでした",
       "failed": "いいねを公開できませんでした：{{reason}}"
     },
+    "report": {
+      "action": "報告",
+      "titleVideo": "動画を報告",
+      "titleComment": "コメントを報告",
+      "titleProfile": "アカウントを報告",
+      "description": "報告は署名付きのノートとして送信され、クリエイターが確認できます。匿名ではありません。",
+      "reasonLabel": "理由",
+      "reasons": {
+        "spam": "スパムまたは誤解を招く内容",
+        "nudity": "ヌードまたは性的コンテンツ",
+        "profanity": "冒涜的な言葉や不快な表現",
+        "illegal": "違法コンテンツ",
+        "impersonation": "なりすまし",
+        "harassment": "ハラスメントまたは虐待",
+        "other": "その他"
+      },
+      "detailsLabel": "追加情報（任意）",
+      "detailsPlaceholder": "クリエイターのために詳細を記入してください…",
+      "cancel": "キャンセル",
+      "submit": "報告を送信",
+      "submitting": "送信中…",
+      "sent": "報告を送信しました。ありがとうございます。",
+      "refused": "拒否されました",
+      "noRelays": "どのリレーも確認しませんでした",
+      "failed": "報告を送信できませんでした：{{reason}}"
+    },
     "zap": {
       "button": "Zap",
       "totalTitle": "Zap された sats：{{sats}}",

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import {
   finalizeEvent,
   generateSecretKey,
@@ -22,6 +22,7 @@ const owner = getPublicKey(secret)
 const spammer = 'b'.repeat(64)
 const RELAY = 'wss://videos.example.org'
 
+const videoHash = 'a'.repeat(64)
 const video = finalizeEvent(
   {
     kind: 34235,
@@ -30,7 +31,7 @@ const video = finalizeEvent(
     tags: [
       ['d', 'clip'],
       ['title', 'My clip'],
-      ['imeta', 'url https://videos.example.org/clip.mp4', 'm video/mp4'],
+      ['imeta', 'url https://videos.example.org/clip.mp4', 'm video/mp4', `x ${videoHash}`],
     ],
   },
   secret
@@ -53,7 +54,60 @@ const list = finalizeEvent(
   { kind: 10000, created_at: 5_000, content: 'nip04-cipher', tags: [['t', 'spam']] },
   secret
 )
-const events: NostrEvent[] = [video, comment, list]
+const videoReport = {
+  id: 'd'.repeat(64),
+  pubkey: spammer,
+  kind: 1984,
+  created_at: 3_000,
+  content: 'actually fine, reporter was wrong',
+  tags: [
+    ['e', video.id, 'illegal'],
+    ['p', owner],
+  ],
+  sig: 'f'.repeat(128),
+} as NostrEvent
+const commentReport = {
+  id: 'e'.repeat(64),
+  pubkey: owner,
+  kind: 1984,
+  created_at: 4_000,
+  content: '',
+  tags: [
+    ['e', comment.id, 'spam'],
+    ['p', spammer, 'spam'],
+  ],
+  sig: 'f'.repeat(128),
+} as NostrEvent
+const profileReport = {
+  id: 'f'.repeat(64),
+  pubkey: spammer,
+  kind: 1984,
+  created_at: 4_500,
+  content: '',
+  // A profile report with no e tag against the creator's own key (ADR 0011): the self-note
+  // branch, not a mute button.
+  tags: [['p', owner, 'harassment']],
+  sig: 'f'.repeat(128),
+} as NostrEvent
+const bareXReport = {
+  id: '0'.repeat(64),
+  pubkey: spammer,
+  kind: 1984,
+  created_at: 4_800,
+  content: '',
+  // No e tag: the BUD-09 bridge's fallback, resolved against the video's own media hash.
+  tags: [['x', videoHash, 'malware']],
+  sig: 'f'.repeat(128),
+} as NostrEvent
+const events: NostrEvent[] = [
+  video,
+  comment,
+  list,
+  videoReport,
+  commentReport,
+  profileReport,
+  bareXReport,
+]
 
 const publish = vi.fn(async () => [{ ok: true, from: RELAY }])
 vi.mock('./instance-client', () => ({
@@ -109,10 +163,12 @@ const renderPage = () =>
 
 it('mutes a comment author with a signed list built on the current one', async () => {
   renderPage()
-  expect(await screen.findByText('buy my coin')).toBeTruthy()
-  expect(screen.getByText(/on My clip/)).toBeTruthy()
+  const commentRow = (await screen.findByText('buy my coin')).closest('li') as HTMLElement
+  expect(within(commentRow).getByText(/on My clip/)).toBeTruthy()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Mute author' }))
+  // The comment's own row and the report row on the same comment both offer "Mute author"
+  // for the same spammer; the comment row is the one under test here.
+  fireEvent.click(within(commentRow).getByRole('button', { name: 'Mute author' }))
   await waitFor(() => expect(publish).toHaveBeenCalledTimes(1))
   const [relays, signed] = publish.mock.calls[0] as unknown as [string[], NostrEvent]
   expect(relays).toEqual([RELAY])
@@ -123,8 +179,8 @@ it('mutes a comment author with a signed list built on the current one', async (
     ['p', spammer],
   ])
   expect(signed.created_at).toBeGreaterThan(list.created_at)
-  // The row and the list both offer the way back.
-  expect(await screen.findAllByRole('button', { name: 'Unmute author' })).toHaveLength(2)
+  // The comment row, its report row, and the mute list itself all offer the way back.
+  expect(await screen.findAllByRole('button', { name: 'Unmute author' })).toHaveLength(3)
 })
 
 it('refuses to publish when the extension holds another key than the creator key', async () => {
@@ -137,9 +193,38 @@ it('refuses to publish when the extension holds another key than the creator key
       JSON.parse(JSON.stringify(finalizeEvent(template, other))),
   }
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Mute author' }))
+  const commentRow = (await screen.findByText('buy my coin')).closest('li') as HTMLElement
+  fireEvent.click(within(commentRow).getByRole('button', { name: 'Mute author' }))
   expect(
     await screen.findByText(/uses a different key than this instance's creator key/)
   ).toBeTruthy()
   expect(publish).not.toHaveBeenCalled()
+})
+
+it('resolves each report to its video, comment or account, with no mute action on a video report', async () => {
+  renderPage()
+  // Two video reports: one by e tag, one by a bare x (the BUD-09 bridge's fallback) — both
+  // resolve to the same video, so distinguish them by reason.
+  const videoRows = (await screen.findAllByText('Reported video: My clip')).map(
+    el => el.closest('li') as HTMLElement
+  )
+  expect(videoRows).toHaveLength(2)
+  for (const row of videoRows) {
+    expect(within(row).getByText(/one of your own videos/)).toBeTruthy()
+    expect(within(row).queryByRole('button')).toBeNull()
+  }
+  expect(videoRows.some(row => within(row).queryByText(/Reason: illegal/))).toBe(true)
+  expect(videoRows.some(row => within(row).queryByText(/Reason: malware/))).toBe(true)
+
+  const commentReportRow = (await screen.findByText('Reported comment')).closest(
+    'li'
+  ) as HTMLElement
+  expect(within(commentReportRow).getByText(/Reason: spam/)).toBeTruthy()
+  expect(within(commentReportRow).getByRole('button', { name: 'Mute author' })).toBeTruthy()
+  expect(within(commentReportRow).getByRole('button', { name: 'Mute this comment' })).toBeTruthy()
+
+  // A profile report against the creator's own key offers nothing to mute.
+  const profileRow = (await screen.findByText('Reported account')).closest('li') as HTMLElement
+  expect(within(profileRow).getByText(/Reason: harassment/)).toBeTruthy()
+  expect(within(profileRow).queryByRole('button')).toBeNull()
 })

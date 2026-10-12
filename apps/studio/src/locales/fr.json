@@ -335,7 +335,16 @@
       "unmuteComment": "Rétablir le commentaire",
       "muteList": "En sourdine",
       "emptyList": "Personne ni rien n'est en sourdine.",
-      "unknownComment": "Commentaire {{id}}"
+      "unknownComment": "Commentaire {{id}}",
+      "reports": "Signalements",
+      "noReports": "Aucun signalement pour le moment.",
+      "reportTargetVideo": "Vidéo signalée : {{title}}",
+      "reportTargetComment": "Commentaire signalé",
+      "reportTargetProfile": "Compte signalé",
+      "reportReason": "Motif : {{reason}}",
+      "reportHandled": "déjà traité",
+      "reportVideoNote": "C'est l'une de tes propres vidéos. Masque-la ou supprime-la depuis la page Vidéos.",
+      "reportSelfNote": "C'est le propre compte ou une réponse du créateur ; il n'y a rien à mettre en sourdine ici."
     },
     "overview": {
       "description": "Ce que contiennent actuellement le relais intégré et le serveur Blossom. Rien n’est modifié ici.",

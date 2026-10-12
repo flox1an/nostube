@@ -84,12 +84,15 @@ interface Loaded {
   videos: VideoEvent[]
   /** Newest first. */
   comments: NostrEvent[]
+  /** Newest first; only reports (NIP-56, ADR 0011) that resolve to one of ours. */
+  reports: NostrEvent[]
 }
 
-// ponytail: the newest 100 videos and 500 comments per query, no paging; add it when an
-// instance outgrows that.
+// ponytail: the newest 100 videos, 500 comments and 200 reports per query, no paging; add it
+// when an instance outgrows that.
 const VIDEO_LIMIT = 100
 const COMMENT_LIMIT = 500
+const REPORT_LIMIT = 200
 
 /** Kind 1 (NIP-10) and kind 1111 (NIP-22) comments on any of the videos. */
 function commentFilters(videos: VideoEvent[]): Filter[] {
@@ -120,6 +123,70 @@ function videoOf(comment: NostrEvent, videos: VideoEvent[]): VideoEvent | undefi
   return videos.find(v => refs.has(v.id) || refs.has(videoAddressOf(targetOf(v)) ?? ''))
 }
 
+/** What a report (kind 1984) resolves to among the owner's own videos and comments. */
+interface ReportInfo {
+  report: NostrEvent
+  reason?: string
+  target:
+    | { kind: 'video'; video: VideoEvent }
+    | { kind: 'comment'; id: string; author: string }
+    | { kind: 'profile'; pubkey: string }
+}
+
+/** A video's own media hashes: its primary `x` plus every variant's, video or thumbnail. */
+function videoMediaHashes(video: VideoEvent): Set<string> {
+  const hashes = new Set<string>()
+  if (video.x) hashes.add(video.x.toLowerCase())
+  for (const variant of [
+    ...video.videoVariants,
+    ...video.thumbnailVariants,
+    ...(video.allVideoVariants ?? []),
+  ]) {
+    if (variant.hash) hashes.add(variant.hash.toLowerCase())
+  }
+  return hashes
+}
+
+/**
+ * Resolves a report against what the studio already loaded, the same way the relay resolved it
+ * on acceptance (ADR 0011): an `e` tag naming one of the owner's videos or comments; with no
+ * `e`, a bare `x` naming one of the owner's videos by its media hash (the BUD-09 bridge's
+ * fallback), or a `p` tag naming the owner or a visitor who has commented here. A report the
+ * studio cannot place (an older comment outside `COMMENT_LIMIT`, say) is not shown rather than
+ * guessed.
+ */
+function reportTarget(
+  report: NostrEvent,
+  videos: VideoEvent[],
+  comments: NostrEvent[],
+  owner: string
+): ReportInfo | null {
+  const eTag = report.tags.find(t => t[0] === 'e' && t[1])
+  if (eTag) {
+    const video = videos.find(v => v.id === eTag[1])
+    if (video) return { report, reason: eTag[2], target: { kind: 'video', video } }
+    const comment = comments.find(c => c.id === eTag[1])
+    if (comment) {
+      return {
+        report,
+        reason: eTag[2],
+        target: { kind: 'comment', id: comment.id, author: comment.pubkey },
+      }
+    }
+    return null
+  }
+  const xTag = report.tags.find(t => t[0] === 'x' && t[1])
+  if (xTag) {
+    const video = videos.find(v => videoMediaHashes(v).has(xTag[1].toLowerCase()))
+    return video ? { report, reason: xTag[2], target: { kind: 'video', video } } : null
+  }
+  const pTag = report.tags.find(t => t[0] === 'p' && t[1])
+  if (pTag && (pTag[1] === owner || comments.some(c => c.pubkey === pTag[1]))) {
+    return { report, reason: pTag[2], target: { kind: 'profile', pubkey: pTag[1] } }
+  }
+  return null
+}
+
 function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }) {
   const { t } = useTranslation()
   const { signer } = useSigner()
@@ -145,12 +212,18 @@ function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }
         { kinds: getKindsForType('all'), authors: [owner], limit: VIDEO_LIMIT },
       ])
       const videos = videoEvents.flatMap(e => processEvent(e, []) ?? [])
-      if (videos.length === 0) return { list, videos, comments: [] }
+      if (videos.length === 0) return { list, videos, comments: [], reports: [] }
       const found = await collect(config.interactionRelays, commentFilters(videos))
       const comments = [...new Map(found.map(e => [e.id, e])).values()]
         .filter(e => videoOf(e, videos))
         .sort((a, b) => b.created_at - a.created_at)
-      return { list, videos, comments }
+      const foundReports = await collect(config.interactionRelays, [
+        { kinds: [1984], limit: REPORT_LIMIT },
+      ])
+      const reports = [...new Map(foundReports.map(e => [e.id, e])).values()]
+        .filter(e => reportTarget(e, videos, comments, owner))
+        .sort((a, b) => b.created_at - a.created_at)
+      return { list, videos, comments, reports }
     }
     load().then(
       result => current && setLoaded(result),
@@ -170,7 +243,7 @@ function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }
     )
   }
 
-  const { list, videos, comments } = loaded
+  const { list, videos, comments, reports } = loaded
   const muted = mutedOf(list ? [list] : [])
 
   const change = async (next: (list: MuteListEvent | null) => EventTemplate) => {
@@ -208,6 +281,29 @@ function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }
         )}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">{t('studio.moderation.reports')}</h3>
+        {reports.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('studio.moderation.noReports')}</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-md border border-border">
+            {reports.map(report => {
+              const info = reportTarget(report, videos, comments, owner)
+              return info ? (
+                <ReportRow
+                  key={report.id}
+                  info={info}
+                  owner={owner}
+                  muted={muted}
+                  busy={busy}
+                  onChange={next => void change(next)}
+                />
+              ) : null
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold">{t('studio.moderation.comments')}</h3>
@@ -270,6 +366,102 @@ function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }
         )}
       </section>
     </div>
+  )
+}
+
+function ReportRow({
+  info,
+  owner,
+  muted,
+  busy,
+  onChange,
+}: {
+  info: ReportInfo
+  owner: string
+  muted: Muted
+  busy: boolean
+  onChange: (next: (list: MuteListEvent | null) => EventTemplate) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const { report, reason, target } = info
+  // The owner cannot mute themself: a report on the creator's own account or reply offers
+  // nothing to do here, the same way a video report points elsewhere instead of a button.
+  const targetAuthor =
+    target.kind === 'comment' ? target.author : target.kind === 'profile' ? target.pubkey : null
+  const isOwner = targetAuthor === owner
+  const handled =
+    target.kind === 'comment'
+      ? muted.events.has(target.id) || muted.pubkeys.has(target.author)
+      : target.kind === 'profile'
+        ? muted.pubkeys.has(target.pubkey)
+        : false
+
+  return (
+    <li className={`space-y-2 p-3 ${handled ? 'opacity-60' : ''}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Author pubkey={report.pubkey} />
+        <span className="text-xs text-muted-foreground">
+          {formatDate(report.created_at, i18n.resolvedLanguage)}
+          {handled ? ` · ${t('studio.moderation.reportHandled')}` : ''}
+        </span>
+      </div>
+      <p className="text-sm font-medium">
+        {target.kind === 'video'
+          ? t('studio.moderation.reportTargetVideo', { title: target.video.title })
+          : target.kind === 'comment'
+            ? t('studio.moderation.reportTargetComment')
+            : t('studio.moderation.reportTargetProfile')}
+      </p>
+      {reason && (
+        <p className="text-sm text-muted-foreground">
+          {t('studio.moderation.reportReason', { reason })}
+        </p>
+      )}
+      {report.content && (
+        <p className="line-clamp-4 text-sm break-words whitespace-pre-wrap">{report.content}</p>
+      )}
+      {target.kind === 'video' ? (
+        <p className="text-sm text-muted-foreground">{t('studio.moderation.reportVideoNote')}</p>
+      ) : isOwner ? (
+        <p className="text-sm text-muted-foreground">{t('studio.moderation.reportSelfNote')}</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              const author = target.kind === 'comment' ? target.author : target.pubkey
+              onChange(l =>
+                muted.pubkeys.has(author) ? unmuteAuthor(l, author) : muteAuthor(l, author)
+              )
+            }}
+          >
+            {muted.pubkeys.has(target.kind === 'comment' ? target.author : target.pubkey)
+              ? t('studio.moderation.unmuteAuthor')
+              : t('studio.moderation.muteAuthor')}
+          </Button>
+          {target.kind === 'comment' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() =>
+                onChange(l =>
+                  muted.events.has(target.id) ? unmuteEvent(l, target.id) : muteEvent(l, target.id)
+                )
+              }
+            >
+              {muted.events.has(target.id)
+                ? t('studio.moderation.unmuteComment')
+                : t('studio.moderation.muteComment')}
+            </Button>
+          )}
+        </div>
+      )}
+    </li>
   )
 }
 

@@ -71,6 +71,32 @@
       "noRelays": "没有中继确认",
       "failed": "无法发布点赞：{{reason}}"
     },
+    "report": {
+      "action": "举报",
+      "titleVideo": "举报视频",
+      "titleComment": "举报评论",
+      "titleProfile": "举报账号",
+      "description": "您的举报将作为已签名的记录发送，创作者可以查看；举报不是匿名的。",
+      "reasonLabel": "原因",
+      "reasons": {
+        "spam": "垃圾信息或误导",
+        "nudity": "裸露或色情内容",
+        "profanity": "粗俗或冒犯性语言",
+        "illegal": "非法内容",
+        "impersonation": "冒充他人",
+        "harassment": "骚扰或虐待",
+        "other": "其他"
+      },
+      "detailsLabel": "附加详情（可选）",
+      "detailsPlaceholder": "为创作者补充一些背景信息…",
+      "cancel": "取消",
+      "submit": "提交举报",
+      "submitting": "提交中…",
+      "sent": "举报已发送，谢谢。",
+      "refused": "已拒绝",
+      "noRelays": "没有中继确认",
+      "failed": "无法发送举报：{{reason}}"
+    },
     "zap": {
       "button": "打赏",
       "totalTitle": "已打赏 sats：{{sats}}",

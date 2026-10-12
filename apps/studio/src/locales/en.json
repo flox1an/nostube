@@ -334,7 +334,16 @@
       "unmuteComment": "Unmute comment",
       "muteList": "Muted",
       "emptyList": "Nobody and nothing is muted.",
-      "unknownComment": "Comment {{id}}"
+      "unknownComment": "Comment {{id}}",
+      "reports": "Reports",
+      "noReports": "No reports yet.",
+      "reportTargetVideo": "Reported video: {{title}}",
+      "reportTargetComment": "Reported comment",
+      "reportTargetProfile": "Reported account",
+      "reportReason": "Reason: {{reason}}",
+      "reportHandled": "handled",
+      "reportVideoNote": "This is one of your own videos. Hide or delete it from the Videos page.",
+      "reportSelfNote": "This is the creator's own account or reply; there's nothing to mute here."
     },
     "overview": {
       "description": "What the built-in relay and Blossom server hold right now. Nothing here changes anything.",

@@ -73,6 +73,32 @@
       "noRelays": "kein Relay hat es bestätigt",
       "failed": "Das Like konnte nicht veröffentlicht werden: {{reason}}"
     },
+    "report": {
+      "action": "Melden",
+      "titleVideo": "Video melden",
+      "titleComment": "Kommentar melden",
+      "titleProfile": "Konto melden",
+      "description": "Deine Meldung wird als signierte Notiz gesendet, die der Creator einsehen kann; sie ist nicht anonym.",
+      "reasonLabel": "Grund",
+      "reasons": {
+        "spam": "Spam oder irreführend",
+        "nudity": "Nacktheit oder sexuelle Inhalte",
+        "profanity": "Beleidigungen oder anstößige Sprache",
+        "illegal": "Illegaler Inhalt",
+        "impersonation": "Identitätsmissbrauch",
+        "harassment": "Belästigung oder Missbrauch",
+        "other": "Sonstiges"
+      },
+      "detailsLabel": "Zusätzliche Details (optional)",
+      "detailsPlaceholder": "Gib dem Creator mehr Kontext…",
+      "cancel": "Abbrechen",
+      "submit": "Meldung senden",
+      "submitting": "Wird gesendet…",
+      "sent": "Meldung gesendet. Danke.",
+      "refused": "abgelehnt",
+      "noRelays": "kein Relay hat es bestätigt",
+      "failed": "Die Meldung konnte nicht gesendet werden: {{reason}}"
+    },
     "zap": {
       "button": "Zap",
       "totalTitle": "Gezappte Sats: {{sats}}",

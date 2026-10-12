@@ -73,6 +73,32 @@
       "noRelays": "no relay confirmed it",
       "failed": "The like could not be published: {{reason}}"
     },
+    "report": {
+      "action": "Report",
+      "titleVideo": "Report video",
+      "titleComment": "Report comment",
+      "titleProfile": "Report account",
+      "description": "Your report is sent as a signed note the creator can review; it is not anonymous.",
+      "reasonLabel": "Reason",
+      "reasons": {
+        "spam": "Spam or misleading",
+        "nudity": "Nudity or sexual content",
+        "profanity": "Profanity or offensive language",
+        "illegal": "Illegal content",
+        "impersonation": "Impersonation",
+        "harassment": "Harassment or abuse",
+        "other": "Other"
+      },
+      "detailsLabel": "Additional details (optional)",
+      "detailsPlaceholder": "Add context for the creator…",
+      "cancel": "Cancel",
+      "submit": "Submit report",
+      "submitting": "Submitting…",
+      "sent": "Report sent. Thank you.",
+      "refused": "refused",
+      "noRelays": "no relay confirmed it",
+      "failed": "The report could not be sent: {{reason}}"
+    },
     "zap": {
       "button": "Zap",
       "totalTitle": "Sats zapped: {{sats}}",

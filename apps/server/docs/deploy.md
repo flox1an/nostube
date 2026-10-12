@@ -34,6 +34,15 @@ the instance relays and any additional visitor-profile relays configured in Stud
 visitor's kinds 0 and 10002 use this exception: video sources, creator metadata, embed
 queries and interaction publishing retain their instance scope. Public relays learn the
 visitor's IP address and queried public key; a public avatar URL can also contact its host.
+
+Signed-in visitors can also report a video or a comment. A report is a signed NIP-56 note on
+the relay, public like any other event and never anonymous; **Content → Moderation** in Studio
+lists video, comment and account reports next to the comments themselves, resolved against
+what the relay already stores (ADR 0011) and with no new storage of its own. A report on a
+comment or an account offers the existing mute actions; a report on a video points to the
+Videos page instead (the report disappears once the video is deleted, but not just hidden),
+and a report on the creator's own account or reply offers nothing to mute.
+
 The Site's first login dialog uses a translated, brand-neutral “Welcome” heading.
 
 **Server → Overview** in Studio shows the built-in relay's live event count and distribution
@@ -45,10 +54,10 @@ enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
 
 ## What you have to set
 
-| What               | How                                                            | Why                                                                                                                                                                                                                                     |
-| ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What               | How                                                            | Why                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database (which also holds the mirror outbox, ADR 0009), the stored videos, and `branding/` with the logo, favicon and banner uploaded in the studio |
-| The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ)      |
+| The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ)                                                     |
 
 Everything else is optional: `NOSTUBE_PORT` (default 8080), `NOSTUBE_BIND` (the image binds all
 interfaces, the binary alone binds loopback in proxy mode), `NOSTUBE_DATA` (`/data` in the image).

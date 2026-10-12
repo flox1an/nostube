@@ -333,7 +333,16 @@
       "unmuteComment": "コメントのミュートを解除",
       "muteList": "ミュート中",
       "emptyList": "ミュートしているものはありません。",
-      "unknownComment": "コメント {{id}}"
+      "unknownComment": "コメント {{id}}",
+      "reports": "報告",
+      "noReports": "まだ報告はありません。",
+      "reportTargetVideo": "報告された動画：{{title}}",
+      "reportTargetComment": "報告されたコメント",
+      "reportTargetProfile": "報告されたアカウント",
+      "reportReason": "理由：{{reason}}",
+      "reportHandled": "対応済み",
+      "reportVideoNote": "これはあなた自身の動画です。動画ページから非表示または削除してください。",
+      "reportSelfNote": "これはクリエイター自身のアカウントまたは返信です。ここでミュートする対象はありません。"
     },
     "overview": {
       "description": "内蔵リレーと Blossom サーバーに現在保存されている内容です。ここでは何も変更されません。",

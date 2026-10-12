@@ -75,6 +75,32 @@
       "noRelays": "ningún relé lo confirmó",
       "failed": "No se pudo publicar el me gusta: {{reason}}"
     },
+    "report": {
+      "action": "Reportar",
+      "titleVideo": "Reportar video",
+      "titleComment": "Reportar comentario",
+      "titleProfile": "Reportar cuenta",
+      "description": "Tu reporte se envía como una nota firmada que el creador puede revisar; no es anónimo.",
+      "reasonLabel": "Motivo",
+      "reasons": {
+        "spam": "Spam o engañoso",
+        "nudity": "Desnudez o contenido sexual",
+        "profanity": "Lenguaje ofensivo o vulgar",
+        "illegal": "Contenido ilegal",
+        "impersonation": "Suplantación de identidad",
+        "harassment": "Acoso o abuso",
+        "other": "Otro"
+      },
+      "detailsLabel": "Detalles adicionales (opcional)",
+      "detailsPlaceholder": "Añade contexto para el creador…",
+      "cancel": "Cancelar",
+      "submit": "Enviar reporte",
+      "submitting": "Enviando…",
+      "sent": "Reporte enviado. Gracias.",
+      "refused": "rechazado",
+      "noRelays": "ningún relé lo confirmó",
+      "failed": "No se pudo enviar el reporte: {{reason}}"
+    },
     "zap": {
       "button": "Zap",
       "totalTitle": "Sats enviados: {{sats}}",

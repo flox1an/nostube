@@ -29,6 +29,7 @@ import type { AgeGate } from './use-age-gate'
 import { playerBoxStyle } from './player-box'
 import { siteLinks } from './site-links'
 import { SiteLikes } from './SiteLikes'
+import { SiteReport } from './SiteReport'
 import { SiteZap } from './SiteZap'
 import { useCreatorVideos } from './use-creator-videos'
 import { useEscapeToHome } from './use-escape-to-home'
@@ -208,6 +209,10 @@ function VideoDetails({
         <div className="flex flex-wrap items-center gap-2">
           <SiteLikes video={video} relays={config.interactionRelays} />
           <SiteZap video={video} relays={config.interactionRelays} currentTime={currentTime} />
+          <SiteReport
+            target={{ type: 'video', id: video.id, author: video.pubkey }}
+            relays={config.interactionRelays}
+          />
           <ShareButton
             shareOpen={shareOpen}
             setShareOpen={onShareOpenChange}

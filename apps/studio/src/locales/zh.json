@@ -333,7 +333,16 @@
       "unmuteComment": "取消静音评论",
       "muteList": "已静音",
       "emptyList": "没有静音任何人或内容。",
-      "unknownComment": "评论 {{id}}"
+      "unknownComment": "评论 {{id}}",
+      "reports": "举报",
+      "noReports": "暂无举报。",
+      "reportTargetVideo": "被举报的视频：{{title}}",
+      "reportTargetComment": "被举报的评论",
+      "reportTargetProfile": "被举报的账号",
+      "reportReason": "原因：{{reason}}",
+      "reportHandled": "已处理",
+      "reportVideoNote": "这是你自己的视频。请在视频页面隐藏或删除它。",
+      "reportSelfNote": "这是创作者自己的账号或自己的回复；这里没有需要静音的内容。"
     },
     "overview": {
       "description": "内置中继和 Blossom 服务器当前存储的内容。此处不会更改任何内容。",

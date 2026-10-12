@@ -335,7 +335,16 @@
       "unmuteComment": "Dejar de silenciar comentario",
       "muteList": "Silenciados",
       "emptyList": "No hay nada ni nadie silenciado.",
-      "unknownComment": "Comentario {{id}}"
+      "unknownComment": "Comentario {{id}}",
+      "reports": "Reportes",
+      "noReports": "Todavía no hay reportes.",
+      "reportTargetVideo": "Video reportado: {{title}}",
+      "reportTargetComment": "Comentario reportado",
+      "reportTargetProfile": "Cuenta reportada",
+      "reportReason": "Motivo: {{reason}}",
+      "reportHandled": "ya resuelto",
+      "reportVideoNote": "Este es uno de tus propios vídeos. Ocúltalo o elimínalo desde la página de Vídeos.",
+      "reportSelfNote": "Esta es la propia cuenta o una respuesta del creador; no hay nada que silenciar aquí."
     },
     "overview": {
       "description": "Lo que contienen ahora el relay integrado y el servidor Blossom. Aquí no se cambia nada.",

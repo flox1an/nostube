@@ -224,7 +224,7 @@
     "instance": {
       "advanced": "詳細設定",
       "startPage": "トップページ",
-      "searchHint": "オフ：検索欄を表示しません。ローカル：このサーバーにある動画を検索します。外部：下のアドレスの検索サービスに検索を送ります。",
+      "searchHint": "オフ：サイトに検索はありません。ローカル：サイトに検索欄が表示され、公開中の動画をタイトル・説明・タグで探せます。検索は訪問者のブラウザー内で行われます。",
       "keys": {
         "placeholder": "npub、hex 鍵、または name@domain",
         "add": "追加",
@@ -256,11 +256,8 @@
       "search": "検索",
       "searchModes": {
         "off": "オフ",
-        "local": "ローカル",
-        "external": "外部"
+        "local": "ローカル"
       },
-      "searchUrl": "検索インスタンス",
-      "searchUrlHint": "https:// の URL。",
       "storage": "ストレージ",
       "quota": "容量上限（GiB）",
       "quotaHint": "0 は無制限です。",
@@ -441,7 +438,6 @@
       "link": "リンク（{{kind}}）：{nip19} を含む https:// アドレスが必要です。",
       "pageText": "{{page}}：各テキストは{{max}}文字までです。",
       "font": "フォントを 1 つ選んでください。",
-      "searchUrl": "検索：外部検索には https:// URL が必要です。",
       "labels": {
         "creators": "クリエイター",
         "writers": "書き込みを許可する鍵",

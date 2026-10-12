@@ -98,7 +98,6 @@ describe('draft', () => {
     ],
     ['link over http', { links: { ...DEFAULT_SITE_LINKS, profile: 'http://example.org/{nip19}' } }],
     ['quota', { quota: '-1' }],
-    ['external search', { searchMode: 'external' as const, searchUrl: 'http://x' }],
     ['lightning address', { lightning: 'flox at getalby' }],
     [
       'page text over the limit',

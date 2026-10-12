@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef } from 'react'
-import { Link, Navigate, Route, Routes, useMatch } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation, useMatch } from 'react-router-dom'
 import { AccountsContext, AccountsProvider } from 'applesauce-react/providers'
 import type { AccountManager } from 'applesauce-accounts'
 import type { NostubeClient } from '@nostube/core/client'
@@ -8,7 +8,7 @@ import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { AuthArea } from './AuthArea'
-import { GridPage } from './GridPage'
+import { GridPage, SearchBox, SearchPage } from './GridPage'
 import { SiteFooter, SitePage } from './SitePage'
 import { VideoView } from './VideoView'
 import { useAgeGate } from './use-age-gate'
@@ -51,6 +51,9 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
   useBatchedProfileLoader()
   // The banner would push a video below the fold; the header (title, sign-in) stays everywhere.
   const onVideoPage = useMatch('/v/:id') !== null
+  const search = config.search.mode === 'local'
+  // A new page shows its own query in the box (empty outside `/search`).
+  const { key: pageKey } = useLocation()
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-3 sm:space-y-6 sm:py-6">
       <AccountRestoreInit />
@@ -89,9 +92,11 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
         </Link>
         <AuthArea client={client} relays={config.interactionRelays} />
       </header>
+      {search && <SearchBox key={pageKey} />}
       <Routes>
         <Route path="/" element={<GridPage config={config} gate={gate} />} />
         <Route path="/t/:tag" element={<GridPage config={config} gate={gate} />} />
+        {search && <Route path="/search" element={<SearchPage config={config} gate={gate} />} />}
         <Route
           path="/v/:id"
           element={

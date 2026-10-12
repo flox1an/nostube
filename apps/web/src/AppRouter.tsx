@@ -26,7 +26,7 @@ import { nip19 } from 'nostr-tools'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
 // Instance build: `/` is the start page (the profile of `startPage.creator`) and search is
-// off in this cut (see isSearchOff in src/lib/search-client.ts).
+// off (see isSearchOff in src/lib/search-client.ts).
 const instance = getInstanceConfig()
 const startCreator = instance?.startPage?.creator
 

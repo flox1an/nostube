@@ -2,7 +2,7 @@ import type { NostrEvent } from 'nostr-tools'
 import type { BrandingSlot, InstanceSite } from '@nostube/core/instance-config'
 import i18n from './i18n'
 
-export type SearchConfig = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
+export type SearchConfig = { mode: 'off' } | { mode: 'local' }
 
 /** What the server lets the studio edit (`GET/PUT /api/admin/config`). */
 export interface AdminConfig {

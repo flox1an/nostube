@@ -224,7 +224,7 @@
     "instance": {
       "advanced": "Avancé",
       "startPage": "Page d'accueil",
-      "searchHint": "Désactivée : pas de champ de recherche. Locale : recherche parmi les vidéos de ce serveur. Externe : envoie les recherches au service de recherche à l'adresse ci-dessous.",
+      "searchHint": "Désactivée : le site n'a pas de recherche. Locale : le site affiche un champ de recherche qui trouve les vidéos visibles par titre, description et tags ; la recherche se fait dans le navigateur du visiteur.",
       "keys": {
         "placeholder": "npub, clé hex ou nom@domaine",
         "add": "Ajouter",
@@ -256,11 +256,8 @@
       "search": "Recherche",
       "searchModes": {
         "off": "Désactivée",
-        "local": "Locale",
-        "external": "Externe"
+        "local": "Locale"
       },
-      "searchUrl": "Instance de recherche",
-      "searchUrlHint": "Une URL https://.",
       "storage": "Stockage",
       "quota": "Quota (Gio)",
       "quotaHint": "0 signifie illimité.",
@@ -445,7 +442,6 @@
       "link": "Liens ({{kind}}) : une adresse https:// contenant {nip19}.",
       "pageText": "{{page}} : chaque texte doit faire {{max}} caractères au plus.",
       "font": "Choisissez l'une des polices.",
-      "searchUrl": "Recherche : la recherche externe nécessite une URL https://.",
       "labels": {
         "creators": "Créateurs",
         "writers": "Auteurs autorisés",

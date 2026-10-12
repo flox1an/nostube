@@ -43,6 +43,12 @@
       "title": "#{{tag}} の動画",
       "back": "すべての動画"
     },
+    "search": {
+      "label": "動画を検索",
+      "placeholder": "動画を検索…",
+      "title": "「{{query}}」の検索結果",
+      "empty": "「{{query}}」に一致する動画はありません。"
+    },
     "video": {
       "invalidLink": "この動画リンクは無効です。",
       "notFound": "動画が見つかりません。",

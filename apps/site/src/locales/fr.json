@@ -43,6 +43,12 @@
       "title": "Vidéos avec #{{tag}}",
       "back": "Toutes les vidéos"
     },
+    "search": {
+      "label": "Rechercher des vidéos",
+      "placeholder": "Rechercher des vidéos…",
+      "title": "Résultats pour « {{query}} »",
+      "empty": "Aucune vidéo ne correspond à « {{query}} »."
+    },
     "video": {
       "invalidLink": "Ce lien vidéo n’est pas valide.",
       "notFound": "Vidéo introuvable.",

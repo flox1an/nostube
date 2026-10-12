@@ -224,7 +224,7 @@
     "instance": {
       "advanced": "高级",
       "startPage": "首页",
-      "searchHint": "关闭：不显示搜索框。本地：搜索此服务器上的视频。外部：将搜索发送到下方地址的搜索服务。",
+      "searchHint": "关闭：网站没有搜索。本地：网站显示搜索框，可按标题、描述和标签查找已显示的视频；搜索在访问者的浏览器中进行。",
       "keys": {
         "placeholder": "npub、hex 密钥或 name@domain",
         "add": "添加",
@@ -256,11 +256,8 @@
       "search": "搜索",
       "searchModes": {
         "off": "关闭",
-        "local": "本地",
-        "external": "外部"
+        "local": "本地"
       },
-      "searchUrl": "搜索实例",
-      "searchUrlHint": "一个 https:// URL。",
       "storage": "存储",
       "quota": "配额（GiB）",
       "quotaHint": "0 表示不限。",
@@ -441,7 +438,6 @@
       "link": "链接（{{kind}}）：需为包含 {nip19} 的 https:// 地址。",
       "pageText": "{{page}}：每段文本最多 {{max}} 个字符。",
       "font": "请选择一种字体。",
-      "searchUrl": "搜索：外部搜索需要 https:// URL。",
       "labels": {
         "creators": "创作者",
         "writers": "允许写入者",

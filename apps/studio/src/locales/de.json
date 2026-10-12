@@ -224,7 +224,7 @@
     "instance": {
       "advanced": "Erweitert",
       "startPage": "Startseite",
-      "searchHint": "Aus: kein Suchfeld. Lokal: durchsucht die Videos auf diesem Server. Extern: schickt Suchanfragen an den Suchdienst unter der Adresse unten.",
+      "searchHint": "Aus: Die Website hat keine Suche. Lokal: Die Website bekommt ein Suchfeld, das die gezeigten Videos nach Titel, Beschreibung und Tags findet; gesucht wird im Browser der Besucher.",
       "keys": {
         "placeholder": "npub, Hex-Schlüssel oder name@domain",
         "add": "Hinzufügen",
@@ -256,11 +256,8 @@
       "search": "Suche",
       "searchModes": {
         "off": "Aus",
-        "local": "Lokal",
-        "external": "Extern"
+        "local": "Lokal"
       },
-      "searchUrl": "Suchinstanz",
-      "searchUrlHint": "Eine https://-URL.",
       "storage": "Speicher",
       "quota": "Kontingent (GiB)",
       "quotaHint": "0 bedeutet unbegrenzt.",
@@ -443,7 +440,6 @@
       "link": "Links ({{kind}}): eine https://-Adresse mit {nip19}.",
       "pageText": "{{page}}: Jeder Text darf höchstens {{max}} Zeichen lang sein.",
       "font": "Wähle eine der Schriften.",
-      "searchUrl": "Suche: Die externe Suche braucht eine https://-URL.",
       "labels": {
         "creators": "Creator",
         "writers": "Schreibberechtigte",

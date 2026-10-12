@@ -224,7 +224,7 @@
     "instance": {
       "advanced": "Advanced",
       "startPage": "Start page",
-      "searchHint": "Off: no search box. Local: searches the videos stored on this server. External: sends searches to the search service at the address below.",
+      "searchHint": "Off: the site has no search. Local: the site gets a search box that finds the shown videos by title, description and tags; it searches in the visitor's browser.",
       "keys": {
         "placeholder": "npub, hex key or name@domain",
         "add": "Add",
@@ -256,11 +256,8 @@
       "search": "Search",
       "searchModes": {
         "off": "Off",
-        "local": "Local",
-        "external": "External"
+        "local": "Local"
       },
-      "searchUrl": "Search instance",
-      "searchUrlHint": "An https:// URL.",
       "storage": "Storage",
       "quota": "Quota (GiB)",
       "quotaHint": "0 means unlimited.",
@@ -443,7 +440,6 @@
       "link": "Links ({{kind}}): an https:// address containing {nip19}.",
       "pageText": "{{page}}: each text must be at most {{max}} characters.",
       "font": "Choose one of the fonts.",
-      "searchUrl": "Search: the external search needs an https:// URL.",
       "labels": {
         "creators": "Creators",
         "writers": "Allowed writers",

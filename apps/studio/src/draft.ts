@@ -10,7 +10,7 @@ import {
   type SiteFont,
   type SitePages,
 } from '@nostube/core/instance-config'
-import type { AdminConfig } from './api'
+import type { AdminConfig, SearchConfig } from './api'
 import i18n from './i18n'
 
 /** The form's own shape: lists as one entry per line, numbers as typed. */
@@ -33,8 +33,7 @@ export interface Draft {
   /** Empty lists: the outbox is off. */
   mirrorRelaysText: string
   mirrorBlossomText: string
-  searchMode: 'off' | 'local' | 'external'
-  searchUrl: string
+  searchMode: SearchConfig['mode']
   quota: string
   reserve: string
 }
@@ -63,7 +62,6 @@ export function toDraft(c: AdminConfig): Draft {
     mirrorRelaysText: c.mirror.relays.join('\n'),
     mirrorBlossomText: c.mirror.blossom.join('\n'),
     searchMode: c.search.mode,
-    searchUrl: c.search.mode === 'external' ? c.search.url : '',
     quota: String(c.storage.quotaGib),
     reserve: String(c.storage.freeSpaceReserveGib),
   }
@@ -197,13 +195,7 @@ export function fromDraft(d: Draft): DraftResult {
   const mirrorBlossom = servers(label('mirrorBlossom'), d.mirrorBlossomText, errors)
   const quotaGib = count(label('quota'), d.quota, errors)
   const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
-  let search: AdminConfig['search'] = { mode: 'off' }
-  if (d.searchMode === 'local') search = { mode: 'local' }
-  if (d.searchMode === 'external') {
-    const url = d.searchUrl.trim()
-    if (!/^https:\/\/\S+$/.test(url)) errors.push(i18n.t('studio.errors.searchUrl'))
-    search = { mode: 'external', url }
-  }
+  const search: AdminConfig['search'] = { mode: d.searchMode }
   if (errors.length) return { config: null, errors }
   return {
     config: {

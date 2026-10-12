@@ -25,6 +25,7 @@ struct Raw {
     /// Newer than ADR 0005, so a config file without it keeps the public defaults (ADR 0008).
     #[serde(default = "default_profile_relays")]
     profile_relays: Vec<String>,
+    #[serde(deserialize_with = "stored_search")]
     search: Search,
     tls: Tls,
     #[serde(default)]
@@ -36,13 +37,32 @@ struct Raw {
     mirror: Mirror,
 }
 
-/// Same shape in TOML and in the public config JSON.
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+/// Same shape in TOML and in the public config JSON. `local`: the site searches the creators'
+/// videos in the browser.
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(tag = "mode", rename_all = "lowercase", deny_unknown_fields)]
 pub enum Search {
     Off,
     Local,
-    External { url: String },
+}
+
+/// `config.toml` may still hold the removed `external` mode (a URL without a specified search
+/// contract); it reads as `off`, so an old file keeps starting.
+fn stored_search<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Search, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(tag = "mode", rename_all = "lowercase", deny_unknown_fields)]
+    enum Stored {
+        Off,
+        Local,
+        External {
+            #[serde(rename = "url")]
+            _url: serde::de::IgnoredAny,
+        },
+    }
+    Ok(match Stored::deserialize(d)? {
+        Stored::Local => Search::Local,
+        Stored::Off | Stored::External { .. } => Search::Off,
+    })
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -288,15 +308,6 @@ fn check_relays(lists: &[&[String]]) -> Result<(), BoxError> {
     Ok(())
 }
 
-fn check_search(search: &Search) -> Result<(), BoxError> {
-    if let Search::External { url } = search {
-        if !url.starts_with("https://") {
-            return Err(format!("search.url must start with https://: {url}").into());
-        }
-    }
-    Ok(())
-}
-
 #[derive(Clone)]
 pub struct Config {
     pub revision: u64,
@@ -334,7 +345,6 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&raw.video_sources, &raw.interaction_relays, &raw.profile_relays])?;
-        check_search(&raw.search)?;
         check_site(&raw.site)?;
         check_mirror(&raw.mirror)?;
         Ok(Config {
@@ -362,7 +372,6 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&e.video_sources, &e.interaction_relays, &e.profile_relays])?;
-        check_search(&e.search)?;
         check_site(&e.site)?;
         check_mirror(&e.mirror)?;
         Ok(Config {
@@ -375,7 +384,7 @@ impl Config {
             video_sources: e.video_sources.clone(),
             interaction_relays: e.interaction_relays.clone(),
             profile_relays: e.profile_relays.clone(),
-            search: e.search.clone(),
+            search: e.search,
             tls: self.tls.clone(),
             storage: e.storage.clone(),
             site: e.site.clone(),
@@ -435,7 +444,7 @@ impl Config {
             video_sources: self.video_sources.clone(),
             interaction_relays: self.interaction_relays.clone(),
             profile_relays: self.profile_relays.clone(),
-            search: self.search.clone(),
+            search: self.search,
             tls: self.tls.clone(),
             storage: self.storage.clone(),
             site: self.site.clone(),
@@ -616,7 +625,7 @@ tls = {{ mode = "local-ca" }}
                 video_sources: vec!["wss://flox-mac.local".into()],
                 interaction_relays: vec![],
                 profile_relays: vec![],
-                search: Search::External { url: "https://search.example".into() },
+                search: Search::Local,
                 storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
                 site: Site::default(),
                 mirror: Mirror { relays: vec!["wss://m.example".into()], blossom: vec!["https://b.example".into()] },
@@ -629,7 +638,10 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(next.title, "Renamed");
         assert_eq!(next.origin, cfg.origin);
         let re = Config::parse(&next.to_toml().unwrap()).unwrap();
-        assert_eq!(re.search, Search::External { url: "https://search.example".into() });
+        assert_eq!(re.search, Search::Local);
+        // The removed external mode still starts, as off.
+        let old = sample("").replace("search = { mode = \"off\" }", "search = { mode = \"external\", url = \"https://search.example\" }");
+        assert_eq!(Config::parse(&old).unwrap().search, Search::Off);
         assert!(cfg
             .with_edits(&Edited {
                 title: "x".into(),

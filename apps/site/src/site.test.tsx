@@ -4,7 +4,7 @@ import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
 import { nip19 } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
-import { NEVER, of } from 'rxjs'
+import { EMPTY, NEVER, delay, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
 import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
@@ -314,6 +314,91 @@ describe('SiteHome', () => {
     expect(screen.queryByText('Untagged')).toBeNull()
     fireEvent.click(screen.getByRole('link', { name: 'All videos' }))
     await waitFor(() => expect(screen.getByText('Untagged')).toBeTruthy())
+  })
+
+  describe('search', () => {
+    const fresh = (): typeof video => JSON.parse(JSON.stringify(video))
+    const cafe = {
+      ...fresh(),
+      id: 'd'.repeat(64),
+      content: 'Morning coffee by the river',
+      tags: [
+        ['title', 'Café in Lisbon'],
+        ['t', 'travel'],
+        ['imeta', 'url https://media.example/b.mp4', 'm video/mp4', 'duration 30'],
+      ],
+    }
+    const secret = {
+      ...fresh(),
+      id: 'a'.repeat(64),
+      tags: [
+        ['title', 'Secret cafe'],
+        ['imeta', 'url https://media.example/c.mp4', 'm video/mp4', 'duration 30'],
+      ],
+    }
+    const gated = {
+      ...fresh(),
+      id: 'b'.repeat(64),
+      content: 'Cafe after dark',
+      tags: [
+        ['title', 'Night shift'],
+        ['content-warning', 'nudity'],
+        ['imeta', 'url https://media.example/d.mp4', 'm video/mp4', 'duration 30'],
+      ],
+    }
+    // Two pages, then nothing: a match on the second page is found too. Async, like relays.
+    const pagedClient = () =>
+      ({
+        eventStore: makeStore(),
+        getTimelineLoader: () => {
+          const pages = [[fresh()], [cafe, secret, gated]]
+          return () => {
+            const page = pages.shift()
+            return page ? of(...page).pipe(delay(1)) : EMPTY.pipe(delay(1))
+          }
+        },
+        relayPool: { request: () => of(profile), subscription: () => NEVER },
+      }) as unknown as NostubeClient
+    const local: InstanceConfig = {
+      ...config,
+      search: { mode: 'local' },
+      site: { ...config.site, videos: { hidden: [secret.id] } },
+    }
+
+    it('has no search box and no search page when search is off', async () => {
+      renderSite(pagedClient(), '/search?q=cafe')
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      expect(screen.queryByRole('search')).toBeNull()
+      expect(screen.queryByText(/Search results/)).toBeNull()
+    })
+
+    it('finds the shown videos by description words, ignoring case and accents', async () => {
+      renderSite(pagedClient(), '/', local)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search videos' }), {
+        target: { value: '  COFFEE cafe ' },
+      })
+      fireEvent.submit(screen.getByRole('search'))
+      expect(
+        await screen.findByRole('heading', { name: 'Search results for “COFFEE cafe”' })
+      ).toBeTruthy()
+      await waitFor(() => expect(screen.getByText('Café in Lisbon')).toBeTruthy())
+      expect(screen.queryByText('My first upload')).toBeNull()
+      // Hidden by the creator: never found.
+      expect(screen.queryByText('Secret cafe')).toBeNull()
+      // Locked: only its title is searched, and "cafe" is in its description only.
+      expect(screen.queryByText('Night shift')).toBeNull()
+      expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('COFFEE cafe')
+    })
+
+    it('says so when nothing matches, and finds a locked video by its title', async () => {
+      const { unmount } = renderSite(pagedClient(), '/search?q=nothing%20like%20this', local)
+      expect(await screen.findByText('No video matches “nothing like this”.')).toBeTruthy()
+      unmount()
+      renderSite(pagedClient(), '/search?q=night', local)
+      await waitFor(() => expect(screen.getByText('Night shift')).toBeTruthy())
+      expect(screen.getByText('Content warning')).toBeTruthy()
+    })
   })
 
   it('shows placeholders while the videos load', async () => {

@@ -10,6 +10,8 @@ export interface CreatorVideos {
   loading: boolean
   error: boolean
   hasMore: boolean
+  /** A page request is open (also after the first videos of it are shown). */
+  fetching: boolean
   loadMore: () => void
 }
 
@@ -33,11 +35,21 @@ export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorV
         : undefined,
     [creator, tag]
   )
-  const { videos, isInitialLoading, phase, hasMore, loadMore } = useTimeline(filters, {
-    relays: config.videoSources,
-    enabled: Boolean(creator),
-    // The instance's relays answer with the full limit when they have it, so a short page is the end.
-    endOnShortPage: true,
-  })
-  return { videos, loading: isInitialLoading, error: phase === 'error', hasMore, loadMore }
+  const { videos, isInitialLoading, phase, hasMore, subscriptionActive, loadMore } = useTimeline(
+    filters,
+    {
+      relays: config.videoSources,
+      enabled: Boolean(creator),
+      // The instance's relays answer with the full limit when they have it, so a short page is the end.
+      endOnShortPage: true,
+    }
+  )
+  return {
+    videos,
+    loading: isInitialLoading,
+    error: phase === 'error',
+    hasMore,
+    fetching: subscriptionActive,
+    loadMore,
+  }
 }

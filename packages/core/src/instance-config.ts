@@ -35,7 +35,8 @@ export const pageTitle = (page: string | null | undefined) => {
   return page ? `${page} - ${title}` : title
 }
 
-export type InstanceSearch = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
+/** `local`: the site searches the creators' catalog in the browser (`@nostube/core/video-search`). */
+export type InstanceSearch = { mode: 'off' } | { mode: 'local' }
 
 export const SITE_FONTS = ['sans', 'serif', 'mono'] as const
 export type SiteFont = (typeof SITE_FONTS)[number]
@@ -255,11 +256,9 @@ export function parseInstanceConfig(json: unknown): ParseResult {
   if ('profileRelays' in c && !(Array.isArray(c.profileRelays) && c.profileRelays.every(isWs)))
     e.push('profileRelays must be a list of ws(s):// relay URLs')
   if ('search' in c) {
-    const s = c.search as { mode?: unknown; url?: unknown } | null
-    if (!s || typeof s !== 'object' || !['off', 'local', 'external'].includes(s.mode as string))
-      e.push('search.mode must be off, local or external')
-    else if (s.mode === 'external' && !(typeof s.url === 'string' && /^https:\/\/\S+$/.test(s.url)))
-      e.push('search.url must be an https URL for external search')
+    const s = c.search as { mode?: unknown } | null
+    if (!s || typeof s !== 'object' || !['off', 'local'].includes(s.mode as string))
+      e.push('search.mode must be off or local')
   }
   if ('site' in c) e.push(...validateSite(c.site))
   if ('startPage' in c && creatorsOk) {

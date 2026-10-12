@@ -161,9 +161,11 @@ describe('parseInstanceConfig', () => {
     })
   })
 
-  it('rejects an origin with a path and an empty external search url', () => {
+  it('rejects an origin with a path and the removed external search mode', () => {
     expect(parseInstanceConfig({ ...good(), origin: 'https://studio.local/app' }).ok).toBe(false)
-    expect(parseInstanceConfig({ ...good(), search: { mode: 'external', url: '' } }).ok).toBe(false)
+    expect(
+      parseInstanceConfig({ ...good(), search: { mode: 'external', url: 'https://x.example' } }).ok
+    ).toBe(false)
   })
 
   it('reads profileRelays: absent keeps the public defaults, empty stays empty', () => {

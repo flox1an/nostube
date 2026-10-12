@@ -43,6 +43,12 @@
       "title": "带有 #{{tag}} 标签的视频",
       "back": "全部视频"
     },
+    "search": {
+      "label": "搜索视频",
+      "placeholder": "搜索视频…",
+      "title": "“{{query}}”的搜索结果",
+      "empty": "没有与“{{query}}”匹配的视频。"
+    },
     "video": {
       "invalidLink": "此视频链接无效。",
       "notFound": "未找到视频。",

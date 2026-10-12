@@ -1509,7 +1509,7 @@ mod tests {
             "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
             "interactionRelays": ["wss://relay.example"],
             "profileRelays": [],
-            "search": { "mode": "external", "url": "https://search.example" },
+            "search": { "mode": "local" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
             "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} } },
             "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
@@ -1617,7 +1617,7 @@ mod tests {
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert!(after.profile_relays.is_empty());
-        assert_eq!(after.search, Search::External { url: "https://search.example".into() });
+        assert_eq!(after.search, Search::Local);
         assert_eq!((after.storage.quota_gib, after.storage.free_space_reserve_gib), (100, 3));
         assert_eq!(after.mirror.relays, vec!["wss://mirror.example"]);
         assert_eq!(after.mirror.blossom, vec!["https://blossom.example"]);

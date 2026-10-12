@@ -150,6 +150,8 @@ export function useTimeline(
   useEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
+      // The page will never finish; a remount (StrictMode) must be able to load again.
+      inFlightRef.current = false
       clearTimers()
     }
   }, [clearTimers])

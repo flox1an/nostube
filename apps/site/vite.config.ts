@@ -5,7 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 /**
  * Dev stand-in for the nostube-server `/api/config` (instance config contract v1). Either
  * proxies to a running server (NOSTUBE_SERVER_URL=http://127.0.0.1:8080) or builds a config
- * from NOSTUBE_DEV_CREATOR (64-hex pubkey) and NOSTUBE_DEV_RELAYS (comma-separated wss:// URLs).
+ * from NOSTUBE_DEV_CREATOR (64-hex pubkey) and NOSTUBE_DEV_RELAYS (comma-separated wss:// URLs);
+ * NOSTUBE_DEV_SEARCH=local turns the search on.
  */
 function devConfig(env: NodeJS.ProcessEnv): Plugin {
   return {
@@ -45,7 +46,7 @@ function devConfig(env: NodeJS.ProcessEnv): Plugin {
             startPage: { kind: 'creator-profile', creator },
             videoSources: relays,
             interactionRelays: relays,
-            search: { mode: 'off' },
+            search: { mode: env.NOSTUBE_DEV_SEARCH === 'local' ? 'local' : 'off' },
             site: {
               tagline: '',
               theme: { accent: '#8b5cf6', font: 'sans' },

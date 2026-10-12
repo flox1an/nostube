@@ -148,23 +148,8 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
             >
               <option value="off">{t('studio.instance.searchModes.off')}</option>
               <option value="local">{t('studio.instance.searchModes.local')}</option>
-              <option value="external">{t('studio.instance.searchModes.external')}</option>
             </select>
           </Field>
-          {draft.searchMode === 'external' && (
-            <Field
-              id="search-url"
-              label={t('studio.instance.searchUrl')}
-              hint={t('studio.instance.searchUrlHint')}
-            >
-              <Input
-                id="search-url"
-                value={draft.searchUrl}
-                placeholder="https://"
-                onChange={e => update({ searchUrl: e.target.value })}
-              />
-            </Field>
-          )}
         </CardContent>
       </Card>
 

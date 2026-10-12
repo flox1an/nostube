@@ -7,9 +7,9 @@ import { getInstanceConfig } from '@nostube/core/instance-config'
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
 
 /**
- * Instance build: search is off in this cut, whatever `search.mode` says. `local` (MiniSearch
- * over the scoped catalog) and `external` (the configured URL) are later work
- * (nostube-server ADR 0005); until then the hosted service is never asked.
+ * Instance build: never searches, whatever `search.mode` says. The server embeds `apps/site`,
+ * which runs `local` search (nostube-server ADR 0005); this build is no longer embedded, so the
+ * hosted service is never asked and no search UI is shown.
  */
 export const isSearchOff = () => getInstanceConfig() !== null
 

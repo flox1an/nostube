@@ -164,7 +164,7 @@ function RelayPoolSync() {
 
 export function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
+    <ThemeProvider>
       <AppProvider
         storageKey={APP_CONFIG_STORAGE_KEY}
         defaultConfig={defaultConfig}

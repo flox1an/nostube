@@ -34,7 +34,7 @@
       content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: http: https: ws: wss:; img-src 'self' data: blob: https: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; media-src 'self' https: blob: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*"
     />
     <style>
-      /* Prevent white flash on iOS PWA - loads before any CSS. Only until the app sets
+      /* Prevent white flash on iOS PWA - loads before any CSS. Only until /theme-init.js sets
          .light/.dark on <html>; after that the theme's own background must win. */
       html:not(.light):not(.dark),
       html:not(.light):not(.dark) body {
@@ -52,6 +52,7 @@
         }
       }
     </style>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

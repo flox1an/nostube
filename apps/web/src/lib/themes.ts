@@ -365,26 +365,26 @@ export function getThemeById(id: string): Theme {
   return availableThemes.find(t => t.id === id) || nostubeTheme
 }
 
+/** Saved mode ('light' | 'dark' | 'system'); read before first paint by public/theme-init.js. */
+export const THEME_MODE_STORAGE_KEY = 'nostr-tube-theme'
+/** Saved palette id (a `Theme.id`). */
+export const COLOR_THEME_STORAGE_KEY = 'nostube-color-theme'
+/** CSS variables of the saved palette per mode, applied before first paint by public/theme-init.js. */
+export const THEME_VARS_STORAGE_KEY = 'nostube-theme-vars'
+
+/** The palette's CSS custom properties for one mode, e.g. `cardForeground` → `--card-foreground`. */
+export function themeVars(theme: Theme, mode: 'light' | 'dark'): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(theme.colors[mode]).map(([key, value]) => [
+      `--${key.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`,
+      value,
+    ])
+  )
+}
+
 export function applyTheme(theme: Theme, mode: 'light' | 'dark') {
   const root = document.documentElement
-  const colors = mode === 'dark' ? theme.colors.dark : theme.colors.light
-
-  root.style.setProperty('--background', colors.background)
-  root.style.setProperty('--foreground', colors.foreground)
-  root.style.setProperty('--card', colors.card)
-  root.style.setProperty('--card-foreground', colors.cardForeground)
-  root.style.setProperty('--popover', colors.popover)
-  root.style.setProperty('--popover-foreground', colors.popoverForeground)
-  root.style.setProperty('--primary', colors.primary)
-  root.style.setProperty('--primary-foreground', colors.primaryForeground)
-  root.style.setProperty('--secondary', colors.secondary)
-  root.style.setProperty('--secondary-foreground', colors.secondaryForeground)
-  root.style.setProperty('--muted', colors.muted)
-  root.style.setProperty('--muted-foreground', colors.mutedForeground)
-  root.style.setProperty('--accent', colors.accent)
-  root.style.setProperty('--accent-foreground', colors.accentForeground)
-  root.style.setProperty('--destructive', colors.destructive)
-  root.style.setProperty('--border', colors.border)
-  root.style.setProperty('--input', colors.input)
-  root.style.setProperty('--ring', colors.ring)
+  for (const [name, value] of Object.entries(themeVars(theme, mode))) {
+    root.style.setProperty(name, value)
+  }
 }

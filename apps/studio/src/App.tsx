@@ -132,12 +132,14 @@ export function Shell({
 function Studio({ state, reload }: { state: AdminState; reload: () => Promise<void> }) {
   const [page, navigate] = useRoute()
   const { t } = useTranslation()
-  const [draft, setDraft] = useState<Draft>(() => toDraft(state.config))
+  // The saved config; hiding a video saves it at once, so it moves on without a reload.
+  const [config, setConfig] = useState(state.config)
+  const [draft, setDraft] = useState<Draft>(() => toDraft(config))
   const [saving, setSaving] = useState<Saving>(null)
   // Branding uploads apply at once; kept here so the page shows them after navigating away.
   const [branding, setBranding] = useState(state.branding)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const saved = useMemo(() => toDraft(state.config), [state.config])
+  const saved = useMemo(() => toDraft(config), [config])
   const result = fromDraft(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
@@ -170,10 +172,19 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
 
   const save = () => (result.config ? apply(result.config) : Promise.resolve())
 
+  /** Hiding applies at once: only the hidden list is saved, pending edits elsewhere stay drafts.
+   * The server applies site settings without a restart. */
+  const saveHidden = async (hiddenText: string) => {
+    const hidden = hiddenText.split('\n').filter(Boolean)
+    const next = { ...config, site: { ...config.site, videos: { hidden } } }
+    await saveConfig(next)
+    setConfig(next)
+    setDraft(d => ({ ...d, hiddenText }))
+  }
+
   // Pending edits go along (this is a save like any other, with one more entry in two lists);
   // if they do not validate, only the key is added to what is saved.
-  const connectKey = (pubkey: string) =>
-    apply(addKeyToConfig(result.config ?? state.config, pubkey))
+  const connectKey = (pubkey: string) => apply(addKeyToConfig(result.config ?? config, pubkey))
 
   const banner = (
     <ConnectKey config={state.config} onConnected={connectKey} busy={saving !== null} />
@@ -198,7 +209,9 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
         </Alert>
       )}
 
-      {page === 'videos' && <VideosPage draft={draft} update={update} banner={banner} />}
+      {page === 'videos' && (
+        <VideosPage hiddenText={draft.hiddenText} onHiddenChange={saveHidden} banner={banner} />
+      )}
       {page === 'upload' && (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <UploadPage state={state} banner={banner} />

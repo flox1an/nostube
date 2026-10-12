@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { finalizeEvent, generateSecretKey, getPublicKey, type NostrEvent } from 'nostr-tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { processEvent } from '@nostube/core/video-event'
+import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { VideoActions } from './VideoActions'
 import type { InstanceClient } from './instance-client'
 import './i18n'
@@ -43,18 +44,35 @@ const event = finalizeEvent(
 )
 const video = processEvent(event, [])!
 
-function setup(replies = [{ ok: true, from: 'wss://relay', message: '' }]) {
+function setup(replies = [{ ok: true, from: 'wss://relay', message: '' }], hidden = false) {
   const eventStore = new EventStore()
   // jsdom's TextEncoder realm breaks schnorr verification; not under test here.
   eventStore.verifyEvent = () => true
   eventStore.add(event)
   const publish = vi.fn(async (..._args: [string[], NostrEvent]) => replies)
+  const onHiddenChange = vi.fn()
   const instance = {
     client: { eventStore, relayPool: { publish } },
     config: { videoSources: ['wss://relay'] },
   } as unknown as InstanceClient
-  render(<VideoActions video={video} instance={instance} />)
-  return { publish, eventStore }
+  render(
+    <TooltipProvider>
+      <VideoActions
+        video={video}
+        instance={instance}
+        hidden={hidden}
+        hideBusy={false}
+        onHiddenChange={onHiddenChange}
+      />
+    </TooltipProvider>
+  )
+  return { publish, eventStore, onHiddenChange }
+}
+
+/** Opens the row's `⋯` menu with the keyboard and answers its item names. */
+function openMenu() {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' })
+  return screen.getAllByRole('menuitem').map(item => item.textContent)
 }
 // Its frame slider renders `calc(NaN%)` before video metadata, which jsdom's CSS parser rejects.
 // Thumbnail and subtitle handling are covered in run-video-edit.test.ts.
@@ -75,6 +93,7 @@ describe('studio video actions', () => {
   it('saves metadata without reuploading video and refreshes the shared store after acceptance', async () => {
     const { publish, eventStore } = setup()
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
+    expect(screen.getByRole('dialog', { name: 'Edit metadata' })).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Edited title' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save video' }))
     await waitFor(() => expect(publish).toHaveBeenCalledTimes(1))
@@ -87,9 +106,10 @@ describe('studio video actions', () => {
     expect(mocks.probe).not.toHaveBeenCalled()
   })
 
-  it('requires confirmation and cancellation never publishes', () => {
+  it('offers replace, hide and delete in the menu and confirms deletion in an alert dialog', () => {
     const { publish } = setup()
-    fireEvent.click(screen.getByRole('button', { name: 'Delete video' }))
+    expect(openMenu()).toEqual(['Replace video file', 'Hide on site', 'Delete video'])
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete video' }))
     expect(screen.getByRole('alertdialog')).toBeTruthy()
     expect(publish).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -101,7 +121,8 @@ describe('studio video actions', () => {
     const { publish, eventStore } = setup()
     const latest = finalizeEvent({ ...event, created_at: 2_000_000_000, content: 'Newer' }, secret)
     eventStore.add(latest)
-    fireEvent.click(screen.getByRole('button', { name: 'Delete video' }))
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete video' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm deletion' }))
     await waitFor(() => expect(publish).toHaveBeenCalledTimes(1))
     const deletion = publish.mock.calls[0][1] as typeof event
@@ -119,7 +140,8 @@ describe('studio video actions', () => {
     const { publish, eventStore } = setup([
       { ok: false, from: 'wss://relay', message: 'blocked: denied' },
     ])
-    fireEvent.click(screen.getByRole('button', { name: 'Delete video' }))
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete video' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm deletion' }))
     await screen.findByText(/blocked: denied/)
     expect(eventStore.getReplaceable(34235, pubkey, 'stable')?.id).toBe(event.id)
@@ -127,9 +149,22 @@ describe('studio video actions', () => {
     await waitFor(() => expect(publish).toHaveBeenCalledTimes(2))
   })
 
-  it('does not offer edit, replace or delete to an administrator signing as another author', () => {
+  it('hides and shows the video on the site from the menu', () => {
+    const { onHiddenChange } = setup()
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Hide on site' }))
+    expect(onHiddenChange).toHaveBeenCalledWith(true)
+    cleanup()
+    const shown = setup(undefined, true)
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Show on site' }))
+    expect(shown.onHiddenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('offers only hiding to an administrator signing as another author', () => {
     mocks.signerState = { ...mocks.signerState, pubkey: 'f'.repeat(64) }
     setup()
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit metadata' })).toBeNull()
+    expect(openMenu()).toEqual(['Hide on site'])
   })
 })

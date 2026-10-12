@@ -3,6 +3,7 @@ import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import { processEvent } from '@nostube/core/video-event'
+import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import type { AdminConfig, SignerInfo } from './api'
 import { ConnectKey } from './ConnectKey'
 import type { InstanceClient } from './instance-client'
@@ -128,12 +129,21 @@ describe('video actions without a connect step', () => {
     serve(info)
     render(
       <SignerProvider creatorKey={creator}>
-        <VideoActions video={video} instance={{} as InstanceClient} />
+        <TooltipProvider>
+          <VideoActions
+            video={video}
+            instance={{} as InstanceClient}
+            hidden={false}
+            hideBusy={false}
+            onHiddenChange={() => {}}
+          />
+        </TooltipProvider>
       </SignerProvider>
     )
     expect(await screen.findByRole('button', { name: 'Edit metadata' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Replace video file' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Delete video' })).toBeTruthy()
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' })
+    expect(screen.getByRole('menuitem', { name: 'Replace video file' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Delete video' })).toBeTruthy()
     expect(extension.getPublicKey).not.toHaveBeenCalled()
   })
 })

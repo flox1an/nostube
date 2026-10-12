@@ -22,7 +22,7 @@ export interface PageDef {
 export const GROUPS: { id: GroupId }[] = [{ id: 'content' }, { id: 'site' }, { id: 'server' }]
 
 export const PAGES: PageDef[] = [
-  { id: 'videos', group: 'content', editsConfig: true },
+  { id: 'videos', group: 'content', editsConfig: false },
   { id: 'upload', group: 'content', editsConfig: false },
   { id: 'moderation', group: 'content', editsConfig: false },
   { id: 'appearance', group: 'site', editsConfig: true },

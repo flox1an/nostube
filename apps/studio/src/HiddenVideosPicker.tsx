@@ -6,7 +6,6 @@ import { getPublishDate } from '@nostube/core/video-event'
 import { formatDate } from '@nostube/widgets'
 import { Button } from '@nostube/widgets/components/button'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { Switch } from '@nostube/widgets/components/switch'
 import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { isRefHidden, setRefHidden } from './draft'
@@ -15,10 +14,11 @@ import { VideoActions } from './VideoActions'
 
 interface PickerProps {
   hiddenText: string
-  onChange: (hiddenText: string) => void
+  /** Saves the hidden list at once (the server applies it without a restart). */
+  onChange: (hiddenText: string) => Promise<void>
 }
 
-/** The creator's videos with a switch each: what is switched on is hidden on the public site. */
+/** The creator's videos, each with its actions; hiding one applies to the public site at once. */
 export default function HiddenVideosPicker(props: PickerProps) {
   const { t } = useTranslation()
   const [booted, setBooted] = useState<InstanceClient | Error | null>(null)
@@ -51,6 +51,19 @@ function VideoList({
 }: PickerProps & { config: InstanceClient['config']; instance: InstanceClient }) {
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
+  const [hideBusy, setHideBusy] = useState(false)
+  const [hideError, setHideError] = useState<string | null>(null)
+  const setHidden = async (refs: string[], on: boolean) => {
+    setHideBusy(true)
+    setHideError(null)
+    try {
+      await onChange(setRefHidden(hiddenText, refs, on))
+    } catch (e) {
+      setHideError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setHideBusy(false)
+    }
+  }
 
   if (!config.startPage) {
     return <p className="text-sm text-muted-foreground">{t('studio.videos.addCreator')}</p>
@@ -63,6 +76,11 @@ function VideoList({
 
   return (
     <div className="space-y-3">
+      {hideError && (
+        <p role="alert" className="text-sm text-destructive">
+          {hideError}
+        </p>
+      )}
       <ul className="divide-y divide-border rounded-md border border-border">
         {videos.map(video => (
           <Row
@@ -70,7 +88,8 @@ function VideoList({
             video={video}
             instance={instance}
             hidden={isRefHidden(hiddenText, videoRef(video)) || isRefHidden(hiddenText, video.id)}
-            onToggle={on => onChange(setRefHidden(hiddenText, [videoRef(video), video.id], on))}
+            hideBusy={hideBusy}
+            onHiddenChange={on => void setHidden([videoRef(video), video.id], on)}
           />
         ))}
       </ul>
@@ -87,18 +106,22 @@ function Row({
   video,
   instance,
   hidden,
-  onToggle,
+  hideBusy,
+  onHiddenChange,
 }: {
   video: VideoEvent
   instance: InstanceClient
   hidden: boolean
-  onToggle: (hidden: boolean) => void
+  hideBusy: boolean
+  onHiddenChange: (hidden: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   return (
     <li className="flex flex-wrap items-center gap-3 p-2">
-      <div className="h-12 w-20 shrink-0 overflow-hidden rounded bg-muted">
+      <div
+        className={`h-12 w-20 shrink-0 overflow-hidden rounded bg-muted ${hidden ? 'opacity-50' : ''}`}
+      >
         {thumbnail && !video.contentWarning && (
           <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
         )}
@@ -112,17 +135,16 @@ function Row({
         <p className="text-xs text-muted-foreground">
           {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
           {video.contentWarning ? ` · ${t('studio.videos.contentWarning')}` : ''}
+          {hidden ? ` · ${t('studio.videos.hidden')}` : ''}
         </p>
       </div>
-      <label className="flex items-center gap-2 text-xs text-muted-foreground">
-        {t('studio.videos.hidden')}
-        <Switch
-          checked={hidden}
-          onCheckedChange={onToggle}
-          aria-label={t('studio.videos.hide', { title: video.title })}
-        />
-      </label>
-      <VideoActions video={video} instance={instance} />
+      <VideoActions
+        video={video}
+        instance={instance}
+        hidden={hidden}
+        hideBusy={hideBusy}
+        onHiddenChange={onHiddenChange}
+      />
     </li>
   )
 }

@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in Forgejo Issues (`flox/nostube-server`), managed with the `tea` CLI. See `apps/server/docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for `flox1an/nostube`, managed with `gh` — same tracker as the rest of the monorepo. See `docs/agents/issue-tracker.md` at the repository root.
 
 ### Triage labels
 

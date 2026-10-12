@@ -89,6 +89,7 @@ pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
     } else {
         conn.execute_batch(SCHEMA)?;
     }
+    conn.execute_batch(crate::schedule::SCHEMA)?;
     Ok(())
 }
 
@@ -208,7 +209,7 @@ impl Outbox {
         }).await
     }
 
-    async fn db<T: Send + 'static>(
+    pub(crate) async fn db<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Connection) -> rusqlite::Result<T> + Send + 'static,
     ) -> Result<T, String> {
@@ -517,7 +518,7 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
     outbox.record(job, outcome).await;
 }
 
-fn storage(outbox: &Outbox) -> Result<almond::models::AppState, String> {
+pub(crate) fn storage(outbox: &Outbox) -> Result<almond::models::AppState, String> {
     outbox.0.storage.read().clone().ok_or_else(|| "local Blossom storage is unavailable".into())
 }
 
@@ -554,7 +555,10 @@ async fn retained_hashes(outbox: &Outbox) -> Result<HashSet<String>, String> {
     let roots = outbox.db(|conn| {
         let mut stmt = conn.prepare("SELECT DISTINCT hash FROM media_ref")?;
         let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
-        rows.collect::<rusqlite::Result<HashSet<_>>>()
+        let mut roots = rows.collect::<rusqlite::Result<HashSet<_>>>()?;
+        // Scheduled videos are not in the relay yet, but their blobs must outlive any cleanup.
+        roots.extend(crate::schedule::pending_media(conn)?);
+        Ok(roots)
     }).await?;
     let state = outbox.0.storage.read().clone();
     match state {
@@ -716,6 +720,15 @@ fn short(s: &str) -> String {
     match s.char_indices().nth(300) {
         Some((i, _)) => format!("{}…", &s[..i]),
         None => s.to_owned(),
+    }
+}
+
+/// One round of the worker, for tests of other modules that leave jobs in the outbox.
+#[cfg(test)]
+pub(crate) async fn run_due_for_test(outbox: &Outbox, keys: &crate::signer::Shared) {
+    let http = http_client();
+    for job in outbox.due(100).await.unwrap() {
+        work(outbox, keys, &http, &job).await;
     }
 }
 

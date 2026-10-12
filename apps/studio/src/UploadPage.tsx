@@ -21,6 +21,7 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import type { AdminState } from './api'
 import { isKeyConnected } from './draft'
 import { Field } from './fields'
+import { fromLocalInput, isFuture } from './datetime'
 import { useSigner } from './signer-context'
 import { probeVideo, type VideoProbe } from './upload/probe-video'
 import { makeUploadDeps } from './upload/make-deps'
@@ -74,6 +75,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   const [thumbnail, setThumbnail] = useState<Blob | null>(null)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated')
   const [subtitles, setSubtitles] = useState<{ id: string; file: File; lang: string }[]>([])
+  const [publishAtText, setPublishAtText] = useState('')
 
   useEffect(() => {
     if (!file) return
@@ -116,6 +118,8 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
 
   const key = pubkey
   const mayPublish = key !== null && isKeyConnected(state.config, key)
+  const publishAt = fromLocalInput(publishAtText)
+  const dateOk = isFuture(publishAt)
 
   const start = async () => {
     if (!file || !probe || busy.current) return
@@ -134,7 +138,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
       }
       if (!signer) return setNotice(t('studio.errors.noSigner'))
       // Use the just-connected key rather than the render behind it.
-      const deps = makeUploadDeps({ signer, pubkey: who, title })
+      const deps = makeUploadDeps({ signer, pubkey: who, title, publishAt })
       const input = {
         file,
         title: title.trim(),
@@ -143,6 +147,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
         contentWarning: warning ? reason : undefined,
         thumbnail,
         subtitles,
+        publishAt,
       }
       await runUpload(
         job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe),
@@ -161,11 +166,31 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
     setTags([])
     setWarning(false)
     setReason('')
+    setPublishAtText('')
   }
 
   if (job && isDone(job)) {
     const published = job.published!
     const address = `${location.origin}/v/${published.link}`
+    if (published.scheduledFor !== undefined) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('studio.upload.scheduledTitle')}</CardTitle>
+            <CardDescription>
+              {t('studio.upload.scheduledDescription', {
+                date: new Date(published.scheduledFor * 1000).toLocaleString(locale),
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" variant="outline" onClick={reset}>
+              {t('studio.upload.another')}
+            </Button>
+          </CardContent>
+        </Card>
+      )
+    }
     return (
       <Card>
         <CardHeader>
@@ -202,7 +227,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
 
   const failed = job && STEPS.find(s => job.steps[s.id].status === 'error')
   const canStart =
-    !!file && !!probe && title.trim() !== '' && !running && subtitles.every(s => s.lang)
+    !!file && !!probe && title.trim() !== '' && !running && dateOk && subtitles.every(s => s.lang)
 
   return (
     <div className="space-y-6">
@@ -272,6 +297,19 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
             onReasonChange={setReason}
             disabled={running}
           />
+          <Field
+            id="video-publish-at"
+            label={t('studio.upload.publishAt')}
+            hint={t(dateOk ? 'studio.upload.publishAtHint' : 'studio.upload.publishAtPast')}
+          >
+            <Input
+              id="video-publish-at"
+              type="datetime-local"
+              value={publishAtText}
+              disabled={running}
+              onChange={e => setPublishAtText(e.target.value)}
+            />
+          </Field>
           {probe && (
             <ThumbnailSection
               key={videoUrl}
@@ -379,7 +417,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
             ? t('studio.upload.uploading')
             : failed
               ? t('studio.upload.retry')
-              : t('studio.upload.start')}
+              : t(publishAt ? 'studio.upload.schedule' : 'studio.upload.start')}
         </Button>
         {!running && (
           <p className="text-xs text-muted-foreground">{t('studio.upload.approveHint')}</p>

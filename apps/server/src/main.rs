@@ -9,6 +9,7 @@ mod data_lock;
 mod login_guard;
 mod outbox;
 mod relay;
+mod schedule;
 mod seo;
 mod signer;
 mod tls;
@@ -334,6 +335,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
     let admin = admin.map(admin::router);
     let worker = outbox::spawn(outbox.clone(), signer);
+    // The first scan releases anything that became due while the server was down.
+    let releaser = schedule::spawn(outbox.clone(), relay.clone());
 
     let app = App {
         blossom: almond::create_app(state),
@@ -396,6 +399,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         worker.abort();
         let _ = worker.await;
     }
+    releaser.abort();
+    let _ = releaser.await;
     // A config apply or a signal brought us here: a supervisor restarts the process if it should run.
     tracing::info!("stopped; restart the service to run the applied config");
     Ok(())

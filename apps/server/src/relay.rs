@@ -233,7 +233,6 @@ impl Relay {
         Ok(relay)
     }
 
-    #[cfg(test)]
     pub(crate) async fn ingest(&self, ev: Event) -> RelayMessage<'static> {
         self.ingest_from(ev, false).await
     }

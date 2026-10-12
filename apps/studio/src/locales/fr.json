@@ -186,7 +186,21 @@
       "authorMismatch": "Seul l'auteur peut modifier ou supprimer cette vidéo. Les administrateurs peuvent la masquer.",
       "notAddressable": "Seuls les événements vidéo adressables peuvent être modifiés ou supprimés ici.",
       "eventMissing": "L'événement vidéo actuel est indisponible. Rechargez la liste avant de réessayer.",
-      "assetMissing": "Il manque le fichier ou l'URL d'un sous-titre."
+      "assetMissing": "Il manque le fichier ou l'URL d'un sous-titre.",
+      "scheduled": {
+        "title": "Vidéos programmées",
+        "edit": "Modifier",
+        "cancelPublication": "Annuler la publication",
+        "cancelConfirm": "Annuler la vidéo programmée « {{title}} » ?",
+        "cancelHint": "La vidéo et ses fichiers sont supprimés de ce serveur. Cette action est irréversible.",
+        "confirmCancel": "Annuler la publication",
+        "keep": "Conserver",
+        "state": {
+          "scheduled": "Programmée pour le {{date}}",
+          "released": "Publiée le {{date}}",
+          "failed": "Non publiée"
+        }
+      }
     },
     "instance": {
       "languageHint": "S'applique uniquement à Studio dans ce navigateur. Le site public utilise la langue du navigateur de chaque visiteur.",
@@ -258,7 +272,13 @@
       "uploading": "Mise en ligne…",
       "retry": "Réessayer",
       "start": "Mettre en ligne et publier",
-      "approveHint": "Votre signataire vous demande d'approuver la mise en ligne et la publication."
+      "approveHint": "Votre signataire vous demande d'approuver la mise en ligne et la publication.",
+      "publishAt": "Publier le",
+      "publishAtHint": "Facultatif. Laissez vide pour publier tout de suite. Jusque-là, seul ce serveur détient la vidéo.",
+      "publishAtPast": "Choisissez une date et une heure dans le futur.",
+      "schedule": "Téléverser et programmer",
+      "scheduledTitle": "Programmée",
+      "scheduledDescription": "La vidéo est stockée sur cette instance et devient publique le {{date}}. D’ici là, elle n’est sur aucun relais ni sur le site."
     },
     "moderation": {
       "title": "Modération",

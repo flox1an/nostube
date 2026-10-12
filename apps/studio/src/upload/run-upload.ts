@@ -27,6 +27,8 @@ export interface UploadInput {
   /** Undefined uses the probed frame; null deliberately omits a thumbnail. */
   thumbnail?: Blob | null
   subtitles?: { id: string; file: File; lang: string }[]
+  /** Unix seconds in the future: the server holds the signed event until then. */
+  publishAt?: number
 }
 
 export interface StepState {
@@ -42,6 +44,8 @@ export interface PublishedVideo {
   link: string
   /** The relays that accepted the event. */
   accepted: string[]
+  /** Unix seconds when the server will publish it; the video is not public before. */
+  scheduledFor?: number
 }
 
 /** Everything a run has achieved so far, so a retry continues where the last one stopped. */
@@ -265,6 +269,7 @@ export async function runUpload(
       description: input.description,
       tags: input.tags,
       contentWarning: input.contentWarning,
+      publishedAt: input.publishAt,
       video: {
         ...video!,
         // The server's description should carry these; the file itself is the fallback.

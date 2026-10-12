@@ -186,7 +186,21 @@
       "authorMismatch": "動画を編集・削除できるのは作者のみです。管理者は非表示にできます。",
       "notAddressable": "ここではアドレス可能な動画イベントのみ編集・削除できます。",
       "eventMissing": "現在の動画イベントを取得できません。動画一覧を再読み込みしてから再試行してください。",
-      "assetMissing": "字幕のファイルまたは URL がありません。"
+      "assetMissing": "字幕のファイルまたは URL がありません。",
+      "scheduled": {
+        "title": "予約中の動画",
+        "edit": "編集",
+        "cancelPublication": "公開をキャンセル",
+        "cancelConfirm": "予約中の動画「{{title}}」をキャンセルしますか？",
+        "cancelHint": "動画とそのファイルはこのサーバーから削除されます。元に戻せません。",
+        "confirmCancel": "公開をキャンセル",
+        "keep": "残す",
+        "state": {
+          "scheduled": "{{date}} に公開予定",
+          "released": "{{date}} に公開済み",
+          "failed": "未公開"
+        }
+      }
     },
     "instance": {
       "languageHint": "このブラウザーの Studio にのみ適用されます。公開サイトは各訪問者のブラウザーの言語を使用します。",
@@ -258,7 +272,13 @@
       "uploading": "アップロード中…",
       "retry": "再試行",
       "start": "アップロードして公開",
-      "approveHint": "署名ツールがアップロードと公開の承認を求めます。"
+      "approveHint": "署名ツールがアップロードと公開の承認を求めます。",
+      "publishAt": "公開日時",
+      "publishAtHint": "任意。空欄なら今すぐ公開します。それまでは、動画はこのサーバーにのみ保管されます。",
+      "publishAtPast": "未来の日時を選んでください。",
+      "schedule": "アップロードして予約",
+      "scheduledTitle": "予約しました",
+      "scheduledDescription": "動画はこのインスタンスに保存され、{{date}} に公開されます。それまではどのリレーにもサイトにも表示されません。"
     },
     "moderation": {
       "title": "モデレーション",

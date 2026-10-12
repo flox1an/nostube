@@ -186,7 +186,21 @@
       "authorMismatch": "Solo el autor puede editar o eliminar el video. Los administradores pueden ocultarlo.",
       "notAddressable": "Aquí solo se pueden editar o eliminar eventos de video direccionables.",
       "eventMissing": "El evento de video actual no está disponible. Recarga la lista antes de reintentar.",
-      "assetMissing": "Falta el archivo o la URL de un subtítulo."
+      "assetMissing": "Falta el archivo o la URL de un subtítulo.",
+      "scheduled": {
+        "title": "Vídeos programados",
+        "edit": "Editar",
+        "cancelPublication": "Cancelar la publicación",
+        "cancelConfirm": "¿Cancelar el vídeo programado «{{title}}»?",
+        "cancelHint": "El vídeo y sus archivos se eliminan de este servidor. No se puede deshacer.",
+        "confirmCancel": "Cancelar la publicación",
+        "keep": "Conservar",
+        "state": {
+          "scheduled": "Programado para el {{date}}",
+          "released": "Publicado el {{date}}",
+          "failed": "No publicado"
+        }
+      }
     },
     "instance": {
       "languageHint": "Solo se aplica a Studio en este navegador. El sitio público usa el idioma del navegador de cada visitante.",
@@ -258,7 +272,13 @@
       "uploading": "Subiendo…",
       "retry": "Reintentar",
       "start": "Subir y publicar",
-      "approveHint": "Tu firmante te pedirá aprobar la subida y la publicación."
+      "approveHint": "Tu firmante te pedirá aprobar la subida y la publicación.",
+      "publishAt": "Publicar el",
+      "publishAtHint": "Opcional. Déjalo vacío para publicar ahora. Hasta entonces solo este servidor guarda el vídeo.",
+      "publishAtPast": "Elige una fecha y una hora en el futuro.",
+      "schedule": "Subir y programar",
+      "scheduledTitle": "Programado",
+      "scheduledDescription": "El vídeo se guarda en esta instancia y se hará público el {{date}}. Hasta entonces no está en ningún relay ni en el sitio."
     },
     "moderation": {
       "title": "Moderación",

@@ -1,8 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } from 'nostr-tools'
+import {
+  finalizeEvent,
+  generateSecretKey,
+  getPublicKey,
+  verifyEvent,
+  type EventTemplate,
+} from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
+import { fromLocalInput, toLocalInput } from './datetime'
 import { bootInstanceClient } from './instance-client'
 import { SignerProvider } from './signer-context'
 import UploadPage from './UploadPage'
@@ -146,5 +153,50 @@ describe('UploadPage', () => {
     await screen.findByText(/blocked: not a writer/, {}, { timeout: 4000 })
     expect(screen.queryByText('Published')).toBeNull()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy())
+  })
+
+  describe('with a publish date', () => {
+    const stubFetch = () => {
+      const fetchMock = vi.fn(
+        async (url: string, _init?: RequestInit) =>
+          new Response(
+            JSON.stringify(
+              url === '/api/admin/schedule' ? { id: 'x', dueAt: 1 } : { mode: 'own', pubkey: null }
+            )
+          )
+      )
+      vi.stubGlobal('fetch', fetchMock)
+      return fetchMock
+    }
+    const inSeconds = (seconds: number) => Math.floor(Date.now() / 1000) + seconds
+
+    it('hands the signed event to the server instead of publishing it', async () => {
+      const fetchMock = stubFetch()
+      await renderPage(stateFor([pubkey], [pubkey]))
+      const local = toLocalInput(inSeconds(86400))
+      fireEvent.change(screen.getByLabelText('Publish on'), { target: { value: local } })
+      fireEvent.click(screen.getByRole('button', { name: 'Upload and schedule' }))
+      await screen.findByText('Scheduled', {}, { timeout: 4000 })
+      const sent = fetchMock.mock.calls.find(([url]) => url === '/api/admin/schedule')
+      const signed = JSON.parse(String(sent?.[1]?.body))
+      expect(verifyEvent(signed)).toBe(true)
+      expect(signed.pubkey).toBe(pubkey)
+      expect(signed.tags).toContainEqual(['published_at', String(fromLocalInput(local))])
+      // Signed now (relays refuse a future created_at); only published_at carries the date.
+      expect(Math.abs(signed.created_at - inSeconds(0))).toBeLessThan(60)
+      expect(bootInstanceClient).not.toHaveBeenCalled()
+    })
+
+    it('does not start for a date that has passed', async () => {
+      stubFetch()
+      await renderPage(stateFor([pubkey], [pubkey]))
+      fireEvent.change(screen.getByLabelText('Publish on'), {
+        target: { value: toLocalInput(inSeconds(-3600)) },
+      })
+      expect(screen.getByText('Choose a date and time in the future.')).toBeTruthy()
+      expect(
+        (screen.getByRole('button', { name: 'Upload and schedule' }) as HTMLButtonElement).disabled
+      ).toBe(true)
+    })
   })
 })

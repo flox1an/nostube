@@ -92,7 +92,7 @@ export function VideoActions({ video, instance }: { video: VideoEvent; instance:
         <VideoEditor
           event={editing.event}
           getCurrent={getCurrent}
-          instance={instance}
+          publish={template => publishVideoChange(instance, signer, pubkey, template)}
           replace={editing.replace}
           onClose={() => setEditing(null)}
         />

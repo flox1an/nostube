@@ -37,4 +37,29 @@ describe('studio translations', () => {
       }
     }
   })
+  it('provides scheduled publishing texts in every Studio locale', () => {
+    const keys = [
+      'studio.upload.publishAt',
+      'studio.upload.publishAtHint',
+      'studio.upload.publishAtPast',
+      'studio.upload.schedule',
+      'studio.upload.scheduledTitle',
+      'studio.upload.scheduledDescription',
+      'studio.videos.scheduled.title',
+      'studio.videos.scheduled.edit',
+      'studio.videos.scheduled.cancelPublication',
+      'studio.videos.scheduled.cancelConfirm',
+      'studio.videos.scheduled.cancelHint',
+      'studio.videos.scheduled.confirmCancel',
+      'studio.videos.scheduled.keep',
+      'studio.videos.scheduled.state.scheduled',
+      'studio.videos.scheduled.state.released',
+      'studio.videos.scheduled.state.failed',
+    ]
+    for (const language of ['en', 'de', 'fr', 'es', 'ru', 'zh', 'ja']) {
+      for (const key of keys) {
+        expect(i18n.getResource(language, 'translation', key)).toBeTypeOf('string')
+      }
+    }
+  })
 })

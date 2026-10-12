@@ -141,8 +141,10 @@ export function buildMetaTags(
   lines.push(`<meta name="twitter:description" content="${esc(meta.description.slice(0, 200))}" />`)
   lines.push(`<meta name="twitter:image" content="${esc(imageUrl)}" />`)
 
-  // oEmbed discovery
-  lines.push(`<link rel="alternate" type="application/json+oembed" href="${esc(oembedUrl)}" />`)
+  // oEmbed discovery (the endpoint serves videos only)
+  if (type !== 'playlist') {
+    lines.push(`<link rel="alternate" type="application/json+oembed" href="${esc(oembedUrl)}" />`)
+  }
 
   return lines.join('\n    ')
 }

@@ -132,13 +132,13 @@ export function createApp() {
     }
 
     const parsed = parsePageUrl(new URL(url).pathname)
-    if (!parsed) {
-      return c.json({ error: 'Could not parse video URL' }, 400)
+    if (!parsed || parsed.type === 'playlist') {
+      return c.json({ error: 'Video URL not supported' }, 404)
     }
 
     const decoded = decodeIdentifier(parsed.identifier)
     if (!decoded) {
-      return c.json({ error: 'Invalid nostr identifier' }, 400)
+      return c.json({ error: 'Video URL not supported' }, 404)
     }
 
     log('oembed:fetch', { type: parsed.type, identifier: parsed.identifier.slice(0, 30) })
@@ -161,10 +161,10 @@ export function createApp() {
     const meta = extractVideoMeta(event)
 
     const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
-    const oembed = buildOEmbed(meta, embedUrl, url, parsed.type)
+    const oembed = buildOEmbed(meta, embedUrl, url)
 
     log('oembed:success', { title: meta.title })
-    return c.json(oembed)
+    return c.json(oembed, 200, { 'Cache-Control': 'public, max-age=600' })
   })
 
   return app

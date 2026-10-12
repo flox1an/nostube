@@ -2,7 +2,7 @@ import type { VideoMeta } from './meta.js'
 
 export interface OEmbedResponse {
   version: '1.0'
-  type: 'video' | 'rich'
+  type: 'video'
   title: string
   author_name: string
   author_url: string
@@ -12,33 +12,24 @@ export interface OEmbedResponse {
   html: string
   width: number
   height: number
+  cache_age: number
 }
 
-export function buildOEmbed(
-  meta: VideoMeta,
-  embedUrl: string,
-  baseUrl: string,
-  type: 'video' | 'short' | 'playlist'
-): OEmbedResponse {
-  const width = meta.width || 1280
-  const height = meta.height || 720
-
-  const html =
-    type === 'playlist'
-      ? `<a href="${baseUrl}">${meta.title}</a>`
-      : `<iframe src="${embedUrl}" width="${width}" height="${height}" frameborder="0" allowfullscreen></iframe>`
-
+/** Video oEmbed response per docs/plans/2025-11-27-oembed-service-design.md (fixed 640x360 player). */
+export function buildOEmbed(meta: VideoMeta, embedUrl: string, pageUrl: string): OEmbedResponse {
+  const providerUrl = new URL(pageUrl).origin
   return {
     version: '1.0',
-    type: type === 'playlist' ? 'rich' : 'video',
+    type: 'video',
     title: meta.title,
-    author_name: meta.authorNpub.slice(0, 16) + '...',
-    author_url: `${new URL(baseUrl).origin}/p/${meta.authorNpub}`,
-    provider_name: 'NosTube',
-    provider_url: new URL(baseUrl).origin,
+    author_name: meta.authorNpub,
+    author_url: `${providerUrl}/p/${meta.authorNpub}`,
+    provider_name: 'Nostube',
+    provider_url: providerUrl,
     ...(meta.thumbnail ? { thumbnail_url: meta.thumbnail } : {}),
-    html,
-    width,
-    height,
+    html: `<iframe src="${embedUrl}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>`,
+    width: 640,
+    height: 360,
+    cache_age: 600,
   }
 }

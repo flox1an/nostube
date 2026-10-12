@@ -5,8 +5,11 @@ import { siteLinks } from './site-links'
 
 const CREATOR = 'a'.repeat(64)
 const OTHER = 'b'.repeat(64)
+const INSTANCE_RELAYS = ['wss://interact.example', 'wss://videos.example']
 const config = {
   creators: [CREATOR],
+  videoSources: ['wss://videos.example'],
+  interactionRelays: ['wss://interact.example'],
   site: {
     tagline: '',
     theme: { accent: '#112233', font: 'sans' },
@@ -16,12 +19,19 @@ const config = {
 } as unknown as InstanceConfig
 const links = siteLinks(config)
 
+const entity = (target: { href?: string }) =>
+  nip19.decode(new URL(target.href!).pathname.split('/').pop()!)
+
 describe('siteLinks', () => {
-  it('sends the creator home and everyone else to the configured viewer', () => {
+  it('sends the creator home and links everyone else as nprofile with the instance relays', () => {
     expect(links.profile({ pubkey: CREATOR, relays: [] })).toEqual({ to: '/' })
-    expect(links.profile({ pubkey: OTHER, relays: ['wss://private.lan'] })).toEqual({
-      href: `https://people.example/${nip19.npubEncode(OTHER)}`,
-    })
+    const decoded = entity(links.profile({ pubkey: OTHER, relays: [] }) as { href?: string })
+    expect(decoded).toMatchObject({ type: 'nprofile', data: { pubkey: OTHER } })
+    // Text hints stay first, the instance's relays complete them.
+    expect(
+      entity(links.profile({ pubkey: OTHER, relays: ['wss://said.example'] }) as { href?: string })
+        .data
+    ).toMatchObject({ relays: ['wss://said.example', ...INSTANCE_RELAYS] })
   })
 
   it('opens tags on the site and seeks with a query for timestamps', () => {
@@ -37,14 +47,27 @@ describe('siteLinks', () => {
     })
   })
 
-  it('sends other videos and notes to the configured viewers', () => {
-    const video = nip19.naddrEncode({ kind: 34235, pubkey: OTHER, identifier: 'x' })
-    expect(links.event?.({ nip19: video, kind: 34235, pubkey: OTHER, relays: [] })).toEqual({
-      href: `https://nostu.be/v/${video}`,
+  it('sends other videos and notes out with the instance relays as hints', () => {
+    const video = links.event?.({
+      nip19: nip19.naddrEncode({ kind: 34235, pubkey: OTHER, identifier: 'x' }),
+      kind: 34235,
+      pubkey: OTHER,
+      relays: [],
     })
-    const note = nip19.noteEncode('c'.repeat(64))
-    expect(links.event?.({ nip19: note, id: 'c'.repeat(64), relays: [] })).toEqual({
-      href: `https://njump.me/${note}`,
+    expect(entity(video as { href?: string })).toMatchObject({
+      type: 'naddr',
+      data: { pubkey: OTHER, identifier: 'x', relays: INSTANCE_RELAYS },
+    })
+
+    // A note becomes a nevent that names where to read it; existing hints survive.
+    const note = links.event?.({
+      nip19: nip19.noteEncode('c'.repeat(64)),
+      id: 'c'.repeat(64),
+      relays: [],
+    })
+    expect(entity(note as { href?: string })).toMatchObject({
+      type: 'nevent',
+      data: { id: 'c'.repeat(64), relays: INSTANCE_RELAYS },
     })
   })
 })

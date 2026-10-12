@@ -1,5 +1,6 @@
 import { nip19 } from 'nostr-tools'
 import type { InstanceConfig } from '@nostube/core/instance-config'
+import { withRelays } from '@nostube/core/nip19'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { buildVideoPath } from '@/utils/video-utils'
 import { EMBED_ON_INSTANCE } from './instance'
@@ -57,14 +58,21 @@ export function embedLinks({
   // The config is the only way to tell the creator's videos from others; without it the site is
   // the best guess (its video page says "not found" for a video that is not the creator's).
   if (instance && !instance.creators.includes(authorPubkey)) {
+    // The entity names the instance's relays: where nothing is mirrored, they are the only
+    // place the video and the author's profile can be read from.
+    const instanceRelays = [...new Set([...instance.interactionRelays, ...instance.videoSources])]
     return {
-      watchUrl: fill(instance.site.links.video, videoId),
-      profileUrl: fill(instance.site.links.profile, nip19.npubEncode(authorPubkey)),
+      watchUrl: fill(instance.site.links.video, withRelays(videoId, instanceRelays)),
+      profileUrl: fill(
+        instance.site.links.profile,
+        nip19.nprofileEncode({ pubkey: authorPubkey, relays: instanceRelays })
+      ),
       ...ON_THE_SITE,
       watchLabel: 'Watch the video',
       sensitiveMessage:
         'This video is marked as sensitive. Open it to confirm that you are 18 or older.',
     }
   }
+  // The creator's own video on their own site: the viewer is already here, no hints needed.
   return { watchUrl: `${origin}/v/${videoId}`, profileUrl: `${origin}/`, ...ON_THE_SITE }
 }

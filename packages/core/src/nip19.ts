@@ -130,3 +130,45 @@ export function combineNip19Relays(nip19String: string, fallbackRelays: string[]
   const nip19Relays = extractRelaysFromNip19(nip19String)
   return [...new Set([...nip19Relays, ...fallbackRelays])]
 }
+
+/**
+ * Re-encodes a NIP-19 identifier carrying `relays` as additional hints, so the receiver can fetch
+ * the entity from relays it was not published on (an instance relay with no public mirrors):
+ * npub/nprofile become nprofile, note/nevent become nevent, naddr keeps its kind. Undecodable or
+ * other identifiers (nsec) return unchanged.
+ */
+export function withRelays(identifier: string, relays: string[]): string {
+  if (relays.length === 0) return identifier
+  try {
+    const decoded = nip19.decode(identifier)
+    const data = decoded.data
+    const existing = typeof data === 'object' && 'relays' in data ? (data.relays ?? []) : []
+    const hinted = [...new Set([...existing, ...relays])]
+    switch (decoded.type) {
+      case 'npub':
+        return nip19.nprofileEncode({ pubkey: data as string, relays: hinted })
+      case 'nprofile':
+        return nip19.nprofileEncode({ pubkey: decoded.data.pubkey, relays: hinted })
+      case 'note':
+        return nip19.neventEncode({ id: decoded.data, relays: hinted })
+      case 'nevent':
+        return nip19.neventEncode({
+          id: decoded.data.id,
+          kind: decoded.data.kind,
+          author: decoded.data.author,
+          relays: hinted,
+        })
+      case 'naddr':
+        return nip19.naddrEncode({
+          kind: decoded.data.kind,
+          pubkey: decoded.data.pubkey,
+          identifier: decoded.data.identifier,
+          relays: hinted,
+        })
+      default:
+        return identifier
+    }
+  } catch {
+    return identifier
+  }
+}

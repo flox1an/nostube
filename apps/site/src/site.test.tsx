@@ -420,7 +420,13 @@ describe('SiteHome', () => {
     const seek = screen.getByRole('link', { name: '1:23' })
     expect(seek.getAttribute('href')).toMatch(/\/v\/nevent1.*\?t=83$/)
     const mention = screen.getByRole('link', { name: /^@/ })
-    expect(mention.getAttribute('href')).toBe(`https://njump.me/${nip19.npubEncode(other)}`)
+    // The mention links out as nprofile, naming the instance's relays for profile lookup.
+    expect(mention.getAttribute('href')).toBe(
+      `https://njump.me/${nip19.nprofileEncode({
+        pubkey: other,
+        relays: ['wss://interact.example', 'wss://videos.example'],
+      })}`
+    )
     // Tags open the site's own tag page.
     expect(screen.getByRole('link', { name: '#travel' }).getAttribute('href')).toBe('/t/travel')
   })

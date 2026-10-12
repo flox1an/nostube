@@ -2,10 +2,11 @@
 //! NIP-11, NIP-40. Writes from the allowed writers, reads open. Visitors may not publish
 //! arbitrary events, but the relay acts as an interaction inbox for its own videos: NIP-22
 //! comments (kind 1111, replies included), NIP-10 legacy replies (kind 1), NIP-25 reactions
-//! (kind 7) and NIP-09 deletions of a visitor's own interactions are accepted when they
-//! reference a locally stored video whose author is a current allowed writer. A `p`/`P`/`a`
-//! tag is a claim, never proof: every target is resolved against this database, and unknown,
-//! foreign or non-video targets are rejected.
+//! (kind 7), NIP-56 reports (kind 1984, ADR 0011) and NIP-09 deletions of a visitor's own
+//! interactions are accepted when they reference a locally stored video (or, for a report
+//! with no video at all, a locally known account) whose author is a current allowed writer.
+//! A `p`/`P`/`a` tag is a claim, never proof: every target is resolved against this
+//! database, and unknown, foreign or non-video targets are rejected.
 //!
 //! Ported from nostr-rs-relay (https://github.com/scsibug/nostr-rs-relay),
 //! Copyright (c) 2021 Greg Heartsfield, MIT License. The schema, the persist rules
@@ -436,6 +437,9 @@ enum VisitorScope {
     LegacyReply,
     /// NIP-25 reaction (kind 7).
     Reaction,
+    /// NIP-56 report (kind 1984, ADR 0011) of a locally resolvable video, interaction or
+    /// account.
+    Report,
     /// NIP-09 deletion of the sender's own accepted interactions (kind 5).
     Deletion,
 }
@@ -446,6 +450,7 @@ fn visitor_scope(ev: &Event) -> Option<VisitorScope> {
         1111 => Some(VisitorScope::Comment),
         1 => Some(VisitorScope::LegacyReply),
         7 => Some(VisitorScope::Reaction),
+        1984 => Some(VisitorScope::Report),
         5 => Some(VisitorScope::Deletion),
         _ => None,
     }
@@ -583,6 +588,7 @@ fn check_visitor(
     match scope {
         VisitorScope::Deletion => check_visitor_deletion(conn, ev),
         VisitorScope::Reaction => check_visitor_reaction(conn, writers, ev),
+        VisitorScope::Report => check_visitor_report(conn, writers, ev),
         VisitorScope::Comment | VisitorScope::LegacyReply => {
             check_visitor_comment(conn, writers, ev, scope)
         }
@@ -831,6 +837,125 @@ fn check_visitor_reaction(
         if !same_video(&coord, &video) {
             return Err("restricted: reaction a tag does not match its target");
         }
+    }
+    Ok(())
+}
+
+/// NIP-56 report (kind 1984, ADR 0011): targets a locally known video, a stored interaction
+/// rooted at one, or an account that has shown up here, under the same resolution rule as
+/// every other visitor scope. `p` is a claim about the exact target's author, never proof of
+/// who filed it; `x` must be one of the target video's own media hashes, so a report cannot
+/// flag a file the video never referenced.
+fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) -> Result<(), &'static str> {
+    let tags = tag_list(ev);
+    let es: Vec<&[String]> = tags_named(&tags, "e").collect();
+    let ps: Vec<&[String]> = tags_named(&tags, "p").collect();
+    let xs: Vec<&[String]> = tags_named(&tags, "x").collect();
+    let coords: Vec<&[String]> = tags_named(&tags, "a").collect();
+    if es.is_empty() && ps.is_empty() && xs.is_empty() {
+        return Err("restricted: reports need an e, p or x target");
+    }
+    if es.len() > 1 {
+        return Err("restricted: reports may only target one event");
+    }
+
+    let Some(e) = es.first() else {
+        // A bare x or a cannot be resolved without scanning every writer's video (picked up
+        // with the BUD-09 bridge); a profile-only report just needs locally known p tags.
+        if !xs.is_empty() || !coords.is_empty() {
+            return Err("restricted: report x/a tags need an e target to resolve against");
+        }
+        for p in &ps {
+            let author =
+                PublicKey::from_hex(p[1].as_str()).map_err(|_| "restricted: invalid report p tag")?;
+            let known = writers.contains(&author)
+                || conn
+                    .query_row(
+                        "SELECT 1 FROM visitor_event WHERE author = ? LIMIT 1",
+                        params![author.as_bytes().as_slice()],
+                        |_| Ok(()),
+                    )
+                    .optional()
+                    .map_err(|_| "error: lookup failed")?
+                    .is_some();
+            if !known {
+                return Err("restricted: report p tag is not a locally known account");
+            }
+        }
+        return Ok(());
+    };
+
+    let target_id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid report target")?;
+    let row = conn
+        .query_row(
+            "SELECT author, kind, d_tag, content FROM event WHERE event_hash = ?",
+            params![target_id.as_bytes().as_slice()],
+            |r| {
+                Ok((
+                    r.get::<_, Vec<u8>>(0)?,
+                    r.get::<_, u16>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                    r.get::<_, String>(3)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|_| "error: lookup failed")?;
+
+    let (video, target_author_hex) = match row {
+        Some((target_author, target_kind, target_d_tag, target_content)) => {
+            let video = match target_kind {
+                k if is_video_kind(k) => VideoRef { author: target_author.clone(), kind: k, d_tag: target_d_tag },
+                1111 | 1 => interaction_root_video(conn, writers, &target_id)
+                    .ok_or("restricted: report target is not rooted at an allowed video")?,
+                _ => return Err("restricted: reports may only target videos or their interactions"),
+            };
+            if !video_is_allowed(writers, &video) {
+                return Err("restricted: reports may only reference videos of this instance's allowed writers");
+            }
+            if !xs.is_empty() {
+                if !is_video_kind(target_kind) {
+                    return Err("restricted: report x tag must target the video itself, not a comment");
+                }
+                let hashes = media_hashes(&target_content);
+                for x in &xs {
+                    if !hashes.contains(&x[1].to_ascii_lowercase()) {
+                        return Err("restricted: report x tag is not part of the referenced video's media");
+                    }
+                }
+            }
+            (video, PublicKey::from_slice(&target_author).expect("stored key").to_hex())
+        }
+        None => {
+            // A superseded video id: resolvable as a video, but its content (and so its
+            // media hashes) is gone, so an x claim on it can never be verified.
+            if !xs.is_empty() {
+                return Err("restricted: report x tag targets a video version no longer stored here");
+            }
+            let video = video_by_id(conn, &target_id)
+                .filter(|v| video_is_allowed(writers, v))
+                .ok_or("restricted: reports may only reference videos of this instance's allowed writers")?;
+            let author = PublicKey::from_slice(&video.author).expect("stored key").to_hex();
+            (video, author)
+        }
+    };
+
+    for a in &coords {
+        let coord = video_by_coordinate(conn, &a[1])
+            .filter(|v| video_is_allowed(writers, v))
+            .ok_or("restricted: report a tag is not an allowed video")?;
+        if !same_video(&coord, &video) {
+            return Err("restricted: report a tag does not match its target");
+        }
+    }
+
+    check_report_p_tags(&ps, &target_author_hex)
+}
+
+/// Every `p` tag on a report must match the exact author it claims to be about.
+fn check_report_p_tags(ps: &[&[String]], expected: &str) -> Result<(), &'static str> {
+    if ps.iter().any(|p| p[1] != expected) {
+        return Err("restricted: report p tag does not match the target author");
     }
     Ok(())
 }
@@ -1552,6 +1677,75 @@ mod tests {
         assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &reply.id.to_hex()]])).await).0);
         assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &id]])).await).0);
         assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["a", &format!("34235:{author}:fake")]])).await).0);
+    }
+
+    #[tokio::test]
+    async fn visitors_report_only_locally_resolvable_targets() {
+        let (writer, visitor, other, foreign) =
+            (Keys::generate(), Keys::generate(), Keys::generate(), Keys::generate());
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let author = writer.public_key().to_hex();
+        let video_hash = "a".repeat(64);
+        let video = ev(&writer, 21, now, "video", &[&["imeta", &format!("url https://media.example/{video_hash}.mp4")]]);
+        let id = video.id.to_hex();
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        let comment = ev(&visitor, 1111, now, "comment", &[
+            &["E", &id, "", &author], &["K", "21"], &["P", &author],
+            &["e", &id, "", &author], &["k", "21"], &["p", &author],
+        ]);
+        assert!(ok_status(relay.ingest(comment.clone()).await).0);
+        let cid = comment.id.to_hex();
+        let cauthor = visitor.public_key().to_hex();
+        let foreign_video = ev(&foreign, 21, now, "foreign", &[]);
+        put(&relay, &foreign_video); // stored while they were a writer; not one any more
+        let clip = ev(&writer, 34235, now, "clip", &[&["d", "clip"]]);
+        let clip_id = clip.id.to_hex();
+        let address = format!("34235:{author}:clip");
+        assert!(ok_status(relay.ingest(clip.clone()).await).0);
+
+        // Accept: the video itself, with an x tag matching its own media.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "bad video", &[
+            &["e", &id, "illegal"], &["p", &author], &["x", &video_hash, "illegal"],
+        ])).await).0);
+        // Accept: a visitor's comment — p is the commenter, not the video author.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "spam", &[&["e", &cid, "spam"], &["p", &cauthor]])).await).0);
+        // Accept: a profile report against an allowed writer, no e tag.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["p", &author, "impersonation"]])).await).0);
+        // Accept: a profile report against a visitor who has interacted here.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["p", &cauthor, "harassment"]])).await).0);
+        // Accept: an addressable video's own coordinate, matching its e target.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &address], &["p", &author]])).await).0);
+
+        let bad = [
+            // A pubkey that has never shown up here.
+            ev(&other, 1984, now, "", &[&["p", &foreign.public_key().to_hex()]]),
+            // A video stored here but no longer an allowed writer's.
+            ev(&other, 1984, now, "", &[&["e", &foreign_video.id.to_hex()], &["p", &foreign.public_key().to_hex()]]),
+            // An id that does not resolve to anything stored here.
+            ev(&other, 1984, now, "", &[&["e", &"00".repeat(32)], &["p", &author]]),
+            // p does not match the e target's actual author.
+            ev(&other, 1984, now, "", &[&["e", &id], &["p", &cauthor]]),
+            // x is not among the video's own media hashes.
+            ev(&other, 1984, now, "", &[&["e", &id], &["x", &"f".repeat(64)]]),
+            // No e, p or x target at all.
+            ev(&other, 1984, now, "", &[]),
+            // A bare x cannot be resolved without an e.
+            ev(&other, 1984, now, "", &[&["x", &video_hash]]),
+            // a tag is a coordinate nobody owns.
+            ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &format!("34235:{}:nope", foreign.public_key())], &["p", &author]]),
+            // a tag resolves but to a different video than e.
+            ev(&other, 1984, now, "", &[&["e", &id], &["a", &address], &["p", &author]]),
+        ];
+        for event in bad {
+            assert!(!ok_status(relay.ingest(event).await).0);
+        }
+
+        // A reporter can retract their own report, same as any other accepted interaction.
+        let own_report = ev(&other, 1984, now, "mine", &[&["e", &id], &["p", &author]]);
+        assert!(ok_status(relay.ingest(own_report.clone()).await).0);
+        assert!(ok_status(relay.ingest(ev(&other, 5, now, "", &[&["e", &own_report.id.to_hex()]])).await).0);
+        assert!(!queried(&relay).await.iter().any(|e| e.id == own_report.id));
     }
 
     #[tokio::test]

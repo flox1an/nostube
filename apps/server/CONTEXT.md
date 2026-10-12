@@ -32,7 +32,7 @@ The creator list whose videos the homepage shows. One entry gives a personal pag
 _Avoid_: followed creators, members
 
 **Allowed writers** (zugelassene Schreiber):
-Keys allowed to write to the instance's own relay and Blossom; one set for both. Everyone else can read but not write — with one exception: the relay accepts visitor interactions with locally stored videos of allowed writers (comments, replies, reactions, deletion of one's own interactions, ADR 0006). Displaying a creator grants no write access, and removing a writer deletes none of their events.
+Keys allowed to write to the instance's own relay and Blossom; one set for both. Everyone else can read but not write — with one exception: the relay accepts visitor interactions with locally stored videos of allowed writers (comments, replies, reactions, deletion of one's own interactions, ADR 0006), plus reports, which may instead target an allowed writer's or another visitor's account directly, with no video at all (ADR 0011). Displaying a creator grants no write access, and removing a writer deletes none of their events.
 _Avoid_: whitelist, members, admins
 
 **Locally stored media**:
@@ -86,6 +86,12 @@ _Avoid_: runtime env, settings file
 **Instance build**:
 The Nostube app build embedded in an instance. It loads the public config before anything else and never runs on the normal app defaults.
 _Avoid_: custom build, homepage build
+
+### Moderation
+
+**Report** (Meldung):
+A NIP-56 signal (kind 1984) that a locally known video, interaction, blob or account is objectionable, sent by a visitor the same way a comment is (ADR 0006, ADR 0011).
+_Avoid_: flag, complaint, abuse report
 
 ### Reachability
 

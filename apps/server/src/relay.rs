@@ -28,8 +28,9 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         FromRequestParts,
     },
-    http::{header, Request},
+    http::{header, Method, Request, StatusCode},
     response::{IntoResponse, Response},
+    Json,
 };
 use nostr::{
     event::EventId,
@@ -844,8 +845,9 @@ fn check_visitor_reaction(
 /// NIP-56 report (kind 1984, ADR 0011): targets a locally known video, a stored interaction
 /// rooted at one, or an account that has shown up here, under the same resolution rule as
 /// every other visitor scope. `p` is a claim about the exact target's author, never proof of
-/// who filed it; `x` must be one of the target video's own media hashes, so a report cannot
-/// flag a file the video never referenced.
+/// who filed it; `x` must be one of the target video's own media hashes (or, with no `e` at
+/// all, one of a locally stored writer video's media hashes via the `media_ref` index), so a
+/// report cannot flag a file no local video ever referenced.
 fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) -> Result<(), &'static str> {
     let tags = tag_list(ev);
     let es: Vec<&[String]> = tags_named(&tags, "e").collect();
@@ -860,16 +862,42 @@ fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) ->
     }
 
     let Some(e) = es.first() else {
-        // A bare x or a cannot be resolved without scanning every writer's video (picked up
-        // with the BUD-09 bridge); a profile-only report just needs locally known p tags.
-        if !xs.is_empty() || !coords.is_empty() {
-            return Err("restricted: report x/a tags need an e target to resolve against");
+        // A bare x resolves through the media index (a BUD-09 client usually knows only the
+        // blob); a bare a cannot be resolved without scanning every writer's video. A
+        // profile-only report just needs locally known p tags.
+        if !coords.is_empty() {
+            return Err("restricted: report a tag needs an e target to resolve against");
+        }
+        let mut hash_authors: HashSet<Vec<u8>> = HashSet::new();
+        for x in &xs {
+            let hash = x[1].to_ascii_lowercase();
+            let mut stmt = conn
+                .prepare("SELECT e.author, e.kind FROM media_ref m JOIN event e ON e.event_hash = m.event_hash WHERE m.hash = ?")
+                .map_err(|_| "error: lookup failed")?;
+            let rows = stmt
+                .query_map(params![hash], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?)))
+                .map_err(|_| "error: lookup failed")?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(|_| "error: lookup failed")?;
+            let mut resolved = false;
+            for (author, kind) in rows {
+                if is_video_kind(kind) && PublicKey::from_slice(&author).is_ok_and(|a| writers.contains(&a)) {
+                    hash_authors.insert(author);
+                    resolved = true;
+                }
+            }
+            if !resolved {
+                return Err("restricted: report x tag is not part of any locally stored video");
+            }
         }
         for p in &ps {
             let author =
                 PublicKey::from_hex(p[1].as_str()).map_err(|_| "restricted: invalid report p tag")?;
-            let known = writers.contains(&author)
-                || conn
+            // With an x present, p is a claim about that specific blob's author, not about
+            // any locally known account — the general fallback below does not apply.
+            let known = !xs.is_empty() && hash_authors.contains(author.as_bytes().as_slice())
+                || xs.is_empty() && writers.contains(&author)
+                || xs.is_empty() && conn
                     .query_row(
                         "SELECT 1 FROM visitor_event WHERE author = ? LIMIT 1",
                         params![author.as_bytes().as_slice()],
@@ -1381,6 +1409,54 @@ pub async fn handle(relay: Relay, req: Request<Body>) -> Response {
     }
 }
 
+/// `PUT /report` (BUD-09): a signed NIP-56 event accepted straight into the relay under the
+/// same resolution rule as every other visitor interaction (ADR 0011). This is the one and
+/// only place a report is validated — Almond never sees this path (`main.rs`'s `is_blossom`),
+/// so there is no second rule for this one to drift out of sync with. `OPTIONS` answers the
+/// CORS preflight the same way BUD-01 expects every Blossom endpoint to.
+pub async fn handle_report(relay: Relay, req: Request<Body>) -> Response {
+    if req.method() == Method::OPTIONS {
+        return (
+            StatusCode::NO_CONTENT,
+            [
+                (header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+                (header::ACCESS_CONTROL_ALLOW_METHODS, "PUT, OPTIONS"),
+                // BUD-01: `*` alone does not cover `Authorization`, so it needs the literal
+                // token alongside it.
+                (header::ACCESS_CONTROL_ALLOW_HEADERS, "Authorization, *"),
+            ],
+        )
+            .into_response();
+    }
+    let bytes = match axum::body::to_bytes(req.into_body(), MAX_MESSAGE_BYTES).await {
+        Ok(bytes) => bytes,
+        Err(_) => return report_response(StatusCode::PAYLOAD_TOO_LARGE, "invalid: report body too large"),
+    };
+    let event = match Event::from_json(&bytes) {
+        Ok(event) if event.kind.as_u16() == 1984 => event,
+        Ok(_) => return report_response(StatusCode::BAD_REQUEST, "invalid: not a kind 1984 report"),
+        Err(_) => return report_response(StatusCode::BAD_REQUEST, "invalid: not a valid event"),
+    };
+    let RelayMessage::Ok { status, message, .. } = relay.ingest(event).await else {
+        unreachable!("ingest always answers with RelayMessage::Ok")
+    };
+    let code = if status {
+        StatusCode::ACCEPTED
+    } else if message.starts_with("invalid:") {
+        StatusCode::BAD_REQUEST
+    } else if message.starts_with("error:") {
+        StatusCode::INTERNAL_SERVER_ERROR
+    } else {
+        // "restricted:" (not locally resolvable) or "blocked:" (its own report was deleted).
+        StatusCode::FORBIDDEN
+    };
+    report_response(code, &message)
+}
+
+fn report_response(code: StatusCode, message: &str) -> Response {
+    (code, [(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")], Json(serde_json::json!({ "message": message }))).into_response()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1716,6 +1792,8 @@ mod tests {
         assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["p", &cauthor, "harassment"]])).await).0);
         // Accept: an addressable video's own coordinate, matching its e target.
         assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &address], &["p", &author]])).await).0);
+        // Accept: a bare x (no e), resolved through the media index — the BUD-09 fallback.
+        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["x", &video_hash], &["p", &author]])).await).0);
 
         let bad = [
             // A pubkey that has never shown up here.
@@ -1730,12 +1808,16 @@ mod tests {
             ev(&other, 1984, now, "", &[&["e", &id], &["x", &"f".repeat(64)]]),
             // No e, p or x target at all.
             ev(&other, 1984, now, "", &[]),
-            // A bare x cannot be resolved without an e.
-            ev(&other, 1984, now, "", &[&["x", &video_hash]]),
             // a tag is a coordinate nobody owns.
             ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &format!("34235:{}:nope", foreign.public_key())], &["p", &author]]),
             // a tag resolves but to a different video than e.
             ev(&other, 1984, now, "", &[&["e", &id], &["a", &address], &["p", &author]]),
+            // A bare a cannot be resolved without an e.
+            ev(&other, 1984, now, "", &[&["a", &address]]),
+            // A bare x whose hash is not stored in any video here.
+            ev(&other, 1984, now, "", &[&["x", &"f".repeat(64)]]),
+            // A bare x resolves, but p does not match any of that blob's video authors.
+            ev(&other, 1984, now, "", &[&["x", &video_hash], &["p", &cauthor]]),
         ];
         for event in bad {
             assert!(!ok_status(relay.ingest(event).await).0);
@@ -1746,6 +1828,39 @@ mod tests {
         assert!(ok_status(relay.ingest(own_report.clone()).await).0);
         assert!(ok_status(relay.ingest(ev(&other, 5, now, "", &[&["e", &own_report.id.to_hex()]])).await).0);
         assert!(!queried(&relay).await.iter().any(|e| e.id == own_report.id));
+    }
+
+    #[tokio::test]
+    async fn http_report_endpoint_mirrors_the_relay_acceptance_rule() {
+        let writer = Keys::generate();
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let video = ev(&writer, 21, now, "video", &[]);
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        let author = writer.public_key().to_hex();
+        let id = video.id.to_hex();
+        let put = |body: Vec<u8>| Request::builder().method(Method::PUT).uri("/report").body(Body::from(body)).unwrap();
+
+        let preflight = Request::builder().method(Method::OPTIONS).uri("/report").body(Body::empty()).unwrap();
+        let res = handle_report(relay.clone(), preflight).await;
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+        assert_eq!(res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
+
+        let good = ev(&Keys::generate(), 1984, now, "", &[&["e", &id], &["p", &author]]);
+        let res = handle_report(relay.clone(), put(good.as_json().into_bytes())).await;
+        assert_eq!(res.status(), StatusCode::ACCEPTED);
+        assert_eq!(res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
+
+        let unresolvable = ev(&Keys::generate(), 1984, now, "", &[&["e", &"00".repeat(32)], &["p", &author]]);
+        let res = handle_report(relay.clone(), put(unresolvable.as_json().into_bytes())).await;
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+        let wrong_kind = ev(&Keys::generate(), 1, now, "note", &[]);
+        let res = handle_report(relay.clone(), put(wrong_kind.as_json().into_bytes())).await;
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+        let res = handle_report(relay.clone(), put(b"not json".to_vec())).await;
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

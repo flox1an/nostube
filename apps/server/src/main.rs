@@ -454,6 +454,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
             _ => StatusCode::NOT_FOUND.into_response(),
         };
     }
+    if path == "/report" && matches!(*req.method(), Method::PUT | Method::OPTIONS) {
+        return relay::handle_report(app.relay, req).await;
+    }
     if is_blossom(req.method(), &path) {
         let upload = matches!((req.method(), path.as_str()),
             (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"));
@@ -546,12 +549,14 @@ fn asset_response(file: &str, data: std::borrow::Cow<'static, [u8]>) -> Response
     ([(header::CONTENT_TYPE, mime.as_ref().to_owned()), (header::CACHE_CONTROL, cache.to_owned())], data).into_response()
 }
 
+/// `/report` (BUD-09) is not here: it never reaches Almond (ADR 0011), nostube-server's own
+/// relay is the one place a report is validated.
 fn is_blossom(method: &Method, path: &str) -> bool {
     let seg = path.trim_start_matches('/');
     match *method {
-        Method::PUT => matches!(seg, "upload" | "mirror" | "report"),
+        Method::PUT => matches!(seg, "upload" | "mirror"),
         Method::PATCH => seg == "upload",
-        Method::HEAD | Method::OPTIONS if matches!(seg, "upload" | "mirror" | "report") => true,
+        Method::HEAD | Method::OPTIONS if matches!(seg, "upload" | "mirror") => true,
         Method::GET if seg.starts_with("list/") => true,
         Method::GET | Method::HEAD | Method::DELETE | Method::OPTIONS => is_blob_name(seg),
         _ => false,
@@ -692,6 +697,14 @@ mod tests {
             |r| r.get::<_, i64>(0)).unwrap();
         assert_eq!(count(&local_hash), 1);
         assert_eq!(count(&mirrored_hash), 0);
+        // PUT /report must reach the relay directly (ADR 0011), never Almond: Almond's own
+        // report_access stays Off, so a routing regression here would answer 404.
+        let report = EventBuilder::new(Kind::Custom(1984), "")
+            .tags([Tag::parse(["p", &key.public_key().to_hex()]).unwrap()])
+            .finalize(&Keys::generate())
+            .unwrap();
+        let req = Request::builder().method(Method::PUT).uri("/report").body(Body::from(report.as_json())).unwrap();
+        assert_eq!(dispatch(State(app.clone()), req).await.status(), StatusCode::ACCEPTED);
         // The dispatch seam is identical for a successful PUT /mirror descriptor. Keep
         // this boundary test offline: Almond's fetching/SSRF policy is not replaced here.
         conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash]).unwrap();

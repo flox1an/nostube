@@ -49,10 +49,10 @@
       "deviceTitle": "This device",
       "deviceDescription": "Devices that open this instance need to trust its certificate authority once.",
       "downloadCa": "Download the instance CA",
-      "signerTitle": "Signing key",
+      "identityTitle": "Identity",
       "signerModes": {
-        "managed": "Managed key: this server keeps your key encrypted and signs for you. Whoever takes over the server gets the key too.",
-        "own": "Your own key: your browser's signer extension (NIP-07) signs. The server never sees the key.",
+        "managed": "Channel identity (managed key): this server keeps your key encrypted and signs for you. Whoever takes over the server gets the key too.",
+        "own": "Own identity: your browser's signer extension (NIP-07) signs. The server never sees the key.",
         "none": "No signing key is set up yet. The Videos and Upload pages offer the choice."
       },
       "signerKey": "Public key:",
@@ -147,9 +147,7 @@
     },
     "connect": {
       "neededTitle": "Connect your Nostr key to publish",
-      "notCreatorTitle": "This key is not a creator of the instance",
       "neededBody": "The instance has no creator and no one allowed to upload yet. Connect the key of your Nostr signer to become both.",
-      "notCreatorBody": "The key of your signer is not yet a creator and uploader here. Add it to publish with it.",
       "noSigner": "No Nostr signer was found in this browser. Install a NIP-07 extension (nos2x, Alby, …) and reload this page.",
       "connect": "Connect my key",
       "chooseTitle": "Choose how your videos are signed",
@@ -173,7 +171,6 @@
       "hideOnSite": "Hide on site",
       "showOnSite": "Show on site",
       "moreActions": "More actions",
-      "connect": "Connect signing key to edit your videos",
       "edit": "Edit metadata",
       "replace": "Replace video file",
       "replaceHint": "The video keeps its address and original publish date, even if its orientation changes. Unchanged thumbnails and subtitles are retained.",
@@ -285,7 +282,6 @@
     "moderation": {
       "title": "Moderation",
       "description": "Comments on your videos. What you mute is hidden on this site only: muting deletes nothing, the comments stay on the relays and other Nostr apps may still show them.",
-      "connectFirst": "Connect your Nostr key to see the comments on your videos and edit your mute list.",
       "loadFailed": "The comments and the mute list could not be loaded ({{message}}).",
       "listOf": "Mute list of {{npub}}",
       "listNote": "Your public Nostr mute list (NIP-51), saved on the interaction relays of this instance. Anyone can read it, and other Nostr apps may apply it too.",
@@ -372,7 +368,7 @@
       "noNip07": "No NIP-07 signer found in this browser.",
       "noSigner": "No Nostr signer found in this browser.",
       "notPubkey": "The signer returned something that is not a public key.",
-      "differentKey": "The signer signed with a different key than the one connected here.",
+      "differentKey": "Your signer uses a different key than this instance's creator key. Switch to that key in your signer and try again. Nothing was published.",
       "invalidSignature": "The signer returned an invalid signature.",
       "unsupportedType": "Only MP4 and WebM files can be published for now (this one is {{type}}). Converting other formats is planned.",
       "unknownType": "Only MP4 and WebM files can be published for now (this one is of an unknown type). Converting other formats is planned.",

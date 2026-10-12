@@ -12,7 +12,6 @@ describe('studio translations', () => {
   })
   it('provides video lifecycle actions and errors in every Studio locale', () => {
     const keys = [
-      'connect',
       'edit',
       'replace',
       'replaceHint',

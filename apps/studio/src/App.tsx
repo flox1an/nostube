@@ -81,8 +81,15 @@ export function App() {
       </Shell>
     )
   }
+  const { config, nostrPubkey } = phase.state
+  // Own identity signs with the creator key: the bound login key when it is a creator, else the
+  // first creator.
+  const creatorKey =
+    nostrPubkey && config.creators.includes(nostrPubkey)
+      ? nostrPubkey
+      : (config.creators[0] ?? null)
   return (
-    <SignerProvider>
+    <SignerProvider creatorKey={creatorKey}>
       <Studio state={phase.state} reload={load} />
     </SignerProvider>
   )

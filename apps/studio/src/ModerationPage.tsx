@@ -44,42 +44,17 @@ export default function ModerationPage({
   banner: ReactNode
 }) {
   const { t } = useTranslation()
-  const { status, pubkey, connect } = useSigner()
+  const { pubkey } = useSigner()
   const [booted, setBooted] = useState<InstanceClient | Error | null>(null)
-  const [connectError, setConnectError] = useState<string | null>(null)
   useEffect(() => {
     bootInstanceClient().then(setBooted, e =>
       setBooted(e instanceof Error ? e : new Error(String(e)))
     )
   }, [])
 
-  // The banner asks for the key when the instance has no creator yet; otherwise ask here.
-  const bannerAsks = state.config.creators.length === 0 || state.config.allowedWriters.length === 0
-  const connectNow = async () => {
-    setConnectError(null)
-    try {
-      await connect()
-    } catch (e) {
-      setConnectError(e instanceof Error ? e.message : String(e))
-    }
-  }
-
   let body: ReactNode = null
-  if (pubkey === null) {
-    if (!bannerAsks) {
-      body = (
-        <div className="space-y-3 text-sm">
-          <p className="text-muted-foreground">{t('studio.moderation.connectFirst')}</p>
-          {status === 'none' && <p>{t('studio.connect.noSigner')}</p>}
-          {connectError && <p className="text-destructive">{connectError}</p>}
-          <Button type="button" onClick={connectNow} disabled={status !== 'ready'}>
-            {t('studio.connect.connect')}
-          </Button>
-        </div>
-      )
-    }
-  } else if (!isKeyConnected(state.config, pubkey)) {
-    // The banner says that this key is no creator yet and offers to add it.
+  if (pubkey === null || !isKeyConnected(state.config, pubkey)) {
+    // Before onboarding: the banner sets up the first key.
   } else if (booted === null) {
     body = <Skeleton className="h-40 w-full" />
   } else if (booted instanceof Error) {

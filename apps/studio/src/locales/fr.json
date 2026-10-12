@@ -49,10 +49,10 @@
       "deviceTitle": "Cet appareil",
       "deviceDescription": "Les appareils qui ouvrent cette instance doivent faire confiance une fois à son autorité de certification.",
       "downloadCa": "Télécharger l'autorité de certification de l'instance",
-      "signerTitle": "Clé de signature",
+      "identityTitle": "Identité",
       "signerModes": {
-        "managed": "Clé gérée : ce serveur garde votre clé chiffrée et signe pour vous. Quiconque prend le contrôle du serveur obtient aussi la clé.",
-        "own": "Votre propre clé : l'extension de signature de votre navigateur (NIP-07) signe. Le serveur ne voit jamais la clé.",
+        "managed": "Identité de chaîne (clé gérée) : ce serveur garde votre clé chiffrée et signe pour vous. Quiconque prend le contrôle du serveur obtient aussi la clé.",
+        "own": "Identité propre : l'extension de signature de votre navigateur (NIP-07) signe. Le serveur ne voit jamais la clé.",
         "none": "Aucune clé de signature n'est encore configurée. Les pages Vidéos et Mise en ligne proposent le choix."
       },
       "signerKey": "Clé publique :",
@@ -147,9 +147,7 @@
     },
     "connect": {
       "neededTitle": "Connectez votre clé Nostr pour publier",
-      "notCreatorTitle": "Cette clé n'est pas un créateur de l'instance",
       "neededBody": "L'instance n'a encore aucun créateur ni personne autorisée à mettre en ligne. Connectez la clé de votre signataire Nostr pour devenir les deux.",
-      "notCreatorBody": "La clé de votre signataire n'est pas encore créateur et auteur de mises en ligne ici. Ajoutez-la pour publier avec elle.",
       "noSigner": "Aucun signataire Nostr n'a été trouvé dans ce navigateur. Installez une extension NIP-07 (nos2x, Alby, …) et rechargez cette page.",
       "connect": "Connecter ma clé",
       "chooseTitle": "Choisissez comment vos vidéos sont signées",
@@ -173,7 +171,6 @@
       "hideOnSite": "Masquer sur le site",
       "showOnSite": "Afficher sur le site",
       "moreActions": "Plus d'actions",
-      "connect": "Connecter la clé de signature pour modifier vos vidéos",
       "edit": "Modifier les métadonnées",
       "replace": "Remplacer le fichier vidéo",
       "replaceHint": "L'adresse et la date de publication d'origine restent inchangées, même si l'orientation change. Les miniatures et sous-titres inchangés sont conservés.",
@@ -285,7 +282,6 @@
     "moderation": {
       "title": "Modération",
       "description": "Les commentaires sur tes vidéos. Ce que tu mets en sourdine est seulement masqué sur ce site : rien n'est supprimé, les commentaires restent sur les relais et d'autres applis Nostr peuvent encore les afficher.",
-      "connectFirst": "Connecte ta clé Nostr pour voir les commentaires sur tes vidéos et modifier ta liste de mise en sourdine.",
       "loadFailed": "Les commentaires et la liste de mise en sourdine n'ont pas pu être chargés ({{message}}).",
       "listOf": "Liste de mise en sourdine de {{npub}}",
       "listNote": "Ta liste publique de mise en sourdine Nostr (NIP-51), enregistrée sur les relais d'interaction de cette instance. Tout le monde peut la lire et d'autres applis Nostr peuvent aussi l'appliquer.",
@@ -373,7 +369,7 @@
       "noNip07": "Aucun signataire NIP-07 trouvé dans ce navigateur.",
       "noSigner": "Aucun signataire Nostr trouvé dans ce navigateur.",
       "notPubkey": "Le signataire a renvoyé quelque chose qui n'est pas une clé publique.",
-      "differentKey": "Le signataire a signé avec une autre clé que celle connectée ici.",
+      "differentKey": "Votre signataire utilise une autre clé que la clé de créateur de cette instance. Passez à cette clé dans votre signataire et réessayez. Rien n'a été publié.",
       "invalidSignature": "Le signataire a renvoyé une signature invalide.",
       "unsupportedType": "Seuls les fichiers MP4 et WebM peuvent être publiés pour l'instant (celui-ci est {{type}}). La conversion d'autres formats est prévue.",
       "unknownType": "Seuls les fichiers MP4 et WebM peuvent être publiés pour l'instant (celui-ci est d'un type inconnu). La conversion d'autres formats est prévue.",

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import type { AdminConfig } from './api'
-import { isKeyConnected } from './draft'
 import { useSigner } from './signer-context'
 
 /**
@@ -22,14 +21,14 @@ export function ConnectKey({
   busy: boolean
 }) {
   const { t } = useTranslation()
-  const { status, mode, pubkey, connect, createManaged, error: signerError } = useSigner()
+  const { status, mode, connect, createManaged, error: signerError } = useSigner()
   const [error, setError] = useState<string | null>(null)
 
+  // Once the instance has a creator and writer, the studio signs with that key without asking.
   const needed = config.creators.length === 0 || config.allowedWriters.length === 0
   // Until the server said where the key lives, the choice is unknown.
-  if (status === 'loading') return null
-  if (!needed && (pubkey === null || isKeyConnected(config, pubkey))) return null
-  const choose = needed && mode === 'none'
+  if (status === 'loading' || !needed) return null
+  const choose = mode === 'none'
 
   const run = (key: () => Promise<string>) => async () => {
     setError(null)
@@ -47,20 +46,10 @@ export function ConnectKey({
   return (
     <Alert>
       <AlertTitle>
-        {choose
-          ? t('studio.connect.chooseTitle')
-          : needed
-            ? t('studio.connect.neededTitle')
-            : t('studio.connect.notCreatorTitle')}
+        {choose ? t('studio.connect.chooseTitle') : t('studio.connect.neededTitle')}
       </AlertTitle>
       <AlertDescription className="space-y-3">
-        <p>
-          {choose
-            ? t('studio.connect.chooseBody')
-            : needed
-              ? t('studio.connect.neededBody')
-              : t('studio.connect.notCreatorBody')}
-        </p>
+        <p>{choose ? t('studio.connect.chooseBody') : t('studio.connect.neededBody')}</p>
         {signerError && <p className="text-destructive">{signerError}</p>}
         {error && <p className="text-destructive">{error}</p>}
         {choose ? (

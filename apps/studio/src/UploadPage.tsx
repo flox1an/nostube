@@ -57,7 +57,7 @@ const titleFromName = (name: string) =>
 export default function UploadPage({ state, banner }: { state: AdminState; banner: ReactNode }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage
-  const { signer, pubkey, connect } = useSigner()
+  const { signer, pubkey } = useSigner()
   const [file, setFile] = useState<File | null>(null)
   const [probe, setProbe] = useState<VideoProbe | null>(null)
   const [probeError, setProbeError] = useState<string | null>(null)
@@ -116,8 +116,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
     }
   }
 
-  const key = pubkey
-  const mayPublish = key !== null && isKeyConnected(state.config, key)
+  const mayPublish = pubkey !== null && isKeyConnected(state.config, pubkey)
   const publishAt = fromLocalInput(publishAtText)
   const dateOk = isFuture(publishAt)
 
@@ -127,18 +126,9 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
     setRunning(true)
     setNotice(null)
     try {
-      let who = key
-      try {
-        who ??= await connect()
-      } catch (e) {
-        return setNotice(e instanceof Error ? e.message : String(e))
-      }
-      if (!isKeyConnected(state.config, who)) {
-        return setNotice(t('studio.upload.notConnected'))
-      }
+      if (!mayPublish) return setNotice(t('studio.upload.notConnected'))
       if (!signer) return setNotice(t('studio.errors.noSigner'))
-      // Use the just-connected key rather than the render behind it.
-      const deps = makeUploadDeps({ signer, pubkey: who, title, publishAt })
+      const deps = makeUploadDeps({ signer, pubkey, title, publishAt })
       const input = {
         file,
         title: title.trim(),
@@ -412,7 +402,11 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="button" onClick={start} disabled={!canStart || (key !== null && !mayPublish)}>
+        <Button
+          type="button"
+          onClick={start}
+          disabled={!canStart || (pubkey !== null && !mayPublish)}
+        >
           {running
             ? t('studio.upload.uploading')
             : failed

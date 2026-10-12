@@ -20,6 +20,34 @@ docker run --rm -p 8080:8080 --name nostube nostube
 The container listens on port `8080`. Unknown non-file routes serve `index.html` for React Router.
 Hashed assets use a one-year immutable cache policy.
 
+## oEmbed
+
+`GET /oembed?url=<page-url>&format=json` returns oEmbed JSON for a video or short page
+(`/v/<nevent|naddr|note>`, `/short/<…>`), so consumers like Mastodon, WordPress or Discord embed the
+player instead of a bare link:
+
+```json
+{
+  "version": "1.0",
+  "type": "video",
+  "provider_name": "Nostube",
+  "provider_url": "https://nostu.be",
+  "title": "…",
+  "author_name": "npub1…",
+  "author_url": "https://nostu.be/p/npub1…",
+  "thumbnail_url": "https://…",
+  "html": "<iframe src=\"https://nostu.be/embed.html?v=nevent1…\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
+  "width": 640,
+  "height": 360,
+  "cache_age": 600
+}
+```
+
+Responses carry `Cache-Control: public, max-age=600`. A missing `url` returns 400; any other URL
+(not a video page, an invalid identifier, a playlist, or an event no relay returns) returns 404.
+Video pages served to crawlers advertise the endpoint with
+`<link rel="alternate" type="application/json+oembed" href="…/oembed?url=…&format=json">`.
+
 ## Build-time configuration
 
 `VITE_NSFW_SAFETY` controls nostube's NSFW safety: the 18+ confirmation before viewers can opt in to

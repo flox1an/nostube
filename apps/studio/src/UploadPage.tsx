@@ -27,7 +27,7 @@ import { Field } from './fields'
 import { fromLocalInput, isFuture } from './datetime'
 import { hashFor } from './route'
 import { useSigner } from './signer-context'
-import { inspectVideo, VIDEO_ACCEPT, type VideoProbe } from './upload/probe-video'
+import { convertHint, inspectVideo, VIDEO_ACCEPT, type VideoProbe } from './upload/probe-video'
 import { makeUploadDeps } from './upload/make-deps'
 import {
   isDone,
@@ -293,7 +293,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
                 ` · ${probe.width}×${probe.height} · ${formatDuration(probe.duration)}` +
                   (probe.height > probe.width ? ` · ${t('studio.upload.vertical')}` : '')}
               {convert &&
-                ` · ${convert.width}×${convert.height} · ${formatDuration(convert.duration)} · ${t('studio.upload.willConvert')}`}
+                ` · ${convert.width}×${convert.height} · ${formatDuration(convert.duration)} · ${convertHint(convert)}`}
             </p>
           )}
           {file && !probeError && !probe && !convert && (

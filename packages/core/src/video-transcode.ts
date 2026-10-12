@@ -286,14 +286,46 @@ export const MP4_CONVERSION_VARIANT: BrowserTranscodeVariant = {
 
 /** Why `probeMp4Conversion` rejected: its error's message. */
 export type Mp4ConversionProblem =
-  'noWebCodecs' | 'unreadableVideo' | 'cannotDecode' | 'cannotEncode'
+  'noWebCodecs' | 'unreadableVideo' | 'cannotDecode' | 'cannotEncode' | 'tooLong'
 
 const conversionProblem = (problem: Mp4ConversionProblem) => new Error(problem)
 
 /**
+ * Largest MP4 a conversion can produce: `transcodeFile` builds it in an in-memory buffer, and
+ * mediabunny's `BufferTarget` stops at 4 GiB (as does the server's per-file limit).
+ */
+export const MP4_CONVERSION_MAX_BYTES = 2 ** 32
+
+/**
+ * The browser encoders overshoot the target bitrate on detailed footage: a 3 min 1080p MKV of
+ * noisy test video came out 1.34× bitrate × duration (225.5 MiB) in Chrome.
+ */
+const ENCODER_OVERSHOOT = 1.35
+
+/** Expected size of the MP4 that `MP4_CONVERSION_VARIANT` makes from a source, on the high side. */
+export function estimateMp4ConversionBytes(meta: TranscodeSourceMeta): number {
+  const { width, height } = computeTargetDimensions(
+    meta.width,
+    meta.height,
+    MP4_CONVERSION_VARIANT.targetHeight
+  )
+  const videoBitrate = computeBrowserTranscodeVideoBitrate(width, height, 'balanced', meta)
+  return (ENCODER_OVERSHOOT * (videoBitrate + BROWSER_TRANSCODE_AUDIO_BITRATE) * meta.duration) / 8
+}
+
+/**
+ * Memory the browser tab needs at the peak of a conversion: the growing output buffer, then its
+ * copy into a File. ponytail: measured factor (the same conversion took +1 GB of renderer memory
+ * in Chrome, 4.3× its output); streaming the output to OPFS would remove it and the 4 GiB cap.
+ */
+export const estimateMp4ConversionMemoryBytes = (meta: TranscodeSourceMeta) =>
+  4.5 * estimateMp4ConversionBytes(meta)
+
+/**
  * Reads a file with mediabunny rather than a `<video>` element, so containers the browser does not
  * play (MOV, MKV, AVI) work too, and checks that this browser can decode it and encode
- * `MP4_CONVERSION_VARIANT`. Rejects with an Error whose message is an `Mp4ConversionProblem`.
+ * `MP4_CONVERSION_VARIANT`, and that the MP4 stays under `MP4_CONVERSION_MAX_BYTES`. Rejects with
+ * an Error whose message is an `Mp4ConversionProblem`.
  */
 export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMeta> {
   if (!isWebCodecsSupported()) throw conversionProblem('noWebCodecs')
@@ -326,9 +358,28 @@ export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMet
     if (!(await canEncodeVideo('avc', { width, height, bitrate }))) {
       throw conversionProblem('cannotEncode')
     }
+    if (estimateMp4ConversionBytes(meta) > MP4_CONVERSION_MAX_BYTES) {
+      throw conversionProblem('tooLong')
+    }
     return meta
   } finally {
     input.dispose()
+  }
+}
+
+/**
+ * Throws when a conversion would drop the source's audio (the browser cannot decode it, or cannot
+ * encode any audio codec the output container holds). Without this the result is a silent video.
+ * With `tracks: 'primary'` every discarded audio track is the primary one.
+ */
+export function assertKeepsAudio(conversion: {
+  discardedTracks: readonly { track: { type: string }; reason: string }[]
+}): void {
+  const lost = conversion.discardedTracks.find(d => d.track.type === 'audio')
+  if (lost) {
+    throw new Error(
+      `This browser cannot convert the audio of this file (${lost.reason}); the video would have no sound.`
+    )
   }
 }
 
@@ -392,6 +443,7 @@ export async function transcodeFile(
       `Cannot encode ${variant.codec.toUpperCase()} at ${targetWidth}x${targetHeight} in this browser.`
     )
   }
+  assertKeepsAudio(conversion)
 
   const abortConversion = () => {
     void conversion.cancel()
@@ -492,6 +544,7 @@ export async function transcodeToHls(
   })
 
   if (!conversion.isValid) throw new Error('HLS conversion not valid')
+  assertKeepsAudio(conversion)
   console.log('[transcodeToHls] Starting conversion...')
 
   const abortConversion = () => {

@@ -15,7 +15,7 @@ import { Field } from './fields'
 import { fromLocalInput, isFuture, toLocalInput } from './datetime'
 import { useSigner } from './signer-context'
 import { makeUploadDeps } from './upload/make-deps'
-import { inspectVideo, VIDEO_ACCEPT, type ChosenVideo } from './upload/probe-video'
+import { convertHint, inspectVideo, VIDEO_ACCEPT, type ChosenVideo } from './upload/probe-video'
 import type { PublishedVideo } from './upload/run-upload'
 import { runVideoEdit, type EditSubtitle, type VideoEditCache } from './upload/run-video-edit'
 import { PublishError } from './upload/sign'
@@ -199,7 +199,7 @@ export function VideoEditor({
             <p className="text-sm text-muted-foreground">
               {inspected.probe
                 ? `${inspected.probe.width}×${inspected.probe.height} · ${Math.round(inspected.probe.duration)}s`
-                : `${inspected.convert.width}×${inspected.convert.height} · ${Math.round(inspected.convert.duration)}s · ${t('studio.upload.willConvert')}`}
+                : `${inspected.convert.width}×${inspected.convert.height} · ${Math.round(inspected.convert.duration)}s · ${convertHint(inspected.convert)}`}
             </p>
           )}
           <p className="text-sm text-muted-foreground">{t('studio.videos.replaceHint')}</p>

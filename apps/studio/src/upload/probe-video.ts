@@ -1,4 +1,8 @@
-import { probeMp4Conversion, type TranscodeSourceMeta } from '@nostube/core/video-transcode'
+import {
+  estimateMp4ConversionMemoryBytes,
+  probeMp4Conversion,
+  type TranscodeSourceMeta,
+} from '@nostube/core/video-transcode'
 import i18n from '../i18n'
 
 /** What the page learns from a video file before it is uploaded. */
@@ -120,4 +124,16 @@ export async function inspectVideo(file: File): Promise<ChosenVideo> {
     throw new Error(i18n.t(`studio.errors.${message}`, { defaultValue: message }))
   })
   return { convert }
+}
+
+/** From here on a conversion warns about the memory it needs (the tab may crash before). */
+const CONVERT_MEMORY_WARNING_BYTES = 2e9
+
+/** "Converted to MP4 …", and for a long video how much memory the conversion needs. */
+export function convertHint(meta: TranscodeSourceMeta): string {
+  const hint = i18n.t('studio.upload.willConvert')
+  const memory = estimateMp4ConversionMemoryBytes(meta)
+  if (memory < CONVERT_MEMORY_WARNING_BYTES) return hint
+  const gb = (memory / 1e9).toLocaleString(i18n.language, { maximumFractionDigits: 1 })
+  return `${hint} · ${i18n.t('studio.upload.convertMemory', { gb })}`
 }

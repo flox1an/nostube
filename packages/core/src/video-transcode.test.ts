@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertKeepsAudio,
   assessTranscodeNeed,
+  estimateMp4ConversionBytes,
   assignMp4ResolutionCodecs,
   canUseOriginalHlsVariant,
   computeBrowserTranscodeVideoBitrate,
@@ -83,6 +85,35 @@ describe('assessTranscodeNeed', () => {
         mimeType: 'video/mp4',
       })
     ).toBe('none')
+  })
+})
+
+describe('assertKeepsAudio', () => {
+  it('refuses a conversion that would drop the audio track', () => {
+    const conversion = {
+      discardedTracks: [{ track: { type: 'audio' }, reason: 'no_encodable_target_codec' }],
+    }
+    expect(() => assertKeepsAudio(conversion)).toThrow(/no_encodable_target_codec.*no sound/)
+  })
+
+  it('accepts a source without audio or a conversion that keeps it', () => {
+    expect(() => assertKeepsAudio({ discardedTracks: [] })).not.toThrow()
+    expect(() =>
+      assertKeepsAudio({ discardedTracks: [{ track: { type: 'video' }, reason: 'cannot_copy' }] })
+    ).not.toThrow()
+  })
+})
+
+describe('estimateMp4ConversionBytes', () => {
+  // Measured in Chrome: a 3 min 1080p MKV at 12 Mbps converted to a 225.5 MiB MP4.
+  const measured = { ...baseMeta, duration: 180, bitrateMbps: 12, sizeMB: 260 }
+
+  // On the high side, so the size limit never lets through a conversion that ends up too big.
+  it('is at least, and not far above, the measured size of a real conversion', () => {
+    const estimate = estimateMp4ConversionBytes(measured)
+    const actual = 225.5 * 1024 * 1024
+    expect(estimate).toBeGreaterThanOrEqual(actual)
+    expect(estimate / actual).toBeLessThan(1.25)
   })
 })
 

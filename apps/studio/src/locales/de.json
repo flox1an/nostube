@@ -49,10 +49,10 @@
       "deviceTitle": "Dieses Gerät",
       "deviceDescription": "Geräte, die diese Instanz öffnen, müssen ihrer Zertifizierungsstelle einmalig vertrauen.",
       "downloadCa": "Zertifizierungsstelle der Instanz herunterladen",
-      "signerTitle": "Signaturschlüssel",
+      "identityTitle": "Identität",
       "signerModes": {
-        "managed": "Verwalteter Schlüssel: Dieser Server speichert deinen Schlüssel verschlüsselt und signiert für dich. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls.",
-        "own": "Eigener Schlüssel: Die Signer-Erweiterung deines Browsers (NIP-07) signiert. Der Server sieht den Schlüssel nie.",
+        "managed": "Kanal-Identität (verwalteter Schlüssel): Dieser Server speichert deinen Schlüssel verschlüsselt und signiert für dich. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls.",
+        "own": "Eigene Identität: Die Signer-Erweiterung deines Browsers (NIP-07) signiert. Der Server sieht den Schlüssel nie.",
         "none": "Es ist noch kein Signaturschlüssel eingerichtet. Die Seiten Videos und Hochladen bieten die Wahl an."
       },
       "signerKey": "Öffentlicher Schlüssel:",
@@ -147,9 +147,7 @@
     },
     "connect": {
       "neededTitle": "Verbinde deinen Nostr-Schlüssel, um zu veröffentlichen",
-      "notCreatorTitle": "Dieser Schlüssel ist kein Creator der Instanz",
       "neededBody": "Die Instanz hat noch keinen Creator und niemanden, der hochladen darf. Verbinde den Schlüssel deines Nostr-Signers, um beides zu werden.",
-      "notCreatorBody": "Der Schlüssel deines Signers ist hier noch kein Creator und Uploader. Füge ihn hinzu, um damit zu veröffentlichen.",
       "noSigner": "In diesem Browser wurde kein Nostr-Signer gefunden. Installiere eine NIP-07-Erweiterung (nos2x, Alby, …) und lade diese Seite neu.",
       "connect": "Meinen Schlüssel verbinden",
       "chooseTitle": "Wähle, wie deine Videos signiert werden",
@@ -171,7 +169,6 @@
       "contentWarning": "Inhaltswarnung",
       "hidden": "Ausgeblendet",
       "hide": "{{title}} ausblenden",
-      "connect": "Signierschlüssel verbinden, um deine Videos zu bearbeiten",
       "edit": "Metadaten bearbeiten",
       "replace": "Videodatei ersetzen",
       "replaceHint": "Adresse und ursprüngliches Veröffentlichungsdatum bleiben auch bei geänderter Ausrichtung erhalten. Unveränderte Vorschaubilder und Untertitel bleiben bestehen.",
@@ -283,7 +280,6 @@
     "moderation": {
       "title": "Moderation",
       "description": "Kommentare zu deinen Videos. Was du stummschaltest, wird nur auf dieser Website ausgeblendet: Stummschalten löscht nichts, die Kommentare bleiben auf den Relays und andere Nostr-Apps können sie weiter zeigen.",
-      "connectFirst": "Verbinde deinen Nostr-Schlüssel, um die Kommentare zu deinen Videos zu sehen und deine Stummschaltliste zu bearbeiten.",
       "loadFailed": "Die Kommentare und die Stummschaltliste konnten nicht geladen werden ({{message}}).",
       "listOf": "Stummschaltliste von {{npub}}",
       "listNote": "Deine öffentliche Nostr-Stummschaltliste (NIP-51), gespeichert auf den Interaktions-Relays dieser Instanz. Jeder kann sie lesen, und andere Nostr-Apps können sie ebenfalls anwenden.",
@@ -370,7 +366,7 @@
       "noNip07": "In diesem Browser wurde kein NIP-07-Signer gefunden.",
       "noSigner": "In diesem Browser wurde kein Nostr-Signer gefunden.",
       "notPubkey": "Der Signer hat etwas zurückgegeben, das kein öffentlicher Schlüssel ist.",
-      "differentKey": "Der Signer hat mit einem anderen Schlüssel signiert als dem hier verbundenen.",
+      "differentKey": "Dein Signer verwendet einen anderen Schlüssel als den Creator-Schlüssel dieser Instanz. Wechsle im Signer zu diesem Schlüssel und versuche es erneut. Es wurde nichts veröffentlicht.",
       "invalidSignature": "Der Signer hat eine ungültige Signatur zurückgegeben.",
       "unsupportedType": "Vorerst können nur MP4- und WebM-Dateien veröffentlicht werden (diese ist {{type}}). Die Umwandlung anderer Formate ist geplant.",
       "unknownType": "Vorerst können nur MP4- und WebM-Dateien veröffentlicht werden (diese hat einen unbekannten Typ). Die Umwandlung anderer Formate ist geplant.",

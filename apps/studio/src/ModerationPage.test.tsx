@@ -96,16 +96,19 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.unstubAllGlobals()
+  publish.mockClear()
   delete (window as unknown as { nostr?: object }).nostr
 })
 
-it('mutes a comment author with a signed list built on the current one', async () => {
+const renderPage = () =>
   render(
-    <SignerProvider>
+    <SignerProvider creatorKey={owner}>
       <ModerationPage state={state} banner={null} />
     </SignerProvider>
   )
-  fireEvent.click(await screen.findByRole('button', { name: 'Connect my key' }))
+
+it('mutes a comment author with a signed list built on the current one', async () => {
+  renderPage()
   expect(await screen.findByText('buy my coin')).toBeTruthy()
   expect(screen.getByText(/on My clip/)).toBeTruthy()
 
@@ -122,4 +125,21 @@ it('mutes a comment author with a signed list built on the current one', async (
   expect(signed.created_at).toBeGreaterThan(list.created_at)
   // The row and the list both offer the way back.
   expect(await screen.findAllByRole('button', { name: 'Unmute author' })).toHaveLength(2)
+})
+
+it('refuses to publish when the extension holds another key than the creator key', async () => {
+  const other = generateSecretKey()
+  // jsdom's Window has no NIP-07 extension declaration; install the other key's extension.
+  const extensionWindow = window as unknown as { nostr: object }
+  extensionWindow.nostr = {
+    getPublicKey: async () => getPublicKey(other),
+    signEvent: async (template: EventTemplate) =>
+      JSON.parse(JSON.stringify(finalizeEvent(template, other))),
+  }
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: 'Mute author' }))
+  expect(
+    await screen.findByText(/uses a different key than this instance's creator key/)
+  ).toBeTruthy()
+  expect(publish).not.toHaveBeenCalled()
 })

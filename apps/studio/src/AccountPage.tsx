@@ -15,8 +15,17 @@ import { exportNsec, nip07, nostrPost, unbindNostr, type AdminState } from './ap
 import { Field } from './fields'
 import { useSigner } from './signer-context'
 
-/** Where the creator's key lives; in managed mode the way to take it along (the nsec export). */
-function SigningKeyCard() {
+/**
+ * The one identity card: which identity signs (own or channel), its npub, logging in with a Nostr
+ * key and, for the channel identity, the way to take its key along (the nsec export).
+ */
+function IdentityCard({
+  state,
+  run,
+}: {
+  state: AdminState
+  run: (action: () => Promise<void>) => Promise<void>
+}) {
   const { t } = useTranslation()
   const { mode, pubkey, error: signerError } = useSigner()
   const [password, setPassword] = useState('')
@@ -41,7 +50,7 @@ function SigningKeyCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('studio.account.signerTitle')}</CardTitle>
+        <CardTitle>{t('studio.account.identityTitle')}</CardTitle>
         {mode && <CardDescription>{t(`studio.account.signerModes.${mode}`)}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-3">
@@ -82,44 +91,14 @@ function SigningKeyCard() {
               </Button>
             </form>
           ))}
-      </CardContent>
-    </Card>
-  )
-}
-
-/** Who signs (the signing key) and who can log in: the password always, optionally a NIP-07 key. */
-export function AccountPage({ state, reload }: { state: AdminState; reload: () => void }) {
-  const { t } = useTranslation()
-  const [error, setError] = useState<string | null>(null)
-  const run = async (action: () => Promise<void>) => {
-    setError(null)
-    try {
-      await action()
-      reload()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <SigningKeyCard />
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.account.title')}</CardTitle>
-          <CardDescription>{t('studio.account.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        <section className="space-y-3 border-t border-border pt-3">
+          <h3 className="text-sm font-medium">{t('studio.account.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('studio.account.description')}</p>
           <p className="text-sm">
             {state.nostrPubkey ? (
               <>
                 {t('studio.account.boundKey')}{' '}
-                <code className="break-all">{state.nostrPubkey}</code>
+                <code className="break-all">{nip19.npubEncode(state.nostrPubkey)}</code>
               </>
             ) : (
               t('studio.account.noKey')
@@ -144,8 +123,34 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
               <p className="text-sm text-muted-foreground">{t('studio.account.installSigner')}</p>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** The identity (who signs, who can log in besides the password) and this device. */
+export function AccountPage({ state, reload }: { state: AdminState; reload: () => void }) {
+  const { t } = useTranslation()
+  const [error, setError] = useState<string | null>(null)
+  const run = async (action: () => Promise<void>) => {
+    setError(null)
+    try {
+      await action()
+      reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <IdentityCard state={state} run={run} />
       {/* Only an instance with its own CA has one to install; behind a proxy TLS is public. */}
       {state.tlsMode === 'local-ca' && (
         <Card>

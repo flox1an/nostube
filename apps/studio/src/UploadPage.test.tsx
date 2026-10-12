@@ -78,7 +78,7 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
 
 async function renderPage(state: AdminState) {
   render(
-    <SignerProvider>
+    <SignerProvider creatorKey={state.config.creators[0] ?? null}>
       <UploadPage state={state} banner={null} />
     </SignerProvider>
   )
@@ -119,7 +119,7 @@ describe('UploadPage', () => {
     expect(uploadBlob).not.toHaveBeenCalled()
     expect(signEvent).not.toHaveBeenCalled()
   })
-  it('publishes on the very first click, before the page has seen the key', async () => {
+  it('publishes on the very first click, without asking the extension for its key', async () => {
     await renderPage(stateFor([pubkey], [pubkey]))
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('my clip')
     fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))

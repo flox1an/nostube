@@ -1,9 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
+import { processEvent } from '@nostube/core/video-event'
 import type { AdminConfig, SignerInfo } from './api'
 import { ConnectKey } from './ConnectKey'
+import type { InstanceClient } from './instance-client'
 import { SignerProvider, useSigner, type SignerState } from './signer-context'
+import { VideoActions } from './VideoActions'
 import i18n from './i18n'
 
 const MANAGED = 'b'.repeat(64)
@@ -49,7 +53,7 @@ describe('SignerProvider', () => {
   it('signs on the server when it holds the managed key, not with the extension', async () => {
     const fetch = serve({ mode: 'managed', pubkey: MANAGED })
     render(
-      <SignerProvider>
+      <SignerProvider creatorKey={null}>
         <Probe />
       </SignerProvider>
     )
@@ -70,16 +74,16 @@ describe('SignerProvider', () => {
     expect(extension.signEvent).not.toHaveBeenCalled()
   })
 
-  it('uses the extension when the owner signs with an own key', async () => {
+  it('knows the creator key in own identity without asking the extension', async () => {
     serve({ mode: 'own', pubkey: null })
     render(
-      <SignerProvider>
+      <SignerProvider creatorKey={OWN}>
         <Probe />
       </SignerProvider>
     )
     await waitFor(() => expect(current.status).toBe('ready'))
-    expect(current.pubkey).toBeNull()
-    expect(await current.connect()).toBe(OWN)
+    expect(current.pubkey).toBe(OWN)
+    expect(extension.getPublicKey).not.toHaveBeenCalled()
   })
 
   it('shows why when the server cannot tell where the key is', async () => {
@@ -88,12 +92,49 @@ describe('SignerProvider', () => {
       vi.fn(async () => new Response(JSON.stringify({ error: 'key locked' }), { status: 500 }))
     )
     render(
-      <SignerProvider>
+      <SignerProvider creatorKey={null}>
         <Probe />
       </SignerProvider>
     )
     await waitFor(() => expect(current.error).toBe('key locked'))
     expect(current.signer).toBeNull()
+  })
+})
+
+describe('video actions without a connect step', () => {
+  const secret = generateSecretKey()
+  const creator = getPublicKey(secret)
+  const video = processEvent(
+    finalizeEvent(
+      {
+        kind: 34235,
+        created_at: 200,
+        content: '',
+        tags: [
+          ['d', 'clip'],
+          ['title', 'Clip'],
+          ['imeta', 'url https://media.example/clip.mp4', 'm video/mp4'],
+        ],
+      },
+      secret
+    ),
+    []
+  )!
+
+  it.each([
+    ['own', { mode: 'own', pubkey: null }],
+    ['channel', { mode: 'managed', pubkey: creator }],
+  ] as const)('offers edit, replace and delete at once in %s identity', async (_, info) => {
+    serve(info)
+    render(
+      <SignerProvider creatorKey={creator}>
+        <VideoActions video={video} instance={{} as InstanceClient} />
+      </SignerProvider>
+    )
+    expect(await screen.findByRole('button', { name: 'Edit metadata' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Replace video file' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete video' })).toBeTruthy()
+    expect(extension.getPublicKey).not.toHaveBeenCalled()
   })
 })
 
@@ -118,7 +159,7 @@ describe('ConnectKey onboarding', () => {
   }
   const renderBanner = (onConnected: (pubkey: string) => Promise<void>) =>
     render(
-      <SignerProvider>
+      <SignerProvider creatorKey={null}>
         <ConnectKey config={fresh} onConnected={onConnected} busy={false} />
       </SignerProvider>
     )

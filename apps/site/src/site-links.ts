@@ -32,11 +32,13 @@ export function siteLinks(config: InstanceConfig): RichTextLinks {
             ),
           },
     hashtag: tag => ({ to: tagPath(tag) }),
-    timestamp: (videoLink, seconds) => ({ to: `/v/${videoLink}?t=${Math.floor(seconds)}` }),
+    timestamp: (videoLink, seconds) => ({
+      to: `/v/${withRelays(videoLink, instanceRelays)}?t=${Math.floor(seconds)}`,
+    }),
     event: reference => {
       const isVideo = reference.kind !== undefined && VIDEO_KINDS.has(reference.kind)
       if (isVideo && reference.pubkey && creators.has(reference.pubkey)) {
-        return { to: `/v/${reference.nip19}` }
+        return { to: `/v/${withRelays(reference.nip19, instanceRelays)}` }
       }
       return {
         href: fillLinkTemplate(

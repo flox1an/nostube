@@ -37,13 +37,24 @@ describe('siteLinks', () => {
   it('opens tags on the site and seeks with a query for timestamps', () => {
     expect(links.hashtag('travel')).toEqual({ to: '/t/travel' })
     expect(links.hashtag('c#')).toEqual({ to: '/t/c%23' })
-    expect(links.timestamp('naddr1xyz', 83.9)).toEqual({ to: '/v/naddr1xyz?t=83' })
+    const address = nip19.naddrEncode({ kind: 34235, pubkey: CREATOR, identifier: 'intro' })
+    const target = links.timestamp(address, 83.9)
+    if (!target || !('to' in target)) throw new Error('Expected an internal timestamp link')
+    const url = new URL(target.to, 'https://site.example')
+    expect(url.searchParams.get('t')).toBe('83')
+    expect(nip19.decode(url.pathname.split('/').pop()!)).toMatchObject({
+      type: 'naddr',
+      data: { pubkey: CREATOR, identifier: 'intro', relays: INSTANCE_RELAYS },
+    })
   })
 
-  it('opens the creator’s own videos on the site', () => {
+  it('opens the creator’s own videos on the site with relay hints', () => {
     const own = nip19.naddrEncode({ kind: 34235, pubkey: CREATOR, identifier: 'intro' })
-    expect(links.event?.({ nip19: own, kind: 34235, pubkey: CREATOR, relays: [] })).toEqual({
-      to: `/v/${own}`,
+    const target = links.event?.({ nip19: own, kind: 34235, pubkey: CREATOR, relays: [] })
+    if (!target || !('to' in target)) throw new Error('Expected an internal video link')
+    expect(nip19.decode(target.to.split('/').pop()!)).toMatchObject({
+      type: 'naddr',
+      data: { pubkey: CREATOR, identifier: 'intro', relays: INSTANCE_RELAYS },
     })
   })
 

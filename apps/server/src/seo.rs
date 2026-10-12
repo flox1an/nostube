@@ -14,7 +14,7 @@ use nostr::{
         nip01::Coordinate,
         nip19::{FromBech32, Nip19, Nip19Coordinate, Nip19Event, ToBech32},
     },
-    prelude::{Event, Filter, Kind, PublicKey},
+    prelude::{Event, Filter, Kind, PublicKey, RelayUrl},
 };
 use serde::Deserialize;
 
@@ -40,6 +40,8 @@ const ATOM_PATH: &str = "/atom.xml";
 #[derive(Deserialize)]
 struct Public {
     origin: String,
+    #[serde(skip)]
+    relay: Option<RelayUrl>,
     title: String,
     creators: Vec<PublicKey>,
     site: PublicSite,
@@ -62,7 +64,10 @@ struct Videos {
 
 impl Public {
     fn parse(bytes: &[u8]) -> Option<Public> {
-        serde_json::from_slice(bytes).map_err(|e| tracing::warn!("seo: reading the public config: {e}")).ok()
+        let mut p: Self = serde_json::from_slice(bytes).map_err(|e| tracing::warn!("seo: reading the public config: {e}")).ok()?;
+        // Derive once per response from the canonical origin, not an access alias or video source.
+        p.relay = Some(RelayUrl::parse(&format!("wss://{}", p.origin.strip_prefix("https://")?)).ok()?);
+        Some(p)
     }
 
     /// A page without any text does not exist on the site.
@@ -134,7 +139,7 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
     for page in PAGES.into_iter().filter(|name| p.has_page(name)) {
         let _ = writeln!(xml, "<url><loc>{}/{page}</loc></url>", Esc(&p.origin));
     }
-    for v in videos.iter().filter(|ev| p.shows(ev)).map(Video::from_event) {
+    for v in videos.iter().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, &p)) {
         if v.link.is_empty() {
             continue;
         }
@@ -190,7 +195,7 @@ pub async fn feed(relay: &Relay, public: &[u8], atom: bool) -> Response {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-    let videos: Vec<Video> = events.iter().filter(|ev| p.shows(ev)).map(Video::from_event).filter(|v| !v.link.is_empty()).collect();
+    let videos: Vec<Video> = events.iter().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, &p)).filter(|v| !v.link.is_empty()).collect();
     let (xml, mime) = if atom { (atom_feed(&p, &videos), "application/atom+xml") } else { (rss_feed(&p, &videos), "application/rss+xml") };
     ([(header::CONTENT_TYPE, format!("{mime}; charset=utf-8")), (header::CACHE_CONTROL, "no-cache".to_owned())], xml).into_response()
 }
@@ -280,7 +285,7 @@ async fn find_video(relay: &Relay, p: &Public, id: &str) -> Option<Video> {
         _ => return None,
     };
     match relay.stored(filter.limit(1)).await {
-        Ok(events) => events.first().filter(|ev| p.shows(ev)).map(Video::from_event),
+        Ok(events) => events.first().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, p)),
         Err(e) => {
             tracing::warn!("seo: looking up video {id}: {e}");
             None
@@ -296,14 +301,13 @@ fn tag<'a>(ev: &'a Event, name: &str) -> Option<&'a str> {
     ev.tags.iter().map(|t| t.as_slice()).find(|t| t.first().is_some_and(|n| n == name)).and_then(|t| t.get(1)).map(String::as_str)
 }
 
-/// The link the site builds for a video (`generateEventLink` in core), without relay hints:
-/// naddr for an addressable video with a `d`, nevent otherwise.
-fn link(ev: &Event) -> Option<String> {
+/// A video's NIP-19 address with the relays where it can be retrieved.
+fn link(ev: &Event, relays: impl IntoIterator<Item = RelayUrl>) -> Option<String> {
     let d = d_tag(ev);
     if ev.kind.is_addressable() && !d.is_empty() {
-        Nip19Coordinate::new(Coordinate::new(ev.kind, ev.pubkey).identifier(d), []).to_bech32().ok()
+        Nip19Coordinate::new(Coordinate::new(ev.kind, ev.pubkey).identifier(d), relays).to_bech32().ok()
     } else {
-        Nip19Event::new(ev.id).author(ev.pubkey).kind(ev.kind).to_bech32().ok()
+        Nip19Event::new(ev.id).author(ev.pubkey).kind(ev.kind).relays(relays).to_bech32().ok()
     }
 }
 
@@ -323,7 +327,7 @@ struct Video {
 }
 
 impl Video {
-    fn from_event(ev: &Event) -> Video {
+    fn from_event(ev: &Event, p: &Public) -> Video {
         fn field<'a>(entries: &[(&str, &'a str)], key: &str) -> Option<&'a str> {
             entries.iter().find(|(k, _)| *k == key).map(|(_, v)| v.trim())
         }
@@ -356,7 +360,7 @@ impl Video {
             .filter(|d| d.is_finite() && *d >= 0.5)
             .map(|d| d.round() as u64);
         Video {
-            link: link(ev).unwrap_or_default(),
+            link: link(ev, p.relay.iter().cloned()).unwrap_or_default(),
             title,
             description: clip(description),
             image: image.map(str::to_owned),
@@ -550,9 +554,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn published_video_urls_locate_both_video_kinds_on_the_canonical_relay() {
+        let (relay, public, addressable, regular, _) = fixture().await;
+        let mut public: serde_json::Value = serde_json::from_slice(&public).unwrap();
+        public["origin"] = "https://videos.example:8443".into();
+        public["videoSources"] = serde_json::json!(["wss://elsewhere.example"]);
+        public["site"]["videos"]["hidden"] = serde_json::json!([]);
+        let public = serde_json::to_vec(&public).unwrap();
+        let sitemap = axum::body::to_bytes(sitemap(&relay, &public).await.into_body(), usize::MAX).await.unwrap();
+        let sitemap = std::str::from_utf8(&sitemap).unwrap();
+        let rss = axum::body::to_bytes(feed(&relay, &public, false).await.into_body(), usize::MAX).await.unwrap();
+        let atom = axum::body::to_bytes(feed(&relay, &public, true).await.into_body(), usize::MAX).await.unwrap();
+        for ev in [&addressable, &regular] {
+            // A previously shared identifier without hints must still resolve.
+            let old_id = link(ev, []).unwrap();
+            let page = shell(&relay, &public, &format!("/v/{old_id}"), SHELL).await;
+            let canonical = page.split("<link rel=\"canonical\" href=\"").nth(1).unwrap().split('"').next().unwrap();
+            let id = canonical.strip_prefix("https://videos.example:8443/v/").unwrap();
+            let relays = match Nip19::from_bech32(id).unwrap() {
+                Nip19::Coordinate(c) => {
+                    assert_eq!(c.coordinate, Coordinate::new(ev.kind, ev.pubkey).identifier(d_tag(ev)));
+                    c.relays
+                }
+                Nip19::Event(e) => {
+                    assert_eq!(e.event_id, ev.id);
+                    assert_eq!(e.author, Some(ev.pubkey));
+                    assert_eq!(e.kind, Some(ev.kind));
+                    e.relays
+                }
+                other => panic!("unexpected video identifier: {other:?}"),
+            };
+            assert_eq!(relays.iter().map(|r| r.as_str()).collect::<Vec<_>>(), ["wss://videos.example:8443"]);
+            assert!(page.contains(&format!("property=\"og:url\" content=\"{canonical}\"")), "{page}");
+            assert!(page.contains(&format!("/embed.html?v={id}")), "{page}");
+            assert!(sitemap.contains(canonical), "{sitemap}");
+            // Only the addressable fixture has the thumbnail required for a video sitemap entry.
+            if ev.id == addressable.id {
+                assert!(sitemap.contains(&format!("/embed.html?v={id}")), "{sitemap}");
+                let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
+                let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
+                assert_eq!(ld["url"], canonical);
+            }
+            assert!(std::str::from_utf8(&rss).unwrap().contains(canonical));
+            assert!(std::str::from_utf8(&atom).unwrap().contains(canonical));
+        }
+    }
+
+    #[tokio::test]
     async fn a_video_page_gets_the_videos_head_and_others_the_sites() {
         let (relay, public, shown, hidden, foreign) = fixture().await;
-        let naddr = link(&shown).unwrap();
+        let naddr = link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap();
         let page = shell(&relay, &public, &format!("/v/{naddr}"), SHELL).await;
         assert!(!page.contains("Loading…"), "{page}");
         assert!(page.contains("<title>Tom &amp; &quot;Jerry&quot; – My &lt;Site&gt;</title>"), "{page}");
@@ -577,8 +628,8 @@ mod tests {
         assert_eq!(ld["duration"], "PT61S");
 
         // Hidden, someone else's, or not a video link: the site's head, no canonical URL.
-        let hidden = link(&hidden).unwrap();
-        for path in [format!("/v/{hidden}"), format!("/v/{}", link(&foreign).unwrap()), "/v/nope".into(), "/elsewhere".into()] {
+        let hidden = link(&hidden, []).unwrap();
+        for path in [format!("/v/{hidden}"), format!("/v/{}", link(&foreign, []).unwrap()), "/v/nope".into(), "/elsewhere".into()] {
             let page = shell(&relay, &public, &path, SHELL).await;
             assert!(page.contains("<title>My &lt;Site&gt;</title>"), "{path}: {page}");
             assert!(!page.contains("canonical") && !page.contains("ld+json"), "{path}: {page}");
@@ -599,7 +650,7 @@ mod tests {
         let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let xml = std::str::from_utf8(&body).unwrap();
         let locs: Vec<&str> = xml.split("<loc>").skip(1).map(|s| s.split("</loc>").next().unwrap()).collect();
-        let video = format!("https://videos.example/v/{}", link(&shown).unwrap());
+        let video = format!("https://videos.example/v/{}", link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap());
         assert_eq!(locs, ["https://videos.example/", "https://videos.example/about", video.as_str()], "{xml}");
         assert!(xml.contains("<lastmod>2025-10-09T08:53:20Z</lastmod>"), "{xml}");
         assert!(xml.contains("<video:video><video:thumbnail_loc>https://cdn.example/t.jpg</video:thumbnail_loc><video:title>Tom &amp; &quot;Jerry&quot;</video:title><video:description>A &lt;b&gt;long&lt;/b&gt; description</video:description><video:content_loc>https://cdn.example/v.mp4</video:content_loc>"), "{xml}");
@@ -609,7 +660,7 @@ mod tests {
     #[tokio::test]
     async fn the_feeds_list_the_shown_videos_with_an_enclosure_and_every_page_links_them() {
         let (relay, public, shown, hidden, foreign) = fixture().await;
-        let url = format!("https://videos.example/v/{}", link(&shown).unwrap());
+        let url = format!("https://videos.example/v/{}", link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap());
         for atom in [false, true] {
             let res = feed(&relay, &public, atom).await;
             let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
@@ -618,7 +669,7 @@ mod tests {
             assert!(xml.contains(&url) && xml.contains("<title>Tom &amp; &quot;Jerry&quot;</title>"), "{xml}");
             assert!(xml.contains("https://cdn.example/v.mp4"), "{xml}");
             for other in [&hidden, &foreign] {
-                assert!(!xml.contains(&link(other).unwrap()), "{xml}");
+                assert!(!xml.contains(&link(other, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap()), "{xml}");
             }
             if !atom {
                 assert!(xml.contains("<pubDate>Thu, 09 Oct 2025 08:53:20 GMT</pubDate>"), "{xml}");

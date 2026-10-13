@@ -37,7 +37,6 @@ const good = (): InstanceConfig => ({
     links: DEFAULT_SITE_LINKS,
     pages: { about: { en: 'About us', de: 'Über uns' }, imprint: {}, privacy: {} },
   },
-  reach: 'private',
 })
 
 describe('site link templates', () => {
@@ -177,16 +176,6 @@ describe('parseInstanceConfig', () => {
     expect(empty.ok && empty.config.profileRelays).toEqual([])
     expect(parseInstanceConfig({ ...good(), profileRelays: ['https://x.example'] }).ok).toBe(false)
     expect(parseInstanceConfig({ ...good(), profileRelays: null }).ok).toBe(false)
-  })
-
-  it('reads reach: absent is private, an unknown value is invalid', () => {
-    const { reach: _r, ...oldServer } = good()
-    const absent = parseInstanceConfig(oldServer)
-    expect(absent.ok && absent.config.reach).toBe('private')
-    const pub = parseInstanceConfig({ ...good(), reach: 'public' })
-    expect(pub.ok && pub.config.reach).toBe('public')
-    expect(parseInstanceConfig({ ...good(), reach: 'everyone' }).ok).toBe(false)
-    expect(parseInstanceConfig({ ...good(), reach: null }).ok).toBe(false)
   })
 })
 

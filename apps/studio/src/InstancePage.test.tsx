@@ -106,16 +106,18 @@ describe('Reach on the Instance page', () => {
 describe('Advanced page', () => {
   const field = (label: string) => screen.getByLabelText(label) as HTMLTextAreaElement
 
-  it('greys out the public-only lists in Private, keeps their values and the mirror lists', () => {
+  it('greys out the public-only lists in Private, keeps their values, profile and mirror lists', () => {
     const s = state(true)
     render(<AdvancedPage draft={toDraft(s.config)} update={vi.fn()} state={s} />)
     expect(screen.getByText(/Your instance is Private/)).toBeTruthy()
-    for (const label of ['Video sources', 'Interaction relays', 'Profile relays']) {
+    for (const label of ['Video sources', 'Interaction relays']) {
       expect(field(label).disabled, label).toBe(true)
     }
+    expect(field('Video sources').value).toBe(s.config.videoSources.join('\n'))
+    for (const label of ['Profile relays', 'Mirror relays', 'Mirror Blossom servers']) {
+      expect(field(label).disabled, label).toBe(false)
+    }
     expect(field('Profile relays').value).toBe(DEFAULT_PROFILE_RELAYS.join('\n'))
-    expect(field('Mirror relays').disabled).toBe(false)
-    expect(field('Mirror Blossom servers').disabled).toBe(false)
   })
 
   it('makes every list editable in Public', () => {

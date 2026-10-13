@@ -246,7 +246,7 @@
       "interactionRelays": "Relais d'interaction",
       "interactionRelaysHint": "Un relais ws:// ou wss:// par ligne. Utilisé pour les profils et, plus tard, les commentaires et les zaps.",
       "profileRelaysTitle": "Relais de profils",
-      "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es et wss://index.hzrd149.com et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne, le serveur y publie aussi son profil et sa liste de relais.",
+      "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es et wss://index.hzrd149.com et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne et en mode Public, le serveur y publie aussi son profil et sa liste de relais.",
       "profileRelays": "Relais de profils",
       "profileRelaysHint": "Un relais ws:// ou wss:// par ligne.",
       "mirrorTitle": "Répliquer vers d'autres serveurs",
@@ -267,14 +267,14 @@
       "fixed": "L'origine <code>{{origin}}</code> et le TLS ({{tls}}) sont fixes ici."
     },
     "advanced": {
-      "privateNote": "Votre instance est privée : les sources vidéo, les relais d'interaction et les relais de profils n'ont aucun effet, le site n'utilise que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les listes de miroirs fonctionnent dans les deux cas."
+      "privateNote": "Votre instance est privée : les sources vidéo et les relais d'interaction n'ont aucun effet, le site n'utilise pour cela que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les relais de profils servent toujours à rechercher le profil des visiteurs connectés ; les listes de miroirs fonctionnent dans les deux cas."
     },
     "reach": {
       "title": "Portée",
       "privateTitle": "Privé",
-      "privateLead": "Votre instance ne se connecte à personne.",
+      "privateLead": "Votre instance ne publie rien.",
       "privateLeadOwn": "Vous gérez vous-même votre profil Nostr.",
-      "privateBody": "Les vidéos, le profil et les commentaires n'existent qu'à cette adresse et via les liens que vous partagez.",
+      "privateBody": "Les vidéos, le profil et les commentaires n'existent qu'à cette adresse et via les liens que vous partagez. Seul le profil des personnes qui se connectent sur le site est recherché sur des relais publics.",
       "publicTitle": "Public",
       "publicBody": "Votre profil et votre liste de relais sont publiés sur le réseau Nostr. D'autres applications Nostr trouvent votre chaîne et vos vidéos sur cette instance ; les commentaires et les zaps arrivent ici. Cela ne peut pas être entièrement annulé.",
       "confirmPublic": "Passer en Public ? Cela ne peut pas être entièrement annulé : votre profil et votre liste de relais restent sur le réseau Nostr même si vous revenez en arrière plus tard. Les relais miroirs saisis figurent dans la liste de relais publiée.",

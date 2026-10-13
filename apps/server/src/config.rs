@@ -40,9 +40,11 @@ struct Raw {
     mirror: Mirror,
 }
 
-/// Who the instance talks to (ADR 0012). `private`: nobody but the owner's `[mirror]` targets;
-/// `public`: the channel identity is announced on the Nostr network and visitors' profiles are
-/// looked up at public indexers.
+/// What the instance publishes and where the site reads (ADR 0012). `private`: nothing goes out
+/// but to the owner's `[mirror]` targets, and the site reads videos and interactions from the
+/// instance relay only; `public`: the channel identity is announced on the Nostr network and the
+/// configured relay lists are served. A signed-in visitor's own profile is looked up at public
+/// indexers in both (ADR 0008).
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Reach {
@@ -323,9 +325,9 @@ pub struct Edited {
     pub mirror: Mirror,
 }
 
-/// The public indexers the channel profile and relay list go to, and where the site looks up a
-/// signed-in visitor's profile, in public reach (ADR 0008, 0012); the same list as
-/// `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
+/// Where the site looks up a signed-in visitor's profile besides the mandatory defaults, in both
+/// reaches, and where the channel's kinds 0 and 10002 go in public reach (ADR 0008, 0012); the
+/// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
 fn default_profile_relays() -> Vec<String> {
     vec!["wss://purplepag.es".into(), "wss://index.hzrd149.com".into()]
 }
@@ -351,8 +353,9 @@ pub struct Config {
     pub allowed_writers: Vec<PublicKey>,
     pub video_sources: Vec<String>,
     pub interaction_relays: Vec<String>,
-    /// Public reach only: where the channel's kinds 0 and 10002 go and where the site looks up a
-    /// signed-in visitor's profile besides the instance relays; empty = only the instance relays.
+    /// Where the site looks up a signed-in visitor's profile besides the instance relays and the
+    /// mandatory defaults (both reaches), and, in public reach, where the channel's kinds 0 and
+    /// 10002 go.
     pub profile_relays: Vec<String>,
     pub search: Search,
     pub tls: Tls,
@@ -502,13 +505,14 @@ impl Config {
     }
 
     /// Public config contract v1 (ADR 0005). Start page: the first displayed creator. Private
-    /// reach (ADR 0012) enforces the relay lists here: the instance relay only, no indexers; the
-    /// stored lists stay as configured, so switching back loses nothing.
+    /// reach (ADR 0012) enforces the catalog and interaction relays here: the instance relay
+    /// only; the stored lists stay as configured, so switching back loses nothing. Profile relays
+    /// serve the visitor lookup in both reaches and go out as stored.
     pub fn public_json(&self) -> serde_json::Value {
         let creators: Vec<String> = self.creators.iter().map(PublicKey::to_hex).collect();
-        let (video_sources, interaction_relays, profile_relays) = match self.reach {
-            Reach::Public => (self.video_sources.clone(), self.interaction_relays.clone(), self.profile_relays.clone()),
-            Reach::Private => (vec![self.instance_relay()], vec![self.instance_relay()], vec![]),
+        let (video_sources, interaction_relays) = match self.reach {
+            Reach::Public => (self.video_sources.clone(), self.interaction_relays.clone()),
+            Reach::Private => (vec![self.instance_relay()], vec![self.instance_relay()]),
         };
         let start_page = creators
             .first()
@@ -523,7 +527,7 @@ impl Config {
             "startPage": start_page,
             "videoSources": video_sources,
             "interactionRelays": interaction_relays,
-            "profileRelays": profile_relays,
+            "profileRelays": self.profile_relays,
             "search": self.search,
             "site": {
                 "tagline": self.site.tagline,
@@ -612,9 +616,9 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json.as_object().unwrap().len(), 12);
         assert_eq!(json["reach"], "private");
         // A config file from before the field keeps the public profile lookup list (ADR 0008),
-        // which private reach does not announce (ADR 0012).
+        // served in private reach too: the visitor lookup does not depend on reach (ADR 0012).
         assert_eq!(cfg.profile_relays, default_profile_relays());
-        assert_eq!(json["profileRelays"], serde_json::json!([]));
+        assert_eq!(json["profileRelays"], serde_json::json!(default_profile_relays()));
         assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#8b5cf6", "font": "sans" }));
         assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
@@ -874,7 +878,7 @@ tls = {{ mode = "local-ca" }}
     }
 
     #[test]
-    fn private_reach_announces_only_the_instance_relay_and_public_the_configured_lists() {
+    fn private_reach_narrows_catalog_and_interactions_to_the_instance_relay() {
         let text = public_sample("profile_relays = [\"wss://indexer.example\"]\n")
             .replace("interaction_relays = []", "interaction_relays = [\"wss://comments.example\"]");
         let private = Config::parse(&text).unwrap();
@@ -882,7 +886,7 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json["reach"], "private");
         assert_eq!(json["videoSources"], serde_json::json!(["wss://videos.example.org"]));
         assert_eq!(json["interactionRelays"], serde_json::json!(["wss://videos.example.org"]));
-        assert_eq!(json["profileRelays"], serde_json::json!([]));
+        assert_eq!(json["profileRelays"], serde_json::json!(["wss://indexer.example"]), "visitor lookup in both reaches");
         // Enforced, not rewritten: the stored lists survive for a switch to public.
         assert_eq!(private.interaction_relays, vec!["wss://comments.example"]);
         assert_eq!(Config::parse(&private.to_toml().unwrap()).unwrap().profile_relays, vec!["wss://indexer.example"]);

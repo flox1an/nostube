@@ -246,7 +246,7 @@
       "interactionRelays": "Interaktions-Relays",
       "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile und später für Kommentare und Zaps verwendet.",
       "profileRelaysTitle": "Profil-Relays",
-      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es und wss://index.hzrd149.com sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
+      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es und wss://index.hzrd149.com sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität und bei Öffentlich veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
       "profileRelays": "Profil-Relays",
       "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "mirrorTitle": "Auf andere Server spiegeln",
@@ -267,14 +267,14 @@
       "fixed": "Origin <code>{{origin}}</code> und TLS ({{tls}}) sind hier fest vorgegeben."
     },
     "advanced": {
-      "privateNote": "Deine Instanz ist privat: Videoquellen, Interaktions-Relays und Profil-Relays wirken nicht, die Website nutzt nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Spiegel-Listen wirken in beiden Fällen."
+      "privateNote": "Deine Instanz ist privat: Videoquellen und Interaktions-Relays wirken nicht, die Website nutzt dafür nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Profil-Relays dienen weiter der Profilsuche angemeldeter Besucher; die Spiegel-Listen wirken in beiden Fällen."
     },
     "reach": {
       "title": "Reichweite",
       "privateTitle": "Privat",
-      "privateLead": "Deine Instanz verbindet sich mit niemandem.",
+      "privateLead": "Deine Instanz veröffentlicht nichts.",
       "privateLeadOwn": "Dein Nostr-Profil verwaltest du selbst.",
-      "privateBody": "Videos, Profil und Kommentare gibt es nur unter dieser Adresse und über Links, die du teilst.",
+      "privateBody": "Videos, Profil und Kommentare gibt es nur unter dieser Adresse und über Links, die du teilst. Nur wer sich auf der Seite anmeldet, dessen eigenes Profil wird bei öffentlichen Relays gesucht.",
       "publicTitle": "Öffentlich",
       "publicBody": "Dein Profil und deine Relay-Liste werden im Nostr-Netz veröffentlicht. Andere Nostr-Apps finden deinen Kanal und deine Videos auf dieser Instanz, Kommentare und Zaps kommen hier an. Das lässt sich nicht vollständig zurücknehmen.",
       "confirmPublic": "Auf Öffentlich umstellen? Das lässt sich nicht vollständig zurücknehmen: Profil und Relay-Liste bleiben im Nostr-Netz, auch wenn du später zurückschaltest. Die eingetragenen Spiegel-Relays stehen in der veröffentlichten Relay-Liste.",

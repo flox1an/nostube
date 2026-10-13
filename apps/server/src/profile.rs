@@ -340,8 +340,9 @@ mod tests {
         assert_eq!(f.stored(keys.public_key(), Kind::RelayList).await, list);
         assert_eq!(f.jobs(INDEXER).len(), 2);
 
-        // Back to private: the relay list stays as it is, and a new profile goes nowhere public.
-        let mut private = public("Renamed", "Videos about things");
+        // Back to private: the relay list stays as it is, and a new profile goes nowhere public,
+        // though the public config still carries `profileRelays` for the visitor lookup.
+        let mut private = public_reach("Renamed");
         private["reach"] = "private".into();
         f.branding.set_base(private);
         f.sync(&shared).await;

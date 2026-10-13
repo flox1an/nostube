@@ -1,12 +1,11 @@
-import { DEFAULT_PROFILE_RELAYS, type Reach } from '@nostube/core/instance-config'
+import { DEFAULT_PROFILE_RELAYS } from '@nostube/core/instance-config'
 
 /**
  * The standard privacy policy: what the Nostube site and server do with a visitor's data, in the
  * languages of the site. It describes this software only (no cookies, no tracking, what a sign-in,
  * a like, a comment or a zap sends where) and names the operator through the imprint. Every
  * sentence is a fact of the code (apps/site, packages/widgets, apps/server), so a change there
- * means a change here. In `public` reach it names the public lookup relays; in `private` the site
- * asks only this server's relay.
+ * means a change here. It names the mandatory public defaults and additional profile lookup relays.
  */
 
 /** Heading first, then the paragraphs of one section. */
@@ -14,10 +13,8 @@ type Section = [heading: string, ...paragraphs: string[]]
 
 interface Policy {
   sections: Section[]
-  /** Public reach: after a sign-in, with mandatory and additional public lookup relays (`{relays}`). */
+  /** After a sign-in, with mandatory and additional public lookup relays (`{relays}`). */
   profileOpen: string
-  /** Private reach: only this server's relay is asked. */
-  profilePrivate: string
 }
 
 const en: Policy = {
@@ -69,8 +66,6 @@ const en: Policy = {
   ],
   profileOpen:
     "For this it asks this server's relay, the public relays {relays} and the relays you list in your own profile. Those relays see your IP address and your public key.",
-  profilePrivate:
-    "For this it asks only this server's relay. No other relay learns about your sign-in.",
 }
 
 const de: Policy = {
@@ -122,8 +117,6 @@ const de: Policy = {
   ],
   profileOpen:
     'Dafür fragt sie das Relay dieses Servers, die öffentlichen Relays {relays} und die Relays, die Sie in Ihrem eigenen Profil angeben. Diese Relays sehen Ihre IP-Adresse und Ihren öffentlichen Schlüssel.',
-  profilePrivate:
-    'Dafür fragt sie nur das Relay dieses Servers. Kein anderes Relay erfährt von Ihrer Anmeldung.',
 }
 
 const fr: Policy = {
@@ -175,8 +168,6 @@ const fr: Policy = {
   ],
   profileOpen:
     'Pour cela, il interroge le relais de ce serveur, les relais publics {relays} et les relais que vous indiquez dans votre propre profil. Ces relais voient votre adresse IP et votre clé publique.',
-  profilePrivate:
-    "Pour cela, il interroge uniquement le relais de ce serveur. Aucun autre relais n'apprend votre connexion.",
 }
 
 const es: Policy = {
@@ -228,8 +219,6 @@ const es: Policy = {
   ],
   profileOpen:
     'Para ello consulta el relé de este servidor, los relés públicos {relays} y los relés que usted indique en su propio perfil. Esos relés ven su dirección IP y su clave pública.',
-  profilePrivate:
-    'Para ello consulta solo el relé de este servidor. Ningún otro relé se entera de su inicio de sesión.',
 }
 
 const ru: Policy = {
@@ -281,8 +270,6 @@ const ru: Policy = {
   ],
   profileOpen:
     'Для этого запрашиваются релей этого сервера, публичные релеи {relays} и релеи, которые вы указали в собственном профиле. Эти релеи видят ваш IP-адрес и ваш публичный ключ.',
-  profilePrivate:
-    'Для этого запрашивается только релей этого сервера. Другие релеи о вашем входе не узнают.',
 }
 
 const zh: Policy = {
@@ -334,7 +321,6 @@ const zh: Policy = {
   ],
   profileOpen:
     '为此会查询本服务器的中继、公共中继 {relays}，以及您在自己的个人资料中列出的中继。这些中继会看到您的 IP 地址和公钥。',
-  profilePrivate: '为此只会查询本服务器的中继。其他中继不会知道您已登录。',
 }
 
 const ja: Policy = {
@@ -386,8 +372,6 @@ const ja: Policy = {
   ],
   profileOpen:
     'そのために、このサーバーのリレー、公開リレー {relays}、およびお客様ご自身のプロフィールに記載したリレーに問い合わせます。これらのリレーには、お客様の IP アドレスと公開鍵が見えます。',
-  profilePrivate:
-    'そのために、このサーバーのリレーにのみ問い合わせます。ほかのリレーにはお客様のサインインは伝わりません。',
 }
 
 const POLICIES: Record<string, Policy> = { en, de, fr, es, ru, zh, ja }
@@ -396,24 +380,16 @@ const POLICIES: Record<string, Policy> = { en, de, fr, es, ru, zh, ja }
 export const DEFAULT_PAGE_LANGUAGES = Object.keys(POLICIES)
 
 /**
- * The standard privacy policy in one language. In `public` reach `profileRelays` are additional
- * public relays for a signed-in visitor's profile (mandatory public defaults always included); in
- * `private` no public relay is named.
+ * The standard privacy policy in one language. `profileRelays` are additional public relays for
+ * a signed-in visitor's profile; mandatory public defaults are always included.
  */
-export function privacyPolicy(
-  language: string,
-  reach: Reach,
-  profileRelays: string[]
-): string | undefined {
+export function privacyPolicy(language: string, profileRelays: string[]): string | undefined {
   const policy = POLICIES[language]
   if (!policy) return undefined
-  const profile =
-    reach === 'private'
-      ? policy.profilePrivate
-      : policy.profileOpen.replace(
-          '{relays}',
-          [...new Set([...DEFAULT_PROFILE_RELAYS, ...profileRelays])].join(', ')
-        )
+  const profile = policy.profileOpen.replace(
+    '{relays}',
+    [...new Set([...DEFAULT_PROFILE_RELAYS, ...profileRelays])].join(', ')
+  )
   return policy.sections
     .map(([heading, ...paragraphs]) =>
       [heading, ...paragraphs].join('\n').replace('{profile}', profile)

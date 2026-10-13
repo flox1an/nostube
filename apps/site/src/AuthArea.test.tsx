@@ -5,29 +5,14 @@ import { PrivateKeyAccount } from 'applesauce-accounts/accounts'
 import { EventStore } from 'applesauce-core'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import type { NostubeClient } from '@nostube/core/client'
-import {
-  DEFAULT_PROFILE_RELAYS,
-  setInstanceConfig,
-  type InstanceConfig,
-} from '@nostube/core/instance-config'
 import { AccountsProvider, EventStoreProvider } from 'applesauce-react/providers'
 import { matchFilters, type Filter, type NostrEvent } from 'nostr-tools'
 import { of } from 'rxjs'
-import { afterEach, expect, it } from 'vitest'
+import { expect, it } from 'vitest'
 import { NostubeHostProvider, type NostubeHost } from '@nostube/widgets/host'
 import { AuthArea } from './AuthArea'
 
-afterEach(() => {
-  setInstanceConfig(null as unknown as InstanceConfig)
-})
-
-it('loads the signed-in visitor profile of a public instance from their NIP-65 write relay without using read-only relays', async () => {
-  setInstanceConfig({
-    videoSources: ['wss://instance.example'],
-    interactionRelays: ['wss://instance.example'],
-    profileRelays: DEFAULT_PROFILE_RELAYS,
-    reach: 'public',
-  } as unknown as InstanceConfig)
+it('loads the signed-in visitor profile from their NIP-65 write relay without using read-only relays', async () => {
   const account = PrivateKeyAccount.generateNew()
   const manager = new AccountManager()
   manager.addAccount(account)

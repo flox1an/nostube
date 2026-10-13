@@ -20,7 +20,7 @@ export interface AdminConfig {
   storage: { quotaGib: number; freeSpaceReserveGib: number }
   /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public). */
   site: InstanceSite & { lightning?: string }
-  /** `private`: connects to no one but the mirror targets; `public`: published into Nostr (ADR 0012). */
+  /** `private`: publishes nothing, only mirror targets get copies; `public`: published into Nostr (ADR 0012). */
   reach: Reach
 }
 

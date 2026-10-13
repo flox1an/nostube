@@ -1,6 +1,6 @@
 # Mandatory public visitor identity; videos and embeds retain instance scope
 
-> **Status:** this decision supersedes this ADR's earlier “empty means local only” visitor-profile policy. The embed's instance-relay isolation remains unchanged. **Amended by ADR 0012:** the mandatory public visitor lookup holds only in public reach; in private reach (the default) the site makes no public lookups and the public config's `profileRelays` is empty. The **Check** below now runs a private instance and allows no external traffic at all.
+> **Status:** this decision supersedes this ADR's earlier “empty means local only” visitor-profile policy. The embed's instance-relay isolation remains unchanged. ADR 0012 (reach) keeps this lookup in both reaches; the **Check** runs a private-reach instance.
 
 The signed-in visitor must see their own published name and picture even when the instance has no copy. Visitor identity therefore always uses the public discovery defaults (`wss://purplepag.es`, `wss://index.hzrd149.com`), instance relays, configured additional profile relays and the visitor's NIP-65 write relays. An empty configured list does not disable this lookup. A signed-in site is no longer promised to make zero requests outside the instance.
 

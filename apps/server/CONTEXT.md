@@ -60,11 +60,11 @@ The configured relays that video catalog queries may use. Profiles, comments, an
 _Avoid_: default relays, relay list
 
 **Profile relays** (Profil-Relays):
-The public indexers (default purplepag.es, index.hzrd149.com) that, in public reach only, receive the channel's profile and relay list through the outbox and where the site looks up a signed-in visitor's profile (ADR 0008, ADR 0012). Empty in the public config in private reach.
+The relays where the site looks up a signed-in visitor's profile besides the instance relays, the mandatory public defaults and the visitor's NIP-65 write relays, in both reaches (ADR 0008); in public reach also where the channel's profile and relay list go through the outbox (ADR 0012). Default purplepag.es, index.hzrd149.com; served as stored in both reaches.
 _Avoid_: discovery relays, lookup relays
 
 **Reach** (Privat / Öffentlich):
-Whether the instance talks to the Nostr network (ADR 0012). `private` (the default): it connects to nobody but the owner's mirror targets; videos, profile and comments exist only under its address. `public`: the channel's profile and relay list are published to the profile relays and visitors are looked up there; not fully revocable. Public needs a publicly reachable origin (not local-ca, `.local` or an IP). Code: `reach`.
+What the instance publishes and where the site reads (ADR 0012). `private` (the default): nothing goes out but copies to the owner's mirror targets, and videos, creator data and comments come only from the instance relay. `public`: the channel's profile and relay list are published to the profile relays and the configured relay lists are served; not fully revocable. In both, the site looks a signed-in visitor's own profile up at public indexers (ADR 0008). Public needs a publicly reachable origin (not local-ca, `.local` or an IP). Code: `reach`.
 _Avoid_: visibility, mode, privacy setting
 
 **Admin**:

@@ -246,7 +246,7 @@
       "interactionRelays": "Interaction relays",
       "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps.",
       "profileRelaysTitle": "Profile relays",
-      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es and wss://index.hzrd149.com and on the visitor's NIP-65 outbox relays. With the channel identity the server also publishes its profile and relay list here.",
+      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es and wss://index.hzrd149.com and on the visitor's NIP-65 outbox relays. With the channel identity and Public reach the server also publishes its profile and relay list here.",
       "profileRelays": "Profile relays",
       "profileRelaysHint": "One ws:// or wss:// relay per line.",
       "mirrorTitle": "Mirror to other servers",
@@ -267,14 +267,14 @@
       "fixed": "Origin <code>{{origin}}</code> and TLS ({{tls}}) are fixed here."
     },
     "advanced": {
-      "privateNote": "Your instance is Private: video sources, interaction relays and profile relays have no effect, the site uses only this server's relay. The lists keep their values and work only in Public. The mirror lists work in both."
+      "privateNote": "Your instance is Private: video sources and interaction relays have no effect, the site uses only this server's relay for them. The lists keep their values and work only in Public. Profile relays still serve the lookup of signed-in visitors; the mirror lists work in both."
     },
     "reach": {
       "title": "Reach",
       "privateTitle": "Private",
-      "privateLead": "Your instance connects to no one.",
+      "privateLead": "Your instance publishes nothing.",
       "privateLeadOwn": "You manage your Nostr profile yourself.",
-      "privateBody": "Videos, profile and comments exist only at this address and through links you share.",
+      "privateBody": "Videos, profile and comments exist only at this address and through links you share. Only visitors who sign in on the site have their own profile looked up on public relays.",
       "publicTitle": "Public",
       "publicBody": "Your profile and your relay list are published on the Nostr network. Other Nostr apps find your channel and your videos on this instance; comments and zaps arrive here. This cannot be fully undone.",
       "confirmPublic": "Switch to Public? This cannot be fully undone: your profile and relay list stay on the Nostr network even if you switch back later. The mirror relays you entered appear in the published relay list.",

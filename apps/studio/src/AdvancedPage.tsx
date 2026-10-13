@@ -25,7 +25,8 @@ type ListKey =
 /** Writers, relay and mirror lists most owners never touch. */
 export function AdvancedPage({ draft, update, state }: PageProps & { state: AdminState }) {
   const { t } = useTranslation()
-  // Privat: the server sends only its own relay, whatever these lists hold (they keep their values).
+  // Privat: the server sends only its own relay as video source and interaction relay, whatever
+  // these lists hold (they keep their values). Profile relays still serve the visitor lookup.
   const publicOnly = draft.reach === 'private'
 
   /** A list edited one entry per line; `name` names its label and hint (`studio.instance.*`). */
@@ -84,9 +85,7 @@ export function AdvancedPage({ draft, update, state }: PageProps & { state: Admi
           <CardTitle>{t('studio.instance.profileRelaysTitle')}</CardTitle>
           <CardDescription>{t('studio.instance.profileRelaysDescription')}</CardDescription>
         </CardHeader>
-        <CardContent>
-          {list('profile-relays', 'profileRelaysText', 'profileRelays', publicOnly)}
-        </CardContent>
+        <CardContent>{list('profile-relays', 'profileRelaysText', 'profileRelays')}</CardContent>
       </Card>
 
       <Card>

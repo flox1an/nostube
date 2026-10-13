@@ -189,7 +189,6 @@ describe('instance scoping', () => {
       links: DEFAULT_SITE_LINKS,
       pages: noSitePages(),
     },
-    reach: 'private',
   }
 
   afterEach(() => {

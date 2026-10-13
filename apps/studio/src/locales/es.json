@@ -246,7 +246,7 @@
       "interactionRelays": "Relays de interacción",
       "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles y, más adelante, comentarios y zaps.",
       "profileRelaysTitle": "Relays de perfiles",
-      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es y wss://index.hzrd149.com y en los relays outbox NIP-65 del visitante. Con la identidad de canal, el servidor también publica aquí su perfil y su lista de relays.",
+      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es y wss://index.hzrd149.com y en los relays outbox NIP-65 del visitante. Con la identidad de canal y en Público, el servidor también publica aquí su perfil y su lista de relays.",
       "profileRelays": "Relays de perfiles",
       "profileRelaysHint": "Un relay ws:// o wss:// por línea.",
       "mirrorTitle": "Replicar en otros servidores",
@@ -267,14 +267,14 @@
       "fixed": "El origen <code>{{origin}}</code> y TLS ({{tls}}) son fijos aquí."
     },
     "advanced": {
-      "privateNote": "Tu instancia es privada: las fuentes de vídeo, los relays de interacción y los relays de perfiles no tienen efecto, el sitio solo usa el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Las listas de réplica funcionan en ambos casos."
+      "privateNote": "Tu instancia es privada: las fuentes de vídeo y los relays de interacción no tienen efecto, el sitio solo usa para ello el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Los relays de perfiles siguen sirviendo para buscar el perfil de los visitantes que inician sesión; las listas de réplica funcionan en ambos casos."
     },
     "reach": {
       "title": "Alcance",
       "privateTitle": "Privado",
-      "privateLead": "Tu instancia no se conecta con nadie.",
+      "privateLead": "Tu instancia no publica nada.",
       "privateLeadOwn": "Tu perfil de Nostr lo gestionas tú.",
-      "privateBody": "Los vídeos, el perfil y los comentarios solo existen en esta dirección y a través de los enlaces que compartes.",
+      "privateBody": "Los vídeos, el perfil y los comentarios solo existen en esta dirección y a través de los enlaces que compartes. Solo de quien inicia sesión en el sitio se busca su propio perfil en relays públicos.",
       "publicTitle": "Público",
       "publicBody": "Tu perfil y tu lista de relays se publican en la red Nostr. Otras apps de Nostr encuentran tu canal y tus vídeos en esta instancia; los comentarios y los zaps llegan aquí. Esto no se puede deshacer por completo.",
       "confirmPublic": "¿Cambiar a Público? Esto no se puede deshacer por completo: tu perfil y tu lista de relays siguen en la red Nostr aunque más tarde vuelvas atrás. Los relays de réplica que has introducido aparecen en la lista de relays publicada.",

@@ -246,7 +246,7 @@
       "interactionRelays": "互动中继",
       "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料，以后也用于评论和打闪（zap）。",
       "profileRelaysTitle": "个人资料中继",
-      "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es 和 wss://index.hzrd149.com 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份时，服务器还会在这里发布自己的个人资料和中继列表。",
+      "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es 和 wss://index.hzrd149.com 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份并处于公开模式时，服务器还会在这里发布自己的个人资料和中继列表。",
       "profileRelays": "个人资料中继",
       "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。",
       "mirrorTitle": "镜像到其他服务器",
@@ -267,14 +267,14 @@
       "fixed": "源地址 <code>{{origin}}</code> 和 TLS（{{tls}}）在此处固定不变。"
     },
     "advanced": {
-      "privateNote": "你的实例为私密：视频来源、互动中继和个人资料中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。镜像列表在两种模式下都有效。"
+      "privateNote": "你的实例为私密：视频来源和互动中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。个人资料中继仍用于查找已登录访客的个人资料；镜像列表在两种模式下都有效。"
     },
     "reach": {
       "title": "可见范围",
       "privateTitle": "私密",
-      "privateLead": "你的实例不与任何人连接。",
+      "privateLead": "你的实例不发布任何内容。",
       "privateLeadOwn": "你自己管理你的 Nostr 个人资料。",
-      "privateBody": "视频、个人资料和评论只存在于此地址以及你分享的链接中。",
+      "privateBody": "视频、个人资料和评论只存在于此地址以及你分享的链接中。只有在网站上登录的人，才会在公共中继上查找其本人的个人资料。",
       "publicTitle": "公开",
       "publicBody": "你的个人资料和中继列表会发布到 Nostr 网络。其他 Nostr 应用可以在此实例上找到你的频道和视频；评论和 Zap 会到达这里。此操作无法完全撤回。",
       "confirmPublic": "切换为公开？此操作无法完全撤回：即使你以后切换回来，个人资料和中继列表也会留在 Nostr 网络中。你填写的镜像中继会出现在发布的中继列表中。",

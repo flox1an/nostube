@@ -1,22 +1,12 @@
 import './i18n'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  DEFAULT_PROFILE_RELAYS,
-  DEFAULT_SITE_LINKS,
-  noSitePages,
-  type Reach,
-} from '@nostube/core/instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { Draft } from './draft'
 import { PagesPage } from './PagesPage'
 
 const draft = (pages = noSitePages()) =>
-  ({
-    links: DEFAULT_SITE_LINKS,
-    profileRelaysText: '',
-    reach: 'private',
-    pages,
-  }) as unknown as Draft
+  ({ links: DEFAULT_SITE_LINKS, profileRelaysText: '', pages }) as unknown as Draft
 
 describe('PagesPage', () => {
   it('edits one language of one page and leaves the others as they were', () => {
@@ -50,15 +40,10 @@ describe('PagesPage', () => {
   })
 
   describe('standard text', () => {
-    const privacyDraft = (
-      privacy: Record<string, string>,
-      profileRelaysText = '',
-      reach: Reach = 'public'
-    ) =>
+    const privacyDraft = (privacy: Record<string, string>, profileRelaysText = '') =>
       ({
         links: DEFAULT_SITE_LINKS,
         profileRelaysText,
-        reach,
         pages: { ...noSitePages(), privacy },
       }) as unknown as Draft
     const standardButton = () => screen.getByRole('button', { name: 'Insert the standard text' })
@@ -68,29 +53,13 @@ describe('PagesPage', () => {
       expect(screen.getAllByRole('button', { name: 'Insert the standard text' })).toHaveLength(1)
     })
 
-    it('fills the current language, in Public with the profile relays of the Advanced page', () => {
+    it('fills the current language, with the profile relays of the Advanced page', () => {
       const update = vi.fn()
       render(<PagesPage draft={privacyDraft({}, 'wss://profiles.example\n')} update={update} />)
       fireEvent.click(standardButton())
       const { privacy } = update.mock.calls[0][0].pages
       expect(Object.keys(privacy)).toEqual(['en'])
       expect(privacy.en).toContain('wss://profiles.example')
-    })
-
-    it('in Private names no public lookup relay', () => {
-      const update = vi.fn()
-      render(
-        <PagesPage
-          draft={privacyDraft({}, 'wss://profiles.example\n', 'private')}
-          update={update}
-        />
-      )
-      fireEvent.click(standardButton())
-      const text: string = update.mock.calls[0][0].pages.privacy.en
-      expect(text).toContain("asks only this server's relay")
-      for (const relay of [...DEFAULT_PROFILE_RELAYS, 'wss://profiles.example']) {
-        expect(text).not.toContain(relay)
-      }
     })
 
     it('asks before it replaces a text that is there', () => {

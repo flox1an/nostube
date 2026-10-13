@@ -33,23 +33,20 @@ function ProfileQuery(
       defer(() => {
         if (events.hasReplaceable(kinds.Metadata, pubkey)) return EMPTY
 
+        // Index/metadata relays always (batched); hint relays on top, so a profile
+        // that only lives on a private server still resolves.
+        requestProfile(pubkey)
         if (relays && relays.length > 0) {
-          // Load directly from the relays named in the profile pointer
-          const loader = createTimelineLoader(
+          createTimelineLoader(
             pool,
             relays,
             { kinds: [kinds.Metadata], authors: [pubkey] },
             { eventStore: events, limit: 1 }
-          )
-
-          loader().subscribe({
+          )().subscribe({
             error: err => {
-              console.error('[Profile Loader] Error loading profile from custom relays:', err)
+              console.error('[Profile Loader] Error loading profile from hint relays:', err)
             },
           })
-        } else {
-          // Use batched loader for profiles without custom relays
-          requestProfile(pubkey)
         }
         return EMPTY
       }),

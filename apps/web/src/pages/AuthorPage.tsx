@@ -1093,7 +1093,9 @@ function AuthorPageContent() {
 
   const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos])
 
-  const authorMeta = useProfile({ pubkey })
+  // Same relays the video list uses (nprofile hints, outbox); this call loads the
+  // profile for the banner/header too, they read the same store entry.
+  const authorMeta = useProfile({ pubkey, relays })
   const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey
 
   useEffect(() => {

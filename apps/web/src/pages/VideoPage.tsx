@@ -386,7 +386,10 @@ function VideoPageContent() {
     }
   }, [video, labelHashtags, labelLanguages, videoLanguage])
 
-  const metadata = useProfile(video?.pubkey ? { pubkey: video.pubkey } : undefined)
+  // relaysToUse holds the nevent hints and the relays the video was seen on
+  const metadata = useProfile(
+    video?.pubkey ? { pubkey: video.pubkey, relays: relaysToUse } : undefined
+  )
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
 
   // Get user's blossom servers

@@ -65,7 +65,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
           className="-mx-4 aspect-[3/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:aspect-[5/1] sm:w-full sm:rounded-lg"
         />
       )}
-      <header className="flex items-start justify-between gap-4">
+      <header className="relative flex items-start justify-between gap-4">
         <Link to="/" className="flex min-w-0 items-center gap-4">
           {config.site.logo ? (
             <img
@@ -90,9 +90,11 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
             )}
           </div>
         </Link>
-        <AuthArea client={client} relays={config.interactionRelays} />
+        <div className="flex shrink-0 items-center gap-1">
+          {search && <SearchBox key={pageKey} />}
+          <AuthArea client={client} relays={config.interactionRelays} />
+        </div>
       </header>
-      {search && <SearchBox key={pageKey} />}
       <Routes>
         <Route path="/" element={<GridPage config={config} gate={gate} />} />
         <Route path="/t/:tag" element={<GridPage config={config} gate={gate} />} />

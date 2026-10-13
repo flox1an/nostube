@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Search } from 'lucide-react'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { searchVideos } from '@nostube/core/video-search'
@@ -153,16 +153,44 @@ export function SearchPage({ config, gate }: { config: InstanceConfig; gate: Age
   )
 }
 
-/** The site's search box; it opens `/search?q=` and keeps showing the query there. */
+/**
+ * The site's search in the header: an icon until clicked, then a box that opens `/search?q=`.
+ * It stays open with the query on the results page; empty, it folds back on blur or Escape. On a
+ * phone the open box covers the header row (the title would not fit next to it).
+ */
 export function SearchBox() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [query, setQuery] = useState(params.get('q') ?? '')
+  const [open, setOpen] = useState(query !== '')
+  const toggle = useRef<HTMLButtonElement>(null)
+  // Closed with Escape: the icon replaces the box, so the keyboard focus moves there.
+  const refocus = useRef(false)
+  useEffect(() => {
+    if (open || !refocus.current) return
+    refocus.current = false
+    toggle.current?.focus()
+  }, [open])
+  if (!open) {
+    return (
+      <Button
+        ref={toggle}
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9"
+        aria-label={t('site.search.label')}
+        onClick={() => setOpen(true)}
+      >
+        <Search />
+      </Button>
+    )
+  }
   return (
     <form
       role="search"
-      className="max-w-md"
+      className="absolute inset-0 z-10 flex items-center bg-background sm:static sm:bg-transparent"
       onSubmit={e => {
         e.preventDefault()
         const q = query.trim()
@@ -171,10 +199,22 @@ export function SearchBox() {
     >
       <Input
         type="search"
+        // Opened by a click on the icon: typing can start right away.
+        autoFocus={query === ''}
         value={query}
         onChange={e => setQuery(e.target.value)}
+        onBlur={() => {
+          if (!query.trim()) setOpen(false)
+        }}
+        onKeyDown={e => {
+          if (e.key !== 'Escape') return
+          setQuery('')
+          refocus.current = true
+          setOpen(false)
+        }}
         placeholder={t('site.search.placeholder')}
         aria-label={t('site.search.label')}
+        className="h-9 w-full sm:w-64"
       />
     </form>
   )

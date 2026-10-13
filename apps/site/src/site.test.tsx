@@ -371,12 +371,21 @@ describe('SiteHome', () => {
       renderSite(pagedClient(), '/search?q=cafe')
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
       expect(screen.queryByRole('search')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Search videos' })).toBeNull()
       expect(screen.queryByText(/Search results/)).toBeNull()
     })
 
     it('finds the shown videos by description words, ignoring case and accents', async () => {
       renderSite(pagedClient(), '/', local)
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      // Folded into an icon until clicked; an empty box folds back on Escape, focus on the icon.
+      expect(screen.queryByRole('searchbox')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Search videos' }))
+      expect(document.activeElement).toBe(screen.getByRole('searchbox'))
+      fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
+      expect(screen.queryByRole('searchbox')).toBeNull()
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Search videos' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Search videos' }))
       fireEvent.change(screen.getByRole('searchbox', { name: 'Search videos' }), {
         target: { value: '  COFFEE cafe ' },
       })

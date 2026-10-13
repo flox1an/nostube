@@ -6,6 +6,7 @@ import { Button } from '@nostube/widgets/components/button'
 import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AccountPage } from './AccountPage'
+import { AdvancedPage } from './AdvancedPage'
 import { AppearancePage } from './AppearancePage'
 import { Onboarding } from './OnboardingWizard'
 import { needsOnboarding } from './onboarding-config'
@@ -236,6 +237,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       )}
       {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
+      {page === 'advanced' && <AdvancedPage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
       {page === 'overview' && <OverviewPage />}
       {page === 'moderation' && (

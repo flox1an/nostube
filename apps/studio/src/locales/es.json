@@ -49,7 +49,8 @@
         "sitePages": "Páginas",
         "instance": "Instancia",
         "account": "Cuenta",
-        "overview": "Resumen"
+        "overview": "Resumen",
+        "advanced": "Avanzado"
       }
     },
     "account": {
@@ -137,7 +138,7 @@
       "size": "{{count}} / {{max}} caracteres. Texto sin formato: los saltos de línea y las direcciones web funcionan.",
       "useStandard": "Insertar el texto estándar",
       "useStandardAll": "Texto estándar para todos los idiomas vacíos",
-      "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Usa los relés de perfiles de visitantes configurados en la página Instancia en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
+      "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Sigue el alcance (página Instancia) y los relays de perfiles (página Avanzado) en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
       "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?"
     },
     "branding": {
@@ -222,7 +223,6 @@
       }
     },
     "instance": {
-      "advanced": "Avanzado",
       "startPage": "Página de inicio",
       "searchHint": "Desactivada: el sitio no tiene búsqueda. Local: el sitio muestra un cuadro de búsqueda que encuentra los vídeos visibles por título, descripción y etiquetas; la búsqueda se hace en el navegador del visitante.",
       "keys": {
@@ -233,20 +233,22 @@
         "invalid": "No es una clave: introduce un npub, una clave hex de 64 caracteres o una dirección NIP-05 (nombre@dominio).",
         "notFound": "No se encontró ninguna clave para {{address}}. Revisa la dirección o pega el npub."
       },
-      "creatorsTitle": "Creadores y relays",
-      "creatorsDescription": "De quién son los videos que muestra el sitio y de dónde se leen.",
+      "creatorsTitle": "Creadores",
+      "creatorsDescription": "De quién son los vídeos que muestra el sitio.",
       "creators": "Creadores mostrados",
       "creatorsHint": "De quién son los videos que muestra el sitio. Añade un npub, una clave hex o una dirección NIP-05 (nombre@dominio).",
       "writers": "Escritores permitidos",
       "writersHint": "Estas claves pueden publicar en tu relay y subir a tu almacenamiento.",
+      "relaysTitle": "Relays",
+      "relaysDescription": "De dónde lee el sitio los vídeos, perfiles, comentarios y zaps.",
       "videoSources": "Fuentes de video",
       "videoSourcesHint": "Un relay ws:// o wss:// por línea.",
       "interactionRelays": "Relays de interacción",
       "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles y, más adelante, comentarios y zaps.",
-      "profileRelaysTitle": "Perfiles de visitantes",
-      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, imagen y lista de relays siempre se buscan en los relays de interacción, en los públicos predeterminados wss://purplepag.es y wss://index.hzrd149.com y en sus relays de salida NIP-65. Esta lista añade relays de búsqueda; no permite desactivar los públicos predeterminados.",
-      "profileRelays": "Relays adicionales para buscar perfiles",
-      "profileRelaysHint": "Un relay ws:// o wss:// por línea. Vacío significa sin relays adicionales; los públicos predeterminados y los relays de salida NIP-65 del visitante se siguen consultando.",
+      "profileRelaysTitle": "Relays de perfiles",
+      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es y wss://index.hzrd149.com y en los relays outbox NIP-65 del visitante. Con la identidad de canal, el servidor también publica aquí su perfil y su lista de relays.",
+      "profileRelays": "Relays de perfiles",
+      "profileRelaysHint": "Un relay ws:// o wss:// por línea.",
       "mirrorTitle": "Replicar en otros servidores",
       "mirrorDescription": "Copia en segundo plano los eventos y vídeos propios de esta instancia a los servidores que indiques. Sigue reintentando mientras un destino no responda. Deja ambas listas vacías para que todo quede en esta instancia.",
       "mirrorRelays": "Relays de réplica",
@@ -263,6 +265,20 @@
       "quotaHint": "0 significa ilimitado.",
       "reserve": "Reserva de espacio libre (GiB)",
       "fixed": "El origen <code>{{origin}}</code> y TLS ({{tls}}) son fijos aquí."
+    },
+    "advanced": {
+      "privateNote": "Tu instancia es privada: las fuentes de vídeo, los relays de interacción y los relays de perfiles no tienen efecto, el sitio solo usa el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Las listas de réplica funcionan en ambos casos."
+    },
+    "reach": {
+      "title": "Alcance",
+      "privateTitle": "Privado",
+      "privateLead": "Tu instancia no se conecta con nadie.",
+      "privateLeadOwn": "Tu perfil de Nostr lo gestionas tú.",
+      "privateBody": "Los vídeos, el perfil y los comentarios solo existen en esta dirección y a través de los enlaces que compartes.",
+      "publicTitle": "Público",
+      "publicBody": "Tu perfil y tu lista de relays se publican en la red Nostr. Otras apps de Nostr encuentran tu canal y tus vídeos en esta instancia; los comentarios y los zaps llegan aquí. Esto no se puede deshacer por completo.",
+      "confirmPublic": "¿Cambiar a Público? Esto no se puede deshacer por completo: tu perfil y tu lista de relays siguen en la red Nostr aunque más tarde vuelvas atrás. Los relays de réplica que has introducido aparecen en la lista de relays publicada.",
+      "unavailable": "Público necesita una dirección que la red Nostr pueda alcanzar. Esta instancia funciona con un nombre local (.local), una dirección IP o su propia autoridad de certificación, así que otras apps de Nostr no pueden conectarse a su relay."
     },
     "upload": {
       "publishedTitle": "Publicado",
@@ -455,7 +471,7 @@
         "writers": "Escritores permitidos",
         "videoSources": "Fuentes de video",
         "interactionRelays": "Relays de interacción",
-        "profileRelays": "Relays adicionales para buscar perfiles",
+        "profileRelays": "Relays de perfiles",
         "quota": "Cuota de almacenamiento",
         "reserve": "Reserva de espacio libre",
         "mirrorRelays": "Relays de réplica",
@@ -485,19 +501,7 @@
         "noExtension": "¿Ya tienes una clave Nostr? Instala una extensión como nos2x o Alby y recarga la página."
       },
       "publishing": {
-        "intro": "¿Quién debe poder encontrar tus vídeos?",
-        "localTitle": "Solo en mi sitio",
-        "localBody": "Tus vídeos se quedan en este sitio. No se copia nada a ningún otro lugar.",
-        "networkTitle": "También en la red Nostr",
-        "networkBody": "También visibles en toda la red Nostr: otras apps pueden mostrar y reproducir tus vídeos.",
-        "networkChannel": "También se guardan copias de tus archivos de vídeo en servidores públicos.",
-        "networkOwn": "Los archivos de vídeo se quedan en este sitio; otras apps los reproducen desde aquí.",
-        "advanced": "Avanzado",
-        "advancedHint": "Detalles técnicos: tus eventos de vídeo se copian a los relays espejo de abajo (con la identidad de canal, los archivos de vídeo también van a servidores Blossom). Los perfiles de visitantes conectados siempre se buscan en los relays públicos predeterminados y en sus relays de salida NIP-65.",
-        "mirrorRelays": "Relays espejo",
-        "mirrorBlossom": "Servidores espejo Blossom",
-        "profileRelays": "Relays adicionales para buscar perfiles",
-        "oneLine": "Uno por línea."
+        "intro": "¿Quién debe poder encontrar tus vídeos?"
       },
       "site": {
         "appearance": "Tras la configuración podrás elegir colores, fuente y logo en la página Apariencia."
@@ -507,7 +511,6 @@
         "login": "Inicio de sesión",
         "loginNostr": "Contraseña o clave Nostr",
         "loginPassword": "Contraseña",
-        "none": "ninguno",
         "freeDisk": "Espacio libre en disco",
         "hint": "Finalizar crea la clave si hace falta, guarda todo de una vez y reinicia el servidor unos segundos."
       }

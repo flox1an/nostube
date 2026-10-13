@@ -173,9 +173,10 @@ impl AdminState {
         self.managed.clone()
     }
 
-    /// Rebuilds the channel profile from the site settings (#129); does nothing in own identity.
+    /// Rebuilds the channel profile (and in public reach the relay list) from the settings (#129,
+    /// ADR 0012); signs nothing in own identity.
     async fn sync_profile(&self) {
-        crate::profile::sync(&self.stores.relay, &self.stores.branding, &self.managed).await;
+        crate::profile::sync(&self.stores.relay, &self.stores.branding, &self.stores.outbox, &self.managed).await;
     }
 
     /// `nostube-server admin reset`: forget password and bound key, issue a new
@@ -590,6 +591,7 @@ fn editable_json(cfg: &Config) -> serde_json::Value {
     let keys = |v: &[nostr::prelude::PublicKey]| v.iter().map(|k| k.to_hex()).collect::<Vec<_>>();
     serde_json::json!({
         "title": cfg.title,
+        "reach": cfg.reach,
         "creators": keys(&cfg.creators),
         "allowedWriters": keys(&cfg.allowed_writers),
         "videoSources": cfg.video_sources,
@@ -606,6 +608,7 @@ fn editable_json(cfg: &Config) -> serde_json::Value {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct ConfigPut {
     title: String,
+    reach: config::Reach,
     creators: Vec<String>,
     allowed_writers: Vec<String>,
     video_sources: Vec<String>,
@@ -659,7 +662,8 @@ struct VideosBody {
     hidden: Vec<String>,
 }
 
-/// The config for the studio plus what it shows read-only (origin, TLS, boot id, bound key).
+/// The config for the studio plus what it shows read-only (origin, TLS, boot id, bound key, and
+/// whether the origin allows public reach).
 async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
     if !is_authed(&state, &headers) {
         return json_error(StatusCode::UNAUTHORIZED, "not logged in");
@@ -684,6 +688,7 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         "revision": cfg.revision,
         "origin": cfg.origin,
         "tls": tls,
+        "canBePublic": cfg.can_be_public(),
         "tlsMode": tls_mode,
         "bootId": state.boot_id,
         "nostrPubkey": nostr,
@@ -765,6 +770,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
     };
     let edited = Edited {
         title: put.title,
+        reach: put.reach,
         creators: put.creators,
         allowed_writers: put.allowed_writers,
         video_sources: put.video_sources,
@@ -1504,6 +1510,7 @@ mod tests {
     fn put_value(accent: &str) -> serde_json::Value {
         serde_json::json!({
             "title": "Renamed",
+            "reach": "private",
             "creators": [PK],
             "allowedWriters": [PK],
             "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
@@ -1637,11 +1644,14 @@ mod tests {
         edit["title"] = "Live".into();
         edit["site"]["tagline"] = "Now".into();
         edit["videoSources"] = serde_json::json!(["wss://other.example"]);
+        assert_eq!(edit["reach"], "private");
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
         assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
         let live = public();
         assert_eq!((&live["revision"], &live["title"], &live["site"]["tagline"]), (&5.into(), &"Live".into(), &"Now".into()));
-        assert_eq!(live["videoSources"], serde_json::json!(["wss://other.example"]));
+        // Private reach: the site gets the instance relay only; the studio keeps the stored list.
+        assert_eq!(live["videoSources"], serde_json::json!(["wss://flox-mac.local"]));
+        assert_eq!(call(&app, "GET", Some(&cookie), None, "").await.1["config"]["videoSources"], serde_json::json!(["wss://other.example"]));
 
         edit["storage"]["quotaGib"] = 8.into();
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
@@ -1681,6 +1691,20 @@ mod tests {
         assert!(dir.join("config.prev").exists());
         let after = Config::load(&dir.join("config.toml")).unwrap();
         assert!(matches!(after.tls, config::Tls::Proxy { port: 8080 }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_local_origin_cannot_be_switched_to_public() {
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
+        assert_eq!(read["canBePublic"], false, "flox-mac.local is not reachable from the network");
+        assert_eq!(read["config"]["reach"], "private");
+        let mut edit = put_value("#112233");
+        edit["reach"] = "public".into();
+        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().reach, config::Reach::Private);
         std::fs::remove_dir_all(&dir).ok();
     }
 

@@ -18,6 +18,9 @@ struct Raw {
     revision: u64,
     origin: String,
     title: String,
+    /// Newer than ADR 0005; absent = private (ADR 0012).
+    #[serde(default)]
+    reach: Reach,
     creators: Vec<String>,
     allowed_writers: Vec<String>,
     video_sources: Vec<String>,
@@ -35,6 +38,32 @@ struct Raw {
     /// Opt-in (ADR 0009); absent = no outbox work at all.
     #[serde(default, skip_serializing_if = "Mirror::is_off")]
     mirror: Mirror,
+}
+
+/// Who the instance talks to (ADR 0012). `private`: nobody but the owner's `[mirror]` targets;
+/// `public`: the channel identity is announced on the Nostr network and visitors' profiles are
+/// looked up at public indexers.
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Reach {
+    #[default]
+    Private,
+    Public,
+}
+
+/// Public needs a relay URL the network can reach: not a local-CA instance, not a `.local`
+/// name, not a bare IP address.
+fn can_be_public(tls: &Tls, origin_host: &str) -> bool {
+    !matches!(tls, Tls::LocalCa { .. })
+        && !origin_host.to_ascii_lowercase().ends_with(".local")
+        && origin_host.parse::<std::net::IpAddr>().is_err()
+}
+
+fn check_reach(reach: Reach, tls: &Tls, origin_host: &str) -> Result<(), BoxError> {
+    if reach == Reach::Public && !can_be_public(tls, origin_host) {
+        return Err("reach public needs a public origin (not local-ca, not a .local name, not an IP address)".into());
+    }
+    Ok(())
 }
 
 /// Same shape in TOML and in the public config JSON. `local`: the site searches the creators'
@@ -282,6 +311,7 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
 /// The fields the studio may edit (#17): origin and TLS mode are fixed in the first cut.
 pub struct Edited {
     pub title: String,
+    pub reach: Reach,
     pub creators: Vec<String>,
     pub allowed_writers: Vec<String>,
     pub video_sources: Vec<String>,
@@ -293,8 +323,9 @@ pub struct Edited {
     pub mirror: Mirror,
 }
 
-/// The site's public discovery relays for the signed-in visitor's own profile (ADR 0008); the
-/// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
+/// The public indexers the channel profile and relay list go to, and where the site looks up a
+/// signed-in visitor's profile, in public reach (ADR 0008, 0012); the same list as
+/// `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
 fn default_profile_relays() -> Vec<String> {
     vec!["wss://purplepag.es".into(), "wss://index.hzrd149.com".into()]
 }
@@ -315,12 +346,13 @@ pub struct Config {
     /// Host part of `origin` (with port if any stripped).
     pub origin_host: String,
     pub title: String,
+    pub reach: Reach,
     pub creators: Vec<PublicKey>,
     pub allowed_writers: Vec<PublicKey>,
     pub video_sources: Vec<String>,
     pub interaction_relays: Vec<String>,
-    /// Where the site looks up a signed-in visitor's profile besides the instance relays;
-    /// empty = only the instance relays (local only).
+    /// Public reach only: where the channel's kinds 0 and 10002 go and where the site looks up a
+    /// signed-in visitor's profile besides the instance relays; empty = only the instance relays.
     pub profile_relays: Vec<String>,
     pub search: Search,
     pub tls: Tls,
@@ -341,6 +373,7 @@ impl Config {
             return Err("revision must be a positive integer".into());
         }
         let origin_host = origin_host(&raw.origin)?.to_owned();
+        check_reach(raw.reach, &raw.tls, &origin_host)?;
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
@@ -352,6 +385,7 @@ impl Config {
             origin: raw.origin,
             origin_host,
             title: raw.title,
+            reach: raw.reach,
             creators: keys("creators", &raw.creators)?,
             allowed_writers: keys("allowed_writers", &raw.allowed_writers)?,
             video_sources: raw.video_sources,
@@ -372,6 +406,7 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&e.video_sources, &e.interaction_relays, &e.profile_relays])?;
+        check_reach(e.reach, &self.tls, &self.origin_host)?;
         check_site(&e.site)?;
         check_mirror(&e.mirror)?;
         Ok(Config {
@@ -379,6 +414,7 @@ impl Config {
             origin: self.origin.clone(),
             origin_host: self.origin_host.clone(),
             title: e.title.trim().to_owned(),
+            reach: e.reach,
             creators: keys("creators", &e.creators)?,
             allowed_writers: keys("allowed_writers", &e.allowed_writers)?,
             video_sources: e.video_sources.clone(),
@@ -406,6 +442,7 @@ impl Config {
             origin: format!("https://{authority}"),
             origin_host: origin_host.to_owned(),
             title: "My videos".into(),
+            reach: Reach::Private,
             creators: vec![],
             allowed_writers: vec![],
             video_sources: vec![format!("wss://{authority}")],
@@ -439,6 +476,7 @@ impl Config {
             revision: self.revision,
             origin: self.origin.clone(),
             title: self.title.clone(),
+            reach: self.reach,
             creators: self.creators.iter().map(PublicKey::to_hex).collect(),
             allowed_writers: self.allowed_writers.iter().map(PublicKey::to_hex).collect(),
             video_sources: self.video_sources.clone(),
@@ -453,9 +491,25 @@ impl Config {
         Ok(toml::to_string_pretty(&raw)?)
     }
 
-    /// Public config contract v1 (ADR 0005). Start page: the first displayed creator.
+    /// `wss://` on the origin's authority: this instance's own relay.
+    pub fn instance_relay(&self) -> String {
+        self.origin.replacen("https://", "wss://", 1)
+    }
+
+    /// Same rule as `can_be_public` for the studio, which offers public reach only then.
+    pub fn can_be_public(&self) -> bool {
+        can_be_public(&self.tls, &self.origin_host)
+    }
+
+    /// Public config contract v1 (ADR 0005). Start page: the first displayed creator. Private
+    /// reach (ADR 0012) enforces the relay lists here: the instance relay only, no indexers; the
+    /// stored lists stay as configured, so switching back loses nothing.
     pub fn public_json(&self) -> serde_json::Value {
         let creators: Vec<String> = self.creators.iter().map(PublicKey::to_hex).collect();
+        let (video_sources, interaction_relays, profile_relays) = match self.reach {
+            Reach::Public => (self.video_sources.clone(), self.interaction_relays.clone(), self.profile_relays.clone()),
+            Reach::Private => (vec![self.instance_relay()], vec![self.instance_relay()], vec![]),
+        };
         let start_page = creators
             .first()
             .map(|c| serde_json::json!({ "kind": "creator-profile", "creator": c }));
@@ -464,11 +518,12 @@ impl Config {
             "revision": self.revision,
             "origin": self.origin,
             "title": self.title,
+            "reach": self.reach,
             "creators": creators,
             "startPage": start_page,
-            "videoSources": self.video_sources,
-            "interactionRelays": self.interaction_relays,
-            "profileRelays": self.profile_relays,
+            "videoSources": video_sources,
+            "interactionRelays": interaction_relays,
+            "profileRelays": profile_relays,
             "search": self.search,
             "site": {
                 "tagline": self.site.tagline,
@@ -553,10 +608,13 @@ tls = {{ mode = "local-ca" }}
         let json = cfg.public_json();
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
-        assert_eq!(json["interactionRelays"], serde_json::json!([]));
-        assert_eq!(json.as_object().unwrap().len(), 11);
-        // A config file from before the field keeps the public profile lookup (ADR 0008).
-        assert_eq!(json["profileRelays"], serde_json::json!(["wss://purplepag.es", "wss://index.hzrd149.com"]));
+        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://flox-mac.local"]), "private: the instance relay only");
+        assert_eq!(json.as_object().unwrap().len(), 12);
+        assert_eq!(json["reach"], "private");
+        // A config file from before the field keeps the public profile lookup list (ADR 0008),
+        // which private reach does not announce (ADR 0012).
+        assert_eq!(cfg.profile_relays, default_profile_relays());
+        assert_eq!(json["profileRelays"], serde_json::json!([]));
         assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#8b5cf6", "font": "sans" }));
         assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
@@ -620,6 +678,7 @@ tls = {{ mode = "local-ca" }}
         let next = cfg
             .with_edits(&Edited {
                 title: "Renamed".into(),
+                reach: Reach::Private,
                 creators: vec![PK.into()],
                 allowed_writers: vec![PK.into()],
                 video_sources: vec!["wss://flox-mac.local".into()],
@@ -645,6 +704,7 @@ tls = {{ mode = "local-ca" }}
         assert!(cfg
             .with_edits(&Edited {
                 title: "x".into(),
+                reach: Reach::Private,
                 creators: vec![PK.into()],
                 allowed_writers: vec![PK.into()],
                 video_sources: vec!["https://nope".into()],
@@ -699,6 +759,7 @@ tls = {{ mode = "local-ca" }}
         let cfg = Config::parse(&sample("[site]\ntagline = \"Keep me\"\naccent = \"#00aa55\"\nfont = \"mono\"\n")).unwrap();
         let edited = Edited {
             title: "Renamed".into(),
+            reach: Reach::Private,
             creators: vec![PK.into()],
             allowed_writers: vec![PK.into()],
             video_sources: vec!["wss://flox-mac.local".into()],
@@ -793,5 +854,73 @@ tls = {{ mode = "local-ca" }}
         for bad in ["http://videos.example.org", "videos.example.org", "https://videos.example.org/app", "https://"] {
             assert!(Config::default_for_proxy(bad, 8080).is_err(), "{bad}");
         }
+    }
+
+    fn public_sample(extra: &str) -> String {
+        sample(extra)
+            .replace("https://flox-mac.local\"", "https://videos.example.org\"")
+            .replace("tls = { mode = \"local-ca\" }", "tls = { mode = \"proxy\" }")
+    }
+
+    #[test]
+    fn reach_defaults_to_private_and_round_trips() {
+        let cfg = Config::parse(&sample("")).unwrap();
+        assert_eq!(cfg.reach, Reach::Private);
+        assert!(cfg.to_toml().unwrap().contains("reach = \"private\""));
+        let public = Config::parse(&public_sample("reach = \"public\"\n")).unwrap();
+        assert_eq!(public.reach, Reach::Public);
+        assert_eq!(Config::parse(&public.to_toml().unwrap()).unwrap().reach, Reach::Public);
+        assert!(Config::parse(&sample("reach = \"open\"\n")).is_err());
+    }
+
+    #[test]
+    fn private_reach_announces_only_the_instance_relay_and_public_the_configured_lists() {
+        let text = public_sample("profile_relays = [\"wss://indexer.example\"]\n")
+            .replace("interaction_relays = []", "interaction_relays = [\"wss://comments.example\"]");
+        let private = Config::parse(&text).unwrap();
+        let json = private.public_json();
+        assert_eq!(json["reach"], "private");
+        assert_eq!(json["videoSources"], serde_json::json!(["wss://videos.example.org"]));
+        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://videos.example.org"]));
+        assert_eq!(json["profileRelays"], serde_json::json!([]));
+        // Enforced, not rewritten: the stored lists survive for a switch to public.
+        assert_eq!(private.interaction_relays, vec!["wss://comments.example"]);
+        assert_eq!(Config::parse(&private.to_toml().unwrap()).unwrap().profile_relays, vec!["wss://indexer.example"]);
+
+        let public = Config::parse(&format!("{text}reach = \"public\"\n")).unwrap();
+        let json = public.public_json();
+        assert_eq!(json["reach"], "public");
+        assert_eq!(json["videoSources"], serde_json::json!(["wss://flox-mac.local"]));
+        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://comments.example"]));
+        assert_eq!(json["profileRelays"], serde_json::json!(["wss://indexer.example"]));
+    }
+
+    #[test]
+    fn public_reach_needs_a_publicly_reachable_origin() {
+        let proxy = Tls::Proxy { port: 8080 };
+        assert!(can_be_public(&proxy, "videos.example.org"));
+        assert!(!can_be_public(&Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 }, "videos.example.org"));
+        for host in ["flox-mac.local", "Flox-Mac.LOCAL", "192.168.1.5", "fd00::1"] {
+            assert!(!can_be_public(&proxy, host), "{host}");
+        }
+        assert!(Config::parse(&sample("reach = \"public\"\n")).is_err(), "local-ca cannot be public");
+        let local = Config::parse(&sample("")).unwrap();
+        assert!(!local.can_be_public());
+        assert!(Config::parse(&public_sample("")).unwrap().can_be_public());
+        let edits = |reach| Edited {
+            title: "Flox".into(),
+            reach,
+            creators: vec![PK.into()],
+            allowed_writers: vec![PK.into()],
+            video_sources: vec![],
+            interaction_relays: vec![],
+            profile_relays: vec![],
+            search: Search::Off,
+            storage: Storage::default(),
+            site: Site::default(),
+            mirror: Mirror::default(),
+        };
+        assert!(local.with_edits(&edits(Reach::Public)).is_err());
+        assert!(local.with_edits(&edits(Reach::Private)).is_ok());
     }
 }

@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@nostube/core/nip19'
+import { isNip05 } from '@nostube/core/nip05-bunker'
+import { displayNip05, resolveNip05, verifyNip05 } from '@nostube/core/nip05'
 import { nip19 } from 'nostr-tools'
+import type { ProfilePointer } from 'nostr-tools/nip19'
 import { cn, combineRelays } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -24,7 +27,10 @@ import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
 import { UserActionsMenu } from '@/components/UserActionsMenu'
 import { FollowingList } from '@/components/FollowingList'
-import { Camera, Plus, Minus, Loader2, Upload } from 'lucide-react'
+import { BadgeCheck, Camera, Plus, Minus, Loader2, Upload } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
+import { AuthorPageLoader } from '@/components/page-loaders'
+import NotFound from '@/pages/NotFound'
 import {
   useProfile,
   useUserPlaylists,
@@ -197,6 +203,24 @@ function AuthorProfile({
     }
   }, [metadata?.about])
 
+  // NIP-05 is checked only here, once per page view; other places show it unverified.
+  const nip05 = typeof metadata?.nip05 === 'string' ? metadata.nip05 : undefined
+  const [verified, setVerified] = useState<string>()
+  useEffect(() => {
+    if (!nip05) return
+    let cancelled = false
+    verifyNip05(nip05, pubkey).then(ok => {
+      if (ok && !cancelled) setVerified(`${pubkey} ${nip05}`)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [nip05, pubkey])
+  const verifiedLabel =
+    nip05 && verified === `${pubkey} ${nip05}`
+      ? t('pages.author.nip05Verified', { nip05: displayNip05(nip05) })
+      : undefined
+
   return (
     <div
       className={cn(
@@ -223,6 +247,19 @@ function AuthorProfile({
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
             <TrustBadge pubkey={pubkey} />
+            {verifiedLabel && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <BadgeCheck
+                    className="h-4 w-4 text-primary"
+                    role="img"
+                    tabIndex={0}
+                    aria-label={verifiedLabel}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{verifiedLabel}</TooltipContent>
+              </Tooltip>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 pr-4">
             {isOwnProfile && (
@@ -646,18 +683,12 @@ function ProfileField({
   )
 }
 
-function AuthorPageContent() {
+function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null }) {
   const { t } = useTranslation()
   const { nprofile, tab } = useParams<{ nprofile: string; tab?: string }>()
   const location = useLocation()
   const activeTab: Tabs = isAuthorTab(tab) ? tab : 'overview'
   const setShortsFeedVideos = useShortsFeedStore(state => state.setVideos)
-
-  // Decode nprofile to get pubkey and relays
-  const profileData = useMemo(() => {
-    if (!nprofile) return null
-    return decodeProfilePointer(nprofile)
-  }, [nprofile])
 
   const pubkey = profileData?.pubkey || ''
   const nprofileRelays = profileData?.relays || []
@@ -1496,19 +1527,47 @@ function AuthorPageContent() {
 }
 
 export function AuthorPage() {
-  const { nprofile } = useParams<{ nprofile: string }>()
+  const { t } = useTranslation()
+  const { nprofile = '' } = useParams<{ nprofile: string }>()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useBlockedPubkeys()
-  const pubkey = useMemo(() => decodeProfilePointer(nprofile ?? '')?.pubkey, [nprofile])
-  const safetyGate = getContentSafetyGate(pubkey, config.nsfwFilter, {
+
+  // A NIP-05 address (`name@domain`, `domain`) instead of an npub/nprofile: its pubkey and
+  // nostr.json relays act as the nprofile's. The URL stays as typed.
+  const address = !/^n(pub|profile)1/.test(nprofile) && isNip05(nprofile) ? nprofile : undefined
+  const decoded = useMemo(
+    () => (address ? null : decodeProfilePointer(nprofile)),
+    [address, nprofile]
+  )
+  const [resolved, setResolved] = useState<{ address: string; profile: ProfilePointer | null }>()
+  useEffect(() => {
+    if (!address) return
+    let cancelled = false
+    resolveNip05(address).then(
+      profile => {
+        if (!cancelled) setResolved({ address, profile })
+      },
+      () => {
+        if (!cancelled) setResolved({ address, profile: null })
+      }
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [address])
+  const profile = address ? (resolved?.address === address ? resolved.profile : undefined) : decoded
+
+  const safetyGate = getContentSafetyGate(profile?.pubkey, config.nsfwFilter, {
     nsfwPubkeys: presetContent.nsfwPubkeys,
     blockedPubkeys,
   })
 
+  if (profile === undefined) return <AuthorPageLoader />
+  if (address && !profile) return <NotFound hint={t('pages.author.nip05Unresolved')} />
   return (
     <ContentSafetyRoute safetyGate={safetyGate}>
-      <AuthorPageContent />
+      <AuthorPageContent profileData={profile} />
     </ContentSafetyRoute>
   )
 }

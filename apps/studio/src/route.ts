@@ -9,6 +9,7 @@ export type PageId =
   | 'instance'
   | 'account'
   | 'overview'
+  | 'advanced'
 export type GroupId = 'content' | 'site' | 'server'
 
 /** Stable ids only: the names shown are translated at render (`studio.nav.*`). */
@@ -30,6 +31,7 @@ export const PAGES: PageDef[] = [
   { id: 'instance', group: 'server', editsConfig: true },
   { id: 'account', group: 'server', editsConfig: false },
   { id: 'overview', group: 'server', editsConfig: false },
+  { id: 'advanced', group: 'server', editsConfig: true },
 ]
 
 export const DEFAULT_PAGE: PageId = 'videos'

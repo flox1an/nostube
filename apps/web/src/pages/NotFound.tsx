@@ -3,7 +3,8 @@ import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const NotFound = () => {
+/** `hint`: why there is nothing here, below the title (e.g. a name that did not resolve). */
+const NotFound = ({ hint }: { hint?: string }) => {
   const { t } = useTranslation()
   const location = useLocation()
 
@@ -22,6 +23,7 @@ const NotFound = () => {
           {t('pages.notFound.code')}
         </h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">{t('pages.notFound.title')}</p>
+        {hint && <p className="text-gray-600 dark:text-gray-400 mb-4">{hint}</p>}
         <a
           href="/"
           className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"

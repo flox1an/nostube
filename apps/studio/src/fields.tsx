@@ -21,3 +21,33 @@ export function Field({
     </div>
   )
 }
+
+/** A choice that fills its column; `selected` marks the one taken. */
+export function Tile({
+  title,
+  selected,
+  onSelect,
+  disabled,
+  children,
+}: {
+  title: string
+  selected: boolean
+  onSelect: () => void
+  disabled?: boolean
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onSelect}
+      className={`space-y-2 rounded-md border p-4 text-left text-sm transition-colors disabled:opacity-50 ${
+        selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:bg-muted'
+      }`}
+    >
+      <span className="block text-base font-medium">{title}</span>
+      {children}
+    </button>
+  )
+}

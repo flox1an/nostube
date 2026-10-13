@@ -9,6 +9,7 @@ import {
   type InstanceSite,
   type SiteFont,
   type SitePages,
+  type Reach,
 } from '@nostube/core/instance-config'
 import type { AdminConfig, SearchConfig } from './api'
 import i18n from './i18n'
@@ -28,7 +29,7 @@ export interface Draft {
   writersText: string
   videoSourcesText: string
   interactionRelaysText: string
-  /** Additional visitor profile lookup relays; empty adds none to the mandatory public defaults. */
+  /** Visitor profile lookups and, in `public`, where the managed key's kind 0 and 10002 go. */
   profileRelaysText: string
   /** Empty lists: the outbox is off. */
   mirrorRelaysText: string
@@ -36,6 +37,7 @@ export interface Draft {
   searchMode: SearchConfig['mode']
   quota: string
   reserve: string
+  reach: Reach
 }
 
 const toLines = (text: string) =>
@@ -64,6 +66,7 @@ export function toDraft(c: AdminConfig): Draft {
     searchMode: c.search.mode,
     quota: String(c.storage.quotaGib),
     reserve: String(c.storage.freeSpaceReserveGib),
+    reach: c.reach,
   }
 }
 
@@ -209,6 +212,7 @@ export function fromDraft(d: Draft): DraftResult {
       search,
       storage: { quotaGib, freeSpaceReserveGib },
       site: { ...site, lightning },
+      reach: d.reach,
     },
     errors: [],
   }

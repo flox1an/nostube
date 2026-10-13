@@ -49,7 +49,8 @@
         "sitePages": "Pages",
         "instance": "Instance",
         "account": "Account",
-        "overview": "Overview"
+        "overview": "Overview",
+        "advanced": "Advanced"
       }
     },
     "account": {
@@ -137,7 +138,7 @@
       "size": "{{count}} / {{max}} characters. Plain text: line breaks and web addresses work.",
       "useStandard": "Insert the standard text",
       "useStandardAll": "Standard text for all empty languages",
-      "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It uses the visitor profile relays set on the Instance page at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
+      "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It follows the reach (Instance page) and the profile relays (Advanced page) at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
       "replaceConfirm": "Replace the current text of this language with the standard text?"
     },
     "branding": {
@@ -222,7 +223,6 @@
       }
     },
     "instance": {
-      "advanced": "Advanced",
       "startPage": "Start page",
       "searchHint": "Off: the site has no search. Local: the site gets a search box that finds the shown videos by title, description and tags; it searches in the visitor's browser.",
       "keys": {
@@ -233,20 +233,22 @@
         "invalid": "Not a key: enter an npub, a 64-character hex key or a NIP-05 address (name@domain).",
         "notFound": "No key found for {{address}}. Check the address, or paste the npub instead."
       },
-      "creatorsTitle": "Creators and relays",
-      "creatorsDescription": "Whose videos the site shows, and where they are read from.",
+      "creatorsTitle": "Creators",
+      "creatorsDescription": "Whose videos the site shows.",
       "creators": "Displayed creators",
       "creatorsHint": "Whose videos the site shows. Add an npub, a hex key or a NIP-05 address (name@domain).",
       "writers": "Allowed writers",
       "writersHint": "These keys may publish to your relay and upload to your storage.",
+      "relaysTitle": "Relays",
+      "relaysDescription": "Where the site reads videos, profiles, comments and zaps from.",
       "videoSources": "Video sources",
       "videoSourcesHint": "One ws:// or wss:// relay per line.",
       "interactionRelays": "Interaction relays",
       "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps.",
-      "profileRelaysTitle": "Visitor profiles",
-      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are always looked up on the interaction relays, the public defaults wss://purplepag.es and wss://index.hzrd149.com, and the visitor's NIP-65 outbox relays. This list adds more lookup relays; it cannot disable the public defaults.",
-      "profileRelays": "Additional profile lookup relays",
-      "profileRelaysHint": "One ws:// or wss:// relay per line. Empty means no additional relays; public defaults and the visitor's NIP-65 outboxes are still queried.",
+      "profileRelaysTitle": "Profile relays",
+      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es and wss://index.hzrd149.com and on the visitor's NIP-65 outbox relays. With the channel identity the server also publishes its profile and relay list here.",
+      "profileRelays": "Profile relays",
+      "profileRelaysHint": "One ws:// or wss:// relay per line.",
       "mirrorTitle": "Mirror to other servers",
       "mirrorDescription": "Copies this instance's own events and videos to servers you list, in the background. It keeps retrying while a target is down. Leave both lists empty to keep everything on this instance.",
       "mirrorRelays": "Mirror relays",
@@ -263,6 +265,20 @@
       "quotaHint": "0 means unlimited.",
       "reserve": "Free-space reserve (GiB)",
       "fixed": "Origin <code>{{origin}}</code> and TLS ({{tls}}) are fixed here."
+    },
+    "advanced": {
+      "privateNote": "Your instance is Private: video sources, interaction relays and profile relays have no effect, the site uses only this server's relay. The lists keep their values and work only in Public. The mirror lists work in both."
+    },
+    "reach": {
+      "title": "Reach",
+      "privateTitle": "Private",
+      "privateLead": "Your instance connects to no one.",
+      "privateLeadOwn": "You manage your Nostr profile yourself.",
+      "privateBody": "Videos, profile and comments exist only at this address and through links you share.",
+      "publicTitle": "Public",
+      "publicBody": "Your profile and your relay list are published on the Nostr network. Other Nostr apps find your channel and your videos on this instance; comments and zaps arrive here. This cannot be fully undone.",
+      "confirmPublic": "Switch to Public? This cannot be fully undone: your profile and relay list stay on the Nostr network even if you switch back later. The mirror relays you entered appear in the published relay list.",
+      "unavailable": "Public needs an address the Nostr network can reach. This instance runs on a local name (.local), an IP address or its own certificate authority, so other Nostr apps cannot connect to its relay."
     },
     "upload": {
       "publishedTitle": "Published",
@@ -453,7 +469,7 @@
         "writers": "Allowed writers",
         "videoSources": "Video sources",
         "interactionRelays": "Interaction relays",
-        "profileRelays": "Additional profile lookup relays",
+        "profileRelays": "Profile relays",
         "quota": "Storage quota",
         "reserve": "Free-space reserve",
         "mirrorRelays": "Mirror relays",
@@ -483,19 +499,7 @@
         "noExtension": "Already have a Nostr key? Install an extension such as nos2x or Alby and reload."
       },
       "publishing": {
-        "intro": "Who should be able to find your videos?",
-        "localTitle": "Only on my site",
-        "localBody": "Your videos stay on this site. Nothing is copied anywhere else.",
-        "networkTitle": "Also on the Nostr network",
-        "networkBody": "Also visible across the Nostr network: other apps can show and play your videos.",
-        "networkChannel": "Copies of your video files are kept on public servers as well.",
-        "networkOwn": "The video files stay on this site; other apps play them from here.",
-        "advanced": "Advanced",
-        "advancedHint": "Technical details: your video events are copied to the mirror relays below (with the channel identity, the video files go to Blossom servers too). Profiles of signed-in visitors are always looked up on public default relays and their NIP-65 outbox relays.",
-        "mirrorRelays": "Mirror relays",
-        "mirrorBlossom": "Blossom mirror servers",
-        "profileRelays": "Additional profile lookup relays",
-        "oneLine": "One per line."
+        "intro": "Who should be able to find your videos?"
       },
       "site": {
         "appearance": "After setup you can choose colours, font and logo on the Appearance page."
@@ -505,7 +509,6 @@
         "login": "Login",
         "loginNostr": "Password or Nostr key",
         "loginPassword": "Password",
-        "none": "none",
         "freeDisk": "Free disk space",
         "hint": "Finish creates the key if needed, saves everything at once and restarts the server for a few seconds."
       }

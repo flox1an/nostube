@@ -14,6 +14,7 @@ const config = (site: Partial<AdminConfig['site']> = {}): AdminConfig => ({
   videoSources: [],
   interactionRelays: [],
   profileRelays: [],
+  reach: 'private',
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

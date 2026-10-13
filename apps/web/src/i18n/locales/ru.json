@@ -887,7 +887,9 @@
       "following": "Подписки ({{count}})",
       "noFollowing": "Ни на кого не подписан в nostube.",
       "showMore": "Показать больше",
-      "showLess": "Показать меньше"
+      "showLess": "Показать меньше",
+      "nip05Unresolved": "Не удалось распознать имя",
+      "nip05Verified": "Подтверждённый адрес Nostr: {{nip05}}"
     },
     "subscriptions": {
       "emptyState": "Подпишитесь на некоторых авторов, чтобы увидеть их видео здесь.",

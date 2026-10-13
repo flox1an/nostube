@@ -887,7 +887,9 @@
       "following": "正在关注（{{count}}）",
       "noFollowing": "在 nostube 上未关注任何人。",
       "showMore": "展开",
-      "showLess": "收起"
+      "showLess": "收起",
+      "nip05Unresolved": "无法解析该名称",
+      "nip05Verified": "已验证的 Nostr 地址：{{nip05}}"
     },
     "subscriptions": {
       "emptyState": "关注一些作者以在此查看他们的视频。",

@@ -52,7 +52,9 @@ This changes the earlier rule that the theme stays with the viewer: the creator 
 
 **Video catalog queries** use only `videoSources` and only `creators`. Relay hints, preset relays, outbox relays and the user's NIP-65 never widen them. The author page of a non-creator still opens (no route restriction), but it sends no video request. Video-by-id lookups are also restricted to `creators`.
 
-**Signed-in visitor identity (Site).** The visitor's own profile is an explicit exception to
+**Signed-in visitor identity (Site).** Only with `reach: "public"` (ADR 0012; absent or
+`"private"` means no public lookup, and the server then sends only the instance relay in
+`videoSources`/`interactionRelays` and an empty `profileRelays`). The visitor's own profile is an explicit exception to
 interaction-relay isolation: `apps/site` always discovers that key's NIP-65 list (kind 10002)
 and profile (kind 0) through the instance relays, mandatory public defaults
 (`wss://purplepag.es`, `wss://index.hzrd149.com`) and configured additional `profileRelays`,

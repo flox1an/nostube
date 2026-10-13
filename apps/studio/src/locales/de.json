@@ -49,7 +49,8 @@
         "sitePages": "Seiten",
         "instance": "Instanz",
         "account": "Konto",
-        "overview": "Übersicht"
+        "overview": "Übersicht",
+        "advanced": "Erweitert"
       }
     },
     "account": {
@@ -137,7 +138,7 @@
       "size": "{{count}} / {{max}} Zeichen. Reiner Text: Zeilenumbrüche und Webadressen funktionieren.",
       "useStandard": "Standardtext einfügen",
       "useStandardAll": "Standardtext für alle leeren Sprachen",
-      "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er verwendet die auf der Seite Instanz eingestellten Relays für Besucherprofile zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
+      "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er richtet sich nach der Reichweite (Seite Instanz) und den Profil-Relays (Seite Erweitert) zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
       "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?"
     },
     "branding": {
@@ -222,7 +223,6 @@
       }
     },
     "instance": {
-      "advanced": "Erweitert",
       "startPage": "Startseite",
       "searchHint": "Aus: Die Website hat keine Suche. Lokal: Die Website bekommt ein Suchfeld, das die gezeigten Videos nach Titel, Beschreibung und Tags findet; gesucht wird im Browser der Besucher.",
       "keys": {
@@ -233,20 +233,22 @@
         "invalid": "Kein Schlüssel: Gib einen npub, einen 64-stelligen Hex-Schlüssel oder eine NIP-05-Adresse (name@domain) ein.",
         "notFound": "Für {{address}} wurde kein Schlüssel gefunden. Prüfe die Adresse oder füge stattdessen den npub ein."
       },
-      "creatorsTitle": "Creator und Relays",
-      "creatorsDescription": "Wessen Videos die Website zeigt und woher sie gelesen werden.",
+      "creatorsTitle": "Creator",
+      "creatorsDescription": "Wessen Videos die Website zeigt.",
       "creators": "Angezeigte Creator",
       "creatorsHint": "Wessen Videos die Website zeigt. Füge einen npub, einen Hex-Schlüssel oder eine NIP-05-Adresse (name@domain) hinzu.",
       "writers": "Schreibberechtigte",
       "writersHint": "Diese Schlüssel dürfen auf dein Relay veröffentlichen und in deinen Speicher hochladen.",
+      "relaysTitle": "Relays",
+      "relaysDescription": "Woher die Website Videos, Profile, Kommentare und Zaps liest.",
       "videoSources": "Videoquellen",
       "videoSourcesHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "interactionRelays": "Interaktions-Relays",
       "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile und später für Kommentare und Zaps verwendet.",
-      "profileRelaysTitle": "Profile von Besuchern",
-      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste immer auf den Interaktions-Relays, den öffentlichen Standard-Relays wss://purplepag.es und wss://index.hzrd149.com sowie den NIP-65-Outbox-Relays der Person gesucht. Diese Liste ergänzt weitere Relays für die Suche; die öffentlichen Standards lassen sich nicht abschalten.",
-      "profileRelays": "Zusätzliche Relays für die Profilsuche",
-      "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Leer heißt keine zusätzlichen Relays; öffentliche Standards und die NIP-65-Outbox-Relays der Person werden weiterhin abgefragt.",
+      "profileRelaysTitle": "Profil-Relays",
+      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es und wss://index.hzrd149.com sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
+      "profileRelays": "Profil-Relays",
+      "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "mirrorTitle": "Auf andere Server spiegeln",
       "mirrorDescription": "Kopiert die eigenen Events und Videos dieser Instanz im Hintergrund auf die Server, die du hier einträgst. Ist ein Ziel nicht erreichbar, wird es immer wieder versucht. Bleiben beide Listen leer, bleibt alles auf dieser Instanz.",
       "mirrorRelays": "Spiegel-Relays",
@@ -263,6 +265,20 @@
       "quotaHint": "0 bedeutet unbegrenzt.",
       "reserve": "Freier Speicher als Reserve (GiB)",
       "fixed": "Origin <code>{{origin}}</code> und TLS ({{tls}}) sind hier fest vorgegeben."
+    },
+    "advanced": {
+      "privateNote": "Deine Instanz ist privat: Videoquellen, Interaktions-Relays und Profil-Relays wirken nicht, die Website nutzt nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Spiegel-Listen wirken in beiden Fällen."
+    },
+    "reach": {
+      "title": "Reichweite",
+      "privateTitle": "Privat",
+      "privateLead": "Deine Instanz verbindet sich mit niemandem.",
+      "privateLeadOwn": "Dein Nostr-Profil verwaltest du selbst.",
+      "privateBody": "Videos, Profil und Kommentare gibt es nur unter dieser Adresse und über Links, die du teilst.",
+      "publicTitle": "Öffentlich",
+      "publicBody": "Dein Profil und deine Relay-Liste werden im Nostr-Netz veröffentlicht. Andere Nostr-Apps finden deinen Kanal und deine Videos auf dieser Instanz, Kommentare und Zaps kommen hier an. Das lässt sich nicht vollständig zurücknehmen.",
+      "confirmPublic": "Auf Öffentlich umstellen? Das lässt sich nicht vollständig zurücknehmen: Profil und Relay-Liste bleiben im Nostr-Netz, auch wenn du später zurückschaltest. Die eingetragenen Spiegel-Relays stehen in der veröffentlichten Relay-Liste.",
+      "unavailable": "Öffentlich braucht eine Adresse, die das Nostr-Netz erreicht. Diese Instanz läuft unter einem lokalen Namen (.local), einer IP-Adresse oder mit eigener Zertifizierungsstelle; andere Nostr-Apps erreichen ihr Relay nicht."
     },
     "upload": {
       "publishedTitle": "Veröffentlicht",
@@ -453,7 +469,7 @@
         "writers": "Schreibberechtigte",
         "videoSources": "Videoquellen",
         "interactionRelays": "Interaktions-Relays",
-        "profileRelays": "Zusätzliche Relays für die Profilsuche",
+        "profileRelays": "Profil-Relays",
         "quota": "Speicherkontingent",
         "reserve": "Freier Speicher als Reserve",
         "mirrorRelays": "Spiegel-Relays",
@@ -483,19 +499,7 @@
         "noExtension": "Du hast schon einen Nostr-Schlüssel? Installiere eine Erweiterung wie nos2x oder Alby und lade neu."
       },
       "publishing": {
-        "intro": "Wer soll deine Videos finden können?",
-        "localTitle": "Nur auf meiner Website",
-        "localBody": "Deine Videos bleiben auf dieser Website. Nichts wird anderswohin kopiert.",
-        "networkTitle": "Auch im Nostr-Netzwerk",
-        "networkBody": "Auch im ganzen Nostr-Netzwerk sichtbar: Andere Apps können deine Videos zeigen und abspielen.",
-        "networkChannel": "Kopien deiner Videodateien liegen zusätzlich auf öffentlichen Servern.",
-        "networkOwn": "Die Videodateien bleiben auf dieser Website; andere Apps spielen sie von hier ab.",
-        "advanced": "Erweitert",
-        "advancedHint": "Technische Details: Deine Video-Events werden auf die Spiegel-Relays unten kopiert (mit der Kanal-Identität auch die Videodateien auf Blossom-Server). Profile angemeldeter Besucher werden immer auf öffentlichen Standard-Relays und ihren NIP-65-Outbox-Relays gesucht.",
-        "mirrorRelays": "Spiegel-Relays",
-        "mirrorBlossom": "Blossom-Spiegelserver",
-        "profileRelays": "Zusätzliche Relays für die Profilsuche",
-        "oneLine": "Einer pro Zeile."
+        "intro": "Wer soll deine Videos finden können?"
       },
       "site": {
         "appearance": "Nach der Einrichtung wählst du Farben, Schrift und Logo auf der Seite Aussehen."
@@ -505,7 +509,6 @@
         "login": "Anmeldung",
         "loginNostr": "Passwort oder Nostr-Schlüssel",
         "loginPassword": "Passwort",
-        "none": "keine",
         "freeDisk": "Freier Speicherplatz",
         "hint": "Fertigstellen erzeugt bei Bedarf den Schlüssel, speichert alles auf einmal und startet den Server für ein paar Sekunden neu."
       }

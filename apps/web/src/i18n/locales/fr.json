@@ -887,7 +887,9 @@
       "following": "Abonnements ({{count}})",
       "noFollowing": "Ne suit personne sur nostube.",
       "showMore": "Afficher plus",
-      "showLess": "Afficher moins"
+      "showLess": "Afficher moins",
+      "nip05Unresolved": "Le nom n'a pas pu être résolu",
+      "nip05Verified": "Adresse Nostr vérifiée : {{nip05}}"
     },
     "subscriptions": {
       "emptyState": "Suivez quelques auteurs pour voir leurs vidéos ici.",

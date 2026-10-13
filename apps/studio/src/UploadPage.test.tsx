@@ -63,6 +63,7 @@ const stateFor = (
   tlsMode: 'proxy',
   bootId: 'b',
   nostrPubkey: null,
+  canBePublic: true,
   config: {
     title: 'T',
     creators,
@@ -70,6 +71,7 @@ const stateFor = (
     videoSources: ['wss://videos.example.org'],
     interactionRelays: [],
     profileRelays: [],
+    reach: 'private',
     mirror: { relays: mirrorRelays, blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

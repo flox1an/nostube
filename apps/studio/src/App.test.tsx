@@ -13,6 +13,7 @@ const state: AdminState = {
   tlsMode: 'proxy',
   bootId: 'b1',
   nostrPubkey: null,
+  canBePublic: true,
   branding: { logo: null, favicon: null, banner: null },
   config: {
     title: 'My videos',
@@ -21,6 +22,7 @@ const state: AdminState = {
     videoSources: ['wss://videos.example.org'],
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: [],
+    reach: 'private',
     mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

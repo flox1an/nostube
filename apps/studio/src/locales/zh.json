@@ -49,7 +49,8 @@
         "sitePages": "页面",
         "instance": "实例",
         "account": "账户",
-        "overview": "概览"
+        "overview": "概览",
+        "advanced": "高级"
       }
     },
     "account": {
@@ -137,7 +138,7 @@
       "size": "{{count}} / {{max}} 个字符。纯文本：换行和网址可正常使用。",
       "useStandard": "插入标准文本",
       "useStandardAll": "为所有空白语言插入标准文本",
-      "standardHint": "标准文本说明 Nostube 站点和服务器如何处理访客数据，并通过法律声明指向运营者。它采用插入时在“实例”页面设置的访客个人资料中继；更改后请重新插入。请核对它是否符合您的运营情况。它不构成法律意见。",
+      "standardHint": "标准文本说明 Nostube 站点和服务器如何处理访客数据，并通过法律声明指向运营者。它采用插入时的可见范围（“实例”页面）和个人资料中继（“高级”页面）；更改后请重新插入。请核对它是否符合您的运营情况。它不构成法律意见。",
       "replaceConfirm": "用标准文本替换此语言的当前文本？"
     },
     "branding": {
@@ -222,7 +223,6 @@
       }
     },
     "instance": {
-      "advanced": "高级",
       "startPage": "首页",
       "searchHint": "关闭：网站没有搜索。本地：网站显示搜索框，可按标题、描述和标签查找已显示的视频；搜索在访问者的浏览器中进行。",
       "keys": {
@@ -233,20 +233,22 @@
         "invalid": "这不是密钥：请输入 npub、64 位 hex 密钥或 NIP-05 地址（name@domain）。",
         "notFound": "找不到 {{address}} 对应的密钥。请检查地址，或直接粘贴 npub。"
       },
-      "creatorsTitle": "创作者和中继",
-      "creatorsDescription": "网站显示谁的视频，以及从哪里读取。",
+      "creatorsTitle": "创作者",
+      "creatorsDescription": "站点显示谁的视频。",
       "creators": "展示的创作者",
       "creatorsHint": "网站显示谁的视频。添加 npub、hex 密钥或 NIP-05 地址（name@domain）。",
       "writers": "允许写入者",
       "writersHint": "这些密钥可以发布到你的中继并上传到你的存储。",
+      "relaysTitle": "中继",
+      "relaysDescription": "站点从哪里读取视频、个人资料、评论和 Zap。",
       "videoSources": "视频来源",
       "videoSourcesHint": "每行一个 ws:// 或 wss:// 中继。",
       "interactionRelays": "互动中继",
       "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料，以后也用于评论和打闪（zap）。",
-      "profileRelaysTitle": "访客资料",
-      "profileRelaysDescription": "访客登录时，始终会在互动中继、默认公共中继 wss://purplepag.es 和 wss://index.hzrd149.com，以及访客的 NIP-65 发件中继上查找其名称、头像和中继列表。此列表用于添加查询中继，不能关闭默认公共中继。",
-      "profileRelays": "额外的资料查询中继",
-      "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。留空表示没有额外中继；默认公共中继和访客的 NIP-65 发件中继仍会被查询。",
+      "profileRelaysTitle": "个人资料中继",
+      "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es 和 wss://index.hzrd149.com 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份时，服务器还会在这里发布自己的个人资料和中继列表。",
+      "profileRelays": "个人资料中继",
+      "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。",
       "mirrorTitle": "镜像到其他服务器",
       "mirrorDescription": "在后台把本实例自己的事件和视频复制到你列出的服务器。目标不可用时会持续重试。两个列表都留空则所有内容只保留在本实例上。",
       "mirrorRelays": "镜像中继",
@@ -263,6 +265,20 @@
       "quotaHint": "0 表示不限。",
       "reserve": "预留可用空间（GiB）",
       "fixed": "源地址 <code>{{origin}}</code> 和 TLS（{{tls}}）在此处固定不变。"
+    },
+    "advanced": {
+      "privateNote": "你的实例为私密：视频来源、互动中继和个人资料中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。镜像列表在两种模式下都有效。"
+    },
+    "reach": {
+      "title": "可见范围",
+      "privateTitle": "私密",
+      "privateLead": "你的实例不与任何人连接。",
+      "privateLeadOwn": "你自己管理你的 Nostr 个人资料。",
+      "privateBody": "视频、个人资料和评论只存在于此地址以及你分享的链接中。",
+      "publicTitle": "公开",
+      "publicBody": "你的个人资料和中继列表会发布到 Nostr 网络。其他 Nostr 应用可以在此实例上找到你的频道和视频；评论和 Zap 会到达这里。此操作无法完全撤回。",
+      "confirmPublic": "切换为公开？此操作无法完全撤回：即使你以后切换回来，个人资料和中继列表也会留在 Nostr 网络中。你填写的镜像中继会出现在发布的中继列表中。",
+      "unavailable": "公开模式需要 Nostr 网络可以访问的地址。此实例使用本地名称（.local）、IP 地址或自有证书颁发机构运行，其他 Nostr 应用无法连接到它的中继。"
     },
     "upload": {
       "publishedTitle": "已发布",
@@ -451,7 +467,7 @@
         "writers": "允许写入者",
         "videoSources": "视频来源",
         "interactionRelays": "互动中继",
-        "profileRelays": "额外的资料查询中继",
+        "profileRelays": "个人资料中继",
         "quota": "存储配额",
         "reserve": "预留可用空间",
         "mirrorRelays": "镜像中继",
@@ -481,19 +497,7 @@
         "noExtension": "已经有 Nostr 密钥？请安装 nos2x 或 Alby 等扩展后重新加载。"
       },
       "publishing": {
-        "intro": "谁应该能找到你的视频？",
-        "localTitle": "仅在我的网站上",
-        "localBody": "你的视频只保留在此网站上，不会复制到其他任何地方。",
-        "networkTitle": "同时发布到 Nostr 网络",
-        "networkBody": "在整个 Nostr 网络中都可见：其他应用可以展示和播放你的视频。",
-        "networkChannel": "你的视频文件也会在公共服务器上保存副本。",
-        "networkOwn": "视频文件保留在此网站上；其他应用从这里播放。",
-        "advanced": "高级",
-        "advancedHint": "技术细节：你的视频事件会复制到下方的镜像中继（使用频道身份时，视频文件也会复制到 Blossom 服务器）。已登录访客的资料始终会在默认公共中继和该访客的 NIP-65 发件中继上查询。",
-        "mirrorRelays": "镜像中继",
-        "mirrorBlossom": "Blossom 镜像服务器",
-        "profileRelays": "额外的资料查询中继",
-        "oneLine": "每行一个。"
+        "intro": "谁应该能找到你的视频？"
       },
       "site": {
         "appearance": "设置完成后，可在“外观”页面选择颜色、字体和标志。"
@@ -503,7 +507,6 @@
         "login": "登录",
         "loginNostr": "密码或 Nostr 密钥",
         "loginPassword": "密码",
-        "none": "无",
         "freeDisk": "可用磁盘空间",
         "hint": "“完成”会在需要时创建密钥，一次性保存所有设置，并让服务器重启几秒钟。"
       }

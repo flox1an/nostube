@@ -27,13 +27,22 @@ chapters. Signed-in visitors can like videos and send Lightning zaps through the
 LNURL-pay provider (QR/external wallet or an injected WebLN wallet). Like publishing needs an
 accepting interaction relay; zap totals include only validated provider receipts.
 
-The signed-in visitor's name and avatar are always discovered through the mandatory public
-profile indexers (`wss://purplepag.es`, `wss://index.hzrd149.com`), their NIP-65 write relays,
-the instance relays and any additional visitor-profile relays configured in Studio.
-`profile_relays = []` means no additional relays, not a public-lookup opt-out. Only that
-visitor's kinds 0 and 10002 use this exception: video sources, creator metadata, embed
-queries and interaction publishing retain their instance scope. Public relays learn the
-visitor's IP address and queried public key; a public avatar URL can also contact its host.
+**Reach** (Studio: Privat / Öffentlich, `reach` in `config.toml`, ADR 0012) decides whether the
+instance talks to the Nostr network. `private` is the default: the instance connects to nobody
+but the `[mirror]` targets you enter. The site then uses only the instance relay for videos,
+comments and profiles, including the signed-in visitor's, whatever relay lists are stored.
+`public` publishes the channel's profile (kind 0) and relay list (kind 10002: the instance
+relay plus the mirror relays) to the profile relays (`profile_relays`, default
+`wss://purplepag.es`, `wss://index.hzrd149.com`) through the outbox, and the site then also
+looks up the signed-in visitor's name and avatar there, at their NIP-65 write relays and on
+the instance relays (ADR 0008). Only that visitor's kinds 0 and 10002 use
+this exception: video sources, creator metadata, embed queries and interaction publishing
+retain their instance scope. Public relays learn the visitor's IP address and queried public
+key; a public avatar URL can also contact its host. Public cannot be fully taken back:
+switching back to private stops further deliveries but deletes nothing already published.
+It needs a publicly reachable origin, so a local-ca instance, a `.local` name or an IP
+address origin stays private. `/.well-known/nostr.json` answers NIP-05 `_@<host>` in both
+reaches.
 
 Signed-in visitors can also report a video or a comment. A report is a signed NIP-56 note on
 the relay, public like any other event and never anonymous; **Content → Moderation** in Studio
@@ -174,29 +183,24 @@ cargo build --release --manifest-path apps/server/Cargo.toml
 
 Run it under systemd with `Restart=always` for the reason given above.
 
-## Checking video and visitor-profile traffic boundaries
+## Checking the private reach traffic boundary
 
-Signed-in visitor identity always uses the public defaults and NIP-65 write relays (ADR 0008).
-There is no “Local only” visitor setting: Studio's visitor-profile list adds discovery relays,
-and `profile_relays = []` adds none. An instance with signed-in visitors therefore cannot
-promise zero internet traffic. Video catalog and creator queries remain instance-scoped,
-and an embed with the instance config uses only instance relays.
+A private instance (ADR 0012) makes no external requests, not even for the signed-in
+visitor's profile; only the `[mirror]` targets the owner entered are contacted, by the server.
+Video catalog and creator queries remain instance-scoped in both reaches, and an embed with
+the instance config uses only instance relays.
 
 `apps/server/scripts/check-local-profile.mjs` checks this boundary on macOS. It starts a
-throwaway instance with `profile_relays = []` and seeds a creator video, profile, thumbnail
-and media only on its own relay and Blossom. It opens the signed-in site, its video page
-and the embed in separate headless Brave targets (`--browser` selects another Chromium).
-On the site and video page, only `wss://purplepag.es` and `wss://index.hzrd149.com` may be
-external sockets. Every public `REQ` must filter only kinds 0/10002 and exactly the seeded
-visitor's public key; public `CLOSE`s are allowed, writes and other messages are not.
-Unexpected hosts, external HTTP, public video queries and any external embed traffic exit 1.
-The check also requires both public sockets and visitor kind 0/10002 requests to be observed;
-it needs public-relay connectivity and may need a longer `--wait` on a slow connection.
+throwaway private instance with `profile_relays = []` and seeds a creator video, profile,
+thumbnail and media only on its own relay and Blossom. It opens the signed-in site, its video
+page and the embed in separate headless Brave targets (`--browser` selects another Chromium).
+Any external request or socket exits 1. The check uses a local-ca `.local` instance, which
+cannot be public, so public reach is not covered by it.
 
 Prerequisites: installed workspace dependencies, macOS `scutil`/mDNS, Brave or another
 Chromium browser, and freshly built Site/Studio/embed assets and server. The instance uses
-a throwaway local CA and browser profile. `--default-profile-relays` compares an omitted
-config list with the explicit empty list; both must retain public visitor lookup.
+a throwaway local CA and browser profile. `--default-profile-relays` leaves the stored list
+at the public defaults; private reach must still contact none of them.
 `--serve` only seeds and keeps the instance running for manual inspection.
 
 ```sh

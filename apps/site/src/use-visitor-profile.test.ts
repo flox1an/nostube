@@ -28,14 +28,27 @@ const served = (extra: object) => {
 }
 
 describe('visitorProfileRelays', () => {
-  it('keeps both public discovery relays when the server does not send profileRelays', () => {
-    const relays = visitorProfileRelays([INSTANCE], served({}).profileRelays, [OUTBOX])
-    expect(relays).toEqual([OUTBOX, INSTANCE, 'wss://purplepag.es/', 'wss://index.hzrd149.com/'])
+  it('asks only the instance relays when the instance is private', () => {
+    const config = served({})
+    expect(config.reach).toBe('private')
+    expect(visitorProfileRelays(config.reach, [INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
+      INSTANCE,
+    ])
+  })
+
+  it('keeps both public discovery relays when a public server does not send profileRelays', () => {
+    const config = served({ reach: 'public' })
+    expect(visitorProfileRelays(config.reach, [INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
+      OUTBOX,
+      INSTANCE,
+      'wss://purplepag.es/',
+      'wss://index.hzrd149.com/',
+    ])
   })
 
   it('keeps public discovery and visitor outboxes even when the instance config has no profile relays', () => {
-    const config = served({ profileRelays: [] })
-    expect(visitorProfileRelays([INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
+    const config = served({ reach: 'public', profileRelays: [] })
+    expect(visitorProfileRelays(config.reach, [INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
       OUTBOX,
       INSTANCE,
       'wss://purplepag.es/',
@@ -44,7 +57,7 @@ describe('visitorProfileRelays', () => {
   })
 
   it('adds configured profile relays without replacing public discovery', () => {
-    expect(visitorProfileRelays([INSTANCE], ['wss://custom.example'], [])).toEqual([
+    expect(visitorProfileRelays('public', [INSTANCE], ['wss://custom.example'], [])).toEqual([
       INSTANCE,
       'wss://custom.example/',
       'wss://purplepag.es/',

@@ -171,6 +171,9 @@ pub struct Outbox(Arc<Inner>);
 struct Inner {
     conn: Mutex<Connection>,
     mirror: Mirror,
+    /// Public reach only (ADR 0012): the indexers the channel's kinds 0 and 10002 go to; set by
+    /// `profile::sync`, so it follows the config while running. Empty in private reach.
+    indexers: parking_lot::RwLock<Vec<String>>,
     storage: parking_lot::RwLock<Option<almond::models::AppState>>,
 }
 
@@ -179,12 +182,20 @@ impl Outbox {
         let conn = crate::relay::connect(db)?;
         initialize(&conn)?;
         Ok(Outbox(Arc::new(Inner {
-            conn: Mutex::new(conn), mirror, storage: parking_lot::RwLock::new(None),
+            conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
         })))
     }
 
     pub fn attach_storage(&self, state: almond::models::AppState) {
         *self.0.storage.write() = Some(state);
+    }
+
+    /// Sets the indexers and queues the channel's current kinds 0 and 10002 (`ids`) for them; a
+    /// job that exists already is kept as it is. Private reach passes none of either: jobs still
+    /// pending for an indexer wait, and nothing goes there.
+    pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>) -> Result<(), String> {
+        *self.0.indexers.write() = indexers.clone();
+        self.db(move |conn| ids.iter().try_for_each(|id| enqueue_event(conn, &indexers, id))).await
     }
 
     /// Called only after Almond accepted an upload. Its index does not retain auth authors.
@@ -336,22 +347,28 @@ impl Outbox {
         .await
     }
 
-    /// Due cleanup jobs always run; outbound jobs run for configured targets only.
-    /// A target removed from config keeps its rows, but nothing is sent there.
+    /// Due cleanup jobs always run; outbound jobs run for configured targets only: the mirror
+    /// targets, and the indexers for event jobs. A target removed from config keeps its rows, but
+    /// nothing is sent there.
+    // ponytail: an indexer URL that was once a mirror relay also gets that relay's old pending
+    // event jobs; filter by kind and author here if that ever matters.
     async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
         let targets: Vec<String> = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
+        let indexers = self.0.indexers.read().clone();
         self.db(move |conn| {
             let marks = vec!["?"; targets.len()].join(",");
+            let indexer_marks = vec!["?"; indexers.len()].join(",");
             let mut stmt = conn.prepare(&format!(
                 "SELECT id, kind, target, ref_id, size, source_url, attempts FROM outbox
-                 WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks}))
+                 WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks})
+                   OR (kind = 'event' AND target IN ({indexer_marks})))
                  AND (kind != 'blob-delete' OR NOT EXISTS (
                    SELECT 1 FROM outbox c JOIN blob_owner b ON b.hash=c.ref_id AND b.author=c.target
                    WHERE c.kind='cleanup' AND c.ref_id=outbox.ref_id AND c.status!='done'))
                  ORDER BY next_attempt_at, id LIMIT {limit}"
             ))?;
             let args = std::iter::once(rusqlite::types::Value::from(now()))
-                .chain(targets.into_iter().map(rusqlite::types::Value::from));
+                .chain(targets.into_iter().chain(indexers).map(rusqlite::types::Value::from));
             let jobs = stmt.query_map(params_from_iter(args), |r| {
                 Ok(Job {
                     id: r.get(0)?,
@@ -1311,5 +1328,24 @@ mod tests {
         assert!(path.exists());
         assert_eq!(row(&outbox, "blob-delete", &target).0, "done");
         assert!(outbox.due(100).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn indexers_get_only_what_was_announced_and_nothing_in_private_reach() {
+        let (outbox, _relay, _path) = fixture(Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![] });
+        let (profile, other) = (EventId::from_byte_array([0; 32]), EventId::from_byte_array([1; 32]));
+        enqueue_event(&outbox.0.conn.lock(), &["wss://mirror.example".to_owned()], &other).unwrap();
+        outbox.announce(vec!["wss://indexer.example".into()], vec![profile]).await.unwrap();
+        let due = |jobs: Vec<Job>| jobs.into_iter().map(|j| (j.target, j.ref_id)).collect::<Vec<_>>();
+        let mut public = due(outbox.due(100).await.unwrap());
+        public.sort();
+        assert_eq!(public, [
+            ("wss://indexer.example".to_owned(), profile.to_hex()),
+            ("wss://mirror.example".to_owned(), other.to_hex()),
+        ]);
+        // Private reach: the mirror keeps going, the indexers' jobs wait.
+        outbox.announce(vec![], vec![]).await.unwrap();
+        assert_eq!(due(outbox.due(100).await.unwrap()), [("wss://mirror.example".to_owned(), other.to_hex())]);
+        assert_eq!(row(&outbox, "event", "wss://indexer.example").0, "pending");
     }
 }

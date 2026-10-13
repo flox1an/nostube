@@ -235,6 +235,11 @@ impl Relay {
         Ok(relay)
     }
 
+    /// The `[mirror]` relays it queues writer events for; fixed until the restart a change needs.
+    pub fn mirror_relays(&self) -> &[String] {
+        &self.0.mirror_relays
+    }
+
     pub(crate) async fn ingest(&self, ev: Event) -> RelayMessage<'static> {
         self.ingest_from(ev, false).await
     }

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Scoped traffic check (ADR 0008): seeds a creator video only on a throwaway instance's
-// relay and Blossom, then opens the signed-in site, video page and embed in Chromium.
-// Public sockets on the site may query only the seeded visitor's kinds 0/10002;
-// external HTTP, public writes, public video queries and all external embed traffic fail.
+// Private reach traffic check (ADR 0012): seeds a creator video only on a throwaway instance's
+// relay and Blossom, then opens the signed-in site, video page and embed in Chromium. Every
+// external request or socket fails: a private instance connects to nobody, not even for the
+// signed-in visitor's profile. Public reach cannot run here: a local-ca `.local` instance
+// cannot be public.
 //
 //   node apps/server/scripts/check-local-profile.mjs [--server <binary>] [--browser <path>]
 //     [--default-profile-relays] [--port 9443] [--wait 10] [--serve]
@@ -31,7 +32,7 @@ const { values: opt } = parseArgs({
     },
     port: { type: 'string', default: '9443' },
     wait: { type: 'string', default: '10' },
-    // Compare an omitted list with `[]`; both retain mandatory public identity lookup.
+    // Leave the stored profile_relays at the public defaults; private reach must still not use them.
     'default-profile-relays': { type: 'boolean', default: false },
     // Only seed and keep the instance running, for a look with another browser.
     serve: { type: 'boolean', default: false },
@@ -53,6 +54,7 @@ writeFileSync(
   `revision = 1
 origin = "${origin}"
 title = "Local check"
+reach = "private"
 creators = ["${creator}"]
 allowed_writers = ["${creator}"]
 video_sources = ["${relay}"]
@@ -216,7 +218,6 @@ await new Promise(resolve => cdp.once('open', resolve))
 let nextId = 0
 const pending = new Map()
 const sessions = new Map()
-const publicRelays = new Set(['wss://purplepag.es', 'wss://index.hzrd149.com'])
 const send = (method, params = {}, sessionId) =>
   new Promise((resolve, reject) => {
     const id = ++nextId
@@ -252,7 +253,6 @@ cdp.on('message', raw => {
     const isSocket = msg.method === 'Network.webSocketCreated'
     const url = isSocket ? msg.params.url : msg.params.request.url
     traffic.requests.push(url)
-    if (isSocket) traffic.sockets.set(`${msg.sessionId}:${msg.params.requestId}`, url)
     if (!URL.canParse(url)) {
       traffic.failures.push(`invalid request URL: ${url}`)
       return
@@ -261,78 +261,14 @@ cdp.on('message', raw => {
     if (!/^(https?|wss?):$/.test(parsed.protocol)) return
     if (parsed.host === `${host}:${opt.port}`) return
     traffic.external.add(url)
-    if (
-      traffic.embed ||
-      !isSocket ||
-      !publicRelays.has(parsed.origin) ||
-      parsed.username ||
-      parsed.password
-    ) {
-      traffic.failures.push(
-        `unexpected external ${isSocket ? 'WebSocket' : 'HTTP request'}: ${url}`
-      )
-    } else {
-      traffic.publicSockets.add(parsed.origin)
-    }
-  }
-  if (msg.method === 'Network.webSocketFrameSent') {
-    const url = traffic.sockets.get(`${msg.sessionId}:${msg.params.requestId}`)
-    if (!url) {
-      traffic.failures.push('sent WebSocket frame without a captured socket URL')
-      return
-    }
-    if (!URL.canParse(url)) return // the socket URL has already failed above
-    if (new URL(url).host === `${host}:${opt.port}`) return
-    let frame
-    try {
-      frame = JSON.parse(msg.params.response.payloadData)
-    } catch {
-      traffic.failures.push(`non-JSON public WebSocket frame: ${url}`)
-      return
-    }
-    if (Array.isArray(frame) && frame[0] === 'CLOSE' && frame.length === 2) return
-    if (
-      !Array.isArray(frame) ||
-      frame[0] !== 'REQ' ||
-      typeof frame[1] !== 'string' ||
-      frame.length < 3 ||
-      frame
-        .slice(2)
-        .some(
-          filter =>
-            !filter ||
-            typeof filter !== 'object' ||
-            !Array.isArray(filter.kinds) ||
-            filter.kinds.length === 0 ||
-            filter.kinds.some(kind => kind !== 0 && kind !== 10002) ||
-            !Array.isArray(filter.authors) ||
-            filter.authors.length !== 1 ||
-            filter.authors[0] !== visitor
-        )
-    ) {
-      traffic.failures.push(
-        `public nonidentity request or write to ${url}: ${JSON.stringify(frame)}`
-      )
-      return
-    }
-    for (const filter of frame.slice(2))
-      for (const kind of filter.kinds) traffic.identityKinds.add(kind)
+    traffic.failures.push(`unexpected external ${isSocket ? 'WebSocket' : 'HTTP request'}: ${url}`)
   }
 })
 
 const failures = []
 for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
   // A fresh target/session per page prevents old sockets and workers contaminating the next check.
-  const traffic = {
-    embed: path.startsWith('/embed.html'),
-    requests: [],
-    sockets: new Map(),
-    publicSockets: new Set(),
-    identityKinds: new Set(),
-    external: new Set(),
-    failures: [],
-    watches: [],
-  }
+  const traffic = { requests: [], external: new Set(), failures: [], watches: [] }
   const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
   await send('Page.enable', {}, sessionId)
@@ -353,16 +289,6 @@ for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
   await sleep(Number(opt.wait) * 1000)
   await Promise.all(traffic.watches)
   await send('Target.closeTarget', { targetId })
-  if (!traffic.embed) {
-    for (const url of publicRelays)
-      if (!traffic.publicSockets.has(url))
-        traffic.failures.push(`missing mandatory public socket: ${url}`)
-    for (const kind of [0, 10002])
-      if (!traffic.identityKinds.has(kind))
-        traffic.failures.push(
-          `no public visitor kind ${kind} REQ observed (check public connectivity or --wait)`
-        )
-  }
   console.log(
     `${path.split('?')[0].slice(0, 12)}: ${traffic.requests.length} requests, external: ${[...traffic.external].join(', ') || 'none'}`
   )
@@ -371,6 +297,6 @@ for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
 console.log(
   failures.length
     ? `FAILED:\n${failures.join('\n')}`
-    : 'OK: public traffic is visitor identity only; video sources and embed stayed on the instance'
+    : 'OK: no external traffic; site, video page and embed stayed on the instance'
 )
 process.exit(failures.length ? 1 : 0)

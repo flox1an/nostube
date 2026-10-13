@@ -27,6 +27,7 @@ const config: AdminConfig = {
   videoSources: ['wss://relay.example'],
   interactionRelays: [],
   profileRelays: DEFAULT_PROFILE_RELAYS,
+  reach: 'public',
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

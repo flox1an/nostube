@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { SimplePool } from 'nostr-tools/pool'
-import { DEFAULT_PROFILE_RELAYS } from '@nostube/core/instance-config'
+import { DEFAULT_PROFILE_RELAYS, type Reach } from '@nostube/core/instance-config'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -14,18 +14,11 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { Textarea } from '@nostube/widgets/components/textarea'
 import { loadStats, nip07, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
-import { Field } from './fields'
-import {
-  identityChoices,
-  publishingPreset,
-  wizardConfig,
-  type Identity,
-  type Publishing,
-  type PublishingLists,
-} from './onboarding-config'
+import { Field, Tile } from './fields'
+import { identityChoices, wizardConfig, type Identity } from './onboarding-config'
 import { bytesText } from './OverviewPage'
+import { ReachChoice } from './ReachChoice'
 import { useSigner } from './signer-context'
 
 /** What the wizard needs of a relay pool: find the owner's profile, copy it to the instance. */
@@ -35,36 +28,6 @@ export interface ProfilePool {
 }
 
 const STEPS = ['identity', 'publishing', 'site', 'summary'] as const
-
-/** A choice that fills its column; `selected` marks the one taken. */
-function Tile({
-  title,
-  selected,
-  onSelect,
-  disabled,
-  children,
-}: {
-  title: string
-  selected: boolean
-  onSelect: () => void
-  disabled?: boolean
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onSelect}
-      className={`space-y-2 rounded-md border p-4 text-left text-sm transition-colors disabled:opacity-50 ${
-        selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:bg-muted'
-      }`}
-    >
-      <span className="block text-base font-medium">{title}</span>
-      {children}
-    </button>
-  )
-}
 
 /**
  * First run: sets a new instance up in one pass (identity, publishing, site) and saves the config
@@ -94,8 +57,7 @@ export function Onboarding({
   const [picked, setIdentity] = useState<Identity | null>(null)
   const [ownKey, setOwnKey] = useState<string | null>(null)
   const [bindLogin, setBindLogin] = useState(false)
-  const [publishing, setPublishing] = useState<Publishing | null>(null)
-  const [lists, setLists] = useState<PublishingLists>(() => publishingPreset('local'))
+  const [pickedReach, setReach] = useState<Reach | null>(null)
   const [title, setTitle] = useState(state.config.title)
   const [tagline, setTagline] = useState(state.config.site.tagline)
   const [freeDisk, setFreeDisk] = useState<number | null>(null)
@@ -122,7 +84,9 @@ export function Onboarding({
   const choices = identityChoices({ extension, managedKey: managedKey !== null })
   // A single choice needs no click: it is taken (the text still says what it means).
   const identity = picked ?? (choices.length === 1 ? choices[0] : null)
-  const wizard = { identity: identity ?? 'channel', title, tagline, ...lists }
+  // Without a publicly reachable address only Privat is left: taken like a single identity.
+  const reach = pickedReach ?? (state.canBePublic ? null : 'private')
+  const wizard = { reach: reach ?? 'private', title, tagline }
   const checked = wizardConfig(state.config, wizard, null)
   const busy = phase !== null
 
@@ -134,11 +98,6 @@ export function Onboarding({
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
-  }
-
-  const choosePublishing = (next: Publishing) => {
-    setPublishing(next)
-    setLists(publishingPreset(next))
   }
 
   const finish = async () => {
@@ -176,29 +135,8 @@ export function Onboarding({
     current === 'identity'
       ? identity === 'channel' || (identity === 'own' && ownKey !== null)
       : current === 'publishing'
-        ? publishing !== null
+        ? reach !== null
         : true
-
-  const listField = (id: keyof PublishingLists, label: string) => (
-    <Field
-      id={id}
-      label={label}
-      hint={t(
-        id === 'profileRelaysText'
-          ? 'studio.instance.profileRelaysHint'
-          : 'studio.onboarding.publishing.oneLine'
-      )}
-    >
-      <Textarea
-        id={id}
-        rows={3}
-        className="font-mono text-xs"
-        spellCheck={false}
-        value={lists[id]}
-        onChange={e => setLists(l => ({ ...l, [id]: e.target.value }))}
-      />
-    </Field>
-  )
 
   return (
     <Card>
@@ -258,43 +196,12 @@ export function Onboarding({
         {current === 'publishing' && (
           <>
             <p className="text-sm">{t('studio.onboarding.publishing.intro')}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Tile
-                title={t('studio.onboarding.publishing.localTitle')}
-                selected={publishing === 'local'}
-                onSelect={() => choosePublishing('local')}
-              >
-                <span className="block">{t('studio.onboarding.publishing.localBody')}</span>
-              </Tile>
-              <Tile
-                title={t('studio.onboarding.publishing.networkTitle')}
-                selected={publishing === 'network'}
-                onSelect={() => choosePublishing('network')}
-              >
-                <span className="block">{t('studio.onboarding.publishing.networkBody')}</span>
-                <span className="block text-muted-foreground">
-                  {identity === 'own'
-                    ? t('studio.onboarding.publishing.networkOwn')
-                    : t('studio.onboarding.publishing.networkChannel')}
-                </span>
-              </Tile>
-            </div>
-            {publishing && (
-              <details className="text-sm">
-                <summary className="cursor-pointer text-muted-foreground">
-                  {t('studio.onboarding.publishing.advanced')}
-                </summary>
-                <div className="space-y-3 pt-3">
-                  <p className="text-muted-foreground">
-                    {t('studio.onboarding.publishing.advancedHint')}
-                  </p>
-                  {listField('mirrorRelaysText', t('studio.onboarding.publishing.mirrorRelays'))}
-                  {identity === 'channel' &&
-                    listField('mirrorBlossomText', t('studio.onboarding.publishing.mirrorBlossom'))}
-                  {listField('profileRelaysText', t('studio.onboarding.publishing.profileRelays'))}
-                </div>
-              </details>
-            )}
+            <ReachChoice
+              reach={reach}
+              onChange={setReach}
+              canBePublic={state.canBePublic}
+              own={identity === 'own'}
+            />
           </>
         )}
 
@@ -331,37 +238,12 @@ export function Onboarding({
                   ? t('studio.onboarding.summary.loginNostr')
                   : t('studio.onboarding.summary.loginPassword')}
               </dd>
-              <dt className="text-muted-foreground">{t('studio.onboarding.steps.publishing')}</dt>
+              <dt className="text-muted-foreground">{t('studio.reach.title')}</dt>
               <dd>
-                {publishing === 'network'
-                  ? t('studio.onboarding.publishing.networkTitle')
-                  : t('studio.onboarding.publishing.localTitle')}
+                {reach === 'public'
+                  ? t('studio.reach.publicTitle')
+                  : t('studio.reach.privateTitle')}
               </dd>
-              {checked.config && (
-                <>
-                  <dt className="text-muted-foreground">
-                    {t('studio.onboarding.publishing.mirrorRelays')}
-                  </dt>
-                  <dd className="break-all">
-                    {checked.config.mirror.relays.join(', ') || t('studio.onboarding.summary.none')}
-                  </dd>
-                  <dt className="text-muted-foreground">
-                    {t('studio.onboarding.publishing.mirrorBlossom')}
-                  </dt>
-                  <dd className="break-all">
-                    {checked.config.mirror.blossom.join(', ') ||
-                      t('studio.onboarding.summary.none')}
-                  </dd>
-                  <dt className="text-muted-foreground">
-                    {t('studio.instance.profileRelaysTitle')}
-                  </dt>
-                  <dd className="break-all">
-                    {[
-                      ...new Set([...DEFAULT_PROFILE_RELAYS, ...checked.config.profileRelays]),
-                    ].join(', ')}
-                  </dd>
-                </>
-              )}
               <dt className="text-muted-foreground">{t('studio.appearance.title')}</dt>
               <dd>{title}</dd>
               {tagline.trim() && (

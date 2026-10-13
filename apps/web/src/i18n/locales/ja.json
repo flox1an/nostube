@@ -887,7 +887,9 @@
       "following": "フォロー中（{{count}}）",
       "noFollowing": "nostube で誰もフォローしていません。",
       "showMore": "もっと表示",
-      "showLess": "折りたたむ"
+      "showLess": "折りたたむ",
+      "nip05Unresolved": "名前を解決できませんでした",
+      "nip05Verified": "認証済みのNostrアドレス: {{nip05}}"
     },
     "subscriptions": {
       "emptyState": "作者をフォローしてここに動画を表示しましょう。",

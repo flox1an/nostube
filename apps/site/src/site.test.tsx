@@ -52,6 +52,7 @@ const config: InstanceConfig = {
     links: DEFAULT_SITE_LINKS,
     pages: noSitePages(),
   },
+  reach: 'private',
 }
 
 // The fake events carry no valid signature, so the store must not verify them.

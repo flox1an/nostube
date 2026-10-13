@@ -903,7 +903,9 @@
       "following": "Following ({{count}})",
       "noFollowing": "Not following anyone on nostube.",
       "showMore": "Show more",
-      "showLess": "Show less"
+      "showLess": "Show less",
+      "nip05Unresolved": "Name could not be resolved",
+      "nip05Verified": "Verified Nostr address: {{nip05}}"
     },
     "subscriptions": {
       "emptyState": "Follow some authors to see their videos here.",

@@ -4,8 +4,7 @@
  *
  * @see NIP-46 appendix: https://github.com/nostr-protocol/nips/blob/master/46.md
  */
-
-const NIP05_REGEX = /^(?:([^@]+)@)?([^\s]+)$/
+import { fetchNostrJson, parseNip05 } from './nip05'
 
 interface Nip05BunkerResult {
   pubkey: string
@@ -13,52 +12,14 @@ interface Nip05BunkerResult {
   bunkerUri: string
 }
 
-interface NostrJsonResponse {
-  names?: Record<string, string>
-  relays?: Record<string, string[]>
-  nip46?: {
-    relays?: string[]
-    nostrconnect_url?: string
-  }
-}
-
 export function isNip05(value: string): boolean {
   if (value.startsWith('bunker://')) return false
   // user@domain or just domain.tld (name defaults to _)
-  if (value.includes('@')) return NIP05_REGEX.test(value)
-  return value.includes('.') && NIP05_REGEX.test(value)
+  return (value.includes('@') || value.includes('.')) && parseNip05(value) !== null
 }
 
 export async function resolveNip05ToBunkerUri(nip05: string): Promise<Nip05BunkerResult> {
-  const match = nip05.match(NIP05_REGEX)
-  if (!match) {
-    throw new Error('Invalid NIP-05 address format')
-  }
-
-  const name = match[1] || '_'
-  const domain = match[2]
-
-  const url = `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(name)}`
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      headers: { Accept: 'application/json' },
-    })
-  } catch {
-    throw new Error(`Failed to reach ${domain} for NIP-05 lookup`)
-  }
-
-  if (!response.ok) {
-    throw new Error(`NIP-05 lookup failed: ${response.status} from ${domain}`)
-  }
-
-  let data: NostrJsonResponse
-  try {
-    data = await response.json()
-  } catch {
-    throw new Error(`Invalid JSON response from ${domain}`)
-  }
+  const { name, domain, data } = await fetchNostrJson(nip05)
 
   const pubkey = data.names?.[name]
   if (!pubkey) {

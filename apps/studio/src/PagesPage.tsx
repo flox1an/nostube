@@ -130,7 +130,8 @@ function PageCard({
 /** The optional about, imprint and privacy pages of the site, one text per language. */
 export function PagesPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
-  // The standard text names mandatory public defaults plus the Instance page's additional relays.
+  // The standard text follows the reach; in public it names mandatory public defaults plus the
+  // Advanced page's profile relays.
   const profileRelays = draft.profileRelaysText
     .split('\n')
     .map(line => line.trim())
@@ -143,7 +144,9 @@ export function PagesPage({ draft, update }: PageProps) {
           key={kind}
           kind={kind}
           texts={draft.pages[kind]}
-          standard={kind === 'privacy' ? lng => privacyPolicy(lng, profileRelays) : undefined}
+          standard={
+            kind === 'privacy' ? lng => privacyPolicy(lng, draft.reach, profileRelays) : undefined
+          }
           onChange={texts => update({ pages: { ...draft.pages, [kind]: texts } })}
         />
       ))}

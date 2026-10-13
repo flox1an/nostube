@@ -386,7 +386,7 @@ Quellen: \[Runtimeausgabe\](/path/to/nostube/server/standalone.ts:6), \[Appdefau
 
 „Eine URL konfigurierbar machen“ genügt nicht, wenn ein leerer Wert wieder einen zentralen Default aktiviert. Der Offline-Trace muss diese unsichtbaren Rückwege nachweisen. Die derzeitige \[browserorientierte ADR\](/path/to/nostube/docs/adr/[0002-browser-based-transcoding.md](http://0002-browser-based-transcoding.md)) ist mit einem expliziten Creator-Serverprofil abzugleichen; keine stillschweigende Umkehr der Produktentscheidung.
 
-Stand (Oktober 2026): Site, Videoseite und Embed einer Instanz mit `profile_relays = []` stellen keine Anfrage an einen fremden Host mehr (geprüft mit `apps/server/scripts/check-local-profile.mjs`, Server-ADR 0008). Die Profilsuche für angemeldete Besucher bleibt standardmäßig öffentlich (`purplepag.es`, `index.hzrd149.com`); „Nur lokal“ im Studio leert die Liste. Der Embed-Player der Instanz nutzt nur deren Relays und lädt kein externes Preset.
+Stand (Oktober 2026): Eine Instanz mit Reichweite „Privat“ (`reach = "private"`, Standard, Server-ADR 0012) stellt auf Site, Videoseite und Embed keine Anfrage an einen fremden Host, auch nicht für das Profil angemeldeter Besucher (geprüft mit `apps/server/scripts/check-local-profile.mjs`). Erst „Öffentlich“ veröffentlicht Kanalprofil und Relay-Liste bei den Profil-Relays (`purplepag.es`, `index.hzrd149.com`) und schaltet die öffentliche Profilsuche für Besucher ein (Server-ADR 0008). Der Embed-Player der Instanz nutzt nur deren Relays und lädt kein externes Preset.
 
 ### Lokale Mehrfeldsuche und vollständiger Videokatalog
 

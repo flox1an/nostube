@@ -1,0 +1,22 @@
+# Reach: a private instance connects to nobody, a public one announces its channel
+
+> **Status:** amends ADR 0008. Its mandatory public visitor lookup now holds only in public reach.
+
+ADR 0008 made the signed-in visitor's identity lookup at public indexers mandatory, so no instance could promise zero internet traffic. Owners who run an instance for family, a club or a LAN want exactly that promise; owners who publish want the opposite, other Nostr apps finding the channel. One switch decides it: **Reach** (Studio: "Privat / Öffentlich").
+
+**`reach = "private" | "public"` in `config.toml`.** Absent means `private`, also for config files from before the field. The studio edits it as `config.reach` (`GET`/`PUT /api/admin/config`) and is told `canBePublic` next to `origin` and `tls`. Public needs a relay URL the network can reach: `canBePublic` is false for the local-ca TLS mode, an origin host ending in `.local` and an IP address origin. The server refuses `reach = "public"` then, in a `PUT` and when loading the file. Reach applies while running (ADR 0010), no restart.
+
+**Private: no connection to the outside.** The only exception is the `[mirror]` targets the owner typed in (ADR 0009); the outbox keeps copying there in both reaches. The server enforces this in the public config: `videoSources` and `interactionRelays` are only the instance relay (`wss://<origin authority>`) and `profileRelays` is empty. The stored lists stay as configured and the studio shows them, so switching to public and back loses nothing. Clients obey the lists they get; the site additionally skips the visitor identity lookup at indexers (`/api/config` carries `reach`). The server signs no kind 10002 and sends nothing to the indexers.
+
+**Public: the channel is announced.** With the managed key (ADR 0007) the server also signs a NIP-65 relay list (kind 10002): `["r", <instance relay>]` without marker (read and write) and `["r", <url>, "write"]` per `[mirror]` relay, instance first, without duplicates. Like the derived profile it is rebuilt at startup, after a config applied while running and after a branding change, republished only when its tags change, always strictly newer than the stored one. The outbox delivers the channel's current kinds 0 and 10002, and only those, to the `profile_relays` (default `wss://purplepag.es`, `wss://index.hzrd149.com`) through the same queue and retries as the mirror (no second send path). The site looks signed-in visitors up at the indexers as ADR 0008 describes.
+
+**NIP-05 in both reaches.** `GET /.well-known/nostr.json` (with or without `?name=`) answers `{"names":{"_":<hex>},"relays":{<hex>:[...]}}` with `Access-Control-Allow-Origin: *`. The key is the managed key when the server holds one, else the first displayed creator (own identity); without either, or for any name but `_`, the answer is `{"names":{}}`. `relays` is the instance relay in private reach and the kind 10002 list in public reach. The derived profile carries `nip05: "_@<origin host>"` in both reaches. In own identity the server signs nothing: reach only changes what the public config allows and what the site looks up.
+
+**Privacy tradeoffs.** Public cannot be fully taken back: indexers and their copies keep the profile and the relay list, and the relay list publishes the mirror relay URLs. Switching back to private stops new deliveries (pending indexer jobs wait and are sent only if the instance becomes public again), but the server makes **no deletion attempts**: the stored kind 10002 stays as it is, and a NIP-09 deletion would neither reach every copy nor be honoured by every indexer. In public reach the indexers see the visitor's IP address and public key (ADR 0008). In private reach the price is that a signed-in visitor sees only what the instance relay holds about them.
+
+## Considered Options
+
+- **Keep the mandatory visitor lookup (ADR 0008) and only add the announcement:** rejected; it leaves no way to promise a private instance.
+- **Rewrite the stored relay lists when switching to private:** rejected; enforcing them in the public config keeps the owner's lists for the way back.
+- **Delete the published profile and relay list when switching back to private:** rejected; deletion is not reliable on the network and would only suggest a revocability that does not exist.
+- **A separate sender for the indexers:** rejected; the outbox already has the queue, retries and studio status.

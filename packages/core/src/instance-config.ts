@@ -126,6 +126,13 @@ export const DEFAULT_BLOSSOM_SERVERS = [
   'https://almond.slidestr.net',
 ]
 
+/**
+ * Reach (nostube-server ADR 0012): `private` connects to no one (the server enforces the relay
+ * lists it sends), `public` publishes the profile and relay list into the Nostr network.
+ */
+export const REACHES = ['private', 'public'] as const
+export type Reach = (typeof REACHES)[number]
+
 export interface InstanceConfig {
   version: 1
   revision: number
@@ -142,6 +149,8 @@ export interface InstanceConfig {
   profileRelays: string[]
   search: InstanceSearch
   site: InstanceSite
+  /** Optional on the wire (absent: `private`). */
+  reach: Reach
 }
 
 export type ParseResult =
@@ -223,8 +232,8 @@ export const isHiddenVideoRef = (v: unknown): v is string =>
   typeof v === 'string' && HIDDEN_VIDEO.test(v)
 
 /**
- * Strict v1 validation. Missing never means "use the app default" (the one exception is
- * `profileRelays`, newer than the contract); unknown fields are ignored.
+ * Strict v1 validation. Missing never means "use the app default" (the exceptions are
+ * `profileRelays` and `reach`, newer than the contract); unknown fields are ignored.
  */
 export function parseInstanceConfig(json: unknown): ParseResult {
   if (json === null || typeof json !== 'object' || Array.isArray(json)) {
@@ -255,6 +264,8 @@ export function parseInstanceConfig(json: unknown): ParseResult {
   // Optional (nostube-server ADR 0008): absent keeps the defaults, a present value must be valid.
   if ('profileRelays' in c && !(Array.isArray(c.profileRelays) && c.profileRelays.every(isWs)))
     e.push('profileRelays must be a list of ws(s):// relay URLs')
+  if ('reach' in c && !REACHES.includes(c.reach as Reach))
+    e.push(`reach must be one of ${REACHES.join(', ')}`)
   if ('search' in c) {
     const s = c.search as { mode?: unknown } | null
     if (!s || typeof s !== 'object' || !['off', 'local'].includes(s.mode as string))
@@ -314,6 +325,7 @@ export function parseInstanceConfig(json: unknown): ParseResult {
           BRANDING_SLOTS.filter(s => isBrandingUrl(s, site[s])).map(s => [s, site[s]])
         ),
       },
+      reach: (c.reach as Reach | undefined) ?? 'private',
     },
   }
 }

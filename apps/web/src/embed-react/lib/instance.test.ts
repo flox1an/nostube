@@ -20,6 +20,7 @@ const config = (accent = '#0d9488'): InstanceConfig => ({
     links: DEFAULT_SITE_LINKS,
     pages: noSitePages(),
   },
+  reach: 'private',
 })
 const answer =
   (body: unknown, status = 200) =>

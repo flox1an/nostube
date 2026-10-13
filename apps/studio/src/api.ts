@@ -1,5 +1,5 @@
 import type { NostrEvent } from 'nostr-tools'
-import type { BrandingSlot, InstanceSite } from '@nostube/core/instance-config'
+import type { BrandingSlot, InstanceSite, Reach } from '@nostube/core/instance-config'
 import i18n from './i18n'
 
 export type SearchConfig = { mode: 'off' } | { mode: 'local' }
@@ -9,9 +9,10 @@ export interface AdminConfig {
   title: string
   creators: string[]
   allowedWriters: string[]
+  /** The lists below are kept as stored; in `private` the server sends only its own relay. */
   videoSources: string[]
   interactionRelays: string[]
-  /** Additional visitor profile lookup relays; empty adds none to the mandatory public defaults. */
+  /** Visitor profile lookups and, in `public`, where the managed key's kind 0 and 10002 go. */
   profileRelays: string[]
   /** Where the outbox copies this instance's own events and blobs; both empty = off. */
   mirror: { relays: string[]; blossom: string[] }
@@ -19,6 +20,8 @@ export interface AdminConfig {
   storage: { quotaGib: number; freeSpaceReserveGib: number }
   /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public). */
   site: InstanceSite & { lightning?: string }
+  /** `private`: connects to no one but the mirror targets; `public`: published into Nostr (ADR 0012). */
+  reach: Reach
 }
 
 export interface AdminState {
@@ -29,6 +32,8 @@ export interface AdminState {
   tlsMode: 'local-ca' | 'proxy'
   bootId: string
   nostrPubkey: string | null
+  /** False when the origin is not publicly reachable (local CA, `.local` host, IP address). */
+  canBePublic: boolean
   config: AdminConfig
   /** The uploaded logo, favicon and banner (their URLs), null where none is set. */
   branding: Record<BrandingSlot, string | null>

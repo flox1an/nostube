@@ -2,19 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  DEFAULT_BLOSSOM_SERVERS,
   DEFAULT_PROFILE_RELAYS,
   DEFAULT_SITE_LINKS,
-  NETWORK_MIRROR_RELAYS,
   noSitePages,
 } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
-import {
-  identityChoices,
-  needsOnboarding,
-  publishingPreset,
-  wizardConfig,
-} from './onboarding-config'
+import { identityChoices, needsOnboarding, wizardConfig } from './onboarding-config'
 import { Onboarding } from './OnboardingWizard'
 import { SignerProvider } from './signer-context'
 import i18n from './i18n'
@@ -22,13 +15,14 @@ import i18n from './i18n'
 const OWN = 'c'.repeat(64)
 const MANAGED = 'b'.repeat(64)
 
-const fresh = (): AdminState => ({
+const fresh = (canBePublic = true): AdminState => ({
   revision: 1,
   origin: 'https://videos.example.org',
   tls: 'proxy',
   tlsMode: 'proxy',
   bootId: 'b1',
   nostrPubkey: null,
+  canBePublic,
   branding: { logo: null, favicon: null, banner: null },
   config: {
     title: 'My videos',
@@ -37,6 +31,7 @@ const fresh = (): AdminState => ({
     videoSources: ['wss://videos.example.org'],
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: DEFAULT_PROFILE_RELAYS,
+    reach: 'private',
     mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
@@ -140,7 +135,7 @@ const click = async (name: string | RegExp) => {
 
 const continueThrough = async () => {
   await click('Next') // identity -> publishing
-  await click(/Only on my site/) // a tile, no preselection
+  await click(/^Private/) // a tile, no preselection
   await click('Next') // publishing -> site
   await click('Next') // site -> summary
 }
@@ -158,59 +153,37 @@ describe('onboarding config', () => {
     expect(identityChoices({ extension: true, managedKey: true })).toEqual(['channel'])
   })
 
-  it('builds the local config: own key everywhere, nothing mirrored', () => {
+  it('builds the private config: own key everywhere, the lists as they were', () => {
     const base = fresh().config
-    const result = wizardConfig(
-      base,
-      {
-        identity: 'own',
-        title: 'My videos',
-        tagline: '',
-        ...publishingPreset('local'),
-      },
-      OWN
-    )
+    const result = wizardConfig(base, { reach: 'private', title: 'My videos', tagline: '' }, OWN)
     expect(result.errors).toEqual([])
     expect(result.config).toMatchObject({
       creators: [OWN],
       allowedWriters: [OWN],
+      reach: 'private',
       mirror: { relays: [], blossom: [] },
-      profileRelays: [],
+      profileRelays: DEFAULT_PROFILE_RELAYS,
       title: 'My videos',
     })
   })
 
-  it('builds the network config and sets Blossom mirrors only in channel identity', () => {
+  it('builds the public config by setting the reach alone', () => {
     const base = fresh().config
-    const choices = { title: 'T', tagline: '', ...publishingPreset('network') }
-    const channel = wizardConfig(base, { identity: 'channel', ...choices }, MANAGED)
-    expect(channel.errors).toEqual([])
-    expect(channel.config).toMatchObject({
+    const result = wizardConfig(base, { reach: 'public', title: 'T', tagline: '' }, MANAGED)
+    expect(result.errors).toEqual([])
+    expect(result.config).toMatchObject({
       creators: [MANAGED],
       allowedWriters: [MANAGED],
+      reach: 'public',
+      videoSources: base.videoSources,
+      interactionRelays: base.interactionRelays,
       profileRelays: DEFAULT_PROFILE_RELAYS,
-      mirror: { relays: NETWORK_MIRROR_RELAYS, blossom: DEFAULT_BLOSSOM_SERVERS },
-    })
-
-    const own = wizardConfig(base, { identity: 'own', ...choices }, OWN)
-    expect(own.errors).toEqual([])
-    expect(own.config).toMatchObject({
-      profileRelays: DEFAULT_PROFILE_RELAYS,
-      mirror: { relays: NETWORK_MIRROR_RELAYS, blossom: [] },
+      mirror: { relays: [], blossom: [] },
     })
   })
 
   it('keeps the site texts out of the key lists when nothing is chosen', () => {
-    const result = wizardConfig(
-      fresh().config,
-      {
-        identity: 'channel',
-        title: 'T',
-        tagline: '',
-        ...publishingPreset('local'),
-      },
-      null
-    )
+    const result = wizardConfig(fresh().config, { reach: 'private', title: 'T', tagline: '' }, null)
     expect(result.errors).toEqual([])
     expect(result.config!.creators).toEqual([])
   })
@@ -227,14 +200,15 @@ describe('Onboarding wizard', () => {
     fireEvent.click(await findLabel('Own identity'))
     await waitFor(() => expect(extension.getPublicKey).toHaveBeenCalled())
     await continueThrough()
-    expect(screen.getByText(DEFAULT_PROFILE_RELAYS.join(', '))).toBeTruthy()
+    expect(screen.getByText('Private')).toBeTruthy()
     await click('Finish')
 
     await waitFor(() => expect(saved).toHaveLength(1))
     expect(saved[0]).toMatchObject({
       creators: [OWN],
       allowedWriters: [OWN],
-      profileRelays: [],
+      profileRelays: DEFAULT_PROFILE_RELAYS,
+      reach: 'private',
     })
     // The extension key becomes the login key too.
     expect(fetch.mock.calls.some(([url]) => url === '/admin/bind-nostr')).toBe(true)
@@ -247,23 +221,38 @@ describe('Onboarding wizard', () => {
     expect(profile.publish).not.toHaveBeenCalled()
   })
 
-  it('summarizes mandatory defaults and saves only the edited additional relays', async () => {
+  it('asks before it takes Public and saves the reach', async () => {
     const { saved } = serve({ mode: 'none', pubkey: null })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderWizard(fresh())
     fireEvent.click(await findLabel('Channel identity'))
     await click('Next')
-    await click(/Only on my site/)
-    fireEvent.click(screen.getByText('Advanced'))
-    const extras = [...DEFAULT_PROFILE_RELAYS, 'wss://profiles.example']
-    fireEvent.change(screen.getByLabelText('Additional profile lookup relays'), {
-      target: { value: extras.join('\n') },
-    })
+    await click(/^Public/)
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/cannot be fully undone/))
+    expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true)
+    confirm.mockReturnValue(true)
+    await click(/^Public/)
     await click('Next')
     await click('Next')
-    expect(screen.getByText(extras.join(', '))).toBeTruthy()
+    expect(screen.getByText('Public')).toBeTruthy()
     await click('Finish')
     await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({ profileRelays: extras })
+    expect(saved[0]).toMatchObject({ reach: 'public', profileRelays: DEFAULT_PROFILE_RELAYS })
+    confirm.mockRestore()
+  })
+
+  it('locks Public and takes Private when the address is not publicly reachable', async () => {
+    serve({ mode: 'none', pubkey: null })
+    renderWizard(fresh(false))
+    fireEvent.click(await findLabel('Channel identity'))
+    await click('Next')
+    const publicTile = screen.getByRole('button', { name: /^Public/ }) as HTMLButtonElement
+    expect(publicTile.disabled).toBe(true)
+    expect(screen.getByRole('button', { name: /^Private/ }).getAttribute('aria-pressed')).toBe(
+      'true'
+    )
+    expect(screen.getByText(/Public needs an address the Nostr network can reach/)).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('offers only the channel identity without an extension, taken without a click', async () => {
@@ -276,7 +265,7 @@ describe('Onboarding wizard', () => {
     const tile = screen.getByRole('button', { name: /Channel identity/ })
     expect(tile.getAttribute('aria-pressed')).toBe('true')
     await click('Next')
-    await click(/Only on my site/)
+    await click(/^Private/)
     await click('Next')
     // The site step points at the Appearance page in words: it is not reachable yet.
     expect(await screen.findByText(/on the Appearance page/)).toBeTruthy()
@@ -338,7 +327,7 @@ describe('Onboarding wizard', () => {
     renderWizard(fresh())
     fireEvent.click(await findLabel('Channel identity'))
     await click('Next')
-    await click(/Also on the Nostr network/)
+    await click(/^Private/)
     await click('Back')
     expect(saved).toHaveLength(0)
     // Still only the signer status was read; the config itself was never written.

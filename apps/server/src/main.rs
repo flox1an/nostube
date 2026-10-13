@@ -42,6 +42,8 @@ struct App {
     admin: Option<Router>,
     /// Queues stored blobs for the mirror Blossom servers (ADR 0009).
     outbox: outbox::Outbox,
+    /// The managed key, if the server holds one: the NIP-05 name `_` (ADR 0012).
+    signer: signer::Shared,
 }
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -338,8 +340,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     let worker = outbox::spawn(outbox.clone(), signer.clone());
     // Restarts (and the first start with a managed key) publish a profile the settings changed.
     {
-        let (relay, branding) = (relay.clone(), branding.clone());
-        tokio::spawn(async move { profile::sync(&relay, &branding, &signer).await });
+        let (relay, branding, outbox, signer) = (relay.clone(), branding.clone(), outbox.clone(), signer.clone());
+        tokio::spawn(async move { profile::sync(&relay, &branding, &outbox, &signer).await });
     }
     // The first scan releases anything that became due while the server was down.
     let releaser = schedule::spawn(outbox.clone(), relay.clone());
@@ -351,6 +353,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         boot_id,
         admin,
         outbox,
+        signer,
     };
 
     match serving {
@@ -419,7 +422,8 @@ fn revision(value: Option<String>) -> Option<String> {
 }
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
-/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), `sitemap.xml`, `feed.xml`,
+/// Blossom, branding images (`/branding/*`), NIP-05 (`/.well-known/nostr.json`), the studio
+/// (`/studio/*`), `sitemap.xml`, `feed.xml`,
 /// `atom.xml` and `robots.txt`, root files, app shell (with the head for its route).
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
@@ -499,6 +503,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if let Some(slot) = file.strip_prefix("branding/") {
         return app.branding.serve(slot, req.uri().query(), req.headers());
     }
+    if path == "/.well-known/nostr.json" {
+        return nostr_json(&app, req.uri().query());
+    }
     if file == "studio" || file.starts_with("studio/") {
         return studio_asset(file);
     }
@@ -519,6 +526,21 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let shell = std::str::from_utf8(&shell.data).expect("index.html is UTF-8");
     let html = seo::shell(&app.relay, &app.branding.public_config(), &path, shell).await;
     ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], html).into_response()
+}
+
+/// NIP-05 for both identities (ADR 0012); any web client may read it, hence the `*`.
+fn nostr_json(app: &App, query: Option<&str>) -> Response {
+    let name = query.and_then(|q| q.split('&').find_map(|pair| pair.strip_prefix("name=")));
+    let public = serde_json::from_slice(&app.branding.public_config()).unwrap_or_default();
+    let managed = match &*app.signer.lock() {
+        Some(Ok(keys)) => Some(keys.public_key()),
+        _ => None,
+    };
+    (
+        [(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")],
+        Json(profile::nostr_json(&public, managed, app.relay.mirror_relays(), name)),
+    )
+        .into_response()
 }
 
 /// The studio is its own single-page app under `/studio/`: files by path, the app shell for every
@@ -664,7 +686,7 @@ mod tests {
         let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
         let app = App {
             blossom: almond::create_app(state.clone()), relay, branding: Arc::new(branding::Branding::open(&dir, public)),
-            boot_id: "test".into(), admin: None, outbox: outbox.clone(),
+            boot_id: "test".into(), admin: None, outbox: outbox.clone(), signer: Default::default(),
         };
         let upload = |bytes: &'static [u8], mirrored: bool| {
             let hash = format!("{:x}", sha2::Sha256::digest(bytes));
@@ -705,6 +727,13 @@ mod tests {
             .unwrap();
         let req = Request::builder().method(Method::PUT).uri("/report").body(Body::from(report.as_json())).unwrap();
         assert_eq!(dispatch(State(app.clone()), req).await.status(), StatusCode::ACCEPTED);
+        // NIP-05 is readable cross-origin; no creator and no managed key: no names.
+        let req = Request::builder().uri("/.well-known/nostr.json?name=_").body(Body::empty()).unwrap();
+        let res = dispatch(State(app.clone()), req).await;
+        assert_eq!(res.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN], "*");
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "application/json");
+        let body = axum::body::to_bytes(res.into_body(), 1 << 10).await.unwrap();
+        assert_eq!(serde_json::from_slice::<serde_json::Value>(&body).unwrap(), serde_json::json!({ "names": {} }));
         // The dispatch seam is identical for a successful PUT /mirror descriptor. Keep
         // this boundary test offline: Almond's fetching/SSRF policy is not replaced here.
         conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash]).unwrap();

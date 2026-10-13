@@ -8,127 +8,69 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
-import { Textarea } from '@nostube/widgets/components/textarea'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import type { AdminState } from './api'
-import type { Draft } from './draft'
 import { Field } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { KeyList } from './KeyList'
-import { MirrorCard } from './MirrorCard'
+import { ReachChoice } from './ReachChoice'
+import { useSigner } from './signer-context'
 import type { PageProps } from './AppearancePage'
 
-/** Relay and server lists most owners never touch, folded away. */
-function Advanced({ children }: { children: ReactNode }) {
-  const { t } = useTranslation()
-  return (
-    <details className="text-sm">
-      <summary className="cursor-pointer text-muted-foreground">
-        {t('studio.instance.advanced')}
-      </summary>
-      <div className="space-y-4 pt-3">{children}</div>
-    </details>
-  )
-}
-
-type ListKey =
-  | 'videoSourcesText'
-  | 'interactionRelaysText'
-  | 'profileRelaysText'
-  | 'mirrorRelaysText'
-  | 'mirrorBlossomText'
-
-/** Whose videos the site shows, where they come from, who may write, search and storage. */
-export function InstancePage({ draft, update, state }: PageProps & { state: AdminState }) {
-  const { t } = useTranslation()
-  // The keys' profiles come through the instance client; without it the keys show bare.
+/** Key lists show the keys' profiles through the instance client; without it the keys show bare. */
+export function WithKeyProfiles({ children }: { children: ReactNode }) {
   const [booted, setBooted] = useState<InstanceClient | null>(null)
   useEffect(() => {
     bootInstanceClient().then(setBooted, () => {})
   }, [])
-
-  /** A list edited one entry per line; `name` names its label and hint (`studio.instance.*`). */
-  const list = (id: string, key: ListKey, name: string) => (
-    <Field id={id} label={t(`studio.instance.${name}`)} hint={t(`studio.instance.${name}Hint`)}>
-      <Textarea
-        id={id}
-        rows={3}
-        className="font-mono text-xs"
-        spellCheck={false}
-        value={draft[key]}
-        onChange={e => update({ [key]: e.target.value } as Partial<Draft>)}
-      />
-    </Field>
+  return booted ? (
+    <InstanceProviders client={booted.client} config={booted.config}>
+      {children}
+    </InstanceProviders>
+  ) : (
+    <>{children}</>
   )
+}
 
-  const keyLists = (
-    <>
-      <KeyList
-        id="creators"
-        label={t('studio.instance.creators')}
-        hint={t('studio.instance.creatorsHint')}
-        firstLabel={t('studio.instance.startPage')}
-        text={draft.creatorsText}
-        onChange={creatorsText => update({ creatorsText })}
-      />
-      <KeyList
-        id="writers"
-        label={t('studio.instance.writers')}
-        hint={t('studio.instance.writersHint')}
-        text={draft.writersText}
-        onChange={writersText => update({ writersText })}
-      />
-    </>
-  )
+/** The settings every owner meets: reach, whose videos the site shows, search and storage. */
+export function InstancePage({ draft, update, state }: PageProps & { state: AdminState }) {
+  const { t } = useTranslation()
+  const { mode } = useSigner()
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          <CardTitle>{t('studio.reach.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReachChoice
+            reach={draft.reach}
+            onChange={reach => update({ reach })}
+            canBePublic={state.canBePublic}
+            own={mode === 'own'}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>{t('studio.instance.creatorsTitle')}</CardTitle>
           <CardDescription>{t('studio.instance.creatorsDescription')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {booted ? (
-            <InstanceProviders client={booted.client} config={booted.config}>
-              {keyLists}
-            </InstanceProviders>
-          ) : (
-            keyLists
-          )}
-          <Advanced>
-            {list('video-sources', 'videoSourcesText', 'videoSources')}
-            {list('interaction-relays', 'interactionRelaysText', 'interactionRelays')}
-          </Advanced>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.instance.profileRelaysTitle')}</CardTitle>
-          <CardDescription>{t('studio.instance.profileRelaysDescription')}</CardDescription>
-        </CardHeader>
         <CardContent>
-          <Advanced>{list('profile-relays', 'profileRelaysText', 'profileRelays')}</Advanced>
+          <WithKeyProfiles>
+            <KeyList
+              id="creators"
+              label={t('studio.instance.creators')}
+              hint={t('studio.instance.creatorsHint')}
+              firstLabel={t('studio.instance.startPage')}
+              text={draft.creatorsText}
+              onChange={creatorsText => update({ creatorsText })}
+            />
+          </WithKeyProfiles>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.instance.mirrorTitle')}</CardTitle>
-          <CardDescription>{t('studio.instance.mirrorDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Advanced>
-            {list('mirror-relays', 'mirrorRelaysText', 'mirrorRelays')}
-            {list('mirror-blossom', 'mirrorBlossomText', 'mirrorBlossom')}
-          </Advanced>
-        </CardContent>
-      </Card>
-
-      {(state.config.mirror.relays.length > 0 || state.config.mirror.blossom.length > 0) && (
-        <MirrorCard />
-      )}
 
       <Card>
         <CardHeader>

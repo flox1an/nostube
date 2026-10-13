@@ -2594,7 +2594,7 @@ dependencies = [
 
 [[package]]
 name = "nostube-server"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "almond",
  "argon2",

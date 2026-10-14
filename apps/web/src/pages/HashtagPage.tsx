@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
-import { useStableRelays } from '@/hooks'
+import { useReadRelays } from '@/hooks'
 import { useHashtagVideos } from '@/hooks/useHashtagVideos'
 import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@nostube/core/video-types'
@@ -11,7 +11,7 @@ import { appTitle, pageTitle } from '@nostube/core/instance-config'
 export function HashtagPage() {
   const { t } = useTranslation()
   const { tag } = useParams<{ tag: string }>()
-  const relays = useStableRelays()
+  const relays = useReadRelays()
 
   // Memoize videoKinds to prevent infinite re-renders
   const videoKinds = useMemo(() => getKindsForType('all'), [])

@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
-import { useStableRelays } from '@/hooks'
+import { useReadRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useCategoryVideos } from '@/hooks/useCategoryVideos'
 import { useEffect, useMemo } from 'react'
@@ -14,7 +14,7 @@ import { appTitle, pageTitle } from '@nostube/core/instance-config'
 export function CategoryPage() {
   const { t } = useTranslation()
   const { category: categorySlug } = useParams<{ category: string }>()
-  const relays = useStableRelays()
+  const relays = useReadRelays()
   const { relayOverride, setRelayOverride } = useAppContext()
 
   const effectiveRelays = useMemo(

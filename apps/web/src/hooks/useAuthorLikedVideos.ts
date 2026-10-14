@@ -1,7 +1,7 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
-import { useStableRelays } from './useStableRelays'
+import { useReadRelays } from './useReadRelays'
 import { getKindsForType } from '@nostube/core/video-types'
 import { isUpvoteReaction } from './useEventStats'
 
@@ -16,7 +16,7 @@ const VIDEO_KINDS = new Set(getKindsForType('all'))
 export function useAuthorLikedVideos(pubkey: string | undefined) {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
-  const relays = useStableRelays()
+  const relays = useReadRelays()
   const [loadedPubkey, setLoadedPubkey] = useState<string | null>(null)
 
   // Use EventStore timeline to get author's reactions (kind 7) and zap requests (kind 9734)

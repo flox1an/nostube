@@ -5,7 +5,7 @@ import { Button } from '@nostube/widgets/components/button'
 import { Link } from 'react-router-dom'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
-import { useStableRelays, useContinueWatching, useSubscriptionsVideos } from '@/hooks'
+import { useReadRelays, useContinueWatching, useSubscriptionsVideos } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -70,7 +70,7 @@ export function HomePage() {
       document.title = appTitle()
     }
   }, [t])
-  const relays = useStableRelays()
+  const relays = useReadRelays()
 
   const effectiveRelays = useMemo(
     () => (relayOverride ? [relayOverride] : relays),

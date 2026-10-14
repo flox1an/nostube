@@ -2,7 +2,7 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
-import { useStableRelays } from '@/hooks'
+import { useReadRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -20,7 +20,7 @@ export function ShortsPage() {
       document.title = appTitle()
     }
   }, [t])
-  const relays = useStableRelays()
+  const relays = useReadRelays()
 
   const effectiveRelays = useMemo(
     () => (relayOverride ? [relayOverride] : relays),

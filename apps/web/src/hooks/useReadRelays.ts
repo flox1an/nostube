@@ -8,10 +8,12 @@ import { useAppContext } from './useAppContext'
 export function useReadRelays(): string[] {
   const { config } = useAppContext()
 
-  const configuredRelays = useMemo(
-    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
-    [config.relays]
-  )
+  // Content-stable: config updates rebuild the relays array, but the URLs usually
+  // stay the same — key on the URLs so callers get a stable reference.
+  const relayKey = config.relays
+    .filter(r => r.tags.includes('read'))
+    .map(r => r.url)
+    .join(',')
 
-  return configuredRelays
+  return useMemo(() => (relayKey ? relayKey.split(',') : []), [relayKey])
 }

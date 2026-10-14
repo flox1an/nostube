@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
-import { useFollowedAuthors, useStableRelays } from '@/hooks'
+import { useReadRelays } from '@/hooks/useReadRelays'
+import { useFollowSetContext } from '@/contexts/FollowSetContext'
 import { getKindsForType } from '@nostube/core/video-types'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { getTimelineLoader } from '@/nostr/core'
@@ -13,13 +14,12 @@ import type { VideoEvent } from '@nostube/core/video-event'
  * Used by the full Subscriptions page and the Home "From creators you follow" shelf.
  */
 export function useSubscriptionsVideos() {
-  const { data: followedProfiles = [] } = useFollowedAuthors()
-  const followedPubkeys = useMemo(
-    () => followedProfiles.map(profile => profile.pubkey),
-    [followedProfiles]
-  )
+  // Optimistic: falls back to the cached list so the timeline filter exists
+  // before the live kind 10020 lands.
+  const { optimisticFollowedPubkeys } = useFollowSetContext()
+  const followedPubkeys = optimisticFollowedPubkeys
 
-  const relays = useStableRelays()
+  const relays = useReadRelays()
   const { config } = useAppContext()
 
   // Stable key based on sorted pubkeys — only recreate loader when actual follows change

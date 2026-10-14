@@ -3,7 +3,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { List } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { useAppContext, useStableRelays } from '@/hooks'
+import { useAppContext, useReadRelays } from '@/hooks'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import type { ValidationStatus } from '@/hooks/usePlaylistValidation'
 import { processEvent } from '@nostube/core/video-event'
@@ -17,7 +17,7 @@ interface ThumbnailItemProps {
 function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
-  const relays = useStableRelays()
+  const relays = useReadRelays()
 
   // Subscribe to event changes reactively
   const event = use$(() => eventStore.event(videoId), [eventStore, videoId])

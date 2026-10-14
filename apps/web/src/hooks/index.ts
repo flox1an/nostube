@@ -36,7 +36,6 @@ export { useHasProfile } from './useHasProfile'
 export { useProfilePublish } from './useProfilePublish'
 export { useMutedPubkeys } from './useMutedPubkeys'
 export { useMuteUser } from './useMuteUser'
-export { useFollowedAuthors } from './useFollowedAuthors'
 export { useSubscriptionsVideos } from './useSubscriptionsVideos'
 export { useFollowSet } from './useFollowSet'
 export { useAuthorFollowing } from './useAuthorFollowing'
@@ -120,11 +119,9 @@ export { useSelectedPreset } from './useSelectedPreset'
 // ============================================================================
 export { useAppContext, useAppContextSafe } from './useAppContext'
 export { useNostrPublish } from './useNostrPublish'
-export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
+export { useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
 export { useReadRelays } from './useReadRelays'
-export { useWriteRelays } from './useWriteRelays'
 export { useUserRelays } from './useUserRelays'
-export { useStableRelays } from './useStableRelays'
 
 // ============================================================================
 // UI UTILITIES

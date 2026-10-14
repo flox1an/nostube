@@ -1212,18 +1212,6 @@
       "hint": "Gib die vollständige URL eines kompatiblen Servers ein"
     }
   },
-  "install": {
-    "title": "App installieren",
-    "install": "Installieren",
-    "dismiss": "Ausblenden",
-    "bannerText": "Installiere die App für Vollbild-Wiedergabe und einen schnelleren Start.",
-    "iosHint": "App installieren: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
-    "settingsDescription": "Installiere die App auf diesem Gerät, damit sie vom Home-Bildschirm startet und im Vollbild läuft.",
-    "iosDialogTitle": "Zum Home-Bildschirm",
-    "iosStep1": "Tippe in der Browser-Leiste auf „Teilen“.",
-    "iosStep2": "Scrolle nach unten und wähle „Zum Home-Bildschirm“.",
-    "iosStep3": "Tippe auf „Hinzufügen“."
-  },
   "languages": {
     "en": "Englisch",
     "es": "Spanisch",

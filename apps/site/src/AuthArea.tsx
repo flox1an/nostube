@@ -45,7 +45,8 @@ export function AuthArea({ client, relays }: { client: NostubeClient; relays: st
             name={name}
             className="h-7 w-7"
           />
-          {name}
+          {/* A phone shows the avatar only: the header row has no room for a long name. */}
+          <span className="sr-only sm:not-sr-only sm:max-w-40 sm:truncate">{name}</span>
         </span>
         <Button
           variant="ghost"
@@ -63,7 +64,7 @@ export function AuthArea({ client, relays }: { client: NostubeClient; relays: st
     <>
       <Button variant="outline" size="sm" className="gap-2" onClick={() => setAuthOpen(true)}>
         <LogIn className="h-4 w-4" />
-        {t('site.auth.signIn')}
+        <span className="sr-only sm:not-sr-only">{t('site.auth.signIn')}</span>
       </Button>
       <SiteAuthDialog
         isOpen={authOpen}

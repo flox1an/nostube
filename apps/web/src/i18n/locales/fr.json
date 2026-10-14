@@ -1212,18 +1212,6 @@
       "hint": "Entrez l'URL complète d'un serveur compatible"
     }
   },
-  "install": {
-    "title": "Installer l'application",
-    "install": "Installer",
-    "dismiss": "Masquer",
-    "bannerText": "Installez l'application pour une lecture en plein écran et un démarrage plus rapide.",
-    "iosHint": "Installer l'application : touchez Partager, puis « Sur l'écran d'accueil ».",
-    "settingsDescription": "Installez l'application sur cet appareil pour la lancer depuis l'écran d'accueil en plein écran.",
-    "iosDialogTitle": "Sur l'écran d'accueil",
-    "iosStep1": "Touchez le bouton Partager dans la barre du navigateur.",
-    "iosStep2": "Faites défiler et choisissez « Sur l'écran d'accueil ».",
-    "iosStep3": "Touchez « Ajouter »."
-  },
   "languages": {
     "en": "Anglais",
     "es": "Espagnol",

@@ -18,7 +18,7 @@ export function AgeConfirm({ onConfirm, onCancel }: AgeConfirmProps) {
         {t('site.ageGate.title')}
       </h2>
       <p className="text-sm text-muted-foreground">{t('site.ageGate.body')}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={onConfirm}

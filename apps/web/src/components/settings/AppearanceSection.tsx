@@ -13,9 +13,9 @@ import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-gr
 import { Label } from '@nostube/widgets/components/label'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
-import { useInstallState } from '@/hooks/useInstallState'
-import { getInstallMode, promptInstall } from '@/lib/install-prompt'
-import { IosInstallDialog } from '@/components/InstallHint'
+import { useInstallState } from '@nostube/widgets/hooks/useInstallState'
+import { getInstallMode, promptInstall } from '@nostube/widgets/install-prompt'
+import { IosInstallDialog } from '@nostube/widgets/components/InstallHint'
 
 export function AppearanceSection() {
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()

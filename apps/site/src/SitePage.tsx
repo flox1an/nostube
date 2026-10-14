@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate } from 'react-router-dom'
 import {
@@ -7,6 +8,9 @@ import {
   type SitePageKey,
 } from '@nostube/core/instance-config'
 import { RichTextContent } from '@nostube/widgets/components/RichTextContent'
+import { IosInstallDialog } from '@nostube/widgets/components/InstallHint'
+import { useInstallState } from '@nostube/widgets/hooks/useInstallState'
+import { getInstallMode, promptInstall } from '@nostube/widgets/install-prompt'
 import { siteLinks } from './site-links'
 
 /** The pages the admin wrote (and the text of each in the visitor's language). */
@@ -32,23 +36,36 @@ export function SitePage({ config, page }: { config: InstanceConfig; page: SiteP
   )
 }
 
-/** Links to the pages that exist; nothing at all when there are none. */
+/** Links to the pages that exist and an "Install app" entry; nothing at all when neither applies. */
 export function SiteFooter({ config }: { config: InstanceConfig }) {
   const { t } = useTranslation()
   const pages = usePages(config)
-  if (pages.length === 0) return null
+  const installMode = getInstallMode(useInstallState())
+  const [iosOpen, setIosOpen] = useState(false)
+  if (pages.length === 0 && !installMode) return null
   return (
-    <footer>
-      <nav
-        aria-label={t('site.pages.label')}
-        className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-4 text-sm text-muted-foreground"
-      >
-        {pages.map(({ page }) => (
-          <Link key={page} to={`/${page}`} className="hover:text-foreground hover:underline">
-            {t(`site.pages.${page}`)}
-          </Link>
-        ))}
-      </nav>
+    <footer className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-4 text-sm text-muted-foreground">
+      {pages.length > 0 && (
+        <nav aria-label={t('site.pages.label')} className="flex flex-wrap gap-x-4 gap-y-1">
+          {pages.map(({ page }) => (
+            <Link key={page} to={`/${page}`} className="hover:text-foreground hover:underline">
+              {t(`site.pages.${page}`)}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {installMode && (
+        <>
+          <button
+            type="button"
+            className="hover:text-foreground hover:underline"
+            onClick={() => (installMode === 'prompt' ? void promptInstall() : setIosOpen(true))}
+          >
+            {t('install.title')}
+          </button>
+          <IosInstallDialog open={iosOpen} onOpenChange={setIosOpen} />
+        </>
+      )}
     </footer>
   )
 }

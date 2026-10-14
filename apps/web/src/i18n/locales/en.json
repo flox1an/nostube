@@ -1228,18 +1228,6 @@
       "hint": "Enter the full URL of a compatible server"
     }
   },
-  "install": {
-    "title": "Install app",
-    "install": "Install",
-    "dismiss": "Dismiss",
-    "bannerText": "Install the app for full-screen playback and a faster start.",
-    "iosHint": "Install the app: tap Share, then “Add to Home Screen”.",
-    "settingsDescription": "Install the app on this device so it starts from the home screen and runs full screen.",
-    "iosDialogTitle": "Add to Home Screen",
-    "iosStep1": "Tap the Share button in the browser toolbar.",
-    "iosStep2": "Scroll down and choose “Add to Home Screen”.",
-    "iosStep3": "Tap “Add”."
-  },
   "languages": {
     "en": "English",
     "es": "Spanish",

@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useMatch } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AccountsContext, AccountsProvider } from 'applesauce-react/providers'
 import type { AccountManager } from 'applesauce-accounts'
 import type { NostubeClient } from '@nostube/core/client'
@@ -7,6 +8,8 @@ import { SITE_PAGES, type InstanceConfig } from '@nostube/core/instance-config'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
+import { InstallBanner } from '@nostube/widgets/components/InstallHint'
+import { OfflineBanner } from '@nostube/widgets/components/OfflineBanner'
 import { AuthArea } from './AuthArea'
 import { GridPage, SearchBox, SearchPage } from './GridPage'
 import { SiteFooter, SitePage } from './SitePage'
@@ -26,6 +29,8 @@ export function SiteHome({ client, config, accountManager }: SiteHomeProps) {
     <InstanceProviders client={client} config={config}>
       <AccountsProvider manager={accountManager}>
         <Site client={client} config={config} />
+        {/* For the offline banner's "Back online". */}
+        <Toaster theme="system" />
       </AccountsProvider>
     </InstanceProviders>
   )
@@ -74,7 +79,11 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
               className="h-16 w-auto max-w-[40vw] shrink-0 object-contain sm:max-w-xs"
             />
           ) : profile?.picture ? (
-            <img src={profile.picture} alt="" className="h-16 w-16 rounded-full object-cover" />
+            <img
+              src={profile.picture}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-full object-cover"
+            />
           ) : (
             <span
               aria-hidden
@@ -83,8 +92,8 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
               {[...config.title][0]?.toUpperCase()}
             </span>
           )}
-          <div>
-            <h1 className="text-2xl font-semibold">{config.title}</h1>
+          <div className="min-w-0">
+            <h1 className="break-words text-xl font-semibold sm:text-2xl">{config.title}</h1>
             {config.site.tagline && (
               <p className="text-sm text-muted-foreground">{config.site.tagline}</p>
             )}
@@ -95,6 +104,12 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
           <AuthArea client={client} relays={config.interactionRelays} />
         </div>
       </header>
+      {/* Edge to edge on a phone; gone (no gap) when neither shows. The install banner, like
+          the site banner, stays off video pages (the footer still offers installing). */}
+      <div className="-mx-4 empty:hidden sm:mx-0">
+        <OfflineBanner />
+        {!onVideoPage && <InstallBanner />}
+      </div>
       <Routes>
         <Route path="/" element={<GridPage config={config} gate={gate} />} />
         <Route path="/t/:tag" element={<GridPage config={config} gate={gate} />} />

@@ -14,6 +14,7 @@ import i18n from './i18n'
 import { INLINE_CONFIG_ID, loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
 import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
+import { startInstallPromptCapture } from '@nostube/widgets/install-prompt'
 
 // The real player needs a browser; the gate tests only need to see what it is given.
 vi.mock('@nostube/widgets/player', () => ({
@@ -226,6 +227,22 @@ describe('SiteHome', () => {
       renderSite(client, '/privacy', withPages)
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
       expect(screen.queryByRole('heading', { name: 'Privacy policy' })).toBeNull()
+    })
+
+    it('offers installing the app in the footer once the browser can', async () => {
+      startInstallPromptCapture()
+      const { unmount } = renderSite(client)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      expect(screen.queryByRole('button', { name: 'Install app' })).toBeNull()
+      unmount()
+
+      const prompt = vi.fn(() => Promise.resolve())
+      window.dispatchEvent(Object.assign(new Event('beforeinstallprompt'), { prompt }))
+      renderSite(client)
+      fireEvent.click(await screen.findByRole('button', { name: 'Install app' }))
+      expect(prompt).toHaveBeenCalledOnce()
+      // The prompt can be used once: the entry goes away.
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Install app' })).toBeNull())
     })
   })
 

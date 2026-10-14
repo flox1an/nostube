@@ -169,7 +169,7 @@ function ReportButton({
                 </p>
               )}
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t('site.report.cancel')}
               </Button>

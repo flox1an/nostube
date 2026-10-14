@@ -23,13 +23,15 @@ export function Breadcrumb({
       aria-label={t('site.breadcrumb.label')}
       className="flex min-w-0 items-center gap-2 text-sm"
     >
-      <Link to="/" className="flex shrink-0 items-center gap-2 font-medium hover:underline">
+      <Link to="/" className="flex min-w-0 items-center gap-2 font-medium hover:underline">
         {logo ? (
-          <img src={logo} alt="" className="h-6 w-auto max-w-24 object-contain" />
+          <img src={logo} alt="" className="h-6 w-auto max-w-24 shrink-0 object-contain" />
         ) : (
-          picture && <img src={picture} alt="" className="h-6 w-6 rounded-full object-cover" />
+          picture && (
+            <img src={picture} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+          )
         )}
-        {title}
+        <span className="truncate">{title}</span>
       </Link>
       {current !== undefined && (
         <>

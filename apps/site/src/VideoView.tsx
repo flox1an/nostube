@@ -201,7 +201,7 @@ function VideoDetails({
       </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h2 className="text-xl font-semibold">{video.title}</h2>
+          <h2 className="break-words text-xl font-semibold">{video.title}</h2>
           <p className="text-sm text-muted-foreground">
             {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
           </p>

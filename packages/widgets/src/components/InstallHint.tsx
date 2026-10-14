@@ -1,20 +1,14 @@
 import { Download, Share, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@nostube/widgets/components/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@nostube/widgets/components/dialog'
-import { useInstallState } from '@/hooks/useInstallState'
+import { Button } from './button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog'
+import { useInstallState } from '../hooks/useInstallState'
 import {
   dismissInstallBanner,
   getInstallMode,
   promptInstall,
   shouldShowInstallBanner,
-} from '@/lib/install-prompt'
+} from '../install-prompt'
 
 /** In-flow strip below the header: never overlaps the bottom nav or a player. */
 export function InstallBanner() {

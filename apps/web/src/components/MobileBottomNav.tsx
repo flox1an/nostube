@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useNavigationMenu } from '@/hooks/useNavigationMenu'
-import { useInstallState } from '@/hooks/useInstallState'
-import { getInstallMode, promptInstall } from '@/lib/install-prompt'
-import { IosInstallDialog } from '@/components/InstallHint'
+import { useInstallState } from '@nostube/widgets/hooks/useInstallState'
+import { getInstallMode, promptInstall } from '@nostube/widgets/install-prompt'
+import { IosInstallDialog } from '@nostube/widgets/components/InstallHint'
 
 export function MobileBottomNav() {
   const { t } = useTranslation()

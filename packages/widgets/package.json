@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./site-theme": "./src/site-theme.ts",
+    "./install-prompt": "./src/install-prompt.ts",
     "./cn": "./src/cn.ts",
     "./theme.css": "./src/theme.css",
     "./i18n": "./src/i18n/index.ts",
@@ -66,6 +67,7 @@
     "qrcode.react": "^4.2.0",
     "react-dropzone": "^20.1.1",
     "rxjs": "^7.8.2",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "zustand": "^5.0.15"
   },

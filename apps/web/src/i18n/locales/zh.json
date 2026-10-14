@@ -1212,18 +1212,6 @@
       "hint": "输入兼容服务器的完整 URL"
     }
   },
-  "install": {
-    "title": "安装应用",
-    "install": "安装",
-    "dismiss": "关闭",
-    "bannerText": "安装应用，享受全屏播放和更快的启动速度。",
-    "iosHint": "安装应用：点击“分享”，然后选择“添加到主屏幕”。",
-    "settingsDescription": "在此设备上安装应用，即可从主屏幕启动并全屏运行。",
-    "iosDialogTitle": "添加到主屏幕",
-    "iosStep1": "点击浏览器工具栏中的“分享”按钮。",
-    "iosStep2": "向下滚动并选择“添加到主屏幕”。",
-    "iosStep3": "点击“添加”。"
-  },
   "languages": {
     "en": "英语",
     "es": "西班牙语",

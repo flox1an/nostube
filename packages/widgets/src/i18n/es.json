@@ -244,5 +244,17 @@
       "downloadRawKey": "Descargar clave",
       "continue": "Continuar a nostube"
     }
+  },
+  "install": {
+    "title": "Instalar app",
+    "install": "Instalar",
+    "dismiss": "Ocultar",
+    "bannerText": "Instala la app para reproducir a pantalla completa y abrirla más rápido.",
+    "iosHint": "Instalar la app: toca Compartir y luego «Añadir a pantalla de inicio».",
+    "settingsDescription": "Instala la app en este dispositivo para abrirla desde la pantalla de inicio a pantalla completa.",
+    "iosDialogTitle": "Añadir a pantalla de inicio",
+    "iosStep1": "Toca el botón Compartir en la barra del navegador.",
+    "iosStep2": "Desplázate hacia abajo y elige «Añadir a pantalla de inicio».",
+    "iosStep3": "Toca «Añadir»."
   }
 }

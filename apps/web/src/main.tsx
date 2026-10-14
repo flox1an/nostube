@@ -5,14 +5,14 @@ import { checkAndClearCache } from './lib/cache-clear'
 import { migrateLocalStoragePlayPositions } from './lib/play-position-storage'
 import { installAppHeight } from './lib/app-height'
 import { requestPersistentStorage } from './lib/persistent-storage'
-import { startInstallPromptCapture } from './lib/install-prompt'
+import { startInstallPromptCapture } from '@nostube/widgets/install-prompt'
 import { reloadForStaleChunk } from './lib/active-work'
 import './i18n/config' // Initialize i18n
 
 // iOS PWA full-screen height (--app-height), see lib/app-height.ts
 installAppHeight()
 
-// Before React mounts: Chromium can fire beforeinstallprompt early (lib/install-prompt.ts)
+// Before React mounts: Chromium can fire beforeinstallprompt early (@nostube/widgets/install-prompt)
 startInstallPromptCapture()
 
 // Installed app only: ask the browser not to evict play positions, outbox and drafts

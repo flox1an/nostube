@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
-import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 export function OfflineBanner() {
   const isOnline = useOnlineStatus()

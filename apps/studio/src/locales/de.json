@@ -6,9 +6,6 @@
       "logOut": "Abmelden"
     },
     "app": {
-      "loggedOut": "Du bist abgemeldet",
-      "logInHint": "Melde dich an, um diese Instanz zu verwalten.",
-      "logIn": "Anmelden",
       "loadFailed": "Das Studio konnte nicht geladen werden",
       "stalledTitle": "Der Server ist nicht zurückgekommen",
       "stalledBody": "Die neuen Einstellungen sind gespeichert, aber nichts hat den Server neu gestartet. Starte ihn erneut oder führe <code>nostube-server config rollback</code> aus, um zu den vorherigen Einstellungen zurückzukehren.",
@@ -19,6 +16,21 @@
       "discard": "Änderungen verwerfen",
       "unsaved": "Ungespeicherte Änderungen",
       "restartWarning": "Beim Speichern startet der Server für ein paar Sekunden neu."
+    },
+    "login": {
+      "title": "Anmelden",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "or": "oder",
+      "withNostr": "Mit Nostr anmelden",
+      "wrongPassword": "Falsches Passwort.",
+      "tooManyAttempts": "Zu viele falsche Passwörter. Versuche es in {{seconds}} s erneut.",
+      "forgot": "Passwort vergessen? Führe auf dem Server „nostube-server admin reset“ aus und registriere dich mit dem ausgegebenen Setup-Token neu. Die Anmeldung mit Nostr braucht einen unter Konto verknüpften Schlüssel."
+    },
+    "signer": {
+      "noneTitle": "Kein Nostr-Konto angemeldet",
+      "noneBody": "Videos, Mute-Liste und Uploads werden mit deinem eigenen Schlüssel signiert. Melde dich damit in diesem Browser an (Erweiterung, privater Schlüssel, Bunker oder Nostr Connect).",
+      "connect": "Mit Nostr anmelden"
     },
     "nextSteps": {
       "title": "Nächste Schritte",
@@ -55,19 +67,18 @@
     },
     "account": {
       "title": "Anmeldung mit einem Nostr-Schlüssel",
-      "description": "Dein Passwort funktioniert immer. Mit einem verknüpften NIP-07-Schlüssel kannst du dich auch über deinen Signer anmelden.",
+      "description": "Dein Passwort funktioniert immer. Mit einem verknüpften Nostr-Schlüssel kannst du dich auch darüber anmelden (Erweiterung, privater Schlüssel, Bunker oder Nostr Connect).",
       "boundKey": "Verknüpfter Schlüssel:",
       "noKey": "Es ist kein Schlüssel verknüpft.",
-      "bind": "Schlüssel dieses Browsers verknüpfen",
+      "bind": "Meinen Nostr-Schlüssel verknüpfen",
       "unbind": "Verknüpfung lösen",
-      "installSigner": "Installiere eine NIP-07-Signer-Erweiterung, um einen Schlüssel zu verknüpfen.",
       "deviceTitle": "Dieses Gerät",
       "deviceDescription": "Geräte, die diese Instanz öffnen, müssen ihrer Zertifizierungsstelle einmalig vertrauen.",
       "downloadCa": "Zertifizierungsstelle der Instanz herunterladen",
       "identityTitle": "Identität",
       "signerModes": {
         "managed": "Kanal-Identität (verwalteter Schlüssel): Dieser Server speichert deinen Schlüssel verschlüsselt und signiert für dich. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls.",
-        "own": "Eigene Identität: Die Signer-Erweiterung deines Browsers (NIP-07) signiert. Der Server sieht den Schlüssel nie.",
+        "own": "Eigene Identität: Das Nostr-Konto, mit dem du dich in diesem Browser anmeldest, signiert (Erweiterung, privater Schlüssel, Bunker oder Nostr Connect). Der Server sieht den Schlüssel nie.",
         "none": "Es ist noch kein Signaturschlüssel eingerichtet. Die Seiten Videos und Hochladen bieten die Wahl an."
       },
       "signerKey": "Öffentlicher Schlüssel:",
@@ -432,8 +443,7 @@
     },
     "errors": {
       "serverStatus": "Der Server antwortete mit {{status}}.",
-      "noNip07": "In diesem Browser wurde kein NIP-07-Signer gefunden.",
-      "noSigner": "In diesem Browser wurde kein Nostr-Signer gefunden.",
+      "noSigner": "In diesem Browser ist kein Nostr-Konto angemeldet.",
       "notPubkey": "Der Signer hat etwas zurückgegeben, das kein öffentlicher Schlüssel ist.",
       "differentKey": "Dein Signer verwendet einen anderen Schlüssel als den Creator-Schlüssel dieser Instanz. Wechsle im Signer zu diesem Schlüssel und versuche es erneut. Es wurde nichts veröffentlicht.",
       "invalidSignature": "Der Signer hat eine ungültige Signatur zurückgegeben.",
@@ -495,11 +505,10 @@
       "identity": {
         "intro": "Jedes Video wird mit einem Nostr-Schlüssel signiert. Wähle, wessen Schlüssel das ist.",
         "ownTitle": "Eigene Identität",
-        "ownBody": "Videos erscheinen unter deinem eigenen Nostr-Schlüssel, signiert von deiner Browser-Erweiterung (NIP-07). Der Schlüssel wird auch dein Login-Schlüssel; dein Passwort funktioniert weiter.",
+        "ownBody": "Videos erscheinen unter deinem eigenen Nostr-Schlüssel, signiert in deinem Browser (Erweiterung, privater Schlüssel, Bunker oder Nostr Connect). Der Schlüssel wird auch dein Login-Schlüssel; dein Passwort funktioniert weiter.",
         "channelTitle": "Kanal-Identität",
         "channelBody": "Dieser Server erzeugt einen Schlüssel für den Kanal und bewahrt ihn verschlüsselt auf. Du brauchst nur dein Passwort; unter Konto kannst du den Schlüssel später exportieren.",
-        "loginWithNostr": "Ich melde mich mit meinem Nostr-Schlüssel an",
-        "noExtension": "Du hast schon einen Nostr-Schlüssel? Installiere eine Erweiterung wie nos2x oder Alby und lade neu."
+        "loginWithNostr": "Ich melde mich mit meinem Nostr-Schlüssel an"
       },
       "publishing": {
         "intro": "Wer soll deine Videos finden können?"

@@ -6,9 +6,6 @@
       "logOut": "Cerrar sesión"
     },
     "app": {
-      "loggedOut": "Has cerrado sesión",
-      "logInHint": "Inicia sesión para administrar esta instancia.",
-      "logIn": "Iniciar sesión",
       "loadFailed": "No se pudo cargar el estudio",
       "stalledTitle": "El servidor no volvió",
       "stalledBody": "La nueva configuración está guardada, pero nada reinició el servidor. Inícialo de nuevo o ejecuta <code>nostube-server config rollback</code> para volver a la configuración anterior.",
@@ -19,6 +16,21 @@
       "discard": "Descartar cambios",
       "unsaved": "Cambios sin guardar",
       "restartWarning": "Al guardar, el servidor se reinicia durante unos segundos."
+    },
+    "login": {
+      "title": "Iniciar sesión",
+      "password": "Contraseña",
+      "submit": "Iniciar sesión",
+      "or": "o",
+      "withNostr": "Iniciar sesión con Nostr",
+      "wrongPassword": "Contraseña incorrecta.",
+      "tooManyAttempts": "Demasiadas contraseñas incorrectas. Vuelve a intentarlo en {{seconds}} s.",
+      "forgot": "¿Olvidaste la contraseña? Ejecuta \"nostube-server admin reset\" en el servidor y regístrate de nuevo con el token de configuración que muestra. Iniciar sesión con Nostr requiere una clave vinculada en Cuenta."
+    },
+    "signer": {
+      "noneTitle": "Ninguna cuenta Nostr conectada",
+      "noneBody": "Los vídeos, la lista de silenciados y las subidas se firman con tu propia clave. Inicia sesión con ella en este navegador (extensión, clave privada, bunker o Nostr Connect).",
+      "connect": "Iniciar sesión con Nostr"
     },
     "nextSteps": {
       "title": "Próximos pasos",
@@ -55,19 +67,18 @@
     },
     "account": {
       "title": "Inicio de sesión con una clave Nostr",
-      "description": "Tu contraseña siempre funciona. Una clave NIP-07 vinculada también te permite iniciar sesión con tu firmante.",
+      "description": "Tu contraseña siempre funciona. Una clave Nostr vinculada también te permite iniciar sesión con ella (extensión, clave privada, bunker o Nostr Connect).",
       "boundKey": "Clave vinculada:",
       "noKey": "No hay ninguna clave vinculada.",
-      "bind": "Vincular la clave de este navegador",
+      "bind": "Vincular mi clave Nostr",
       "unbind": "Desvincular",
-      "installSigner": "Instala una extensión de firma NIP-07 para vincular una clave.",
       "deviceTitle": "Este dispositivo",
       "deviceDescription": "Los dispositivos que abren esta instancia deben confiar una vez en su autoridad de certificación.",
       "downloadCa": "Descargar la autoridad de certificación de la instancia",
       "identityTitle": "Identidad",
       "signerModes": {
         "managed": "Identidad de canal (clave gestionada): este servidor guarda tu clave cifrada y firma por ti. Quien se apodere del servidor también obtiene la clave.",
-        "own": "Identidad propia: firma la extensión de firma de tu navegador (NIP-07). El servidor nunca ve la clave.",
+        "own": "Identidad propia: firma la cuenta Nostr con la que inicias sesión en este navegador (extensión, clave privada, bunker o Nostr Connect). El servidor nunca ve la clave.",
         "none": "Todavía no hay ninguna clave de firma. Las páginas Videos y Subir ofrecen la elección."
       },
       "signerKey": "Clave pública:",
@@ -434,8 +445,7 @@
     },
     "errors": {
       "serverStatus": "El servidor respondió {{status}}.",
-      "noNip07": "No se encontró ningún firmante NIP-07 en este navegador.",
-      "noSigner": "No se encontró ningún firmante Nostr en este navegador.",
+      "noSigner": "No hay ninguna cuenta Nostr conectada en este navegador.",
       "notPubkey": "El firmante devolvió algo que no es una clave pública.",
       "differentKey": "Tu firmante usa una clave distinta de la clave de creador de esta instancia. Cambia a esa clave en tu firmante e inténtalo de nuevo. No se publicó nada.",
       "invalidSignature": "El firmante devolvió una firma no válida.",
@@ -497,11 +507,10 @@
       "identity": {
         "intro": "Cada vídeo se firma con una clave Nostr. Elige de quién es la clave.",
         "ownTitle": "Identidad propia",
-        "ownBody": "Los vídeos se publican con tu propia clave Nostr, firmados por la extensión de tu navegador (NIP-07). La clave también será tu clave de acceso; tu contraseña sigue funcionando.",
+        "ownBody": "Los vídeos se publican con tu propia clave Nostr, firmados en tu navegador (extensión, clave privada, bunker o Nostr Connect). La clave también será tu clave de acceso; tu contraseña sigue funcionando.",
         "channelTitle": "Identidad de canal",
         "channelBody": "Este servidor crea una clave para el canal y la guarda cifrada. Solo necesitas tu contraseña; puedes exportar la clave más tarde en Cuenta.",
-        "loginWithNostr": "Inicio sesión con mi clave Nostr",
-        "noExtension": "¿Ya tienes una clave Nostr? Instala una extensión como nos2x o Alby y recarga la página."
+        "loginWithNostr": "Inicio sesión con mi clave Nostr"
       },
       "publishing": {
         "intro": "¿Quién debe poder encontrar tus vídeos?"

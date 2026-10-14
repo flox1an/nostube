@@ -1,6 +1,6 @@
 # apps/studio: Spec (Entwurf)
 
-Stand: 12. Oktober 2026. Der erste Schnitt ist umgesetzt: Gerüst unter `/studio/`, Passwort-Login über den serverseitigen Login, die Bereiche Aussehen, Instanz und Konto sowie `GET/PUT /api/admin/config`. Das Studio ist die **einzige** Admin-Oberfläche; das alte serverseitige Dashboard ist entfernt (`/admin` leitet auf `/studio/` um, nur Einrichtung und Login bleiben serverseitig). Die Moderation per Mute-Liste ist umgesetzt, ebenso der Signer (Managed und NIP-07, Onboarding mit beiden Optionen), Upload sowie Bearbeiten, Ersetzen und Löschen von Videos. Noch offen: Bunker (NIP-46) und Transcoding im Browser.
+Stand: 14. Oktober 2026. Der erste Schnitt ist umgesetzt: Gerüst unter `/studio/`, Login im Studio (Passwort oder Nostr-Key über den Login-Dialog der Site; der serverseitige Login bleibt als Rückfall), die Bereiche Aussehen, Instanz und Konto sowie `GET/PUT /api/admin/config`. Das Studio ist die **einzige** Admin-Oberfläche; das alte serverseitige Dashboard ist entfernt (`/admin` leitet auf `/studio/` um, nur Einrichtung und Login bleiben serverseitig). Die Moderation per Mute-Liste ist umgesetzt, ebenso der Signer (Managed und das im Browser angemeldete Nostr-Konto: Erweiterung, nsec, Bunker, Nostr Connect; Onboarding mit beiden Optionen), Upload sowie Bearbeiten, Ersetzen und Löschen von Videos. Noch offen: Transcoding im Browser.
 
 ## Ziel
 
@@ -19,9 +19,9 @@ Gründe für die Trennung: kleineres Besucher-Bundle (Upload, Transcoding und Ve
 Das Studio kennt nur ein Interface `Signer` ("signiere dieses Event") und weiß nicht, wo der Key liegt. Es gibt zwei Betriebsarten, die gleichrangig sind:
 
 - **Managed:** Der Server erzeugt den Key bei der Einrichtung, speichert ihn verschlüsselt (Admin-Secrets, nicht im `config.toml`) und signiert selbst. Der Creator arbeitet nur mit Passwort, Nostr bleibt unsichtbar. Die Server-Pubkey steht in `creators`. Das ist der Default im Onboarding.
-- **Eigener Key:** Der Owner signiert über NIP-07 oder einen Bunker (NIP-46). Der Server sieht den Key nie. Das Onboarding bietet diese Option im ersten Schritt gleichrangig an, nicht versteckt in den Einstellungen.
+- **Eigener Key:** Der Owner signiert mit dem Nostr-Konto, mit dem er sich im Browser anmeldet (NIP-07, nsec/NIP-49, Bunker NIP-46 oder Nostr Connect). Der Server sieht den Key nie. Das Onboarding bietet diese Option im ersten Schritt gleichrangig an, nicht versteckt in den Einstellungen.
 
-Der Passwort-Login (Server-ADR 0002) bleibt in beiden Fällen der Zugang zum Studio. Er signiert nichts; Signieren läuft über den Signer.
+Der Passwort-Login (Server-ADR 0002) bleibt in beiden Fällen der Zugang zum Studio; daneben meldet „Mit Nostr anmelden“ mit einem verknüpften Key an, über jeden Weg des Login-Dialogs. Der Login allein signiert nichts; Signieren läuft über den Signer.
 
 Anforderungen an Managed:
 
@@ -37,7 +37,7 @@ Anforderungen an Managed:
 - `POST /sign` signiert `{ kind, created_at, tags, content }` und gibt das signierte Event zurück. Andere Felder, leere Tags und zu große Events (wie am Relay: 128 KiB, höchstens 30 Minuten in der Zukunft) lehnt er ab.
 - `POST /export` gibt den `nsec` nur gegen das Admin-Passwort heraus; Fehlversuche zählen zur Login-Drossel (ADR 0002).
 
-Das Studio wählt den Signer nach der Antwort des Servers: den Managed-Key, sonst die NIP-07-Erweiterung. Bei einer neuen Instanz bietet das Banner auf den Inhaltsseiten beide Optionen nebeneinander an; danach trägt dasselbe Speichern wie bei einem NIP-07-Key die Pubkey in `creators` und `allowed_writers` ein (mit Neustart). Die Kontoseite zeigt Betriebsart und Pubkey (npub), im Managed-Modus auch den Export. `nostube-server admin reset` behält den Key. Noch offen: Bunker (NIP-46).
+Das Studio wählt den Signer nach der Antwort des Servers: den Managed-Key, sonst das in diesem Browser angemeldete Nostr-Konto (Erweiterung, nsec/`ncryptsec`, Bunker oder Nostr Connect; derselbe Login-Dialog und dieselbe Kontospeicherung wie auf der Site, Server-ADR 0002, Nachtrag). Ohne angemeldetes Konto zeigt das Studio im eigenen Modus einen Hinweis mit „Mit Nostr anmelden“. Bei einer neuen Instanz bietet das Banner auf den Inhaltsseiten beide Optionen nebeneinander an; danach trägt dasselbe Speichern die Pubkey in `creators` und `allowed_writers` ein (mit Neustart). Die Kontoseite zeigt Betriebsart und Pubkey (npub), im Managed-Modus auch den Export. `nostube-server admin reset` behält den Key.
 
 ### Zeitgesteuertes Publishing
 
@@ -99,14 +99,14 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 ## Offene Fragen
 
 1. **Vorsignierte Events halten:** Entschieden (2026-10-12, Issue #120): Der Server hält vorsignierte Events dauerhaft in SQLite und released sie über die Outbox (Periodischer Scan plus Catch-up beim Start). Der Termin steht im `published_at`-Tag, `created_at` bleibt „jetzt“ (der Managed-Signer und Relays lehnen Zukunfts-Timestamps ab). Editieren vor dem Termin ersetzt das gespeicherte Event per Re-Presign (gleicher `d`-Tag), Abbrechen läuft wie Löschen. Risiko-Akzeptanz dokumentiert: Die DB hält signierte Events (schlimmster Fall: frühzeitiges Release genau dieser Videos), und Blobs sind vor dem Termin öffentlich abrufbar (content-addressed, ohne Event nicht auffindbar).
-2. **Studio und `/admin`:** Entschieden: Das Studio ersetzt das Dashboard. Einrichtung (`/admin/setup`) und Login (`/admin/login`) bleiben serverseitig, weil sie ohne Studio-Bundle funktionieren müssen. Offen: ein Notfall-Zugang, falls das Studio-Bundle fehlt (heute `nostube-server admin reset` und `config rollback` auf der Kommandozeile).
+2. **Studio und `/admin`:** Entschieden: Das Studio ersetzt das Dashboard. Einrichtung (`/admin/setup`) und der Login (`/admin/login`) bleiben serverseitig, weil sie ohne Studio-Bundle funktionieren müssen; das Studio hat daneben einen eigenen Login (Passwort oder Nostr über den Login-Dialog), der dieselben Endpunkte nutzt. Offen: ein Notfall-Zugang, falls das Studio-Bundle fehlt (heute `nostube-server admin reset` und `config rollback` auf der Kommandozeile).
 3. **Mehrere Creators:** Entschieden: Die Site wendet die Mute-Listen aller Creators zusammen an (Vereinigung). Das Studio bearbeitet die Liste des verbundenen Keys.
 4. **Upload-Code:** Teilweise entschieden: Das React-freie Transcoding (Bedarfstest, MP4/HLS-Konvertierung, Worker und Worker-Client) liegt in `@nostube/core`. Offen: wie viel vom Wizard nach `packages/widgets` wandert und wie viel in `apps/web` bleibt.
 5. **Berechtigungen bei Uploads:** Schreibrechte laufen heute über `allowed_writers` in der Config. Das Studio muss konsistent damit sein (der eingeloggte Owner muss dort stehen).
 
 ## Reihenfolge (Vorschlag für den ersten Schnitt)
 
-1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, Bereiche Aussehen, Instanz, Konto (**erledigt**), dazu das `Signer`-Interface mit Managed und NIP-07 und das Onboarding mit beiden Optionen (**erledigt**; Bunker noch offen).
+1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, Bereiche Aussehen, Instanz, Konto (**erledigt**), dazu das `Signer`-Interface mit Managed und dem Nostr-Konto des Browsers (Erweiterung, nsec, Bunker, Nostr Connect) und das Onboarding mit beiden Optionen (**erledigt**).
 2. Mute-Liste: Anzeige und Bearbeitung, Site liest sie (**erledigt**).
 3. Einstellungen (Config).
 4. Videos und Upload.

@@ -1,17 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import {
-  finalizeEvent,
-  generateSecretKey,
-  getPublicKey,
-  verifyEvent,
-  type EventTemplate,
-} from 'nostr-tools'
+import { generateSecretKey, getPublicKey, verifyEvent } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
 import { fromLocalInput, toLocalInput } from './datetime'
 import { bootInstanceClient } from './instance-client'
 import { SignerProvider } from './signer-context'
+import { installExtension, logInWithExtension, logOut } from './test-account'
 import UploadPage from './UploadPage'
 import { uploadBlob } from './upload/blossom-upload'
 import './i18n'
@@ -100,31 +95,24 @@ async function renderPage(state: AdminState) {
 }
 
 beforeEach(() => {
-  ;(window as unknown as { nostr: object }).nostr = {
-    getPublicKey: async () => pubkey,
-    signEvent: async (template: EventTemplate) =>
-      JSON.parse(JSON.stringify(finalizeEvent(template, secret))),
-  }
+  logInWithExtension(secret)
   URL.createObjectURL = vi.fn(() => 'blob:preview')
   URL.revokeObjectURL = vi.fn()
-  // The server reports an own key, so the provider signs with the extension above.
+  // The server reports an own key, so the provider signs with the logged-in account above.
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => new Response(JSON.stringify({ mode: 'own', pubkey: null })))
   )
 })
 afterEach(() => {
-  delete (window as unknown as { nostr?: object }).nostr
+  logOut()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
 
 describe('UploadPage', () => {
   it('does not upload or sign while selecting a video', async () => {
-    const signEvent = vi.fn(async (template: EventTemplate) => finalizeEvent(template, secret))
-    // jsdom's Window has no NIP-07 extension declaration; install the test extension explicitly.
-    const extensionWindow = window as unknown as { nostr: object }
-    extensionWindow.nostr = { getPublicKey: async () => pubkey, signEvent }
+    const { signEvent } = installExtension(secret)
     await renderPage(stateFor([pubkey], [pubkey]))
     expect(uploadBlob).not.toHaveBeenCalled()
     expect(signEvent).not.toHaveBeenCalled()

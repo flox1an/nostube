@@ -2,25 +2,18 @@ import type { Reach } from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
 import { fromDraft, toDraft, type DraftResult } from './draft'
 
-/** Own identity: the owner's NIP-07 key signs. Channel identity: the server's managed key. */
+/** Own identity: the owner's Nostr account signs (any login method). Channel identity: the server's managed key. */
 export type Identity = 'own' | 'channel'
 
 /** The wizard shows while the instance has no creator: it cannot publish without one. */
 export const needsOnboarding = (config: AdminConfig) => config.creators.length === 0
 
 /**
- * Which identities the wizard offers. Own identity needs a NIP-07 extension; once the server
- * holds a managed key (an earlier Finish whose save failed), it signs everything, so only the
- * channel identity is left.
+ * Which identities the wizard offers. Once the server holds a managed key (an earlier Finish whose
+ * save failed), it signs everything, so only the channel identity is left.
  */
-export function identityChoices({
-  extension,
-  managedKey,
-}: {
-  extension: boolean
-  managedKey: boolean
-}): Identity[] {
-  return extension && !managedKey ? ['own', 'channel'] : ['channel']
+export function identityChoices({ managedKey }: { managedKey: boolean }): Identity[] {
+  return managedKey ? ['channel'] : ['own', 'channel']
 }
 
 export interface WizardChoices {

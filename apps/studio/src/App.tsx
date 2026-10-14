@@ -11,6 +11,7 @@ import { AppearancePage } from './AppearancePage'
 import { Onboarding } from './OnboardingWizard'
 import { needsOnboarding } from './onboarding-config'
 import { InstancePage } from './InstancePage'
+import { Login } from './Login'
 import { Nav } from './Nav'
 import { NextSteps } from './NextSteps'
 import { OverviewPage } from './OverviewPage'
@@ -29,7 +30,7 @@ import {
 } from './api'
 import { fromDraft, needsRestart, toDraft, type Draft } from './draft'
 import { PAGES, useRoute } from './route'
-import { SignerProvider } from './signer-context'
+import { SignerProvider, useSigner } from './signer-context'
 
 type Phase =
   | { name: 'loading' }
@@ -65,13 +66,7 @@ export function App() {
   if (phase.name === 'login') {
     return (
       <Shell>
-        <div className="space-y-3 py-12 text-center">
-          <p className="text-lg font-medium">{t('studio.app.loggedOut')}</p>
-          <p className="text-sm text-muted-foreground">{t('studio.app.logInHint')}</p>
-          <Button asChild>
-            <a href="/admin/login">{t('studio.app.logIn')}</a>
-          </Button>
-        </div>
+        <Login onLoggedIn={() => void load()} />
       </Shell>
     )
   }
@@ -203,6 +198,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   return (
     <Shell onLogout={() => void signOut()}>
       <Nav page={page} onNavigate={navigate} />
+      <ConnectSigner />
 
       {saving === 'stalled' && (
         <Alert variant="destructive">
@@ -285,5 +281,23 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
         </div>
       )}
     </Shell>
+  )
+}
+
+/** Own identity without a Nostr account in this browser: nothing can be signed until one logs in. */
+function ConnectSigner() {
+  const { t } = useTranslation()
+  const { mode, status, connect } = useSigner()
+  if (mode !== 'own' || status !== 'none') return null
+  return (
+    <Alert>
+      <AlertTitle>{t('studio.signer.noneTitle')}</AlertTitle>
+      <AlertDescription className="space-y-2">
+        <p>{t('studio.signer.noneBody')}</p>
+        <Button type="button" size="sm" onClick={() => void connect()}>
+          {t('studio.signer.connect')}
+        </Button>
+      </AlertDescription>
+    </Alert>
   )
 }

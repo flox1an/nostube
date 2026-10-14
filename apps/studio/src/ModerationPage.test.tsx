@@ -5,7 +5,6 @@ import {
   getPublicKey,
   matchFilters,
   verifyEvent,
-  type EventTemplate,
   type Filter,
   type NostrEvent,
 } from 'nostr-tools'
@@ -15,6 +14,7 @@ import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
 import ModerationPage from './ModerationPage'
 import { SignerProvider } from './signer-context'
+import { logInWithExtension, logOut } from './test-account'
 import './i18n'
 
 const secret = generateSecretKey()
@@ -142,16 +142,12 @@ beforeEach(() => {
     'fetch',
     vi.fn(async () => new Response(JSON.stringify({ mode: 'own', pubkey: null })))
   )
-  ;(window as unknown as { nostr: object }).nostr = {
-    getPublicKey: async () => owner,
-    signEvent: async (template: EventTemplate) =>
-      JSON.parse(JSON.stringify(finalizeEvent(template, secret))),
-  }
+  logInWithExtension(secret)
 })
 afterEach(() => {
   vi.unstubAllGlobals()
   publish.mockClear()
-  delete (window as unknown as { nostr?: object }).nostr
+  logOut()
 })
 
 const renderPage = () =>
@@ -185,13 +181,8 @@ it('mutes a comment author with a signed list built on the current one', async (
 
 it('refuses to publish when the extension holds another key than the creator key', async () => {
   const other = generateSecretKey()
-  // jsdom's Window has no NIP-07 extension declaration; install the other key's extension.
-  const extensionWindow = window as unknown as { nostr: object }
-  extensionWindow.nostr = {
-    getPublicKey: async () => getPublicKey(other),
-    signEvent: async (template: EventTemplate) =>
-      JSON.parse(JSON.stringify(finalizeEvent(template, other))),
-  }
+  logOut()
+  logInWithExtension(other)
   renderPage()
   const commentRow = (await screen.findByText('buy my coin')).closest('li') as HTMLElement
   fireEvent.click(within(commentRow).getByRole('button', { name: 'Mute author' }))

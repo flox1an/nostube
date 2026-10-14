@@ -6,11 +6,18 @@ import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import type { SignerInfo } from './api'
 import type { InstanceClient } from './instance-client'
 import { SignerProvider, useSigner, type SignerState } from './signer-context'
+import { logInWithExtension, logOut, type TestExtension } from './test-account'
 import { VideoActions } from './VideoActions'
 import i18n from './i18n'
 
+vi.mock('./accounts', async importOriginal => ({
+  ...(await importOriginal<typeof import('./accounts')>()),
+  loadAccounts: async () => [],
+}))
+
 const MANAGED = 'b'.repeat(64)
-const OWN = 'c'.repeat(64)
+const secret = generateSecretKey()
+const OWN = getPublicKey(secret)
 
 const json = (body: unknown) => new Response(JSON.stringify(body))
 
@@ -30,14 +37,14 @@ function serve(info: SignerInfo) {
   return fetch
 }
 
-const extension = { getPublicKey: vi.fn(async () => OWN), signEvent: vi.fn() }
+let extension: TestExtension
 
 beforeEach(async () => {
   await i18n.changeLanguage('en')
-  ;(window as unknown as { nostr?: object }).nostr = extension
+  extension = logInWithExtension(secret)
 })
 afterEach(() => {
-  delete (window as unknown as { nostr?: object }).nostr
+  logOut()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -83,6 +90,21 @@ describe('SignerProvider', () => {
     await waitFor(() => expect(current.status).toBe('ready'))
     expect(current.pubkey).toBe(OWN)
     expect(extension.getPublicKey).not.toHaveBeenCalled()
+  })
+
+  it('has no signer in own identity until a Nostr account is logged in here', async () => {
+    logOut()
+    serve({ mode: 'own', pubkey: null })
+    render(
+      <SignerProvider creatorKey={OWN}>
+        <Probe />
+      </SignerProvider>
+    )
+    await waitFor(() => expect(current.status).toBe('none'))
+    expect(current.signer).toBeNull()
+    logInWithExtension(secret)
+    await waitFor(() => expect(current.status).toBe('ready'))
+    expect(current.signer).not.toBeNull()
   })
 
   it('shows why when the server cannot tell where the key is', async () => {

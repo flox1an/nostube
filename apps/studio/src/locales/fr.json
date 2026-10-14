@@ -6,9 +6,6 @@
       "logOut": "Se déconnecter"
     },
     "app": {
-      "loggedOut": "Vous êtes déconnecté",
-      "logInHint": "Connectez-vous pour gérer cette instance.",
-      "logIn": "Se connecter",
       "loadFailed": "Le studio n'a pas pu se charger",
       "stalledTitle": "Le serveur n'est pas revenu",
       "stalledBody": "Les nouveaux réglages sont enregistrés, mais rien n'a redémarré le serveur. Redémarrez-le, ou exécutez <code>nostube-server config rollback</code> pour revenir aux réglages précédents.",
@@ -19,6 +16,21 @@
       "discard": "Annuler les modifications",
       "unsaved": "Modifications non enregistrées",
       "restartWarning": "L'enregistrement redémarre le serveur pendant quelques secondes."
+    },
+    "login": {
+      "title": "Connexion",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "or": "ou",
+      "withNostr": "Se connecter avec Nostr",
+      "wrongPassword": "Mot de passe incorrect.",
+      "tooManyAttempts": "Trop de mots de passe incorrects. Réessayez dans {{seconds}} s.",
+      "forgot": "Mot de passe oublié ? Exécutez « nostube-server admin reset » sur le serveur et réinscrivez-vous avec le jeton d'installation affiché. La connexion avec Nostr nécessite une clé associée sous Compte."
+    },
+    "signer": {
+      "noneTitle": "Aucun compte Nostr connecté",
+      "noneBody": "Les vidéos, la liste de sourdine et les envois sont signés avec votre propre clé. Connectez-vous avec elle dans ce navigateur (extension, clé privée, bunker ou Nostr Connect).",
+      "connect": "Se connecter avec Nostr"
     },
     "nextSteps": {
       "title": "Prochaines étapes",
@@ -55,19 +67,18 @@
     },
     "account": {
       "title": "Connexion avec une clé Nostr",
-      "description": "Votre mot de passe fonctionne toujours. Une clé NIP-07 associée vous permet aussi de vous connecter avec votre signataire.",
+      "description": "Votre mot de passe fonctionne toujours. Une clé Nostr associée vous permet aussi de vous connecter avec elle (extension, clé privée, bunker ou Nostr Connect).",
       "boundKey": "Clé associée :",
       "noKey": "Aucune clé n'est associée.",
-      "bind": "Associer la clé de ce navigateur",
+      "bind": "Associer ma clé Nostr",
       "unbind": "Dissocier",
-      "installSigner": "Installez une extension de signature NIP-07 pour associer une clé.",
       "deviceTitle": "Cet appareil",
       "deviceDescription": "Les appareils qui ouvrent cette instance doivent faire confiance une fois à son autorité de certification.",
       "downloadCa": "Télécharger l'autorité de certification de l'instance",
       "identityTitle": "Identité",
       "signerModes": {
         "managed": "Identité de chaîne (clé gérée) : ce serveur garde votre clé chiffrée et signe pour vous. Quiconque prend le contrôle du serveur obtient aussi la clé.",
-        "own": "Identité propre : l'extension de signature de votre navigateur (NIP-07) signe. Le serveur ne voit jamais la clé.",
+        "own": "Identité propre : le compte Nostr avec lequel vous vous connectez dans ce navigateur signe (extension, clé privée, bunker ou Nostr Connect). Le serveur ne voit jamais la clé.",
         "none": "Aucune clé de signature n'est encore configurée. Les pages Vidéos et Mise en ligne proposent le choix."
       },
       "signerKey": "Clé publique :",
@@ -434,8 +445,7 @@
     },
     "errors": {
       "serverStatus": "Le serveur a répondu {{status}}.",
-      "noNip07": "Aucun signataire NIP-07 trouvé dans ce navigateur.",
-      "noSigner": "Aucun signataire Nostr trouvé dans ce navigateur.",
+      "noSigner": "Aucun compte Nostr connecté dans ce navigateur.",
       "notPubkey": "Le signataire a renvoyé quelque chose qui n'est pas une clé publique.",
       "differentKey": "Votre signataire utilise une autre clé que la clé de créateur de cette instance. Passez à cette clé dans votre signataire et réessayez. Rien n'a été publié.",
       "invalidSignature": "Le signataire a renvoyé une signature invalide.",
@@ -497,11 +507,10 @@
       "identity": {
         "intro": "Chaque vidéo est signée avec une clé Nostr. Choisissez à qui appartient cette clé.",
         "ownTitle": "Identité propre",
-        "ownBody": "Les vidéos sont publiées sous votre propre clé Nostr, signées par l'extension de votre navigateur (NIP-07). La clé devient aussi votre clé de connexion ; votre mot de passe reste valable.",
+        "ownBody": "Les vidéos sont publiées sous votre propre clé Nostr, signées dans votre navigateur (extension, clé privée, bunker ou Nostr Connect). La clé devient aussi votre clé de connexion ; votre mot de passe reste valable.",
         "channelTitle": "Identité de chaîne",
         "channelBody": "Ce serveur crée une clé pour la chaîne et la conserve chiffrée. Votre mot de passe suffit ; vous pourrez exporter la clé plus tard sous Compte.",
-        "loginWithNostr": "Je me connecte avec ma clé Nostr",
-        "noExtension": "Vous avez déjà une clé Nostr ? Installez une extension comme nos2x ou Alby et rechargez la page."
+        "loginWithNostr": "Je me connecte avec ma clé Nostr"
       },
       "publishing": {
         "intro": "Qui doit pouvoir trouver vos vidéos ?"

@@ -6,9 +6,6 @@
       "logOut": "Log out"
     },
     "app": {
-      "loggedOut": "You are logged out",
-      "logInHint": "Log in to manage this instance.",
-      "logIn": "Log in",
       "loadFailed": "The studio could not load",
       "stalledTitle": "The server did not come back",
       "stalledBody": "The new settings are saved, but nothing restarted the server. Start it again, or run <code>nostube-server config rollback</code> to return to the previous settings.",
@@ -19,6 +16,21 @@
       "discard": "Discard changes",
       "unsaved": "Unsaved changes",
       "restartWarning": "Saving restarts the server for a few seconds."
+    },
+    "login": {
+      "title": "Log in",
+      "password": "Password",
+      "submit": "Log in",
+      "or": "or",
+      "withNostr": "Log in with Nostr",
+      "wrongPassword": "Wrong password.",
+      "tooManyAttempts": "Too many wrong passwords. Try again in {{seconds}} s.",
+      "forgot": "Forgot the password? Run \"nostube-server admin reset\" on the server and register again with the setup token it prints. Logging in with Nostr needs a key bound under Account."
+    },
+    "signer": {
+      "noneTitle": "No Nostr account logged in",
+      "noneBody": "Videos, the mute list and uploads are signed with your own key. Log in with it in this browser (extension, private key, bunker or Nostr Connect).",
+      "connect": "Log in with Nostr"
     },
     "nextSteps": {
       "title": "Next steps",
@@ -55,19 +67,18 @@
     },
     "account": {
       "title": "Login with a Nostr key",
-      "description": "Your password always works. A bound NIP-07 key lets you log in with your signer too.",
+      "description": "Your password always works. A bound Nostr key lets you log in with it too (extension, private key, bunker or Nostr Connect).",
       "boundKey": "Bound key:",
       "noKey": "No key is bound.",
-      "bind": "Bind this browser's key",
+      "bind": "Bind my Nostr key",
       "unbind": "Unbind",
-      "installSigner": "Install a NIP-07 signer extension to bind a key.",
       "deviceTitle": "This device",
       "deviceDescription": "Devices that open this instance need to trust its certificate authority once.",
       "downloadCa": "Download the instance CA",
       "identityTitle": "Identity",
       "signerModes": {
         "managed": "Channel identity (managed key): this server keeps your key encrypted and signs for you. Whoever takes over the server gets the key too.",
-        "own": "Own identity: your browser's signer extension (NIP-07) signs. The server never sees the key.",
+        "own": "Own identity: the Nostr account you log in with in this browser signs (extension, private key, bunker or Nostr Connect). The server never sees the key.",
         "none": "No signing key is set up yet. The Videos and Upload pages offer the choice."
       },
       "signerKey": "Public key:",
@@ -432,8 +443,7 @@
     },
     "errors": {
       "serverStatus": "The server answered {{status}}.",
-      "noNip07": "No NIP-07 signer found in this browser.",
-      "noSigner": "No Nostr signer found in this browser.",
+      "noSigner": "No Nostr account is logged in in this browser.",
       "notPubkey": "The signer returned something that is not a public key.",
       "differentKey": "Your signer uses a different key than this instance's creator key. Switch to that key in your signer and try again. Nothing was published.",
       "invalidSignature": "The signer returned an invalid signature.",
@@ -495,11 +505,10 @@
       "identity": {
         "intro": "Every video is signed with a Nostr key. Choose whose key it is.",
         "ownTitle": "Own identity",
-        "ownBody": "Videos are published under your own Nostr key, signed by your browser extension (NIP-07). The key also becomes your login key; your password keeps working.",
+        "ownBody": "Videos are published under your own Nostr key, signed in your browser (extension, private key, bunker or Nostr Connect). The key also becomes your login key; your password keeps working.",
         "channelTitle": "Channel identity",
         "channelBody": "This server creates a key for the channel and keeps it encrypted. Your password is all you need; you can export the key later under Account.",
-        "loginWithNostr": "I log in with my Nostr key",
-        "noExtension": "Already have a Nostr key? Install an extension such as nos2x or Alby and reload."
+        "loginWithNostr": "I log in with my Nostr key"
       },
       "publishing": {
         "intro": "Who should be able to find your videos?"

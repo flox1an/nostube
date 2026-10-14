@@ -1,5 +1,4 @@
 import { postJson } from './api'
-import i18n from './i18n'
 
 /** An event the signer is asked to sign (NIP-01 without id, pubkey and signature). */
 export interface UnsignedEvent {
@@ -16,8 +15,9 @@ export interface SignedEvent extends UnsignedEvent {
 }
 
 /**
- * Whoever signs for the creator: the server (managed key) or the browser's extension (own key).
- * The studio only talks to this interface (docs/studio-spec.md); a NIP-46 bunker would be one more.
+ * Whoever signs for the creator: the server (managed key) or the Nostr account logged in in this
+ * browser (own key: extension, nsec, bunker or Nostr Connect). The studio only talks to this
+ * interface (docs/studio-spec.md).
  */
 export interface Signer {
   getPublicKey(): Promise<string>
@@ -33,47 +33,5 @@ export function managedSigner(pubkey: string): Signer {
     getPublicKey: async () => pubkey,
     signEvent: ({ kind, created_at, tags, content }) =>
       postJson<SignedEvent>('/api/admin/signer/sign', { kind, created_at, tags, content }),
-  }
-}
-
-interface Nip07Window {
-  nostr?: {
-    getPublicKey(): Promise<string>
-    signEvent(event: UnsignedEvent): Promise<SignedEvent>
-  }
-}
-
-const HEX64 = /^[0-9a-f]{64}$/
-
-/** The NIP-07 extension of this browser (nos2x, Alby, …) as a `Signer`. */
-export function nip07Signer(win: Nip07Window = window as unknown as Nip07Window): Signer | null {
-  const nostr = win.nostr
-  if (!nostr) return null
-  return {
-    async getPublicKey() {
-      const key = await nostr.getPublicKey()
-      if (typeof key !== 'string' || !HEX64.test(key)) {
-        throw new Error(i18n.t('studio.errors.notPubkey'))
-      }
-      return key
-    },
-    signEvent: event => nostr.signEvent(event),
-  }
-}
-
-/**
- * Extensions inject `window.nostr` shortly after the page loads: wait a moment for it before
- * deciding that there is none.
- */
-export async function findSigner(
-  win: Nip07Window = window as unknown as Nip07Window,
-  { waitMs = 1500, stepMs = 100 } = {}
-): Promise<Signer | null> {
-  const deadline = Date.now() + waitMs
-  for (;;) {
-    const signer = nip07Signer(win)
-    if (signer) return signer
-    if (Date.now() >= deadline) return null
-    await new Promise(resolve => setTimeout(resolve, stepMs))
   }
 }

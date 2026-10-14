@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_PROFILE_RELAYS,
@@ -10,9 +11,16 @@ import type { AdminState } from './api'
 import { identityChoices, needsOnboarding, wizardConfig } from './onboarding-config'
 import { Onboarding } from './OnboardingWizard'
 import { SignerProvider } from './signer-context'
+import { installExtension, logInWithExtension, logOut } from './test-account'
 import i18n from './i18n'
 
-const OWN = 'c'.repeat(64)
+vi.mock('./accounts', async importOriginal => ({
+  ...(await importOriginal<typeof import('./accounts')>()),
+  loadAccounts: async () => [],
+}))
+
+const secret = generateSecretKey()
+const OWN = getPublicKey(secret)
 const MANAGED = 'b'.repeat(64)
 
 const fresh = (canBePublic = true): AdminState => ({
@@ -99,17 +107,12 @@ const pool = (profile: object | null) => {
   }
 }
 
-const extension = {
-  getPublicKey: vi.fn(async () => OWN),
-  signEvent: vi.fn(async (event: object) => ({ ...event, id: 'x', pubkey: OWN, sig: 's' })),
-}
-
 beforeEach(async () => {
   await i18n.changeLanguage('en')
-  ;(window as unknown as { nostr?: object }).nostr = extension
+  logInWithExtension(secret)
 })
 afterEach(() => {
-  delete (window as unknown as { nostr?: object }).nostr
+  logOut()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -123,13 +126,10 @@ const renderWizard = (state: AdminState, profilePool?: object) =>
     </StrictMode>
   )
 
-const findLabel = (text: string) =>
-  // The signer lookup waits for an extension before it decides there is none.
-  screen.findByText(text, {}, { timeout: 4000 })
+const findLabel = (text: string) => screen.findByText(text)
 
 const click = async (name: string | RegExp) => {
-  // The signer lookup waits for an extension before it decides there is none.
-  const button = await screen.findByRole('button', { name }, { timeout: 4000 })
+  const button = await screen.findByRole('button', { name })
   fireEvent.click(button)
 }
 
@@ -147,10 +147,9 @@ describe('onboarding config', () => {
     expect(needsOnboarding({ ...state.config, creators: [OWN] })).toBe(false)
   })
 
-  it('offers both identities with an extension, only the channel without', () => {
-    expect(identityChoices({ extension: true, managedKey: false })).toEqual(['own', 'channel'])
-    expect(identityChoices({ extension: false, managedKey: false })).toEqual(['channel'])
-    expect(identityChoices({ extension: true, managedKey: true })).toEqual(['channel'])
+  it('offers both identities, only the channel once the server holds a managed key', () => {
+    expect(identityChoices({ managedKey: false })).toEqual(['own', 'channel'])
+    expect(identityChoices({ managedKey: true })).toEqual(['channel'])
   })
 
   it('builds the private config: own key everywhere, the lists as they were', () => {
@@ -190,7 +189,7 @@ describe('onboarding config', () => {
 })
 
 describe('Onboarding wizard', () => {
-  it('offers own and channel identity with an extension and binds the extension key', async () => {
+  it('offers own and channel identity and binds the logged-in Nostr key', async () => {
     const { saved, fetch } = serve({ mode: 'none', pubkey: null })
     const profile = pool(null)
     renderWizard(fresh(), profile)
@@ -198,7 +197,7 @@ describe('Onboarding wizard', () => {
     expect(screen.getByText('Channel identity')).toBeTruthy()
 
     fireEvent.click(await findLabel('Own identity'))
-    await waitFor(() => expect(extension.getPublicKey).toHaveBeenCalled())
+    await screen.findByText(nip19.npubEncode(OWN))
     await continueThrough()
     expect(screen.getByText('Private')).toBeTruthy()
     await click('Finish')
@@ -255,13 +254,11 @@ describe('Onboarding wizard', () => {
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('offers only the channel identity without an extension, taken without a click', async () => {
-    delete (window as unknown as { nostr?: object }).nostr
-    serve({ mode: 'none', pubkey: null })
+  it('offers only the channel identity once the server holds a managed key, taken without a click', async () => {
+    serve({ mode: 'managed', pubkey: MANAGED })
     const { container } = renderWizard(fresh())
     expect(await findLabel('Channel identity')).toBeTruthy()
     expect(screen.queryByText('Own identity')).toBeNull()
-    expect(screen.getByText(/Install an extension such as nos2x or Alby/)).toBeTruthy()
     const tile = screen.getByRole('button', { name: /Channel identity/ })
     expect(tile.getAttribute('aria-pressed')).toBe('true')
     await click('Next')
@@ -320,6 +317,26 @@ describe('Onboarding wizard', () => {
     await continueThrough()
     await click('Finish')
     await waitFor(() => expect(none.publish).not.toHaveBeenCalled())
+  })
+
+  it('opens the login dialog for own identity without a Nostr account and takes its key', async () => {
+    logOut()
+    installExtension(secret)
+    const { saved, fetch } = serve({ mode: 'none', pubkey: null })
+    renderWizard(fresh(), pool(null))
+    fireEvent.click(await findLabel('Own identity'))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Login with Extension' }))
+    expect(await screen.findByText(nip19.npubEncode(OWN))).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await continueThrough()
+    await click('Finish')
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toMatchObject({ creators: [OWN] })
+    // The key logged in through the dialog signs the binding (NIP-98).
+    const [, init] = fetch.mock.calls.find(([url]) => url === '/admin/bind-nostr')!
+    const auth = String((init?.headers as Record<string, string>).Authorization)
+    expect(JSON.parse(atob(auth.replace('Nostr ', '')))).toMatchObject({ kind: 27235, pubkey: OWN })
   })
 
   it('saves nothing while the owner walks through and back out of the steps', async () => {

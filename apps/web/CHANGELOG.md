@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Studio: the login is part of the studio. Besides the password, "Log in with Nostr" opens the site's login dialog (extension, private key/`ncryptsec`, bunker, Nostr Connect QR) and logs in with the bound key through NIP-98; the server's `/admin/login` page stays as the fallback. In own identity, that Nostr account (any of these methods) now signs everything, Blossom upload authorizations included, instead of only a NIP-07 extension; without one, the studio shows "Log in with Nostr". Onboarding offers own identity without an extension, binding a login key uses the same dialog, and logging out of the studio also signs the Nostr account out in that browser (nostube-server ADR 0002, addendum).
 - PWA manifest (#136, #137): real 192×192 and 512×512 icons rendered from the SVG (the old 512 icon was 400×400) plus the maskable icon; `id`, `scope`, `description`, `lang`, `categories`; app shortcuts for Upload, Shorts, Subscriptions and History.
 - The service worker precaches only the app shell and the start, video and shorts pages (50 entries, 5.1 MB; was 87 entries, 6.9 MB) (#138). Other route chunks are cached on first use (cache-first, `nostube-assets`); a page whose chunk cannot load shows an error with "Try Again" instead of a blank screen.
 - Share target (#146): the installed Android app accepts shared video files and opens the upload flow with the file selected (after sign-in if needed); other file types are ignored.

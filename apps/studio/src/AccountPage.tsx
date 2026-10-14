@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
-import { exportNsec, nip07, nostrPost, unbindNostr, type AdminState } from './api'
+import { exportNsec, nostrPost, unbindNostr, type AdminState } from './api'
 import { Field } from './fields'
 import { useSigner } from './signer-context'
 
@@ -27,11 +27,17 @@ function IdentityCard({
   run: (action: () => Promise<void>) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const { mode, pubkey, error: signerError } = useSigner()
+  const { mode, pubkey, error: signerError, connect } = useSigner()
   const [password, setPassword] = useState('')
   const [nsec, setNsec] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  /** Binds the Nostr account logged in here; without one, the login dialog asks for it first. */
+  const bind = async () => {
+    const account = await connect()
+    if (account) await nostrPost('/admin/bind-nostr', account)
+  }
 
   const exportKey = async (e: FormEvent) => {
     e.preventDefault()
@@ -105,22 +111,13 @@ function IdentityCard({
             )}
           </p>
           <div className="flex flex-wrap gap-2">
-            {nip07() && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => run(() => nostrPost('/admin/bind-nostr'))}
-              >
-                {t('studio.account.bind')}
-              </Button>
-            )}
+            <Button type="button" variant="outline" onClick={() => run(bind)}>
+              {t('studio.account.bind')}
+            </Button>
             {state.nostrPubkey && (
               <Button type="button" variant="outline" onClick={() => run(unbindNostr)}>
                 {t('studio.account.unbind')}
               </Button>
-            )}
-            {!nip07() && !state.nostrPubkey && (
-              <p className="text-sm text-muted-foreground">{t('studio.account.installSigner')}</p>
             )}
           </div>
         </section>

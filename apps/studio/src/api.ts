@@ -1,6 +1,8 @@
 import type { NostrEvent } from 'nostr-tools'
 import type { BrandingSlot, InstanceSite, Reach } from '@nostube/core/instance-config'
+import { forgetActiveAccount } from './accounts'
 import i18n from './i18n'
+import type { Signer } from './signer'
 
 export type SearchConfig = { mode: 'off' } | { mode: 'local' }
 
@@ -309,15 +311,25 @@ export async function waitForRestart(
   return false
 }
 
-interface Nip07 {
-  signEvent(event: object): Promise<object>
+/** Logs in with the admin password (`POST /admin/login`, the form the server's own page sends). */
+export async function logIn(password: string): Promise<void> {
+  const res = await fetch('/admin/login', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: new URLSearchParams({ password }),
+  })
+  // Success sets the session cookie and redirects to the studio; a wrong password answers the
+  // login page again, a wait between tries 429 with `Retry-After`.
+  if (res.redirected) return
+  if (res.status === 429) {
+    const seconds = Math.ceil(Number(res.headers.get('Retry-After')) || 1)
+    throw new Error(i18n.t('studio.login.tooManyAttempts', { seconds }))
+  }
+  throw new Error(i18n.t('studio.login.wrongPassword'))
 }
-export const nip07 = (): Nip07 | undefined => (window as unknown as { nostr?: Nip07 }).nostr
 
-/** Binds (or logs in with) the browser's NIP-07 key through a NIP-98 event for `path`. */
-export async function nostrPost(path: string): Promise<void> {
-  const signer = nip07()
-  if (!signer) throw new Error(i18n.t('studio.errors.noNip07'))
+/** Binds (or logs in with) a Nostr key: the signer signs a NIP-98 event for `path`. */
+export async function nostrPost(path: string, signer: Signer): Promise<void> {
   const event = await signer.signEvent({
     kind: 27235,
     created_at: Math.floor(Date.now() / 1000),
@@ -344,8 +356,9 @@ export async function logout(): Promise<void> {
   await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin', redirect: 'manual' })
 }
 
-/** Ends the session and leads to the login page. */
+/** Ends the session and the Nostr account in this browser; the studio then shows its login. */
 export async function signOut(): Promise<void> {
   await logout()
-  location.href = '/admin/login'
+  forgetActiveAccount()
+  location.reload()
 }

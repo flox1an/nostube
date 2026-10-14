@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import type { IAccount } from 'applesauce-accounts'
 import { nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { SimplePool } from 'nostr-tools/pool'
 import { DEFAULT_PROFILE_RELAYS, type Reach } from '@nostube/core/instance-config'
@@ -14,7 +15,7 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { loadStats, nip07, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
+import { loadStats, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
 import { Field, Tile } from './fields'
 import { identityChoices, wizardConfig, type Identity } from './onboarding-config'
 import { bytesText } from './OverviewPage'
@@ -55,7 +56,7 @@ export function Onboarding({
   } = useSigner()
   const [step, setStep] = useState(0)
   const [picked, setIdentity] = useState<Identity | null>(null)
-  const [ownKey, setOwnKey] = useState<string | null>(null)
+  const [account, setAccount] = useState<IAccount | null>(null)
   const [bindLogin, setBindLogin] = useState(false)
   const [pickedReach, setReach] = useState<Reach | null>(null)
   const [title, setTitle] = useState(state.config.title)
@@ -79,9 +80,8 @@ export function Onboarding({
 
   if (status === 'loading') return <Skeleton className="h-64 w-full" />
 
-  const extension = nip07() !== undefined
   const managedKey = mode === 'managed' ? signerKey : null
-  const choices = identityChoices({ extension, managedKey: managedKey !== null })
+  const choices = identityChoices({ managedKey: managedKey !== null })
   // A single choice needs no click: it is taken (the text still says what it means).
   const identity = picked ?? (choices.length === 1 ? choices[0] : null)
   // Without a publicly reachable address only Privat is left: taken like a single identity.
@@ -90,21 +90,31 @@ export function Onboarding({
   const checked = wizardConfig(state.config, wizard, null)
   const busy = phase !== null
 
+  /** The Nostr account (any login method) for own identity or as the login key. */
   const chooseOwn = async () => {
     setError(null)
     try {
-      setOwnKey(await connect())
+      const next = await connect()
+      if (!next) return
+      setAccount(next)
       setIdentity('own')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }
 
+  const toggleBind = async (checked: boolean) => {
+    if (!checked) return setBindLogin(false)
+    const next = await connect()
+    setAccount(next)
+    setBindLogin(next !== null)
+  }
+
   const finish = async () => {
     setError(null)
     setPhase('finishing')
     try {
-      const pubkey = identity === 'own' ? ownKey! : (managedKey ?? (await createManaged()))
+      const pubkey = identity === 'own' ? account!.pubkey : (managedKey ?? (await createManaged()))
       const result = wizardConfig(state.config, wizard, pubkey)
       if (!result.config) throw new Error(result.errors.join(' '))
       const relays = pool ?? new SimplePool()
@@ -115,7 +125,7 @@ export function Onboarding({
               .get(DEFAULT_PROFILE_RELAYS, { kinds: [0], authors: [pubkey] }, { maxWait: 4000 })
               .catch(() => null)
           : null
-      if (identity === 'own' || bindLogin) await nostrPost('/admin/bind-nostr')
+      if (identity === 'own' || bindLogin) await nostrPost('/admin/bind-nostr', account!)
       const { restart } = await saveConfig(result.config)
       if (restart) {
         setPhase('restarting')
@@ -133,7 +143,7 @@ export function Onboarding({
 
   const canGoOn =
     current === 'identity'
-      ? identity === 'channel' || (identity === 'own' && ownKey !== null)
+      ? identity === 'channel' || (identity === 'own' && account !== null)
       : current === 'publishing'
         ? reach !== null
         : true
@@ -162,8 +172,10 @@ export function Onboarding({
                   onSelect={() => void chooseOwn()}
                 >
                   <span className="block">{t('studio.onboarding.identity.ownBody')}</span>
-                  {identity === 'own' && ownKey && (
-                    <code className="block break-all text-xs">{nip19.npubEncode(ownKey)}</code>
+                  {identity === 'own' && account && (
+                    <code className="block break-all text-xs">
+                      {nip19.npubEncode(account.pubkey)}
+                    </code>
                   )}
                 </Tile>
               )}
@@ -175,20 +187,15 @@ export function Onboarding({
                 <span className="block">{t('studio.onboarding.identity.channelBody')}</span>
               </Tile>
             </div>
-            {identity === 'channel' && extension && (
+            {identity === 'channel' && (
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={bindLogin}
-                  onChange={e => setBindLogin(e.target.checked)}
+                  onChange={e => void toggleBind(e.target.checked)}
                 />
                 {t('studio.onboarding.identity.loginWithNostr')}
               </label>
-            )}
-            {!extension && (
-              <p className="text-sm text-muted-foreground">
-                {t('studio.onboarding.identity.noExtension')}
-              </p>
             )}
           </>
         )}
@@ -229,7 +236,7 @@ export function Onboarding({
               <dt className="text-muted-foreground">{t('studio.onboarding.summary.identity')}</dt>
               <dd>
                 {identity === 'own'
-                  ? `${t('studio.onboarding.identity.ownTitle')} (${nip19.npubEncode(ownKey!)})`
+                  ? `${t('studio.onboarding.identity.ownTitle')} (${nip19.npubEncode(account!.pubkey)})`
                   : t('studio.onboarding.identity.channelTitle')}
               </dd>
               <dt className="text-muted-foreground">{t('studio.onboarding.summary.login')}</dt>

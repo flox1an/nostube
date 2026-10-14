@@ -139,6 +139,17 @@
         "paymentFailed": "The payment failed: {{reason}}",
         "copyFailed": "The invoice could not be copied."
       }
+    },
+    "donate": {
+      "button": "Support",
+      "title": "Support {{name}}",
+      "description": "Every option pays the creator directly.",
+      "lightning": "Lightning Zap",
+      "other": "Other ways to pay",
+      "copy": "Copy address",
+      "copied": "Copied",
+      "copyFailed": "The address could not be copied.",
+      "qr": "QR code"
     }
   }
 }

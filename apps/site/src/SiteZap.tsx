@@ -31,6 +31,7 @@ import {
   validZapReceipts,
   ZapError,
   type ZapEndpoint,
+  type ZapReceipt,
 } from './zap'
 
 declare global {
@@ -40,34 +41,15 @@ declare global {
   }
 }
 
-/**
- * One zap attempt. `gen` ties async results to the attempt that started them; `scope` to the
- * video and account it was made for, so another video or account never sees this invoice.
- */
-type Attempt = { gen: number; scope: string; error?: string } & (
-  | { step: 'form' }
-  | { step: 'creating' }
-  | { step: 'invoice'; bolt11: string; requestId: string; paying?: boolean; copied?: boolean }
-  | { step: 'paid' }
-)
+/** A creator's LNURL-pay provider: the endpoint once resolved, or why it failed. */
+export interface ZapProvider {
+  endpoint?: ZapEndpoint
+  error?: unknown
+  retry: () => void
+}
 
-/** The video's Lightning Zap button: validated sats total, and a dialog to zap the creator. */
-export function SiteZap({
-  video,
-  relays,
-  currentTime,
-}: {
-  video: VideoEvent
-  relays: string[]
-  currentTime: number
-}) {
-  const { t } = useTranslation()
-  const eventStore = useEventStore()
-  const account = useActiveAccount()
-  const profile = useProfile({ pubkey: video.pubkey, relays })
-  const lnurl = profile ? lnurlFromProfile(profile) : null
-
-  // The creator's provider, keyed by the LNURL it came from so a changed profile never uses it.
+/** Resolves the provider of `lnurl`; a result for another LNURL (a changed profile) is never used. */
+export function useZapProvider(lnurl: string | null): ZapProvider {
   const [provider, setProvider] = useState<{
     lnurl: string
     endpoint?: ZapEndpoint
@@ -88,29 +70,59 @@ export function SiteZap({
     return () => controller.abort()
   }, [lnurl, providerAttempt])
   const current = provider?.lnurl === lnurl ? provider : undefined
-  const endpoint = current?.endpoint
+  return {
+    endpoint: current?.endpoint,
+    error: current?.error,
+    retry: () => {
+      setProvider(undefined)
+      setProviderAttempt(n => n + 1)
+    },
+  }
+}
 
-  // Only receipts that pass NIP-57 validation against this provider count.
-  const { zaps } = useEventZaps({
-    eventId: video.id,
-    authorPubkey: video.pubkey,
-    kind: video.kind,
-    identifier: video.identifier,
-  })
-  const address =
-    isAddressableKind(video.kind) && video.identifier
-      ? `${video.kind}:${video.pubkey}:${video.identifier}`
-      : undefined
-  const receipts = useMemo(
-    () =>
-      endpoint
-        ? validZapReceipts(zaps, { endpoint, recipient: video.pubkey, eventId: video.id, address })
-        : [],
-    [zaps, endpoint, video.pubkey, video.id, address]
-  )
-  const totalSats = receipts.reduce((sum, receipt) => sum + receipt.sats, 0)
+/**
+ * One zap attempt. `gen` ties async results to the attempt that started them; `scope` to the
+ * target and account it was made for, so another target or account never sees this invoice.
+ */
+type Attempt = { gen: number; scope: string; error?: string } & (
+  | { step: 'form' }
+  | { step: 'creating' }
+  | { step: 'invoice'; bolt11: string; requestId: string; paying?: boolean; copied?: boolean }
+  | { step: 'paid' }
+)
 
-  const scope = `${video.id}|${account?.pubkey ?? ''}`
+/**
+ * The zap flow for a signed-in visitor: amount and comment, the invoice, then the thanks. Zaps
+ * `video` if given, else the profile of `recipient`. `receipts` (validated against the provider)
+ * confirm a manually paid invoice. Mount it fresh for each zap: its state starts over.
+ */
+export function ZapPanel({
+  recipient,
+  relays,
+  video,
+  at,
+  provider,
+  receipts,
+  onClose,
+  onPayingChange,
+}: {
+  recipient: string
+  relays: string[]
+  video?: VideoEvent
+  /** Seconds into the video; above 0 it offers a timestamped zap. */
+  at: number
+  provider: ZapProvider
+  receipts: ZapReceipt[]
+  onClose: () => void
+  /** While a wallet payment runs the dialog must not close. */
+  onPayingChange: (paying: boolean) => void
+}) {
+  const { t } = useTranslation()
+  const eventStore = useEventStore()
+  const account = useActiveAccount()
+  const { endpoint } = provider
+
+  const scope = `${video?.id ?? recipient}|${account?.pubkey ?? ''}`
   const generation = useRef(0)
   const [attempt, setAttempt] = useState<Attempt>({ gen: 0, scope, step: 'form' })
   const shown: Attempt = attempt.scope === scope ? attempt : { gen: -1, scope, step: 'form' }
@@ -118,33 +130,20 @@ export function SiteZap({
     setAttempt(previous => (previous.gen === gen ? next(previous) : previous))
   const restart = () => setAttempt({ gen: ++generation.current, scope, step: 'form' })
 
-  const [authOpen, setAuthOpen] = useState(false)
-  const [openFor, setOpenFor] = useState<string | null>(null)
-  const [amount, setAmount] = useState('21')
+  // Untouched, the amount follows the provider's minimum once it is known.
+  const [amountInput, setAmountInput] = useState<string>()
+  const amount = amountInput ?? String(Math.max(21, endpoint?.minSats ?? 1))
   const [comment, setComment] = useState('')
-  const [at, setAt] = useState(0)
-  const [withTimestamp, setWithTimestamp] = useState(false)
+  const [withTimestamp, setWithTimestamp] = useState(at > 0)
 
-  if (!lnurl) return null
+  const paying = shown.step === 'invoice' && !!shown.paying
+  useEffect(() => onPayingChange(paying), [paying, onPayingChange])
 
   const errorText = (err: unknown, fallback: 'providerFailed' | 'invoiceFailed') => {
     if (err instanceof ZapError) return t(`site.zap.errors.${err.code}`, err.params)
     return t(`site.zap.errors.${fallback}`, {
       reason: err instanceof Error ? err.message : String(err),
     })
-  }
-
-  const open = () => {
-    if (!account) {
-      setAuthOpen(true)
-      return
-    }
-    const seconds = Math.max(0, Math.floor(currentTime))
-    setAt(seconds)
-    setWithTimestamp(seconds > 0)
-    if (endpoint && Number(amount) < endpoint.minSats) setAmount(String(endpoint.minSats))
-    restart()
-    setOpenFor(video.id)
   }
 
   const createInvoice = async () => {
@@ -154,10 +153,13 @@ export function SiteZap({
     try {
       const sats = Number(amount)
       checkZapAmount(sats, endpoint)
-      const event = eventStore.getEvent(video.id)
-      if (!event) throw new ZapError('videoUnavailable')
+      let event: NostrEvent | undefined
+      if (video) {
+        event = eventStore.getEvent(video.id)
+        if (!event) throw new ZapError('videoUnavailable')
+      }
       const template = createZapRequest({
-        recipientPubkey: video.pubkey,
+        recipientPubkey: recipient,
         amount: sats,
         comment: comment.trim() || undefined,
         relays,
@@ -224,8 +226,171 @@ export function SiteZap({
   const confirmed =
     shown.step === 'invoice' &&
     receipts.some(r => r.bolt11 === shown.bolt11.toLowerCase() && r.requestId === shown.requestId)
-  const paid = shown.step === 'paid' || confirmed
-  const paying = shown.step === 'invoice' && shown.paying
+
+  if (shown.step === 'paid' || confirmed) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">{t('site.zap.paid')}</p>
+        <Button onClick={onClose}>{t('site.zap.close')}</Button>
+      </div>
+    )
+  }
+
+  if (provider.error) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-red-600">{errorText(provider.error, 'providerFailed')}</p>
+        <Button variant="outline" onClick={provider.retry}>
+          {t('site.zap.retry')}
+        </Button>
+      </div>
+    )
+  }
+
+  if (shown.step === 'invoice') {
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-center rounded-lg bg-white p-3">
+          <QRCodeSVG value={`LIGHTNING:${shown.bolt11.toUpperCase()}`} size={220} level="M" />
+        </div>
+        <p className="text-sm text-muted-foreground">{t('site.zap.invoiceHint')}</p>
+        <Input readOnly value={shown.bolt11} aria-label={t('site.zap.copy')} />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => void copy(shown.bolt11)}>
+            {shown.copied ? t('site.zap.copied') : t('site.zap.copy')}
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`lightning:${shown.bolt11}`}>{t('site.zap.openWallet')}</a>
+          </Button>
+          {webln && (
+            <Button size="sm" disabled={paying} onClick={() => void payWithWebln(shown.bolt11)}>
+              {paying ? t('site.zap.paying') : t('site.zap.payWebln')}
+            </Button>
+          )}
+        </div>
+        <p className="text-sm" role="status">
+          {t('site.zap.waiting')}
+        </p>
+        {shown.error && <p className="text-sm text-red-600">{shown.error}</p>}
+        <Button variant="ghost" size="sm" disabled={paying} onClick={restart}>
+          {t('site.zap.cancel')}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={e => {
+        e.preventDefault()
+        void createInvoice()
+      }}
+    >
+      <div className="space-y-1">
+        <Label htmlFor="site-zap-amount">{t('site.zap.amount')}</Label>
+        <Input
+          id="site-zap-amount"
+          type="number"
+          inputMode="numeric"
+          min={endpoint?.minSats ?? 1}
+          max={endpoint?.maxSats}
+          step={1}
+          value={amount}
+          disabled={shown.step === 'creating'}
+          onChange={e => setAmountInput(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="site-zap-comment">{t('site.zap.comment')}</Label>
+        <Input
+          id="site-zap-comment"
+          value={comment}
+          maxLength={endpoint?.commentAllowed}
+          disabled={shown.step === 'creating'}
+          onChange={e => setComment(e.target.value)}
+        />
+      </div>
+      {at > 0 && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="site-zap-timestamp"
+            checked={withTimestamp}
+            disabled={shown.step === 'creating'}
+            onCheckedChange={checked => setWithTimestamp(checked === true)}
+          />
+          <Label htmlFor="site-zap-timestamp">
+            {t('site.zap.includeTimestamp', { time: formatDuration(at) })}
+          </Label>
+        </div>
+      )}
+      {shown.error && <p className="text-sm text-red-600">{shown.error}</p>}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={!endpoint || shown.step === 'creating'}>
+          {shown.step === 'creating' ? t('site.zap.creating') : t('site.zap.createInvoice')}
+        </Button>
+        {shown.step === 'creating' && (
+          <Button type="button" variant="ghost" onClick={restart}>
+            {t('site.zap.cancel')}
+          </Button>
+        )}
+      </div>
+    </form>
+  )
+}
+
+/** The video's Lightning Zap button: validated sats total, and a dialog to zap the creator. */
+export function SiteZap({
+  video,
+  relays,
+  currentTime,
+}: {
+  video: VideoEvent
+  relays: string[]
+  currentTime: number
+}) {
+  const { t } = useTranslation()
+  const account = useActiveAccount()
+  const profile = useProfile({ pubkey: video.pubkey, relays })
+  const lnurl = profile ? lnurlFromProfile(profile) : null
+  const provider = useZapProvider(lnurl)
+  const { endpoint } = provider
+
+  // Only receipts that pass NIP-57 validation against this provider count.
+  const { zaps } = useEventZaps({
+    eventId: video.id,
+    authorPubkey: video.pubkey,
+    kind: video.kind,
+    identifier: video.identifier,
+  })
+  const address =
+    isAddressableKind(video.kind) && video.identifier
+      ? `${video.kind}:${video.pubkey}:${video.identifier}`
+      : undefined
+  const receipts = useMemo(
+    () =>
+      endpoint
+        ? validZapReceipts(zaps, { endpoint, recipient: video.pubkey, eventId: video.id, address })
+        : [],
+    [zaps, endpoint, video.pubkey, video.id, address]
+  )
+  const totalSats = receipts.reduce((sum, receipt) => sum + receipt.sats, 0)
+
+  const [authOpen, setAuthOpen] = useState(false)
+  const [openFor, setOpenFor] = useState<string | null>(null)
+  const [at, setAt] = useState(0)
+  const [paying, setPaying] = useState(false)
+
+  if (!lnurl) return null
+
+  const open = () => {
+    if (!account) {
+      setAuthOpen(true)
+      return
+    }
+    setAt(Math.max(0, Math.floor(currentTime)))
+    setOpenFor(video.id)
+  }
 
   return (
     <>
@@ -256,9 +421,7 @@ export function SiteZap({
       <Dialog
         open={openFor === video.id && !!account}
         onOpenChange={next => {
-          if (next || paying) return
-          setOpenFor(null)
-          restart()
+          if (!next && !paying) setOpenFor(null)
         }}
       >
         <DialogContent className="max-w-sm">
@@ -266,122 +429,16 @@ export function SiteZap({
             <DialogTitle>{t('site.zap.title')}</DialogTitle>
             <DialogDescription>{t('site.zap.description')}</DialogDescription>
           </DialogHeader>
-
-          {paid ? (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">{t('site.zap.paid')}</p>
-              <Button
-                onClick={() => {
-                  setOpenFor(null)
-                  restart()
-                }}
-              >
-                {t('site.zap.close')}
-              </Button>
-            </div>
-          ) : current?.error ? (
-            <div className="space-y-3">
-              <p className="text-sm text-red-600">{errorText(current.error, 'providerFailed')}</p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setProvider(undefined)
-                  setProviderAttempt(n => n + 1)
-                }}
-              >
-                {t('site.zap.retry')}
-              </Button>
-            </div>
-          ) : shown.step === 'invoice' ? (
-            <div className="space-y-3">
-              <div className="flex justify-center rounded-lg bg-white p-3">
-                <QRCodeSVG value={`LIGHTNING:${shown.bolt11.toUpperCase()}`} size={220} level="M" />
-              </div>
-              <p className="text-sm text-muted-foreground">{t('site.zap.invoiceHint')}</p>
-              <Input readOnly value={shown.bolt11} aria-label={t('site.zap.copy')} />
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => void copy(shown.bolt11)}>
-                  {shown.copied ? t('site.zap.copied') : t('site.zap.copy')}
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={`lightning:${shown.bolt11}`}>{t('site.zap.openWallet')}</a>
-                </Button>
-                {webln && (
-                  <Button
-                    size="sm"
-                    disabled={paying}
-                    onClick={() => void payWithWebln(shown.bolt11)}
-                  >
-                    {paying ? t('site.zap.paying') : t('site.zap.payWebln')}
-                  </Button>
-                )}
-              </div>
-              <p className="text-sm" role="status">
-                {t('site.zap.waiting')}
-              </p>
-              {shown.error && <p className="text-sm text-red-600">{shown.error}</p>}
-              <Button variant="ghost" size="sm" disabled={paying} onClick={restart}>
-                {t('site.zap.cancel')}
-              </Button>
-            </div>
-          ) : (
-            <form
-              className="space-y-3"
-              onSubmit={e => {
-                e.preventDefault()
-                void createInvoice()
-              }}
-            >
-              <div className="space-y-1">
-                <Label htmlFor="site-zap-amount">{t('site.zap.amount')}</Label>
-                <Input
-                  id="site-zap-amount"
-                  type="number"
-                  inputMode="numeric"
-                  min={endpoint?.minSats ?? 1}
-                  max={endpoint?.maxSats}
-                  step={1}
-                  value={amount}
-                  disabled={shown.step === 'creating'}
-                  onChange={e => setAmount(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="site-zap-comment">{t('site.zap.comment')}</Label>
-                <Input
-                  id="site-zap-comment"
-                  value={comment}
-                  maxLength={endpoint?.commentAllowed}
-                  disabled={shown.step === 'creating'}
-                  onChange={e => setComment(e.target.value)}
-                />
-              </div>
-              {at > 0 && (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="site-zap-timestamp"
-                    checked={withTimestamp}
-                    disabled={shown.step === 'creating'}
-                    onCheckedChange={checked => setWithTimestamp(checked === true)}
-                  />
-                  <Label htmlFor="site-zap-timestamp">
-                    {t('site.zap.includeTimestamp', { time: formatDuration(at) })}
-                  </Label>
-                </div>
-              )}
-              {shown.error && <p className="text-sm text-red-600">{shown.error}</p>}
-              <div className="flex gap-2">
-                <Button type="submit" disabled={!endpoint || shown.step === 'creating'}>
-                  {shown.step === 'creating' ? t('site.zap.creating') : t('site.zap.createInvoice')}
-                </Button>
-                {shown.step === 'creating' && (
-                  <Button type="button" variant="ghost" onClick={restart}>
-                    {t('site.zap.cancel')}
-                  </Button>
-                )}
-              </div>
-            </form>
-          )}
+          <ZapPanel
+            recipient={video.pubkey}
+            relays={relays}
+            video={video}
+            at={at}
+            provider={provider}
+            receipts={receipts}
+            onClose={() => setOpenFor(null)}
+            onPayingChange={setPaying}
+          />
         </DialogContent>
       </Dialog>
     </>

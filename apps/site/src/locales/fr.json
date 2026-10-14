@@ -141,6 +141,17 @@
         "paymentFailed": "Le paiement a échoué : {{reason}}",
         "copyFailed": "La facture n'a pas pu être copiée."
       }
+    },
+    "donate": {
+      "button": "Soutenir",
+      "title": "Soutenir {{name}}",
+      "description": "Chaque option paie directement le créateur.",
+      "lightning": "Zap Lightning",
+      "other": "Autres moyens de paiement",
+      "copy": "Copier l’adresse",
+      "copied": "Copié",
+      "copyFailed": "L’adresse n’a pas pu être copiée.",
+      "qr": "Code QR"
     }
   }
 }

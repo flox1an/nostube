@@ -139,6 +139,17 @@
         "paymentFailed": "Die Zahlung ist fehlgeschlagen: {{reason}}",
         "copyFailed": "Die Rechnung konnte nicht kopiert werden."
       }
+    },
+    "donate": {
+      "button": "Unterstützen",
+      "title": "{{name}} unterstützen",
+      "description": "Jede Möglichkeit zahlt direkt an den Creator.",
+      "lightning": "Lightning-Zap",
+      "other": "Weitere Zahlungswege",
+      "copy": "Adresse kopieren",
+      "copied": "Kopiert",
+      "copyFailed": "Die Adresse konnte nicht kopiert werden.",
+      "qr": "QR-Code"
     }
   }
 }

@@ -33,11 +33,11 @@ export interface ZapEndpoint {
   commentAllowed?: number
 }
 
-/** What a zap receipt must be about to count for a video. */
+/** What a zap receipt must be about to count: a video, or (without `eventId`) the profile itself. */
 export interface ZapTarget {
   endpoint: ZapEndpoint
   recipient: string
-  eventId: string
+  eventId?: string
   /** `kind:pubkey:d` of an addressable video. */
   address?: string
 }
@@ -164,9 +164,9 @@ export function checkInvoice(invoice: unknown, sats: number): string {
 const tag = (event: NostrEvent, name: string) => event.tags.find(t => t[0] === name)?.[1]
 
 /**
- * A zap receipt for the target video checked per NIP-57 Appendix F: signed by the provider,
- * paying the creator, for this video, wrapping a signed zap request whose amount (and lnurl,
- * if present) match the invoice. Null for anything else.
+ * A zap receipt for the target checked per NIP-57 Appendix F: signed by the provider, paying
+ * the creator, for this video (or, for a profile target, for no event at all), wrapping a
+ * signed zap request whose amount (and lnurl, if present) match the invoice. Null otherwise.
  */
 export function validZapReceipt(receipt: NostrEvent, target: ZapTarget): ZapReceipt | null {
   try {
@@ -181,12 +181,18 @@ export function validZapReceipt(receipt: NostrEvent, target: ZapTarget): ZapRece
     if (tag(request, 'p') !== target.recipient || tag(receipt, 'p') !== target.recipient)
       return null
 
-    const forEvent = tag(request, 'e') === target.eventId && tag(receipt, 'e') === target.eventId
-    const forAddress =
-      !!target.address &&
-      tag(request, 'a') === target.address &&
-      tag(receipt, 'a') === target.address
-    if (!forEvent && !forAddress) return null
+    if (target.eventId === undefined) {
+      // A profile zap: a zap of some event is not one of the profile.
+      if ([request, receipt].some(e => tag(e, 'e') !== undefined || tag(e, 'a') !== undefined))
+        return null
+    } else {
+      const forEvent = tag(request, 'e') === target.eventId && tag(receipt, 'e') === target.eventId
+      const forAddress =
+        !!target.address &&
+        tag(request, 'a') === target.address &&
+        tag(receipt, 'a') === target.address
+      if (!forEvent && !forAddress) return null
+    }
 
     const amount = tag(request, 'amount')
     if (amount !== undefined && amount !== String(sats * 1000)) return null

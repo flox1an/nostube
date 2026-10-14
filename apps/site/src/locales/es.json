@@ -141,6 +141,17 @@
         "paymentFailed": "El pago falló: {{reason}}",
         "copyFailed": "No se pudo copiar la factura."
       }
+    },
+    "donate": {
+      "button": "Apoyar",
+      "title": "Apoyar a {{name}}",
+      "description": "Cada opción paga directamente al creador.",
+      "lightning": "Zap de Lightning",
+      "other": "Otras formas de pago",
+      "copy": "Copiar dirección",
+      "copied": "Copiado",
+      "copyFailed": "No se pudo copiar la dirección.",
+      "qr": "Código QR"
     }
   }
 }

@@ -41,7 +41,19 @@ function zapError(fn: () => unknown): string | undefined {
   }
 }
 
-function receipt({ bolt11 = invoice1000(), signer = providerKey, e = videoId } = {}): NostrEvent {
+function receipt({
+  bolt11 = invoice1000(),
+  signer = providerKey,
+  e = videoId,
+  profile = false,
+} = {}): NostrEvent {
+  // A profile zap names no event and no coordinate.
+  const about = profile
+    ? []
+    : [
+        ['e', e],
+        ['a', address],
+      ]
   const request = finalizeEvent(
     {
       kind: 9734,
@@ -49,8 +61,7 @@ function receipt({ bolt11 = invoice1000(), signer = providerKey, e = videoId } =
       content: '',
       tags: [
         ['p', creator],
-        ['e', e],
-        ['a', address],
+        ...about,
         ['amount', '1000000'],
         ['lnurl', encodeLnurl(LNURL)],
         ['relays', 'wss://relay.example'],
@@ -65,8 +76,7 @@ function receipt({ bolt11 = invoice1000(), signer = providerKey, e = videoId } =
       content: '',
       tags: [
         ['p', creator],
-        ['e', e],
-        ['a', address],
+        ...about,
         ['bolt11', bolt11],
         ['description', JSON.stringify(request)],
       ],
@@ -170,5 +180,13 @@ describe('zap receipts', () => {
       nostrPubkey: endpoint.nostrPubkey,
     })
     expect(validZapReceipt(receipt(), { ...target, endpoint: otherLnurl })).toBeNull()
+  })
+
+  it('counts only zaps of the profile itself for a profile target', () => {
+    const profileTarget: ZapTarget = { endpoint, recipient: creator }
+    expect(validZapReceipt(receipt({ profile: true }), profileTarget)?.sats).toBe(1000)
+    // A zap of a video is not a zap of the profile, and vice versa.
+    expect(validZapReceipt(receipt(), profileTarget)).toBeNull()
+    expect(validZapReceipt(receipt({ profile: true }), target)).toBeNull()
   })
 })

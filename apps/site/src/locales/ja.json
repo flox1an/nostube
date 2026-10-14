@@ -137,6 +137,17 @@
         "paymentFailed": "支払いに失敗しました：{{reason}}",
         "copyFailed": "請求書をコピーできませんでした。"
       }
+    },
+    "donate": {
+      "button": "応援する",
+      "title": "{{name}}を応援",
+      "description": "どの方法でもクリエイターに直接支払われます。",
+      "lightning": "Lightning Zap",
+      "other": "その他の支払い方法",
+      "copy": "アドレスをコピー",
+      "copied": "コピーしました",
+      "copyFailed": "アドレスをコピーできませんでした。",
+      "qr": "QRコード"
     }
   }
 }

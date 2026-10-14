@@ -137,6 +137,17 @@
         "paymentFailed": "付款失败：{{reason}}",
         "copyFailed": "无法复制发票。"
       }
+    },
+    "donate": {
+      "button": "支持",
+      "title": "支持 {{name}}",
+      "description": "每种方式都直接支付给创作者。",
+      "lightning": "闪电 Zap",
+      "other": "其他支付方式",
+      "copy": "复制地址",
+      "copied": "已复制",
+      "copyFailed": "无法复制地址。",
+      "qr": "二维码"
     }
   }
 }

@@ -13,6 +13,7 @@ import { OfflineBanner } from '@nostube/widgets/components/OfflineBanner'
 import { AuthArea } from './AuthArea'
 import { GridPage, SearchBox, SearchPage } from './GridPage'
 import { SiteFooter, SitePage } from './SitePage'
+import { SiteDonate } from './SiteDonate'
 import { VideoView } from './VideoView'
 import { useAgeGate } from './use-age-gate'
 import { useCreatorProfile } from './use-creator-profile'
@@ -101,6 +102,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
         </Link>
         <div className="flex shrink-0 items-center gap-1">
           {search && <SearchBox key={pageKey} />}
+          {config.startPage && <SiteDonate pubkey={config.startPage.creator} config={config} />}
           <AuthArea client={client} relays={config.interactionRelays} />
         </div>
       </header>

@@ -101,8 +101,6 @@ export { useZappedEvents } from './useZappedEvents'
 // UPLOAD & TRANSCODING
 // ============================================================================
 export { useVideoUpload } from './useVideoUpload'
-export { useVideoFileUpload } from './useVideoFileUpload'
-export type { VideoFileUploadStatus, UseVideoFileUploadReturn } from './useVideoFileUpload'
 export { useDvmTranscode } from './useDvmTranscode'
 export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
 export { useUserBlossomServers } from './useUserBlossomServers'

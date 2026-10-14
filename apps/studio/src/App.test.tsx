@@ -102,16 +102,18 @@ describe('Studio save bar', () => {
       vi.stubGlobal('fetch', fetch)
       location.hash = '#/instance'
       render(<App />)
-      await screen.findByLabelText('Site hosting')
+      await screen.findByRole('button', { name: /^nsite hosting/ })
       if (target === 'instance') {
-        fireEvent.change(screen.getByLabelText('Site hosting'), { target: { value: 'instance' } })
+        fireEvent.click(screen.getByRole('button', { name: /^Website on this instance/ }))
       } else {
         fireEvent.click(screen.getByRole('button', { name: /^Private/ }))
       }
       expect(await screen.findByRole('alertdialog')).toBeTruthy()
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(screen.queryByRole('alertdialog')).toBeNull()
-      expect((screen.getByLabelText('Site hosting') as HTMLSelectElement).value).toBe('nsite')
+      expect(
+        screen.getByRole('button', { name: /^nsite hosting/ }).getAttribute('aria-pressed')
+      ).toBe('true')
       expect(screen.queryByText('Unsaved changes')).toBeNull()
       expect(
         fetch.mock.calls.filter(
@@ -156,9 +158,9 @@ describe('Studio save bar', () => {
     )
     location.hash = '#/instance'
     render(<App />)
-    await screen.findByLabelText('Site hosting')
+    await screen.findByRole('button', { name: /^nsite hosting/ })
     if (target === 'private') fireEvent.click(screen.getByRole('button', { name: /^Private/ }))
-    else fireEvent.change(screen.getByLabelText('Site hosting'), { target: { value: 'instance' } })
+    else fireEvent.click(screen.getByRole('button', { name: /^Website on this instance/ }))
     fireEvent.click(await screen.findByRole('button', { name: label }))
     fireEvent.click(screen.getByRole('button', { name: 'Save and apply' }))
     await waitFor(() =>
@@ -207,7 +209,11 @@ describe('Studio save bar', () => {
     const publicTile = await screen.findByRole('button', { name: /^Public/ })
     expect((publicTile as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(publicTile)
-    expect(await screen.findByLabelText('Site hosting')).toBeTruthy()
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('button', { name: /^nsite hosting/ }) as HTMLButtonElement).disabled
+      ).toBe(false)
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
     fireEvent.change(await screen.findByLabelText('Mirror Blossom servers'), {
       target: { value: '' },

@@ -239,14 +239,18 @@ describe('Site hosting', () => {
     s.config.reach = 'public'
     renderInstance(s)
     await screen.findByText(/nsite requires a managed channel key/)
-    expect(screen.queryByLabelText('Site hosting')).toBeNull()
+    expect(
+      (screen.getByRole('button', { name: /^nsite hosting/ }) as HTMLButtonElement).disabled
+    ).toBe(true)
   })
 
   it('does not offer nsite in private reach', async () => {
     serve()
     renderInstance(state(true))
     await screen.findByText(/Switch to Public to publish/)
-    expect(screen.queryByLabelText('Site hosting')).toBeNull()
+    expect(
+      (screen.getByRole('button', { name: /^nsite hosting/ }) as HTMLButtonElement).disabled
+    ).toBe(true)
   })
 
   it('shows URL, CNAME, TLS, version and cache warning and publishes saved settings only', async () => {

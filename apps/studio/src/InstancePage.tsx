@@ -13,7 +13,7 @@ import { Input } from '@nostube/widgets/components/input'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { loadNsite, publishNsite, type AdminState, type NsiteStatus } from './api'
 import { draftCanBePublic } from './draft'
-import { Field } from './fields'
+import { Field, Tile } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { KeyList } from './KeyList'
 import { ReachChoice } from './ReachChoice'
@@ -209,23 +209,31 @@ function NsiteCard({
         <CardDescription>{t('studio.nsite.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Tile
+            title={t('studio.nsite.instance')}
+            selected={draft.siteHosting === 'instance'}
+            onSelect={() => update({ siteHosting: 'instance' })}
+          >
+            <span className="block">{t('studio.nsite.instanceBody')}</span>
+            <code className="block break-all text-xs">{state.origin}</code>
+          </Tile>
+          <Tile
+            title={t('studio.nsite.nsite')}
+            selected={draft.siteHosting === 'nsite'}
+            disabled={!available}
+            onSelect={() => update({ siteHosting: 'nsite' })}
+          >
+            <span className="block">{t('studio.nsite.nsiteBody')}</span>
+            <code className="block break-all text-xs">{url ?? draft.nsiteGateway}</code>
+          </Tile>
+        </div>
         {!available ? (
           <p className="text-sm text-muted-foreground">
             {t(mode === 'managed' ? 'studio.nsite.publicRequired' : 'studio.nsite.managedRequired')}
           </p>
         ) : (
           <>
-            <Field id="site-hosting" label={t('studio.nsite.title')}>
-              <select
-                id="site-hosting"
-                value={draft.siteHosting}
-                onChange={e => update({ siteHosting: e.target.value as typeof draft.siteHosting })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="instance">{t('studio.nsite.instance')}</option>
-                <option value="nsite">{t('studio.nsite.nsite')}</option>
-              </select>
-            </Field>
             {draft.siteHosting === 'nsite' && (
               <>
                 <Field

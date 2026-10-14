@@ -16,7 +16,12 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('./signer-context', () => ({ useSigner: () => mocks.signerState }))
 vi.mock('./upload/make-deps', () => ({
-  makeUploadDeps: () => ({ upload: mocks.upload, hash: mocks.hash, probe: mocks.probe }),
+  makeUploadDeps: () => ({
+    upload: mocks.upload,
+    hash: mocks.hash,
+    probe: mocks.probe,
+    prepareMedia: async (template: unknown) => template,
+  }),
 }))
 
 const secret = generateSecretKey()

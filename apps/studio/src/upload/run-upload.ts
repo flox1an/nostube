@@ -6,7 +6,8 @@ import i18n from '../i18n'
 import type { VideoProbe } from './probe-video'
 import { PublishError } from './sign'
 
-export type StepId = 'convert' | 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
+export type StepId =
+  'convert' | 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'mirroring' | 'publish'
 export type StepStatus = 'pending' | 'running' | 'done' | 'error'
 
 /** In order; the names shown are translated at render (`studio.upload.steps.*`). */
@@ -17,6 +18,7 @@ export const STEPS: { id: StepId }[] = [
   { id: 'video' },
   { id: 'thumbnail' },
   { id: 'subtitles' },
+  { id: 'mirroring' },
   { id: 'publish' },
 ]
 
@@ -72,6 +74,8 @@ export interface UploadJob {
   subtitles?: Record<string, UploadedBlob>
   subtitleOffsets?: Record<string, number>
   published?: PublishedVideo
+  /** Media URLs confirmed for this input before signing or scheduling. */
+  template?: EventTemplate
 }
 
 /** What the pipeline needs from the outside: the browser, the network and the signer. */
@@ -99,6 +103,7 @@ export interface UploadDeps {
     onOffset?: (offset: number) => void
     signal?: AbortSignal
   }): Promise<UploadedBlob>
+  prepareMedia(template: EventTemplate, signal?: AbortSignal): Promise<EventTemplate>
   publish(template: EventTemplate): Promise<PublishedVideo>
   newIdentifier(): string
 }
@@ -122,6 +127,7 @@ export function newJob(
       video: pending(),
       thumbnail: pending(),
       subtitles: pending(),
+      mirroring: pending(),
       publish: pending(),
     },
     probe,
@@ -130,8 +136,8 @@ export function newJob(
 
 /** Update an interrupted job, retaining only uploads that still match the selected files. */
 export function updateJobInput(job: UploadJob, input: UploadInput): UploadJob {
-  const steps = { ...job.steps, publish: pending() }
-  const changed: UploadJob = { ...job, input, steps, published: undefined }
+  const steps = { ...job.steps, mirroring: pending(), publish: pending() }
+  const changed: UploadJob = { ...job, input, steps, template: undefined, published: undefined }
   if (input.file !== job.input.file) {
     changed.probe = undefined
     changed.converted = undefined
@@ -307,31 +313,37 @@ export async function runUpload(
   ) {
     return current
   }
+  if (
+    !(await step('mirroring', async () => {
+      const { probe, video, thumbnail, input } = current
+      const template = buildVideoEvent({
+        identifier: current.identifier,
+        title: input.title,
+        description: input.description,
+        tags: input.tags,
+        contentWarning: input.contentWarning,
+        publishedAt: input.publishAt,
+        video: {
+          ...video!,
+          // The server's description should carry these; the file itself is the fallback.
+          size: video!.size || upload.size,
+          type: video!.type || upload.type,
+          width: probe!.width,
+          height: probe!.height,
+          duration: probe!.duration,
+        },
+        thumbnail,
+        subtitles: (input.subtitles ?? []).map(subtitle => ({
+          url: current.subtitles![subtitle.id].url,
+          lang: subtitle.lang,
+        })),
+      })
+      update({ template: await deps.prepareMedia(template, signal) })
+    }))
+  )
+    return current
   await step('publish', async () => {
-    const { probe, video, thumbnail, input } = current
-    const template = buildVideoEvent({
-      identifier: current.identifier,
-      title: input.title,
-      description: input.description,
-      tags: input.tags,
-      contentWarning: input.contentWarning,
-      publishedAt: input.publishAt,
-      video: {
-        ...video!,
-        // The server's description should carry these; the file itself is the fallback.
-        size: video!.size || upload.size,
-        type: video!.type || upload.type,
-        width: probe!.width,
-        height: probe!.height,
-        duration: probe!.duration,
-      },
-      thumbnail,
-      subtitles: (input.subtitles ?? []).map(subtitle => ({
-        url: current.subtitles![subtitle.id].url,
-        lang: subtitle.lang,
-      })),
-    })
-    update({ published: await deps.publish(template) })
+    update({ published: await deps.publish(current.template!) })
   })
   return current
 }

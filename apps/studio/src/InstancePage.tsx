@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { nip19 } from 'nostr-tools'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Card,
   CardContent,
@@ -9,7 +11,8 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
-import type { AdminState } from './api'
+import { loadNsite, publishNsite, type AdminState, type NsiteStatus } from './api'
+import { draftCanBePublic } from './draft'
 import { Field } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { KeyList } from './KeyList'
@@ -33,7 +36,12 @@ export function WithKeyProfiles({ children }: { children: ReactNode }) {
 }
 
 /** The settings every owner meets: reach, whose videos the site shows, search and storage. */
-export function InstancePage({ draft, update, state }: PageProps & { state: AdminState }) {
+export function InstancePage({
+  draft,
+  update,
+  state,
+  dirty = false,
+}: PageProps & { state: AdminState; dirty?: boolean }) {
   const { t } = useTranslation()
   const { mode } = useSigner()
 
@@ -47,11 +55,14 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
           <ReachChoice
             reach={draft.reach}
             onChange={reach => update({ reach })}
-            canBePublic={state.canBePublic}
+            canBePublic={draftCanBePublic(state.originIsPublic, draft)}
+            originIsPublic={state.originIsPublic}
             own={mode === 'own'}
           />
         </CardContent>
       </Card>
+
+      <NsiteCard draft={draft} update={update} state={state} dirty={dirty} />
 
       <Card>
         <CardHeader>
@@ -133,5 +144,181 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
         />
       </p>
     </div>
+  )
+}
+
+/** Publishing always uses saved settings; the draft URL is a preview until Save and apply. */
+function NsiteCard({
+  draft,
+  update,
+  state,
+  dirty,
+}: PageProps & { state: AdminState; dirty: boolean }) {
+  const { t, i18n } = useTranslation()
+  const { mode, pubkey } = useSigner()
+  const [status, setStatus] = useState<NsiteStatus | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    let timer: number | undefined
+    const refresh = async () => {
+      try {
+        const next = await loadNsite()
+        if (live) {
+          setStatus(next)
+          setError(null)
+        }
+      } catch (e) {
+        if (live) setError(e instanceof Error ? e.message : String(e))
+      } finally {
+        if (live) timer = window.setTimeout(() => void refresh(), 5000)
+      }
+    }
+    void refresh()
+    return () => {
+      live = false
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  const publish = async () => {
+    setPublishing(true)
+    setError(null)
+    try {
+      await publishNsite()
+      setStatus(await loadNsite())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setPublishing(false)
+    }
+  }
+  const available = mode === 'managed' && draft.reach === 'public'
+  const gatewayHost = pubkey ? `${nip19.npubEncode(pubkey)}.${draft.nsiteGateway.trim()}` : null
+  const url = draft.nsiteDomain.trim()
+    ? `https://${draft.nsiteDomain.trim()}`
+    : gatewayHost
+      ? `https://${gatewayHost}`
+      : null
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('studio.nsite.title')}</CardTitle>
+        <CardDescription>{t('studio.nsite.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!available ? (
+          <p className="text-sm text-muted-foreground">
+            {t(mode === 'managed' ? 'studio.nsite.publicRequired' : 'studio.nsite.managedRequired')}
+          </p>
+        ) : (
+          <>
+            <Field id="site-hosting" label={t('studio.nsite.title')}>
+              <select
+                id="site-hosting"
+                value={draft.siteHosting}
+                onChange={e => update({ siteHosting: e.target.value as typeof draft.siteHosting })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="instance">{t('studio.nsite.instance')}</option>
+                <option value="nsite">{t('studio.nsite.nsite')}</option>
+              </select>
+            </Field>
+            {draft.siteHosting === 'nsite' && (
+              <>
+                <Field
+                  id="nsite-gateway"
+                  label={t('studio.nsite.gateway')}
+                  hint={t('studio.nsite.gatewayHint')}
+                >
+                  <Input
+                    id="nsite-gateway"
+                    value={draft.nsiteGateway}
+                    placeholder="nsite.lol"
+                    onChange={e => update({ nsiteGateway: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="nsite-domain"
+                  label={t('studio.nsite.domain')}
+                  hint={t('studio.nsite.domainHint')}
+                >
+                  <Input
+                    id="nsite-domain"
+                    value={draft.nsiteDomain}
+                    placeholder="videos.example.org"
+                    onChange={e => update({ nsiteDomain: e.target.value })}
+                  />
+                </Field>
+                {gatewayHost && (
+                  <p className="break-all text-sm">
+                    {t('studio.nsite.cname', { host: gatewayHost })}
+                  </p>
+                )}
+                {url && (
+                  <p className="break-all text-sm">
+                    {t('studio.nsite.url')}{' '}
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="underline">
+                      {url}
+                    </a>
+                  </p>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => void publish()}
+                  disabled={
+                    dirty ||
+                    state.config.siteHosting !== 'nsite' ||
+                    state.config.reach !== 'public' ||
+                    publishing ||
+                    status?.status === 'pending'
+                  }
+                >
+                  {t(publishing ? 'studio.nsite.publishing' : 'studio.nsite.publish')}
+                </Button>
+                {dirty && (
+                  <p className="text-sm text-muted-foreground">{t('studio.nsite.saveFirst')}</p>
+                )}
+                <p className="text-sm text-muted-foreground">{t('studio.nsite.cache')}</p>
+              </>
+            )}
+          </>
+        )}
+        {status && (
+          <div className="space-y-2 text-sm" role="status" aria-live="polite">
+            <p>{t(`studio.nsite.status.${status.status}`)}</p>
+            {status.aggregate && (
+              <dl>
+                <dt>{t('studio.nsite.version')}</dt>
+                <dd className="break-all font-mono text-xs">{status.aggregate}</dd>
+                {status.publishedAt !== null && (
+                  <>
+                    <dt>{t('studio.nsite.publishedAt')}</dt>
+                    <dd>
+                      <time dateTime={new Date(status.publishedAt * 1000).toISOString()}>
+                        {new Date(status.publishedAt * 1000).toLocaleString(i18n.resolvedLanguage)}
+                      </time>
+                    </dd>
+                  </>
+                )}
+              </dl>
+            )}
+            {status.retained && <p>{t('studio.nsite.retained')}</p>}
+            {status.error && (
+              <p role="alert" className="text-destructive">
+                {status.error}
+              </p>
+            )}
+          </div>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   )
 }

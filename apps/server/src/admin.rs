@@ -99,6 +99,7 @@ pub struct Stores {
     pub branding: Arc<crate::branding::Branding>,
     /// Mirror status and retries (ADR 0009).
     pub outbox: crate::outbox::Outbox,
+    pub nsite: crate::nsite::Nsite,
 }
 
 /// Admin state shared with the axum router.
@@ -177,6 +178,9 @@ impl AdminState {
     /// ADR 0012); signs nothing in own identity.
     async fn sync_profile(&self) {
         crate::profile::sync(&self.stores.relay, &self.stores.branding, &self.stores.outbox, &self.managed).await;
+        if let Err(error) = self.stores.nsite.request(&self.stores.branding.public_config()).await {
+            tracing::warn!("nsite: cannot request rebuild: {error}");
+        }
     }
 
     /// `nostube-server admin reset`: forget password and bound key, issue a new
@@ -374,6 +378,9 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
         .route("/api/admin/outbox", get(outbox_get))
         .route("/api/admin/outbox/retry", post(outbox_retry))
+        .route("/api/admin/nsite", get(nsite_get))
+        .route("/api/admin/nsite/publish", post(nsite_publish))
+        .route("/api/admin/media/mirrors", post(media_mirrors))
         .route("/api/admin/schedule", get(schedule_get).post(schedule_post))
         .route("/api/admin/schedule/cancel", post(schedule_cancel))
         .with_state(state)
@@ -601,6 +608,8 @@ fn editable_json(cfg: &Config) -> serde_json::Value {
         "storage": { "quotaGib": cfg.storage.quota_gib, "freeSpaceReserveGib": cfg.storage.free_space_reserve_gib },
         "site": cfg.public_json()["site"],
         "mirror": cfg.mirror,
+        "siteHosting": cfg.site_hosting,
+        "nsite": cfg.nsite,
     })
 }
 
@@ -618,6 +627,9 @@ struct ConfigPut {
     storage: StorageBody,
     site: SiteBody,
     mirror: config::Mirror,
+    site_hosting: config::SiteHosting,
+    nsite: config::NsiteSettings,
+    delete_nsite: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -689,6 +701,7 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         "origin": cfg.origin,
         "tls": tls,
         "canBePublic": cfg.can_be_public(),
+        "originIsPublic": cfg.origin_is_public(),
         "tlsMode": tls_mode,
         "bootId": state.boot_id,
         "nostrPubkey": nostr,
@@ -771,6 +784,8 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
     let edited = Edited {
         title: put.title,
         reach: put.reach,
+        site_hosting: put.site_hosting,
+        nsite: put.nsite,
         creators: put.creators,
         allowed_writers: put.allowed_writers,
         video_sources: put.video_sources,
@@ -801,15 +816,121 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Ok(c) => c,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &e.to_string()),
     };
+    if next.site_hosting == config::SiteHosting::Nsite {
+        match managed_keys(&state) {
+            Ok(Some(_)) => {}
+            Ok(None) => return json_error(StatusCode::BAD_REQUEST, "nsite needs the managed signing key"),
+            Err(error) => return json_error(StatusCode::BAD_REQUEST, &error),
+        }
+    }
+    let disabling = current.site_hosting == config::SiteHosting::Nsite && next.site_hosting != config::SiteHosting::Nsite;
+    if disabling && put.delete_nsite.is_none() {
+        return json_error(StatusCode::BAD_REQUEST, "choose deleteNsite explicitly: true deletes the nsite, false keeps public copies");
+    }
     let restart = match apply(&state, &current, &next) {
         Ok(restart) => restart,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
+    if disabling {
+        if let Err(error) = state.stores.nsite.disable(put.delete_nsite == Some(true), &state.stores.outbox).await {
+            return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error);
+        }
+    }
     // A restart syncs at startup.
     if !restart {
         state.sync_profile().await;
     }
     Json(serde_json::json!({ "ok": true, "revision": next.revision, "restart": restart })).into_response()
+}
+
+async fn nsite_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) { return json_error(StatusCode::UNAUTHORIZED, "not logged in"); }
+    match state.stores.nsite.status(&state.stores.branding.public_config(), &state.managed, &state.stores.outbox).await {
+        Ok(status) => Json(status).into_response(),
+        Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EmptyBody {}
+
+async fn nsite_publish(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) { return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")); }
+    match managed_keys(&state) {
+        Ok(Some(_)) => {}
+        Ok(None) => return json_error(StatusCode::BAD_REQUEST, "nsite needs the managed signing key"),
+        Err(error) => return json_error(StatusCode::BAD_REQUEST, &error),
+    }
+    let cfg = match Config::load(&state.data.join("config.toml")) {
+        Ok(cfg) => cfg,
+        Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error.to_string()),
+    };
+    if cfg.site_hosting != config::SiteHosting::Nsite || cfg.reach != config::Reach::Public {
+        return json_error(StatusCode::BAD_REQUEST, "save site hosting nsite in public reach before publishing");
+    }
+    match state.stores.nsite.request(&state.stores.branding.public_config()).await {
+        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MirrorsBody { hashes: Vec<String> }
+
+async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+    let put: MirrorsBody = match serde_json::from_slice(&body) {
+        Ok(put) => put,
+        Err(error) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")),
+    };
+    if put.hashes.iter().any(|h| almond::services::file_storage::validate_sha256_format(h).is_err()) {
+        return json_error(StatusCode::BAD_REQUEST, "hashes must be Blossom sha256 values");
+    }
+    let cfg = match Config::load(&state.data.join("config.toml")) {
+        Ok(cfg) => cfg,
+        Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error.to_string()),
+    };
+    let _guard = crate::outbox::MEDIA_LIFECYCLE.lock().await;
+    let mut urls = serde_json::Map::new();
+    let mut ready = true;
+    let mut problem: Option<String> = None;
+    let public_servers = cfg.public_mirror().blossom;
+    for hash in put.hashes {
+        let Some(metadata) = state.stores.blossom.file_index.get(&hash).await else {
+            return json_error(StatusCode::NOT_FOUND, &format!("required output is not on this instance: {hash}"));
+        };
+        let name = format!("{hash}{}", metadata.extension.as_ref().filter(|e| !e.is_empty()).map(|e| format!(".{e}")).unwrap_or_default());
+        if cfg.origin_is_public() {
+            urls.insert(hash, format!("{}/{name}", cfg.origin).into());
+            continue;
+        }
+        if cfg.public_mirror().blossom.is_empty() {
+            ready = false;
+            problem = Some("publishing from a private origin requires a publicly reachable mirror Blossom server".into());
+            continue;
+        }
+        if let Err(error) = state.stores.outbox.queue_blob(hash.clone(), metadata.size, format!("{}/{name}", cfg.origin)).await {
+            return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error);
+        }
+        match state.stores.outbox.blob_copies(hash.clone()).await {
+            Ok(copies) => match copies.into_iter().find(|url| public_servers.iter().any(|server| server.trim_end_matches('/') == url.trim_end_matches('/'))) {
+                Some(server) => { urls.insert(hash.clone(), format!("{}/{name}", server.trim_end_matches('/')).into()); }
+                None => { ready = false; }
+            },
+            Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
+        }
+        if !urls.contains_key(&hash) {
+            match state.stores.outbox.blob_problems(hash).await {
+                Ok(Some(error)) => problem = Some(error),
+                Ok(None) => {}
+                Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
+            }
+        }
+    }
+    Json(serde_json::json!({ "ready": ready, "urls": urls, "error": problem })).into_response()
 }
 
 // ── Branding ────────────────────────────────────────────────────────────────
@@ -1142,6 +1263,11 @@ fn apply(state: &AdminState, current: &Config, next: &Config) -> Result<bool, St
     std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
     let text = next.to_toml().map_err(|e| e.to_string())?;
     std::fs::write(&path, text).map_err(|e| format!("cannot write config: {e}"))?;
+    state.stores.outbox.set_origin_public(next.origin_is_public());
+    // Hosting/private transitions stop redirects immediately; other restart-only edits stay staged.
+    if current.site_hosting != next.site_hosting || current.reach != next.reach {
+        state.stores.branding.set_base(next.public_json());
+    }
     if !current.needs_restart(next) {
         state.stores.branding.set_base(next.public_json());
         state.stores.relay.set_title(&next.title);
@@ -1439,7 +1565,8 @@ mod tests {
         let relay = Relay::open(&dir.join("relay.sqlite"), relay).unwrap();
         let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
         outbox.attach_storage(blossom.clone());
-        Stores { relay, blossom, branding, outbox }
+        let nsite = crate::nsite::Nsite::open(dir).unwrap();
+        Stores { relay, blossom, branding, outbox, nsite }
     }
 
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
@@ -1510,10 +1637,115 @@ mod tests {
         (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
     }
 
+    async fn api_call(app: &Router, method: &str, path: &str, cookie: Option<&str>, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().method(method).uri(path).header(header::CONTENT_TYPE, "application/json");
+        if let Some(cookie) = cookie { req = req.header(header::COOKIE, cookie); }
+        let res = app.clone().oneshot(req.body(axum::body::Body::from(body.to_string())).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
+    #[tokio::test]
+    async fn nsite_endpoints_require_auth_managed_key_saved_settings_and_explicit_disable_choice() {
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let c = Some(cookie.as_str());
+        let empty = serde_json::json!({});
+        assert_eq!(api_call(&app, "GET", "/api/admin/nsite", None, empty.clone()).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", None, empty.clone()).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone()).await.0, StatusCode::BAD_REQUEST);
+        let mut edit = put_value("#112233");
+        edit["reach"] = "public".into();
+        edit["siteHosting"] = "nsite".into();
+        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body["error"].as_str().unwrap().contains("managed"));
+
+        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
+            "test".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap();
+        *state.managed.lock() = Some(Ok(Keys::generate()));
+        let app = router(state);
+        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone()).await.0, StatusCode::BAD_REQUEST, "only saved nsite settings may publish");
+        // Keep mirror targets unchanged in this test so a config apply does not schedule a restart.
+        let mut cfg = Config::load(&dir.join("config.toml")).unwrap();
+        cfg.mirror = config::Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec!["https://blossom.example".into()] };
+        cfg.reach = config::Reach::Public;
+        cfg.site_hosting = config::SiteHosting::Nsite;
+        std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
+        edit = editable_json(&cfg);
+        edit["reach"] = "private".into();
+        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body["error"].as_str().unwrap().contains("deleteNsite"));
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site_hosting, config::SiteHosting::Nsite);
+        edit["deleteNsite"] = false.into();
+        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::OK);
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site_hosting, config::SiteHosting::Instance);
+    }
+
+    #[tokio::test]
+    async fn mirror_readiness_requires_every_output_and_returns_only_confirmed_public_urls() {
+        let (_, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let mut cfg = Config::load(&dir.join("config.toml")).unwrap();
+        cfg.origin = "https://home.example".into();
+        cfg.origin_host = "home.example".into();
+        cfg.tls = config::Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 };
+        cfg.reach = config::Reach::Public;
+        cfg.mirror = config::Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![cfg.origin.clone(), "https://blossom.example".into(), "https://optional.example".into()] };
+        std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
+        let mut live = stores(&dir).await;
+        live.outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), cfg.mirror.clone()).unwrap();
+        live.outbox.attach_storage(live.blossom.clone());
+        live.outbox.set_origin_public(false);
+        let owner = Keys::generate().public_key().to_hex();
+        let (video, _) = live.outbox.store_local(b"video bytes", "video/mp4", "mp4", &owner).await.unwrap();
+        let (thumbnail, _) = live.outbox.store_local(b"thumbnail bytes", "image/png", "png", &owner).await.unwrap();
+        let outbox = live.outbox.clone();
+        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
+            "test".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        let app = router(state);
+        let path = "/api/admin/media/mirrors";
+        let body = serde_json::json!({"hashes":[video,thumbnail]});
+        assert_eq!(api_call(&app, "POST", path, None, body.clone()).await.0, StatusCode::UNAUTHORIZED);
+        let c = Some(cookie.as_str());
+        let (status, response) = api_call(&app, "POST", path, c, body.clone()).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["ready"], false);
+        outbox.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://home.example'", []).map(|_| ())).await.unwrap();
+        let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
+        assert_eq!(response["ready"], false, "a local-ca self-copy is not publicly available");
+        assert_eq!(response["urls"], serde_json::json!({}));
+        let confirmed = video.clone();
+        outbox.db(move |conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://blossom.example' AND ref_id=?", [confirmed]).map(|_| ())).await.unwrap();
+        let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
+        assert_eq!(response["ready"], false, "thumbnail is required too");
+        assert_eq!(response["urls"][&video], format!("https://blossom.example/{video}.mp4"));
+        outbox.db(|conn| {
+            conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://blossom.example'", [])?;
+            conn.execute("UPDATE outbox SET status='pending',last_error='offline' WHERE kind='blob' AND target='https://optional.example'", []).map(|_| ())
+        }).await.unwrap();
+        let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
+        assert_eq!(response["ready"], true);
+        assert!(response["error"].is_null(), "optional mirror failures cannot block confirmed media");
+        assert_eq!(response["urls"][&thumbnail], format!("https://blossom.example/{thumbnail}.png"));
+        assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["../secrets"]})).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["00".repeat(32)]})).await.0, StatusCode::NOT_FOUND);
+        cfg.origin = "https://instance.example".into();
+        cfg.origin_host = "instance.example".into();
+        cfg.tls = config::Tls::Proxy { port: 8080 };
+        std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
+        let (_, response) = api_call(&app, "POST", path, c, body).await;
+        assert_eq!(response["ready"], true);
+        assert_eq!(response["urls"][&video], format!("https://instance.example/{video}.mp4"));
+    }
+
     fn put_value(accent: &str) -> serde_json::Value {
         serde_json::json!({
             "title": "Renamed",
             "reach": "private",
+            "siteHosting": "instance",
+            "nsite": { "gateway": "nsite.lol", "domain": "" },
             "creators": [PK],
             "allowedWriters": [PK],
             "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
@@ -1698,16 +1930,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_local_origin_cannot_be_switched_to_public() {
+    async fn a_local_origin_needs_both_public_mirrors_to_switch_to_public() {
         let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
         assert_eq!(read["canBePublic"], false, "flox-mac.local is not reachable from the network");
         assert_eq!(read["config"]["reach"], "private");
         let mut edit = put_value("#112233");
         edit["reach"] = "public".into();
+        edit["mirror"] = serde_json::json!({"relays": [], "blossom": []});
         let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         assert_eq!(Config::load(&dir.join("config.toml")).unwrap().reach, config::Reach::Private);
+        edit["mirror"] = serde_json::json!({"relays":["wss://mirror.example"],"blossom":["https://blossom.example"]});
+        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().reach, config::Reach::Public);
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -2224,8 +2461,8 @@ mod tests {
         assert_eq!(public_site(&branding)["logo"], response["url"]);
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
         let profile = relay.stored(nostr::prelude::Filter::new().author(keys.public_key()).kind(nostr::prelude::Kind::Metadata)).await.unwrap();
-        assert_eq!(serde_json::from_str::<serde_json::Value>(&profile[0].content).unwrap()["picture"],
-            format!("https://flox-mac.local{}", response["url"].as_str().unwrap()));
+        let content: serde_json::Value = serde_json::from_str(&profile[0].content).unwrap();
+        assert!(content.get("picture").is_none(), "a private LAN profile carries no unreachable image URL: {content}");
         // Refused replacements leave the existing branding untouched, regardless of declared MIME/size.
         tokio::fs::write(&path, b"<html>").await.unwrap();
         assert_eq!(branding_call(&app, "PUT", "logo", c, json, body.clone()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);

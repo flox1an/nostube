@@ -21,6 +21,9 @@ struct Raw {
     /// Newer than ADR 0005; absent = private (ADR 0012).
     #[serde(default)]
     reach: Reach,
+    /// Newer than ADR 0005; absent = the instance serves the site (#157).
+    #[serde(default)]
+    site_hosting: SiteHosting,
     creators: Vec<String>,
     allowed_writers: Vec<String>,
     video_sources: Vec<String>,
@@ -38,6 +41,8 @@ struct Raw {
     /// Opt-in (ADR 0009); absent = no outbox work at all.
     #[serde(default, skip_serializing_if = "Mirror::is_off")]
     mirror: Mirror,
+    #[serde(default)]
+    nsite: NsiteSettings,
 }
 
 /// What the instance publishes and where the site reads (ADR 0012). `private`: nothing goes out
@@ -53,17 +58,92 @@ pub enum Reach {
     Public,
 }
 
-/// Public needs a relay URL the network can reach: not a local-CA instance, not a `.local`
-/// name, not a bare IP address.
-fn can_be_public(tls: &Tls, origin_host: &str) -> bool {
-    !matches!(tls, Tls::LocalCa { .. })
-        && !origin_host.to_ascii_lowercase().ends_with(".local")
-        && origin_host.parse::<std::net::IpAddr>().is_err()
+/// Public DNS names only; local names and bare addresses cannot be announced.
+fn is_public_host(host: &str) -> bool {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    host.contains('.')
+        && !host.ends_with(".local")
+        && !host.ends_with(".localhost")
+        && host.parse::<std::net::IpAddr>().is_err()
 }
 
-fn check_reach(reach: Reach, tls: &Tls, origin_host: &str) -> Result<(), BoxError> {
-    if reach == Reach::Public && !can_be_public(tls, origin_host) {
-        return Err("reach public needs a public origin (not local-ca, not a .local name, not an IP address)".into());
+/// The origin is publicly reachable (S1): not a local-CA instance, and its host is public.
+fn origin_is_public(tls: &Tls, origin_host: &str) -> bool {
+    !matches!(tls, Tls::LocalCa { .. }) && is_public_host(origin_host)
+}
+
+/// A URL the public can reach: neither a local name (`.local`, `.localhost`, single label)
+/// nor an IP address. LAN mirrors stay outbox targets but are announced nowhere. The scheme does
+/// not count: `ws://`/`http://` on a public name is reachable, as the origin rule is about names.
+pub fn is_public_url(url: &str) -> bool {
+    nostr::prelude::Url::parse(url).is_ok_and(|u| {
+        matches!(u.scheme(), "http" | "https" | "ws" | "wss")
+            && u.username().is_empty()
+            && u.password().is_none()
+            && u.host_str().is_some_and(|h| is_public_host(h.trim_start_matches('[').trim_end_matches(']')))
+    })
+}
+
+/// Public-only URLs, preserving owner order and treating a trailing slash as the same endpoint.
+pub fn public_urls<'a>(urls: impl IntoIterator<Item = &'a String>) -> Vec<String> {
+    let mut result = Vec::new();
+    for url in urls {
+        if is_public_url(url) {
+            let url = url.trim_end_matches('/').to_owned();
+            if !result.contains(&url) {
+                result.push(url);
+            }
+        }
+    }
+    result
+}
+
+/// Where the creator site is served (#157): by the instance, or as an nsite (NIP-5A) under the
+/// managed key, which needs public reach.
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SiteHosting {
+    #[default]
+    Instance,
+    Nsite,
+}
+
+/// The nsite URL (#157): `https://<npub>.<gateway>`, or `https://<domain>` when a CNAME points
+/// the owner's domain at that gateway host. Both bare host names; `domain` empty = none.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct NsiteSettings {
+    pub gateway: String,
+    pub domain: String,
+}
+
+impl Default for NsiteSettings {
+    fn default() -> Self {
+        NsiteSettings { gateway: "nsite.lol".into(), domain: String::new() }
+    }
+}
+
+/// A lowercase DNS name of at least two labels: no scheme, port, path or IP address.
+fn is_dns_host(host: &str) -> bool {
+    let labels: Vec<&str> = host.split('.').collect();
+    host.len() <= 253
+        && is_public_host(host)
+        && labels.len() >= 2
+        && labels.iter().all(|l| {
+            (1..=63).contains(&l.len())
+                && !l.starts_with('-')
+                && !l.ends_with('-')
+                && l.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        })
+        && !labels[labels.len() - 1].bytes().all(|b| b.is_ascii_digit())
+}
+
+fn check_nsite(nsite: &NsiteSettings) -> Result<(), BoxError> {
+    if !is_dns_host(&nsite.gateway) {
+        return Err(format!("nsite.gateway must be a host name like nsite.lol (no scheme, port or path): {}", nsite.gateway).into());
+    }
+    if !nsite.domain.is_empty() && !is_dns_host(&nsite.domain) {
+        return Err(format!("nsite.domain must be a host name like videos.example.org (no scheme, port or path): {}", nsite.domain).into());
     }
     Ok(())
 }
@@ -323,6 +403,9 @@ pub struct Edited {
     pub storage: Storage,
     pub site: Site,
     pub mirror: Mirror,
+    /// Forced to `instance` when `reach` is private.
+    pub site_hosting: SiteHosting,
+    pub nsite: NsiteSettings,
 }
 
 /// Where the site looks up a signed-in visitor's profile besides the mandatory defaults, in both
@@ -362,6 +445,9 @@ pub struct Config {
     pub storage: Storage,
     pub site: Site,
     pub mirror: Mirror,
+    /// `nsite` only in public reach (#157).
+    pub site_hosting: SiteHosting,
+    pub nsite: NsiteSettings,
 }
 
 impl Config {
@@ -376,14 +462,14 @@ impl Config {
             return Err("revision must be a positive integer".into());
         }
         let origin_host = origin_host(&raw.origin)?.to_owned();
-        check_reach(raw.reach, &raw.tls, &origin_host)?;
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
         check_relays(&[&raw.video_sources, &raw.interaction_relays, &raw.profile_relays])?;
         check_site(&raw.site)?;
         check_mirror(&raw.mirror)?;
-        Ok(Config {
+        check_nsite(&raw.nsite)?;
+        let cfg = Config {
             revision: raw.revision,
             origin: raw.origin,
             origin_host,
@@ -399,7 +485,11 @@ impl Config {
             storage: raw.storage,
             site: raw.site,
             mirror: raw.mirror,
-        })
+            site_hosting: raw.site_hosting,
+            nsite: raw.nsite,
+        };
+        cfg.check_reach()?;
+        Ok(cfg)
     }
 
     /// Admin edit: everything except origin, TLS mode and revision (which auto-bumps,
@@ -409,10 +499,10 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&e.video_sources, &e.interaction_relays, &e.profile_relays])?;
-        check_reach(e.reach, &self.tls, &self.origin_host)?;
         check_site(&e.site)?;
         check_mirror(&e.mirror)?;
-        Ok(Config {
+        check_nsite(&e.nsite)?;
+        let cfg = Config {
             revision: self.revision + 1,
             origin: self.origin.clone(),
             origin_host: self.origin_host.clone(),
@@ -428,7 +518,12 @@ impl Config {
             storage: e.storage.clone(),
             site: e.site.clone(),
             mirror: e.mirror.clone(),
-        })
+            // Switching to private turns the nsite off (#163).
+            site_hosting: if e.reach == Reach::Private { SiteHosting::Instance } else { e.site_hosting },
+            nsite: e.nsite.clone(),
+        };
+        cfg.check_reach()?;
+        Ok(cfg)
     }
 
     /// First start (no `config.toml` yet): a working fully-local default the admin
@@ -456,6 +551,8 @@ impl Config {
             storage: Storage::default(),
             site: Site::default(),
             mirror: Mirror::default(),
+            site_hosting: SiteHosting::Instance,
+            nsite: NsiteSettings::default(),
         }
     }
 
@@ -480,6 +577,7 @@ impl Config {
             origin: self.origin.clone(),
             title: self.title.clone(),
             reach: self.reach,
+            site_hosting: self.site_hosting,
             creators: self.creators.iter().map(PublicKey::to_hex).collect(),
             allowed_writers: self.allowed_writers.iter().map(PublicKey::to_hex).collect(),
             video_sources: self.video_sources.clone(),
@@ -490,6 +588,7 @@ impl Config {
             storage: self.storage.clone(),
             site: self.site.clone(),
             mirror: self.mirror.clone(),
+            nsite: self.nsite.clone(),
         };
         Ok(toml::to_string_pretty(&raw)?)
     }
@@ -499,20 +598,67 @@ impl Config {
         self.origin.replacen("https://", "wss://", 1)
     }
 
-    /// Same rule as `can_be_public` for the studio, which offers public reach only then.
+    /// The origin is publicly reachable (S1); else the instance is on the home network (S2) and
+    /// only the mirrors can carry anything public.
+    pub fn origin_is_public(&self) -> bool {
+        origin_is_public(&self.tls, &self.origin_host)
+    }
+
+    /// The `[mirror]` relays and Blossom servers the public can reach, in config order.
+    pub fn public_mirror(&self) -> Mirror {
+        let relay = self.instance_relay();
+        let public_origin = self.origin_is_public();
+        Mirror {
+            relays: public_urls(self.mirror.relays.iter().filter(|u| public_origin || u.trim_end_matches('/') != relay)),
+            blossom: public_urls(self.mirror.blossom.iter().filter(|u| public_origin || u.trim_end_matches('/') != self.origin)),
+        }
+    }
+
+    /// Public reach is allowed with a public origin (S1), or else with at least one publicly
+    /// reachable mirror relay and Blossom server that carry everything public (S2, #161).
     pub fn can_be_public(&self) -> bool {
-        can_be_public(&self.tls, &self.origin_host)
+        let m = self.public_mirror();
+        self.origin_is_public() || (!m.relays.is_empty() && !m.blossom.is_empty())
+    }
+
+    fn check_reach(&self) -> Result<(), BoxError> {
+        if self.reach == Reach::Public && !self.can_be_public() {
+            let m = self.public_mirror();
+            let missing: Vec<&str> = [(m.relays.is_empty(), "a mirror relay"), (m.blossom.is_empty(), "a mirror Blossom server")]
+                .into_iter()
+                .filter_map(|(missing, what)| missing.then_some(what))
+                .collect();
+            return Err(format!(
+                "reach public needs a public origin (not local-ca, localhost, a local name or an IP address) or publicly \
+                 reachable mirrors; missing {} on a public host name",
+                missing.join(" and ")
+            )
+            .into());
+        }
+        if self.site_hosting == SiteHosting::Nsite && self.reach != Reach::Public {
+            return Err("site_hosting nsite needs reach public".into());
+        }
+        Ok(())
     }
 
     /// Public config contract v1 (ADR 0005). Start page: the first displayed creator. Private
     /// reach (ADR 0012) enforces the catalog and interaction relays here: the instance relay
-    /// only; the stored lists stay as configured, so switching back loses nothing. Profile relays
-    /// serve the visitor lookup in both reaches and go out as stored.
+    /// only; the stored lists stay as configured, so switching back loses nothing. Public reach
+    /// without a public origin (S2, #161) serves the publicly reachable configured relays and the
+    /// mirror relays, never the instance relay. Profile relays serve the visitor lookup in both
+    /// reaches, excluding LAN targets. `originIsPublic` and `mirror` (the publicly reachable mirror
+    /// targets) tell the server's own publishers which URLs they may announce.
     pub fn public_json(&self) -> serde_json::Value {
         let creators: Vec<String> = self.creators.iter().map(PublicKey::to_hex).collect();
+        let mirror = self.public_mirror();
+        let instance = self.instance_relay();
+        let reachable = |configured: &[String]| {
+            let own = self.origin_is_public().then_some(&instance);
+            public_urls(own.into_iter().chain(configured.iter().filter(|u| u.trim_end_matches('/') != instance)).chain(&mirror.relays))
+        };
         let (video_sources, interaction_relays) = match self.reach {
-            Reach::Public => (self.video_sources.clone(), self.interaction_relays.clone()),
-            Reach::Private => (vec![self.instance_relay()], vec![self.instance_relay()]),
+            Reach::Public => (reachable(&self.video_sources), reachable(&self.interaction_relays)),
+            Reach::Private => (vec![instance.clone()], vec![instance.clone()]),
         };
         let start_page = creators
             .first()
@@ -527,8 +673,15 @@ impl Config {
             "startPage": start_page,
             "videoSources": video_sources,
             "interactionRelays": interaction_relays,
-            "profileRelays": self.profile_relays,
+            "profileRelays": match self.reach {
+                Reach::Private => self.profile_relays.clone(),
+                Reach::Public => public_urls(self.profile_relays.iter().filter(|u| self.origin_is_public() || u.trim_end_matches('/') != instance)),
+            },
             "search": self.search,
+            "siteHosting": self.site_hosting,
+            "nsite": { "gateway": self.nsite.gateway, "domain": self.nsite.domain },
+            "originIsPublic": self.origin_is_public(),
+            "mirror": mirror,
             "site": {
                 "tagline": self.site.tagline,
                 // Public anyway: the derived channel profile carries it as `lud16`.
@@ -613,7 +766,7 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
         assert_eq!(json["interactionRelays"], serde_json::json!(["wss://flox-mac.local"]), "private: the instance relay only");
-        assert_eq!(json.as_object().unwrap().len(), 12);
+        assert_eq!(json.as_object().unwrap().len(), 16);
         assert_eq!(json["reach"], "private");
         // A config file from before the field keeps the public profile lookup list (ADR 0008),
         // served in private reach too: the visitor lookup does not depend on reach (ADR 0012).
@@ -692,6 +845,8 @@ tls = {{ mode = "local-ca" }}
                 storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
                 site: Site::default(),
                 mirror: Mirror { relays: vec!["wss://m.example".into()], blossom: vec!["https://b.example".into()] },
+                site_hosting: SiteHosting::Instance,
+                nsite: NsiteSettings::default(),
             })
             .unwrap();
         // Off stays out of the file; set, it survives the round trip.
@@ -718,6 +873,8 @@ tls = {{ mode = "local-ca" }}
                 storage: Storage::default(),
                 site: Site::default(),
                 mirror: Mirror::default(),
+                site_hosting: SiteHosting::Instance,
+                nsite: NsiteSettings::default(),
             })
             .is_err());
     }
@@ -773,6 +930,8 @@ tls = {{ mode = "local-ca" }}
             storage: Storage::default(),
             site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, ..Site::default() },
             mirror: Mirror::default(),
+            site_hosting: SiteHosting::Instance,
+            nsite: NsiteSettings::default(),
         };
         let next = cfg.with_edits(&edited).unwrap();
         assert_eq!(next.site.tagline, "New");
@@ -894,18 +1053,18 @@ tls = {{ mode = "local-ca" }}
         let public = Config::parse(&format!("{text}reach = \"public\"\n")).unwrap();
         let json = public.public_json();
         assert_eq!(json["reach"], "public");
-        assert_eq!(json["videoSources"], serde_json::json!(["wss://flox-mac.local"]));
-        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://comments.example"]));
+        assert_eq!(json["videoSources"], serde_json::json!(["wss://videos.example.org"]));
+        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://videos.example.org", "wss://comments.example"]));
         assert_eq!(json["profileRelays"], serde_json::json!(["wss://indexer.example"]));
     }
 
     #[test]
     fn public_reach_needs_a_publicly_reachable_origin() {
         let proxy = Tls::Proxy { port: 8080 };
-        assert!(can_be_public(&proxy, "videos.example.org"));
-        assert!(!can_be_public(&Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 }, "videos.example.org"));
-        for host in ["flox-mac.local", "Flox-Mac.LOCAL", "192.168.1.5", "fd00::1"] {
-            assert!(!can_be_public(&proxy, host), "{host}");
+        assert!(origin_is_public(&proxy, "videos.example.org"));
+        assert!(!origin_is_public(&Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 }, "videos.example.org"));
+        for host in ["flox-mac.local", "Flox-Mac.LOCAL", "192.168.1.5", "fd00::1", "localhost", "studio", "studio.localhost"] {
+            assert!(!origin_is_public(&proxy, host), "{host}");
         }
         assert!(Config::parse(&sample("reach = \"public\"\n")).is_err(), "local-ca cannot be public");
         let local = Config::parse(&sample("")).unwrap();
@@ -923,8 +1082,61 @@ tls = {{ mode = "local-ca" }}
             storage: Storage::default(),
             site: Site::default(),
             mirror: Mirror::default(),
+            site_hosting: SiteHosting::Instance,
+            nsite: NsiteSettings::default(),
         };
         assert!(local.with_edits(&edits(Reach::Public)).is_err());
         assert!(local.with_edits(&edits(Reach::Private)).is_ok());
+    }
+
+    #[test]
+    fn mirror_only_public_reach_requires_both_public_mirrors_and_filters_every_list() {
+        let mut cfg = Config::default_for("tube.local", 443, 80);
+        cfg.reach = Reach::Public;
+        cfg.mirror.relays = vec!["ws://localhost:9000".into(), "wss://relay.example".into(), "wss://relay.example/".into()];
+        assert!(cfg.check_reach().unwrap_err().to_string().contains("mirror Blossom"));
+        cfg.mirror.blossom = vec!["https://blob.local".into()];
+        assert!(!cfg.can_be_public());
+        cfg.mirror.blossom.push("http://blobs.example".into());
+        assert!(cfg.check_reach().is_ok());
+        assert!(!cfg.origin_is_public());
+        cfg.video_sources.extend(["ws://single-label".into(), "wss://videos.example".into()]);
+        cfg.interaction_relays.push("wss://comments.localhost".into());
+        cfg.profile_relays.push("wss://indexer.local".into());
+        let public = cfg.public_json();
+        assert_eq!(public["videoSources"], serde_json::json!(["wss://videos.example", "wss://relay.example"]));
+        assert_eq!(public["interactionRelays"], serde_json::json!(["wss://relay.example"]));
+        assert_eq!(public["mirror"]["blossom"], serde_json::json!(["http://blobs.example"]));
+        assert!(!public["profileRelays"].as_array().unwrap().iter().any(|v| v == "wss://indexer.local"));
+        assert!(Config::parse(&cfg.to_toml().unwrap()).unwrap().can_be_public());
+
+        cfg.origin = "https://tube.example".into();
+        cfg.origin_host = "tube.example".into();
+        cfg.tls = Tls::Proxy { port: 8080 };
+        let public = cfg.public_json();
+        assert_eq!(public["videoSources"], serde_json::json!(["wss://tube.example", "wss://videos.example", "wss://relay.example"]));
+        assert_eq!(public["interactionRelays"], serde_json::json!(["wss://tube.example", "wss://relay.example"]));
+    }
+
+    #[test]
+    fn public_url_names_and_nsite_hosts_reject_local_names() {
+        for host in ["localhost", "localhost.", "studio", "studio.localhost", "studio.LOCALHOST.", "studio.local", "127.0.0.1", "[::1]"] {
+            assert!(!is_public_url(&format!("https://{host}")), "{host}");
+        }
+        assert!(is_public_url("http://blobs.127.0.0.1.nip.io:9000"));
+        assert!(!is_public_url("ftp://blobs.example"));
+        assert!(!is_public_url("https://user:secret@blobs.example"));
+        for host in ["nsite.local", "nsite.localhost", "localhost", "https://nsite.lol", "nsite.lol/path", "nsite.lol:443"] {
+            assert!(check_nsite(&NsiteSettings { gateway: host.into(), domain: String::new() }).is_err(), "{host}");
+        }
+    }
+
+    #[test]
+    fn a_local_ca_origin_cannot_count_its_own_endpoints_as_public_mirrors() {
+        let mut cfg = Config::default_for("tube.example", 443, 80);
+        cfg.reach = Reach::Public;
+        cfg.mirror = Mirror { relays: vec!["wss://tube.example/".into()], blossom: vec!["https://tube.example/".into()] };
+        assert!(!cfg.can_be_public());
+        assert!(cfg.public_mirror().is_off());
     }
 }

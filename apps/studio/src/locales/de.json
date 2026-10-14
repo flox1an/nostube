@@ -283,6 +283,39 @@
     "advanced": {
       "privateNote": "Deine Instanz ist privat: Videoquellen und Interaktions-Relays wirken nicht, die Website nutzt dafür nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Profil-Relays dienen weiter der Profilsuche angemeldeter Besucher; die Spiegel-Listen wirken in beiden Fällen."
     },
+    "nsite": {
+      "title": "Site-Hosting",
+      "description": "Die Seite über deine Instanz oder ein nsite-Gateway bereitstellen. Relay, Blossom und Studio bleiben auf der Instanz.",
+      "managedRequired": "nsite benötigt einen verwalteten Kanalschlüssel. Bei eigener Identität kann der Server die Seite nicht veröffentlichen oder aktualisieren.",
+      "publicRequired": "Stelle auf Öffentlich um, um ein nsite zu veröffentlichen und automatisch aktuell zu halten.",
+      "instance": "Diese Instanz",
+      "nsite": "nsite",
+      "gateway": "Gateway",
+      "gatewayHint": "Ein reiner DNS-Hostname, etwa nsite.lol. Ohne Protokoll, Port oder Pfad.",
+      "domain": "Eigene Domain",
+      "domainHint": "Optionaler DNS-Hostname. TLS für deine Domain verwaltet das Gateway; prüfe, ob es deine Domain unterstützt.",
+      "cname": "Richte den CNAME deiner Domain auf {{host}}.",
+      "url": "nsite-URL:",
+      "publish": "nsite veröffentlichen",
+      "publishing": "Veröffentlichung einreihen…",
+      "saveFirst": "Speichere und übernimm deine Änderungen vor dem Veröffentlichen. Nur gespeicherte Einstellungen werden veröffentlicht.",
+      "cache": "Änderungen werden automatisch neu veröffentlicht. Gateway-Caches können bis zu einer Stunde brauchen, um die neue Version zu zeigen.",
+      "version": "Zuletzt veröffentlichte Version (Aggregat-Hash)",
+      "publishedAt": "Veröffentlicht am",
+      "retained": "Das letzte Manifest und seine Dateien bleiben öffentlich. Automatische Veröffentlichung und Weiterleitung der Instanz sind aus.",
+      "invalidHost": "Gateway und eigene Domain müssen öffentliche DNS-Hostnamen sein, ohne Protokoll, Port oder Pfad.",
+      "deleteTitle": "Das nsite jetzt löschen?",
+      "deleteHint": "Beide Optionen schalten nsite-Hosting und Weiterleitung aus. Löschanfragen entfernen das Manifest und ungenutzte Dateien, aber Gateways, Relays und Blossom-Server können Kopien behalten. Löschen ist nicht garantiert.",
+      "delete": "Jetzt löschen",
+      "keep": "Kopien behalten",
+      "cancel": "Abbrechen",
+      "status": {
+        "disabled": "nsite-Hosting ist aus",
+        "pending": "Veröffentlichung ausstehend: warte auf Dateien und Zustellung",
+        "published": "Veröffentlicht",
+        "failed": "Veröffentlichung fehlgeschlagen"
+      }
+    },
     "reach": {
       "title": "Reichweite",
       "privateTitle": "Privat",
@@ -292,7 +325,9 @@
       "publicTitle": "Öffentlich",
       "publicBody": "Dein Profil und deine Relay-Liste werden im Nostr-Netz veröffentlicht. Andere Nostr-Apps finden deinen Kanal und deine Videos auf dieser Instanz, Kommentare und Zaps kommen hier an. Das lässt sich nicht vollständig zurücknehmen.",
       "confirmPublic": "Auf Öffentlich umstellen? Das lässt sich nicht vollständig zurücknehmen: Profil und Relay-Liste bleiben im Nostr-Netz, auch wenn du später zurückschaltest. Die eingetragenen Spiegel-Relays stehen in der veröffentlichten Relay-Liste.",
-      "unavailable": "Öffentlich braucht eine Adresse, die das Nostr-Netz erreicht. Diese Instanz läuft unter einem lokalen Namen (.local), einer IP-Adresse oder mit eigener Zertifizierungsstelle; andere Nostr-Apps erreichen ihr Relay nicht."
+      "unavailable": "Öffentlich benötigt eine öffentliche Instanzadresse oder mindestens ein öffentliches Spiegel-Relay und einen öffentlichen Spiegel-Blossom-Server. Trage beide unter Erweitert ein.",
+      "mirrorRequired": "Diese Instanz ist nicht öffentlich erreichbar. Öffentlich benötigt Spiegel-Relays und Blossom-Server. Videos liegen dort unter deren Beschränkungen; öffentliche Interaktionen kommen nicht zu dieser Instanz zurück.",
+      "publicBodyMirror": "Dein Kanalprofil und die öffentlichen Spiegel-Relays werden im Nostr-Netz veröffentlicht. Videos werden über die Spiegel bereitgestellt, nicht über diese Instanz. Das lässt sich nicht vollständig zurücknehmen."
     },
     "upload": {
       "publishedTitle": "Veröffentlicht",
@@ -319,7 +354,9 @@
       "tagsHint": "Drücke Enter, um Tags hinzuzufügen. Trenne mehrere Tags mit Leerzeichen oder Kommas.",
       "subtitles": "Untertitel (optional)",
       "progress": "Upload-Fortschritt",
+      "waitMirror": "Warte auf bestätigte öffentliche Spiegelkopien…",
       "steps": {
+        "mirroring": "Auf öffentliche Spiegel warten",
         "convert": "In MP4 umwandeln",
         "check": "Video prüfen",
         "hash": "Datei vorbereiten",
@@ -430,6 +467,8 @@
       "pending": "Wartend",
       "failed": "Fehlgeschlagen",
       "kinds": {
+        "cleanup": "Lokale Dateibereinigung",
+        "blob-delete": "Dateilöschung",
         "event": "Event",
         "blob": "Datei"
       },
@@ -442,6 +481,8 @@
       "retried_other": "{{count}} Aufträge wieder eingereiht."
     },
     "errors": {
+      "mirrorFailed": "Öffentliche Medienspiegelung fehlgeschlagen: {{reason}}",
+      "notLoggedIn": "Deine Studio-Sitzung ist abgelaufen. Melde dich vor dem Veröffentlichen erneut an.",
       "serverStatus": "Der Server antwortete mit {{status}}.",
       "noSigner": "In diesem Browser ist kein Nostr-Konto angemeldet.",
       "notPubkey": "Der Signer hat etwas zurückgegeben, das kein öffentlicher Schlüssel ist.",

@@ -1,6 +1,6 @@
 # Nostube Server
 
-A self-hosted Nostube instance: one package serving a creator's (or a curated set of creators') video homepage from the instance's own relay and Blossom storage, operable without WAN.
+A self-hosted Nostube instance: one package with a creator's (or a curated set of creators') video homepage, relay and Blossom storage, operable without WAN; the site may be hosted by the instance or published as an nsite.
 
 ## Language
 
@@ -13,6 +13,14 @@ _Avoid_: server, node, deployment
 **Homepage mode** (Homepage-Modus):
 The Nostube app running under instance rules, showing only the displayed creators' videos from the video sources.
 _Avoid_: creator mode, kiosk mode
+
+**Site hosting**:
+Where the creator site is hosted: on the instance (`instance`) or as a static NIP-5A site (`nsite`), independently of reach. Code: `siteHosting`.
+_Avoid_: deployment mode, static mode
+
+**nsite URL**:
+The public origin baked into the published nsite, either the channel's gateway URL or its custom domain; distinct from the instance's canonical origin.
+_Avoid_: instance URL, canonical origin
 
 **Operating profile** (Betriebsprofil):
 Which modules run locally vs externally: fully local, hybrid, or external.
@@ -60,11 +68,11 @@ The configured relays that video catalog queries may use. Profiles, comments, an
 _Avoid_: default relays, relay list
 
 **Profile relays** (Profil-Relays):
-The relays where the site looks up a signed-in visitor's profile besides the instance relays, the mandatory public defaults and the visitor's NIP-65 write relays, in both reaches (ADR 0008); in public reach also where the channel's profile and relay list go through the outbox (ADR 0012). Default purplepag.es, index.hzrd149.com; served as stored in both reaches.
+The relays where the site looks up a signed-in visitor's profile besides the instance relays, mandatory public defaults and the visitor's NIP-65 write relays, in both reaches; in public reach they also receive the managed channel's profile, relay list, Blossom server list and nsite manifest.
 _Avoid_: discovery relays, lookup relays
 
 **Reach** (Privat / Öffentlich):
-What the instance publishes and where the site reads (ADR 0012). `private` (the default): nothing goes out but copies to the owner's mirror targets, and videos, creator data and comments come only from the instance relay. `public`: the channel's profile and relay list are published to the profile relays and the configured relay lists are served; not fully revocable. In both, the site looks a signed-in visitor's own profile up at public indexers (ADR 0008). Public needs a publicly reachable origin (not local-ca, `.local` or an IP). Code: `reach`.
+What the instance announces and where the site reads: `private` keeps catalog and interactions on the instance, with outgoing copies only to the owner's mirrors; `public` announces the channel and uses public relay sources. Public reach needs either a public instance origin or public mirror relays and Blossom servers; returning to private cannot revoke foreign copies.
 _Avoid_: visibility, mode, privacy setting
 
 **Admin**:
@@ -76,7 +84,7 @@ The one-time secret, issued while the instance has no admin, that lets its holde
 _Avoid_: setup link, invite, setup password
 
 **Managed key**:
-The creator key the instance generates, keeps encrypted and signs with for the studio (ADR 0007). Only the admin session can have it sign; it is a creator and allowed writer only through the config, like any other key, and gives no admin rights. Its profile (kind 0) is derived by the server from the site title, tagline, logo and banner (with `nip05` `_@<origin host>`) and republished only when that content changes; in public reach the server also signs its relay list (kind 10002, ADR 0012). With the owner's own key the server never signs a profile.
+The creator key the instance generates, keeps encrypted and signs with for Studio; it grants no admin rights and writes only where the config allows it. Its channel profile, relay and Blossom server lists, and optional nsite are managed by the instance; with own identity the server signs none of them.
 _Avoid_: server key, instance key, admin key
 
 **Own identity** (eigene Identität):
@@ -112,5 +120,5 @@ The private certificate authority an instance runs in the local-ca TLS mode. Vie
 _Avoid_: self-signed cert, local root
 
 **Canonical origin**:
-The one origin of an instance that goes into the public config and into URLs inside published events. Every other name the instance answers to is an alias.
+The one origin of an instance, distinct from an nsite URL; every other name the instance answers to is an alias. Public events use it only when it is publicly reachable.
 _Avoid_: base URL, public URL, domain

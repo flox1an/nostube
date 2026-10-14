@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Textarea } from '@nostube/widgets/components/textarea'
-import type { AdminState } from './api'
 import type { Draft } from './draft'
 import { Field } from './fields'
 import { WithKeyProfiles } from './InstancePage'
@@ -23,7 +22,7 @@ type ListKey =
   | 'mirrorBlossomText'
 
 /** Writers, relay and mirror lists most owners never touch. */
-export function AdvancedPage({ draft, update, state }: PageProps & { state: AdminState }) {
+export function AdvancedPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
   // Privat: the server sends only its own relay as video source and interaction relay, whatever
   // these lists hold (they keep their values). Profile relays still serve the visitor lookup.
@@ -99,9 +98,7 @@ export function AdvancedPage({ draft, update, state }: PageProps & { state: Admi
         </CardContent>
       </Card>
 
-      {(state.config.mirror.relays.length > 0 || state.config.mirror.blossom.length > 0) && (
-        <MirrorCard />
-      )}
+      <MirrorCard />
     </div>
   )
 }

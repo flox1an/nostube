@@ -2,21 +2,20 @@ import { useTranslation } from 'react-i18next'
 import type { Reach } from '@nostube/core/instance-config'
 import { Tile } from './fields'
 
-/**
- * Privat or Öffentlich (Reach, server ADR 0012). Öffentlich cannot be taken back fully, so
- * switching to it asks first; it is locked while the origin is not publicly reachable.
- */
+/** Reach is explicit; a public origin or public relay and Blossom mirrors make Public available. */
 export function ReachChoice({
   reach,
   onChange,
   canBePublic,
   own,
+  originIsPublic = true,
 }: {
   reach: Reach | null
   onChange: (reach: Reach) => void
   canBePublic: boolean
   /** Own identity: the owner keeps their Nostr profile themselves, the server signs nothing. */
   own: boolean
+  originIsPublic?: boolean
 }) {
   const { t } = useTranslation()
   const choosePublic = () => {
@@ -41,11 +40,16 @@ export function ReachChoice({
           disabled={!canBePublic}
           onSelect={choosePublic}
         >
-          <span className="block">{t('studio.reach.publicBody')}</span>
+          <span className="block">
+            {t(originIsPublic ? 'studio.reach.publicBody' : 'studio.reach.publicBodyMirror')}
+          </span>
         </Tile>
       </div>
       {!canBePublic && (
         <p className="text-sm text-muted-foreground">{t('studio.reach.unavailable')}</p>
+      )}
+      {!originIsPublic && (
+        <p className="text-sm text-muted-foreground">{t('studio.reach.mirrorRequired')}</p>
       )}
     </div>
   )

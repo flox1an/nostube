@@ -22,14 +22,13 @@ function deps(): UploadDeps {
     probe: vi.fn().mockResolvedValue({ width: 720, height: 1280, duration: 9 }),
     convert: vi.fn(),
     hash: vi.fn().mockResolvedValue('newhash'),
-    upload: vi
-      .fn()
-      .mockResolvedValue({
-        url: 'https://media/new.mp4',
-        sha256: 'newhash',
-        size: 3,
-        type: 'video/mp4',
-      }),
+    upload: vi.fn().mockResolvedValue({
+      url: 'https://media/new.mp4',
+      sha256: 'newhash',
+      size: 3,
+      type: 'video/mp4',
+    }),
+    prepareMedia: vi.fn(async template => template),
     publish: vi
       .fn()
       .mockResolvedValue({ eventId: 'accepted', link: 'link', accepted: ['wss://relay'] }),
@@ -100,6 +99,24 @@ describe('editing published videos', () => {
     const template = vi.mocked(dependencies.publish).mock.calls[1][0]
     expect(template.tags).toContainEqual(['text-track', 'https://media/old.vtt', 'en', 'captions'])
     expect(template.tags).toContainEqual(['title', 'Retry title'])
+  })
+
+  it('uses the latest event after waiting for mirrors instead of overwriting a concurrent edit', async () => {
+    const dependencies = deps()
+    let current = event
+    vi.mocked(dependencies.prepareMedia).mockImplementationOnce(async template => {
+      current = {
+        ...event,
+        id: 'd'.repeat(64),
+        created_at: 2_000_000_000,
+        tags: [...event.tags, ['subject', 'concurrent']],
+      }
+      return template
+    })
+    await runVideoEdit(() => current, author, input, dependencies, new Map())
+    const published = vi.mocked(dependencies.publish).mock.calls[0][0]
+    expect(published.created_at).toBe(2_000_000_001)
+    expect(published.tags).toContainEqual(['subject', 'concurrent'])
   })
 
   it('refuses non-owner edits before any uploads or publication', async () => {

@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
+import type { EventTemplate } from 'nostr-tools'
 import type { VideoProbe } from './probe-video'
 import {
   isDone,
   newJob,
   runUpload,
   updateJobInput,
-  STEPS,
   type UploadDeps,
   type UploadJob,
 } from './run-upload'
@@ -44,6 +44,7 @@ function deps(overrides: Partial<UploadDeps> = {}) {
       calls.push(`upload:${type}`)
       return { url: `https://x.example/${sha256}`, sha256, size: 11, type }
     }),
+    prepareMedia: vi.fn(async template => template),
     publish: vi.fn(async template => {
       calls.push('publish')
       expect(template.kind).toBe(34235)
@@ -58,29 +59,36 @@ function deps(overrides: Partial<UploadDeps> = {}) {
 const run = (job: UploadJob, d: UploadDeps) => runUpload(job, d, () => {})
 
 describe('runUpload', () => {
-  it('goes through every step in order and ends with the published video', async () => {
-    const { d, calls } = deps()
-    const seen: string[] = []
-    const job = await runUpload(newJob(input, d), d, j =>
-      STEPS.forEach(
-        s => j.steps[s.id].status === 'running' && !seen.includes(s.id) && seen.push(s.id)
-      )
-    )
-    expect(calls).toEqual([
-      'probe',
-      'hash',
-      'upload:video/mp4',
-      'hash',
-      'upload:image/jpeg',
-      'publish',
-    ])
-    // A file published as it is has nothing to convert.
-    expect(seen).toEqual(STEPS.map(s => s.id).filter(id => id !== 'convert'))
-    expect(job.steps.convert.status).toBe('done')
-    expect(isDone(job)).toBe(true)
-    expect(job.published?.link).toBe('naddr1xyz')
-    expect(job.video?.sha256).toBe(HASH)
-    expect(job.thumbnail?.sha256).toBe(THUMB_HASH)
+  it('does not publish until public media confirmation succeeds, and retains uploads on failure', async () => {
+    let failConfirmation!: (error: Error) => void
+    let started!: () => void
+    const waiting = new Promise<void>(resolve => {
+      started = resolve
+    })
+    const { d } = deps({
+      prepareMedia: vi.fn(() => {
+        started()
+        return new Promise<EventTemplate>((_resolve, reject) => {
+          failConfirmation = reject
+        })
+      }),
+    })
+    const running = run(newJob(input, d), d)
+    await waiting
+    expect(d.publish).not.toHaveBeenCalled()
+    failConfirmation(new Error('Mirror confirmed wrong hash'))
+    const failed = await running
+    expect(failed.steps.mirroring).toMatchObject({
+      status: 'error',
+      error: 'Mirror confirmed wrong hash',
+    })
+    expect(d.publish).not.toHaveBeenCalled()
+    expect(failed.video?.sha256).toBe(HASH)
+    expect(failed.thumbnail?.sha256).toBe(THUMB_HASH)
+    vi.mocked(d.prepareMedia).mockImplementation(async template => template)
+    const retried = await run(failed, d)
+    expect(isDone(retried)).toBe(true)
+    expect(d.upload).toHaveBeenCalledTimes(2)
   })
 
   it('skips the check when the file was probed on selection', async () => {

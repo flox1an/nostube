@@ -5,6 +5,15 @@ import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components
 import { Button } from '@nostube/widgets/components/button'
 import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@nostube/widgets/components/alert-dialog'
 import { AccountPage } from './AccountPage'
 import { AdvancedPage } from './AdvancedPage'
 import { AppearancePage } from './AppearancePage'
@@ -152,13 +161,31 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   // Branding uploads apply at once; kept here so the page shows them after navigating away.
   const [branding, setBranding] = useState(state.branding)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [pendingHostingChange, setPendingHostingChange] = useState<Partial<Draft> | null>(null)
+  const [deleteNsite, setDeleteNsite] = useState<boolean | undefined>()
   const saved = useMemo(() => toDraft(config), [config])
-  const result = fromDraft(draft)
+  const result = fromDraft(draft, state.originIsPublic)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
   const restart = result.config !== null && needsRestart(config, result.config)
 
-  const update = (patch: Partial<Draft>) => setDraft(d => ({ ...d, ...patch }))
+  const update = (patch: Partial<Draft>) => {
+    if (
+      draft.siteHosting === 'nsite' &&
+      (patch.siteHosting === 'instance' || patch.reach === 'private')
+    ) {
+      setPendingHostingChange({ ...patch, siteHosting: 'instance' })
+      return
+    }
+    if (patch.siteHosting === 'nsite') setDeleteNsite(undefined)
+    setDraft(d => ({ ...d, ...patch }))
+  }
+
+  const finishHostingChange = (remove: boolean) => {
+    setDeleteNsite(remove)
+    setDraft(d => ({ ...d, ...pendingHostingChange }))
+    setPendingHostingChange(null)
+  }
 
   /** Saves a whole config: the server checks it, keeps the old one and applies it, at once or by
    * restarting (then we wait for it). */
@@ -167,7 +194,12 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
     setSaving('saving')
     let restart: boolean
     try {
-      ;({ restart } = await saveConfig(config))
+      ;({ restart } = await saveConfig(
+        config,
+        state.config.siteHosting === 'nsite' && config.siteHosting === 'instance'
+          ? deleteNsite
+          : undefined
+      ))
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e))
       setSaving(null)
@@ -232,8 +264,10 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
         />
       )}
       {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
-      {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
-      {page === 'advanced' && <AdvancedPage draft={draft} update={update} state={state} />}
+      {page === 'instance' && (
+        <InstancePage draft={draft} update={update} state={state} dirty={dirty} />
+      )}
+      {page === 'advanced' && <AdvancedPage draft={draft} update={update} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
       {page === 'overview' && <OverviewPage />}
       {page === 'moderation' && (
@@ -268,7 +302,10 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
               type="button"
               variant="ghost"
               disabled={!dirty || saving !== null}
-              onClick={() => setDraft(saved)}
+              onClick={() => {
+                setDraft(saved)
+                setDeleteNsite(undefined)
+              }}
             >
               {t('studio.app.discard')}
             </Button>
@@ -280,6 +317,28 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           </div>
         </div>
       )}
+      <AlertDialog
+        open={pendingHostingChange !== null}
+        onOpenChange={open => {
+          if (!open) setPendingHostingChange(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('studio.nsite.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('studio.nsite.deleteHint')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('studio.nsite.cancel')}</AlertDialogCancel>
+            <Button type="button" variant="outline" onClick={() => finishHostingChange(false)}>
+              {t('studio.nsite.keep')}
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => finishHostingChange(true)}>
+              {t('studio.nsite.delete')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Shell>
   )
 }

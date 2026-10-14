@@ -283,6 +283,39 @@
     "advanced": {
       "privateNote": "Votre instance est privée : les sources vidéo et les relais d'interaction n'ont aucun effet, le site n'utilise pour cela que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les relais de profils servent toujours à rechercher le profil des visiteurs connectés ; les listes de miroirs fonctionnent dans les deux cas."
     },
+    "nsite": {
+      "title": "Hébergement du site",
+      "description": "Hébergez le site sur votre instance ou publiez-le via une passerelle nsite. Le relais, Blossom et Studio restent sur l'instance.",
+      "managedRequired": "nsite exige une clé de chaîne gérée. Avec votre propre identité, le serveur ne peut ni publier ni actualiser le site.",
+      "publicRequired": "Passez en Public pour publier un nsite et le mettre à jour automatiquement.",
+      "instance": "Cette instance",
+      "nsite": "nsite",
+      "gateway": "Passerelle",
+      "gatewayHint": "Un nom d'hôte DNS seul, par exemple nsite.lol. Sans protocole, port ni chemin.",
+      "domain": "Domaine personnalisé",
+      "domainHint": "Nom d'hôte DNS facultatif. La passerelle gère le TLS du domaine ; vérifiez qu'elle le prend en charge.",
+      "cname": "Dirigez le CNAME de votre domaine vers {{host}}.",
+      "url": "URL nsite :",
+      "publish": "Publier le nsite",
+      "publishing": "Publication en file d'attente…",
+      "saveFirst": "Enregistrez et appliquez vos modifications avant de publier. Seuls les paramètres enregistrés sont publiés.",
+      "cache": "Les modifications sont republiées automatiquement. Les caches des passerelles peuvent mettre jusqu'à une heure à afficher la nouvelle version.",
+      "version": "Dernière version publiée (empreinte agrégée)",
+      "publishedAt": "Date de publication",
+      "retained": "Le dernier manifeste et ses fichiers restent publics. La publication automatique et la redirection de l'instance sont désactivées.",
+      "invalidHost": "La passerelle et le domaine doivent être des noms d'hôtes DNS publics, sans protocole, port ni chemin.",
+      "deleteTitle": "Supprimer le nsite maintenant ?",
+      "deleteHint": "Les deux choix désactivent l'hébergement nsite et la redirection. Les demandes suppriment le manifeste et les fichiers inutilisés, mais les passerelles, relais et serveurs Blossom peuvent garder des copies. La suppression n'est pas garantie.",
+      "delete": "Supprimer maintenant",
+      "keep": "Garder les copies",
+      "cancel": "Annuler",
+      "status": {
+        "disabled": "Hébergement nsite désactivé",
+        "pending": "Publication en attente des fichiers et de leur livraison",
+        "published": "Publié",
+        "failed": "Échec de la publication"
+      }
+    },
     "reach": {
       "title": "Portée",
       "privateTitle": "Privé",
@@ -292,7 +325,9 @@
       "publicTitle": "Public",
       "publicBody": "Votre profil et votre liste de relais sont publiés sur le réseau Nostr. D'autres applications Nostr trouvent votre chaîne et vos vidéos sur cette instance ; les commentaires et les zaps arrivent ici. Cela ne peut pas être entièrement annulé.",
       "confirmPublic": "Passer en Public ? Cela ne peut pas être entièrement annulé : votre profil et votre liste de relais restent sur le réseau Nostr même si vous revenez en arrière plus tard. Les relais miroirs saisis figurent dans la liste de relais publiée.",
-      "unavailable": "Le mode Public exige une adresse que le réseau Nostr peut atteindre. Cette instance fonctionne sous un nom local (.local), une adresse IP ou sa propre autorité de certification ; les autres applications Nostr ne peuvent pas joindre son relais."
+      "unavailable": "Public exige une origine publique ou au moins un relais miroir et un serveur Blossom miroir publics. Configurez les deux dans Avancé.",
+      "mirrorRequired": "Cette instance n'est pas accessible publiquement. Public exige des relais et serveurs Blossom miroirs. Les vidéos y sont hébergées selon leurs limites ; les interactions publiques ne reviennent pas à cette instance.",
+      "publicBodyMirror": "Le profil de votre chaîne et la liste des relais miroirs publics sont publiés sur Nostr. Les vidéos sont servies par les miroirs, pas par cette instance. Cela ne peut pas être entièrement annulé."
     },
     "upload": {
       "publishedTitle": "Publiée",
@@ -320,7 +355,9 @@
       "tagsHint": "Appuyez sur Entrée pour ajouter des tags. Séparez plusieurs tags par des espaces ou des virgules.",
       "subtitles": "Sous-titres (facultatif)",
       "progress": "Progression de la mise en ligne",
+      "waitMirror": "En attente de copies publiques confirmées sur les miroirs…",
       "steps": {
+        "mirroring": "Attendre les miroirs publics",
         "convert": "Convertir en MP4",
         "check": "Vérifier la vidéo",
         "hash": "Préparer le fichier",
@@ -431,6 +468,8 @@
       "pending": "En attente",
       "failed": "Échoué",
       "kinds": {
+        "cleanup": "Nettoyage des fichiers locaux",
+        "blob-delete": "Suppression de fichier",
         "event": "Événement",
         "blob": "Fichier"
       },
@@ -444,6 +483,8 @@
       "retried_other": "{{count}} tâches remises en file."
     },
     "errors": {
+      "mirrorFailed": "Échec de la copie publique des médias : {{reason}}",
+      "notLoggedIn": "Votre session Studio est terminée. Reconnectez-vous avant de publier.",
       "serverStatus": "Le serveur a répondu {{status}}.",
       "noSigner": "Aucun compte Nostr connecté dans ce navigateur.",
       "notPubkey": "Le signataire a renvoyé quelque chose qui n'est pas une clé publique.",

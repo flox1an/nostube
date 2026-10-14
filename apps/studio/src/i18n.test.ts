@@ -61,4 +61,53 @@ describe('studio translations', () => {
       }
     }
   })
+  it('provides hosting, deletion and public mirror status texts in every Studio locale', () => {
+    const keys = [
+      'studio.nsite.title',
+      'studio.nsite.description',
+      'studio.nsite.managedRequired',
+      'studio.nsite.publicRequired',
+      'studio.nsite.instance',
+      'studio.nsite.nsite',
+      'studio.nsite.gateway',
+      'studio.nsite.gatewayHint',
+      'studio.nsite.domain',
+      'studio.nsite.domainHint',
+      'studio.nsite.cname',
+      'studio.nsite.url',
+      'studio.nsite.publish',
+      'studio.nsite.publishing',
+      'studio.nsite.saveFirst',
+      'studio.nsite.cache',
+      'studio.nsite.version',
+      'studio.nsite.publishedAt',
+      'studio.nsite.retained',
+      'studio.nsite.invalidHost',
+      'studio.nsite.deleteTitle',
+      'studio.nsite.deleteHint',
+      'studio.nsite.delete',
+      'studio.nsite.keep',
+      'studio.nsite.cancel',
+      'studio.nsite.status.disabled',
+      'studio.nsite.status.pending',
+      'studio.nsite.status.published',
+      'studio.nsite.status.failed',
+      'studio.reach.unavailable',
+      'studio.reach.mirrorRequired',
+      'studio.reach.publicBodyMirror',
+      'studio.upload.steps.mirroring',
+      'studio.upload.waitMirror',
+      'studio.errors.mirrorFailed',
+      'studio.errors.notLoggedIn',
+      'studio.mirror.kinds.cleanup',
+      'studio.mirror.kinds.blob-delete',
+    ]
+    for (const language of ['en', 'de', 'fr', 'es', 'ru', 'zh', 'ja']) {
+      for (const key of keys) {
+        expect(i18n.getResource(language, 'translation', key), `${language}: ${key}`).toBeTypeOf(
+          'string'
+        )
+      }
+    }
+  })
 })

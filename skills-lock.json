@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "pwa-development": {
+      "source": "jwynia/agent-skills",
+      "ref": "e02ec7e226a6e4f8419fd3b88a1d8e472d421b32",
+      "sourceType": "github",
+      "skillPath": "skills/tech/frontend/pwa/pwa-development/SKILL.md",
+      "computedHash": "b2ef095d9ab54b7686bb07e9681ccbbe6af5889e806ee2231650c9e6c9089e1f"
+    }
+  }
+}

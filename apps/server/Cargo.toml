@@ -39,5 +39,8 @@ qrcode = { version = "0.14", default-features = false }
 # The outbox (ADR 0009): publishing to mirror relays and BUD-04 mirror requests. Both are
 # already in the tree through axum and almond.
 tokio-tungstenite = { version = "0.29", features = ["rustls-tls-webpki-roots"] }
-reqwest = { version = "0.13", features = ["json"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
+# The outbox streams local blobs to a mirror target's `PUT /upload`; both are already in the
+# tree through axum and reqwest.
+tokio-util = { version = "0.7", default-features = false, features = ["io"] }
 futures-util = "0.3"

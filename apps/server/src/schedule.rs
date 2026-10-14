@@ -321,7 +321,7 @@ mod tests {
         let relay = Relay::open(path, crate::relay::RelayConfig {
             writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
         }).unwrap();
-        let outbox = Outbox::open(path, Mirror::default()).unwrap();
+        let outbox = Outbox::open(path, Mirror::default(), true).unwrap();
         outbox.attach_storage(state.clone());
         (outbox, relay)
     }

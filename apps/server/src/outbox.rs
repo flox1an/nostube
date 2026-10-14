@@ -65,7 +65,8 @@ const BACKOFF_CAP: u64 = 3600;
 pub const MAX_ATTEMPTS: u32 = 24;
 /// A relay must answer `OK` within this.
 const RELAY_TIMEOUT: Duration = Duration::from_secs(30);
-/// The target downloads the whole blob before it answers, so this is generous.
+/// One blob delivery: either the target downloads the whole blob before it answers
+/// (`PUT /mirror`) or the bytes stream out before its answer (`PUT /upload`), so this is generous.
 const MIRROR_TIMEOUT: Duration = Duration::from_secs(600);
 /// The reason a blob job fails without the managed key (ADR 0007): nothing else may sign.
 pub const NEEDS_KEY: &str = "mirroring blobs needs the managed signing key";
@@ -164,6 +165,14 @@ enum Outcome {
     Fail(String),
 }
 
+/// How a blob delivery to a mirror target can go wrong: a connection or server problem may be
+/// gone next attempt; a target that answers a descriptor with the wrong hash or size cannot
+/// gain the right bytes by trying again.
+enum Delivery {
+    Retry(String),
+    Fail(String),
+}
+
 /// The outbox table on its own connection to `relay.sqlite`, plus the configured targets.
 #[derive(Clone)]
 pub struct Outbox(Arc<Inner>);
@@ -171,6 +180,11 @@ pub struct Outbox(Arc<Inner>);
 struct Inner {
     conn: Mutex<Connection>,
     mirror: Mirror,
+    /// Whether this instance's origin is publicly reachable (ADR 0012's derivation, `Config::
+    /// can_be_public`): origin and TLS cannot change while running, so this is fixed at start.
+    /// Public instances let the target fetch (`PUT /mirror`); the rest push the bytes
+    /// (`PUT /upload`).
+    public: bool,
     /// Public reach only (ADR 0012): the indexers the channel's kinds 0 and 10002 go to; set by
     /// `profile::sync`, so it follows the config while running. Empty in private reach.
     indexers: parking_lot::RwLock<Vec<String>>,
@@ -178,11 +192,11 @@ struct Inner {
 }
 
 impl Outbox {
-    pub fn open(db: &Path, mirror: Mirror) -> rusqlite::Result<Outbox> {
+    pub fn open(db: &Path, mirror: Mirror, public: bool) -> rusqlite::Result<Outbox> {
         let conn = crate::relay::connect(db)?;
         initialize(&conn)?;
         Ok(Outbox(Arc::new(Inner {
-            conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
+            conn: Mutex::new(conn), mirror, public, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
         })))
     }
 
@@ -542,14 +556,23 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
         _ => match mirror_key(keys) {
             Err(e) => Outcome::Fail(e),
             Ok(k) => {
-                drop(media_guard);
                 // Cleanup may remove the local blob while the target fetches it: the target then
                 // fails the fetch (a retry that `record` drops) or keeps a copy that the queued
-                // blob-delete removes after this job (`busy`).
+                // blob-delete removes after this job (`busy`). On the upload path an open file
+                // handle survives the removal, a blob that is already gone retries.
+                drop(media_guard);
                 let (size, url) = (job.size.unwrap_or_default() as u64, job.source_url.as_deref().unwrap_or_default());
-                match mirror(http, &k, &job.target, &job.ref_id, size, url).await {
+                let sent = if outbox.0.public {
+                    mirror(http, &k, &job.target, &job.ref_id, size, url).await
+                } else {
+                    // Not publicly reachable: the target could not fetch the blob, so the bytes
+                    // go out from here (ADR 0009 with ADR 0012's reach derivation).
+                    upload(outbox, http, &k, &job.target, &job.ref_id, size).await
+                };
+                match sent {
                     Ok(()) => Outcome::Done,
-                    Err(e) => Outcome::Retry(e),
+                    Err(Delivery::Retry(e)) => Outcome::Retry(e),
+                    Err(Delivery::Fail(e)) => Outcome::Fail(e),
                 }
             }
         },
@@ -718,24 +741,21 @@ async fn publish(target: &str, json: &str, id: &str) -> Result<(), String> {
     Err("connection closed before OK".into())
 }
 
-/// BUD-04 `PUT /mirror` of the blob at `url` (its public URL here), authorized with a BUD-11
-/// upload token (kind 24242, `t=upload`, `x=<sha256>`) signed by the managed key. Done only when
-/// the target's descriptor confirms the hash and the size.
-async fn mirror(http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64, url: &str) -> Result<(), String> {
-    let tag = |t: &[&str]| Tag::parse(t.iter().copied()).map_err(|e| format!("cannot build the auth token: {e}"));
+/// The BUD-11 upload token (kind 24242, `t=upload`, `x=<sha256>`, 10 minutes) that authorizes a
+/// blob delivery, signed by the managed key.
+fn upload_token(keys: &Keys, purpose: &str, sha256: &str) -> Result<String, Delivery> {
+    let tag = |t: &[&str]| Tag::parse(t.iter().copied()).map_err(|e| Delivery::Retry(format!("cannot build the auth token: {e}")));
     let expiration = (Timestamp::now().as_secs() + 600).to_string();
-    let auth = EventBuilder::new(Kind::Custom(24242), "Mirror blob")
+    let auth = EventBuilder::new(Kind::Custom(24242), purpose)
         .tags([tag(&["t", "upload"])?, tag(&["x", sha256])?, tag(&["expiration", &expiration])?])
         .finalize(keys)
-        .map_err(|e| format!("cannot sign the auth token: {e}"))?;
-    let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
-    let res = http
-        .put(format!("{}/mirror", target.trim_end_matches('/')))
-        .header(header::AUTHORIZATION, format!("Nostr {token}"))
-        .json(&serde_json::json!({ "url": url }))
-        .send()
-        .await
-        .map_err(|e| format!("request failed: {e}"))?;
+        .map_err(|e| Delivery::Retry(format!("cannot sign the auth token: {e}")))?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(auth.as_json()))
+}
+
+/// The target's answer to a blob delivery: success is only a descriptor that answers the same
+/// sha256 and size; a mismatch is a permanent failure with both values in the error.
+async fn check_descriptor(res: reqwest::Response, sha256: &str, size: u64) -> Result<(), Delivery> {
     let status = res.status();
     if !status.is_success() {
         // BUD-01: the reason is in `X-Reason`; fall back to the body.
@@ -744,16 +764,69 @@ async fn mirror(http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str,
             Some(r) => r,
             None => res.text().await.unwrap_or_default(),
         };
-        return Err(format!("{status}: {}", short(&reason)));
+        return Err(Delivery::Retry(format!("{status}: {}", short(&reason))));
     }
-    let d: serde_json::Value = res.json().await.map_err(|e| format!("not a blob descriptor: {e}"))?;
+    let d: serde_json::Value = res.json().await.map_err(|e| Delivery::Retry(format!("not a blob descriptor: {e}")))?;
     if d["sha256"].as_str() != Some(sha256) || d["size"].as_u64() != Some(size) {
-        return Err(format!(
+        return Err(Delivery::Fail(format!(
             "the target confirmed sha256 {} and size {}, expected {sha256} and {size}",
             d["sha256"], d["size"]
-        ));
+        )));
     }
     Ok(())
+}
+
+/// BUD-04 `PUT /mirror` of the blob at `url` (its public URL here), authorized with a BUD-11
+/// upload token signed by the managed key. The target downloads the bytes itself, so this only
+/// works when the target can reach this instance (ADR 0012's derivation). Done only when the
+/// target's descriptor confirms the hash and the size.
+async fn mirror(http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64, url: &str) -> Result<(), Delivery> {
+    let token = upload_token(keys, "Mirror blob", sha256)?;
+    let res = http
+        .put(format!("{}/mirror", target.trim_end_matches('/')))
+        .header(header::AUTHORIZATION, format!("Nostr {token}"))
+        .json(&serde_json::json!({ "url": url }))
+        .send()
+        .await
+        .map_err(|e| Delivery::Retry(format!("request failed: {e}")))?;
+    check_descriptor(res, sha256, size).await
+}
+
+/// BUD-02 `PUT <target>/upload` of the bytes a non-reachable instance pushes itself (its origin
+/// cannot be fetched: `.local`, local-ca, an IP address — ADR 0012's derivation), authorized
+/// with the same BUD-11 upload token. The blob is streamed from local storage, never buffered
+/// whole. A blob the target already has comes back with a descriptor as well, so the same
+/// check answers done. Done only when the target's descriptor confirms the hash and the size.
+async fn upload(outbox: &Outbox, http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64) -> Result<(), Delivery> {
+    use almond::services::file_storage;
+    file_storage::validate_sha256_format(sha256).map_err(|e| Delivery::Fail(e.to_string()))?;
+    let state = storage(outbox).map_err(Delivery::Retry)?;
+    let Some(metadata) = file_storage::get_file_metadata(&state, sha256).await else {
+        return Err(Delivery::Retry(format!("local blob {sha256} is gone")));
+    };
+    // The instance's storage is the filesystem adapter; a blob that no path points at cannot be
+    // pushed from here.
+    let Some(path) = file_storage::local_path(&metadata) else {
+        return Err(Delivery::Retry(format!("local blob {sha256} is not on the filesystem storage")));
+    };
+    let token = upload_token(keys, "Upload blob", sha256)?;
+    let file = tokio::fs::File::open(path)
+        .await
+        .map_err(|e| Delivery::Retry(format!("cannot open local blob {sha256}: {e}")))?;
+    let res = http
+        .put(format!("{}/upload", target.trim_end_matches('/')))
+        .header(header::AUTHORIZATION, format!("Nostr {token}"))
+        // The declared hash of BUD-02 (targets verify the streamed bytes against it) and the
+        // exact length, so the target can reserve for the real size; a blob that changed while
+        // being read makes the target (or the transport) refuse the answer.
+        .header("x-sha-256", sha256)
+        .header(header::CONTENT_LENGTH, metadata.size)
+        .header(header::CONTENT_TYPE, metadata.mime_type.as_deref().unwrap_or("application/octet-stream"))
+        .body(reqwest::Body::wrap_stream(tokio_util::io::ReaderStream::new(file)))
+        .send()
+        .await
+        .map_err(|e| Delivery::Retry(format!("request failed: {e}")))?;
+    check_descriptor(res, sha256, size).await
 }
 
 /// Error texts from targets are stored and shown; keep them short.
@@ -782,8 +855,9 @@ mod tests {
 
     const SHA: &str = "c9f1c6b2a1a8c3e0e1c0a5f5f2b3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5";
 
-    /// A relay file with the relay schema and the outbox, in a fresh temp path.
-    fn fixture(mirror: Mirror) -> (Outbox, crate::relay::Relay, std::path::PathBuf) {
+    /// A relay file with the relay schema and the outbox, in a fresh temp path. `public`: the
+    /// instance's origin is publicly reachable, so blob jobs go by `PUT /mirror`.
+    fn fixture(mirror: Mirror, public: bool) -> (Outbox, crate::relay::Relay, std::path::PathBuf) {
         static N: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
             "nostube-outbox-test-{}-{}.sqlite",
@@ -801,7 +875,7 @@ mod tests {
             },
         )
         .unwrap();
-        (Outbox::open(&path, mirror).unwrap(), relay, path)
+        (Outbox::open(&path, mirror, public).unwrap(), relay, path)
     }
 
     fn row(outbox: &Outbox, kind: &str, target: &str) -> (String, u32, i64, Option<String>) {
@@ -894,7 +968,7 @@ mod tests {
     #[tokio::test]
     async fn blob_jobs_are_queued_once_per_target_and_only_for_descriptors() {
         let blossom = vec!["https://a.example".to_owned(), "https://b.example".to_owned()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() });
+        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() }, true);
         // The answer goes back to the client unchanged.
         let res = outbox.after_upload(descriptor()).await;
         assert_eq!(res.status(), axum::http::StatusCode::CREATED);
@@ -925,7 +999,7 @@ mod tests {
             format!("ws://{}", l.local_addr().unwrap())
         };
         let relays = vec![ok.clone(), dup.clone(), refusing.clone(), gone.clone()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: relays.clone(), blossom: vec![] });
+        let (outbox, _relay, path) = fixture(Mirror { relays: relays.clone(), blossom: vec![] }, true);
         let ev = EventBuilder::new(Kind::TextNote, "hi").finalize(&Keys::generate()).unwrap();
         {
             let conn = outbox.0.conn.lock();
@@ -985,7 +1059,7 @@ mod tests {
         let wrong_hash = fake_blossom("00ff", 42, keys.public_key()).await;
         let wrong_size = fake_blossom(SHA, 41, keys.public_key()).await;
         let blossom = vec![good.clone(), wrong_hash.clone(), wrong_size.clone()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() });
+        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() }, true);
         outbox.after_upload(descriptor()).await;
 
         // Without the managed key nothing else may sign: failed at once, with the reason.
@@ -995,20 +1069,114 @@ mod tests {
             assert_eq!((status.as_str(), attempts, error.as_deref()), ("failed", 1, Some(NEEDS_KEY)));
         }
 
-        // Created later in the studio: a retry delivers.
+        // Created later in the studio: a retry delivers. A wrong descriptor is broken for good.
         assert_eq!(outbox.retry(None).await.unwrap(), 3);
         run_due(&outbox, &shared(Some(keys))).await;
         assert_eq!(row(&outbox, "blob", &good).0, "done");
         for target in [&wrong_hash, &wrong_size] {
             let (status, _, _, error) = row(&outbox, "blob", target);
-            assert_eq!(status, "pending");
+            assert_eq!(status, "failed");
             assert!(error.unwrap().starts_with("the target confirmed sha256"));
         }
         std::fs::remove_file(path).ok();
     }
 
-    async fn lifecycle_fixture(keys: &Keys, mirror: Mirror) -> (Outbox, crate::relay::Relay, almond::models::AppState) {
-        let (outbox, old_relay, path) = fixture(mirror.clone());
+    /// A Blossom server whose `/upload` checks the BUD-11 token for `hash` signed by `signer`
+    /// and answers `descriptor`, recording the bytes it received in `actual`.
+    async fn fake_upload(
+        hash: String, signer: nostr::prelude::PublicKey,
+        descriptor: Arc<Mutex<serde_json::Value>>, actual: Arc<Mutex<Vec<u8>>>,
+    ) -> String {
+        let app = Router::new().route(
+            "/upload",
+            put(move |headers: HeaderMap, body: axum::body::Bytes| async move {
+                let token = headers[header::AUTHORIZATION].to_str().unwrap().strip_prefix("Nostr ").unwrap().to_owned();
+                let auth = nostr::prelude::Event::from_json(base64::engine::general_purpose::STANDARD.decode(token).unwrap()).unwrap();
+                auth.verify().unwrap();
+                assert_eq!((auth.kind, auth.pubkey), (Kind::Custom(24242), signer));
+                let tags: Vec<Vec<String>> = auth.tags.iter().map(|t| t.as_slice().to_vec()).collect();
+                assert!(tags.contains(&vec!["t".into(), "upload".into()]) && tags.contains(&vec!["x".into(), hash.clone()]));
+                assert!(is_mirror_delivery(&headers));
+                *actual.lock() = body.to_vec();
+                Json(descriptor.lock().clone())
+            }),
+        );
+        format!("http://{}", serve(app).await)
+    }
+
+    #[tokio::test]
+    async fn a_private_instance_uploads_the_bytes_and_the_target_serves_them_by_hash() {
+        let keys = Keys::generate();
+        let (_remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default(), true).await;
+        let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
+        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }, false).await;
+        let bytes: Vec<u8> = (0..64u32).map(|i| (i * 7 % 251) as u8).collect();
+        let (hash, _) = stored(&outbox, &state, &keys, &bytes, "mp4", false).await;
+        // The descriptor's URL is this instance's public URL, of which a private instance has
+        // none reachable: a success proves the bytes traveled, not that the URL was fetched.
+        outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
+            "sha256": hash, "size": bytes.len(), "url": format!("https://here.example/{hash}.mp4")
+        }))).into_response()).await;
+
+        // Without the managed key the job fails at once, with the same message as mirroring.
+        run_due(&outbox, &shared(None)).await;
+        assert_eq!(row(&outbox, "blob", &target).3.as_deref(), Some(NEEDS_KEY));
+
+        outbox.retry(None).await.unwrap();
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        assert_eq!(row(&outbox, "blob", &target).0, "done");
+        let served = almond::services::file_storage::get_file_metadata(&remote, &hash).await.unwrap();
+        let served_bytes = tokio::fs::read(almond::services::file_storage::local_path(&served).unwrap()).await.unwrap();
+        assert_eq!(served_bytes, bytes, "the target serves the blob by hash");
+
+        // A blob the target already has counts as done: the target answers 200 with the
+        // descriptor of the copy it holds.
+        outbox.0.conn.lock().execute(
+            "UPDATE outbox SET status='pending', attempts=0, next_attempt_at=0 WHERE kind='blob'", [],
+        ).unwrap();
+        run_due(&outbox, &shared(Some(keys))).await;
+        assert_eq!(row(&outbox, "blob", &target).0, "done");
+    }
+
+    #[tokio::test]
+    async fn upload_jobs_verify_the_descriptor_and_back_off_when_interrupted() {
+        use sha2::Digest;
+        let keys = Keys::generate();
+        let bytes: &[u8] = b"streamed bytes";
+        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let received = Arc::new(Mutex::new(Vec::new()));
+        let wrong = Arc::new(Mutex::new(serde_json::json!({ "sha256": "00ff", "size": bytes.len() })));
+        let good = Arc::new(Mutex::new(serde_json::json!({ "sha256": hash, "size": bytes.len() })));
+        let mismatch = fake_upload(hash.clone(), keys.public_key(), wrong, received.clone()).await;
+        let honest = fake_upload(hash.clone(), keys.public_key(), good, received).await;
+        // Nobody listens here: an interrupted upload.
+        let gone = {
+            let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", l.local_addr().unwrap())
+        };
+        let (outbox, _relay, state) = lifecycle_fixture(
+            &keys, Mirror { relays: vec![], blossom: vec![mismatch.clone(), honest.clone(), gone.clone()] }, false,
+        ).await;
+        stored(&outbox, &state, &keys, bytes, "mp4", false).await;
+        outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
+            "sha256": hash, "size": bytes.len(), "url": format!("https://here.example/{hash}.mp4")
+        }))).into_response()).await;
+
+        run_due(&outbox, &shared(Some(keys))).await;
+        let (status, attempts, _, error) = row(&outbox, "blob", &mismatch);
+        assert_eq!((status.as_str(), attempts), ("failed", 1));
+        let error = error.unwrap();
+        assert!(error.contains("00ff") && error.contains(&format!("expected {hash} and {}", bytes.len())), "{error}");
+        let before = now();
+        let (status, attempts, next, error) = row(&outbox, "blob", &gone);
+        assert_eq!((status.as_str(), attempts), ("pending", 1), "an interrupted upload is retried");
+        assert!(error.unwrap().starts_with("request failed"));
+        assert!(next >= before + (BACKOFF_BASE / 2) as i64 - 1 && next <= before + BACKOFF_BASE as i64, "{next}");
+        assert_eq!(row(&outbox, "blob", &honest).0, "done");
+    }
+
+    async fn lifecycle_fixture(keys: &Keys, mirror: Mirror, public: bool) -> (Outbox, crate::relay::Relay, almond::models::AppState) {
+        let (outbox, old_relay, path) = fixture(mirror.clone(), public);
         drop(old_relay);
         let relay = crate::relay::Relay::open(&path, crate::relay::RelayConfig {
             writers: vec![keys.public_key()], name: "test".into(), description: "test".into(),
@@ -1063,9 +1231,9 @@ mod tests {
     #[tokio::test]
     async fn replacement_cleans_real_storage_and_hls_children_then_delivers_mirror_deletes() {
         let keys = Keys::generate();
-        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default(), true).await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }, true).await;
         let (segment, segment_path) = stored(&outbox, &state, &keys, b"shared segment", "ts", false).await;
         let (init, init_path) = stored(&outbox, &state, &keys, b"init bytes", "mp4", false).await;
         let playlist = format!("#EXTM3U\n#EXT-X-MAP:URI=\"{init}.mp4\"\n{segment}.ts\n");
@@ -1124,7 +1292,7 @@ mod tests {
         let foreign = Keys::generate();
         let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
             relays: vec![], blossom: vec!["http://unreachable.invalid".into()],
-        }).await;
+        }, true).await;
         let (mirrored, mirrored_path) = stored(&outbox, &state, &keys, b"mirrored copy", "mp4", true).await;
         let (wrong_owner, wrong_owner_path) = stored(&outbox, &state, &foreign, b"foreign copy", "mp4", false).await;
         let (unowned, unowned_path) = stored(&outbox, &state, &keys, b"old unowned copy", "mp4", false).await;
@@ -1156,7 +1324,7 @@ mod tests {
         let target = format!("http://{}", serve(Router::new().route("/{hash}", axum::routing::delete(|| async {
             (axum::http::StatusCode::SERVICE_UNAVAILABLE, "disk unavailable")
         }))).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }, true).await;
         let (hash, path) = stored(&outbox, &state, &keys, b"delete copy", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
@@ -1206,7 +1374,7 @@ mod tests {
             })
         };
         let target = format!("http://{}", serve(Router::new().route("/mirror", upload).route("/{hash}", delete)).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }, true).await;
         let (_, path) = stored(&outbox, &state, &keys, bytes, "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
@@ -1238,7 +1406,7 @@ mod tests {
         // Accepts the connection, reads nothing, answers nothing.
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let target = format!("http://{}", listener.local_addr().unwrap());
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: vec![target] });
+        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: vec![target] }, true);
         outbox.after_upload(descriptor()).await;
         let job = outbox.due(1).await.unwrap().remove(0);
         let sending = {
@@ -1259,24 +1427,24 @@ mod tests {
     #[tokio::test]
     async fn cleanup_and_delete_intents_survive_reopening_the_database() {
         let keys = Keys::generate();
-        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default(), true).await;
         stored(&remote_outbox, &remote, &keys, b"durable bytes", "mp4", true).await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
         let mirror = Mirror { relays: vec![], blossom: vec![target] };
-        let (outbox, relay, state) = lifecycle_fixture(&keys, mirror.clone()).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, mirror.clone(), true).await;
         let (hash, path) = stored(&outbox, &state, &keys, b"durable bytes", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
         let db = state.storage.root.with_extension("sqlite");
         drop(outbox);
         drop(relay);
-        let reopened = Outbox::open(&db, mirror.clone()).unwrap();
+        let reopened = Outbox::open(&db, mirror.clone(), true).unwrap();
         reopened.attach_storage(state.clone());
         run_due(&reopened, &shared(Some(keys.clone()))).await;
         assert!(!path.exists() && state.file_index.get(&hash).await.is_none());
         assert!(remote.file_index.get(&hash).await.is_some());
         drop(reopened);
-        let reopened = Outbox::open(&db, mirror).unwrap();
+        let reopened = Outbox::open(&db, mirror, true).unwrap();
         reopened.attach_storage(state);
         run_due(&reopened, &shared(Some(keys))).await;
         assert!(remote.file_index.get(&hash).await.is_none());
@@ -1310,7 +1478,7 @@ mod tests {
     async fn authenticated_republication_cancels_old_cleanup_and_delete_intents_for_the_same_hash() {
         let keys = Keys::generate();
         let target = "http://unreachable.invalid".to_owned();
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }, true).await;
         let (hash, path) = stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
@@ -1332,7 +1500,7 @@ mod tests {
 
     #[tokio::test]
     async fn indexers_get_only_what_was_announced_and_nothing_in_private_reach() {
-        let (outbox, _relay, _path) = fixture(Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![] });
+        let (outbox, _relay, _path) = fixture(Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![] }, true);
         let (profile, other) = (EventId::from_byte_array([0; 32]), EventId::from_byte_array([1; 32]));
         enqueue_event(&outbox.0.conn.lock(), &["wss://mirror.example".to_owned()], &other).unwrap();
         outbox.announce(vec!["wss://indexer.example".into()], vec![profile]).await.unwrap();

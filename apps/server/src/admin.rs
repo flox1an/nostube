@@ -1437,7 +1437,7 @@ mod tests {
         let public = Config::load(&dir.join("config.toml")).map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
         let branding = Arc::new(crate::branding::Branding::open(dir, public));
         let relay = Relay::open(&dir.join("relay.sqlite"), relay).unwrap();
-        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default(), true).unwrap();
         outbox.attach_storage(blossom.clone());
         Stores { relay, blossom, branding, outbox }
     }

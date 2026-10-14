@@ -314,7 +314,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         },
     )?;
     // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
-    let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
+    let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone(), cfg.can_be_public())?;
     outbox.attach_storage(state.clone());
 
     let branding = Arc::new(branding::Branding::open(&data, cfg.public_json()));
@@ -688,7 +688,7 @@ mod tests {
         }).unwrap();
         let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror {
             relays: vec![], blossom: vec!["https://mirror.example".into()],
-        }).unwrap();
+        }, true).unwrap();
         outbox.attach_storage(state.clone());
         let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
         let app = App {

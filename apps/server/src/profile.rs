@@ -184,7 +184,7 @@ mod tests {
             }).unwrap();
             let outbox = Outbox::open(&dir.join("relay.sqlite"), crate::config::Mirror {
                 relays: vec![MIRROR.into()], blossom: vec![],
-            }).unwrap();
+            }, true).unwrap();
             let branding = Branding::open(&dir, public("Channel", "Videos about things"));
             Fixture { dir, relay, branding, outbox }
         }

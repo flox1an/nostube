@@ -3,9 +3,12 @@
  * This runs on app initialization to clear the cache databases if requested.
  */
 
+import { clearAllPersistentCaches } from './persistent-cache'
+
 /**
- * Only real caches: Nostr event cache (nostr-idb), trust scores, playlist validation verdicts.
- * Play positions, the view-event outbox and the service-worker precache must survive a clear.
+ * Only real caches: Nostr event cache (nostr-idb), trust scores, playlist validation
+ * verdicts, and the registered persistent caches (e.g. the preset cache). Play positions,
+ * the view-event outbox and the service-worker precache must survive a clear.
  */
 export const CACHE_DATABASE_NAMES = [
   'nostr-idb',
@@ -56,6 +59,7 @@ function deleteDatabase(name: string): Promise<void> {
 export async function clearBrowserCacheData(): Promise<boolean> {
   try {
     await withTimeout(Promise.all(CACHE_DATABASE_NAMES.map(deleteDatabase)), [])
+    clearAllPersistentCaches()
 
     if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
     return true

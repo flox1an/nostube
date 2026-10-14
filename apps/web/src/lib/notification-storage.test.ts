@@ -38,7 +38,10 @@ describe('notification-storage', () => {
         ],
         lastFetchTime: 1234567890,
       }
-      localStorage.setItem('nostube_notifications', JSON.stringify(stored))
+      localStorage.setItem(
+        'nostube:cache:notifications:current',
+        JSON.stringify({ v: stored, w: Date.now() })
+      )
 
       const result = getNotificationStorage()
       // Migration adds notificationType to stored notifications
@@ -49,7 +52,7 @@ describe('notification-storage', () => {
     })
 
     it('should handle corrupted data gracefully', () => {
-      localStorage.setItem('nostube_notifications', 'invalid json')
+      localStorage.setItem('nostube:cache:notifications:current', 'invalid json')
       const result = getNotificationStorage()
       expect(result).toEqual({
         lastLoginTime: 0,
@@ -68,8 +71,8 @@ describe('notification-storage', () => {
       }
       saveNotificationStorage(data)
 
-      const stored = localStorage.getItem('nostube_notifications')
-      expect(JSON.parse(stored!)).toEqual(data)
+      const raw = localStorage.getItem('nostube:cache:notifications:current')
+      expect(JSON.parse(raw!).v).toEqual(data)
     })
   })
 

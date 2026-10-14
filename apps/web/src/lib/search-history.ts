@@ -1,28 +1,27 @@
-const STORAGE_KEY = 'nostube:search-history'
+import { PersistentCache } from './persistent-cache'
+
 const MAX_HISTORY = 20
 
+// Search history is user data, not a cache: namespaced, but never auto-cleared.
+const history = new PersistentCache<string[]>({
+  namespace: 'search-history',
+  clearable: false,
+})
+
 export function getSearchHistory(): string[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) ? (parsed as string[]) : []
-  } catch {
-    return []
-  }
+  return history.get('recent') ?? []
 }
 
 export function addSearchHistory(query: string): string[] {
   const trimmed = query.trim()
   if (!trimmed) return getSearchHistory()
-  const existing = getSearchHistory().filter(q => q !== trimmed)
-  const updated = [trimmed, ...existing].slice(0, MAX_HISTORY)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  const updated = [trimmed, ...getSearchHistory().filter(q => q !== trimmed)].slice(0, MAX_HISTORY)
+  history.set('recent', updated)
   return updated
 }
 
 export function removeSearchHistory(query: string): string[] {
   const updated = getSearchHistory().filter(q => q !== query)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  history.set('recent', updated)
   return updated
 }

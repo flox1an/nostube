@@ -1,6 +1,6 @@
 import { type NostubePreset } from '@nostube/core'
+import { PersistentCache } from './persistent-cache'
 
-const CACHE_KEY = 'nostube_preset_cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour
 const LOAD_TIMEOUT = 10000 // 10 seconds
 
@@ -15,39 +15,32 @@ export interface CacheResult {
   stale: boolean
 }
 
+// Stale-while-revalidate: the module decides staleness from `cachedAt`, so the
+// cache itself is a plain namespaced kv.
+const cache = new PersistentCache<CachedPreset>({ namespace: 'preset' })
+
 export function getCachedPreset(expectedPubkey: string): CacheResult | null {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY)
-    if (!cached) return null
+  const cached = cache.getStale('current')
+  if (!cached) return null
 
-    const parsed: CachedPreset = JSON.parse(cached)
-
-    // Check if cache is for the correct pubkey
-    if (parsed.pubkey !== expectedPubkey) {
-      localStorage.removeItem(CACHE_KEY)
-      return null
-    }
-
-    // Return preset with stale flag - don't delete expired cache
-    // Use stale-while-revalidate: show immediately, fetch fresh in background
-    const stale = Date.now() - parsed.cachedAt > CACHE_TTL
-    return { preset: parsed.preset, stale }
-  } catch {
+  // Check if cache is for the correct pubkey
+  if (cached.pubkey !== expectedPubkey) {
+    cache.delete('current')
     return null
   }
+
+  // Return preset with stale flag - don't delete expired cache
+  // Use stale-while-revalidate: show immediately, fetch fresh in background
+  const stale = Date.now() - cached.cachedAt > CACHE_TTL
+  return { preset: cached.preset, stale }
 }
 
 export function setCachedPreset(preset: NostubePreset, pubkey: string) {
-  try {
-    const cached: CachedPreset = {
-      preset,
-      pubkey,
-      cachedAt: Date.now(),
-    }
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
-  } catch {
-    // Ignore localStorage errors
-  }
+  cache.set('current', { preset, pubkey, cachedAt: Date.now() })
 }
 
-export { CACHE_KEY, CACHE_TTL, LOAD_TIMEOUT }
+export function removeCachedPreset() {
+  cache.delete('current')
+}
+
+export { CACHE_TTL, LOAD_TIMEOUT }

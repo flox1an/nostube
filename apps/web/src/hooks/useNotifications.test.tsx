@@ -68,7 +68,10 @@ describe('useNotifications', () => {
       ],
       lastFetchTime: 1234567890,
     }
-    localStorage.setItem('nostube_notifications', JSON.stringify(stored))
+    localStorage.setItem(
+      'nostube:cache:notifications:current',
+      JSON.stringify({ v: stored, w: Date.now() })
+    )
 
     const { result } = renderHook(() => useNotifications(), {
       wrapper: TestApp,
@@ -105,7 +108,10 @@ describe('useNotifications', () => {
       ],
       lastFetchTime: 1234567890,
     }
-    localStorage.setItem('nostube_notifications', JSON.stringify(stored))
+    localStorage.setItem(
+      'nostube:cache:notifications:current',
+      JSON.stringify({ v: stored, w: Date.now() })
+    )
 
     const { result } = renderHook(() => useNotifications(), {
       wrapper: TestApp,
@@ -167,11 +173,14 @@ describe('useNotifications', () => {
 
       // Set lastLoginTime
       localStorage.setItem(
-        'nostube_notifications',
+        'nostube:cache:notifications:current',
         JSON.stringify({
-          lastLoginTime: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
-          notifications: [],
-          lastFetchTime: 0,
+          v: {
+            lastLoginTime: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
+            notifications: [],
+            lastFetchTime: 0,
+          },
+          w: Date.now(),
         })
       )
 
@@ -239,7 +248,10 @@ describe('useNotifications', () => {
         ],
         lastFetchTime: 0,
       }
-      localStorage.setItem('nostube_notifications', JSON.stringify(existing))
+      localStorage.setItem(
+        'nostube:cache:notifications:current',
+        JSON.stringify({ v: existing, w: Date.now() })
+      )
 
       // Mock same comment coming from relay
       const mockSubscription = { unsubscribe: vi.fn() }

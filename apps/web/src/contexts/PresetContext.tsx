@@ -26,7 +26,7 @@ import { Button } from '@nostube/widgets/components/button'
 import {
   getCachedPreset,
   setCachedPreset,
-  CACHE_KEY,
+  removeCachedPreset,
   LOAD_TIMEOUT,
   type CacheResult,
 } from '@/lib/preset-storage'
@@ -163,7 +163,7 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
         selectedPresetPubkey: pubkey,
       }))
       // Clear cache when changing preset
-      localStorage.removeItem(CACHE_KEY)
+      removeCachedPreset()
       setStatus('loading')
     },
     [updateConfig]

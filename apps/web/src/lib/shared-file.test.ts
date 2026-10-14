@@ -1,12 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SHARED_FILE_CACHE, SHARED_FILE_KEY, takeSharedFile } from './shared-file'
 
-// Minimal Cache API: one named cache keyed by URL string.
+// Minimal Cache API: one named cache keyed by URL string. match() hands the body out as a
+// jsdom Blob: on Node 22, Response.blob() yields Node's Blob, which jsdom's File stringifies.
 function fakeCaches() {
   const entries = new Map<string, Response>()
   const cache = {
     put: async (key: string, response: Response) => void entries.set(key, response),
-    match: async (key: string) => entries.get(key)?.clone(),
+    match: async (key: string) => {
+      const response = entries.get(key)?.clone()
+      if (!response) return undefined
+      const body = await response.arrayBuffer()
+      const type = response.headers.get('Content-Type') ?? ''
+      return { headers: response.headers, blob: async () => new Blob([body], { type }) }
+    },
     delete: async (key: string) => entries.delete(key),
   }
   const open = vi.fn(async (name: string) => {

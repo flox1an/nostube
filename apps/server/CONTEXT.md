@@ -64,7 +64,7 @@ The relays where the site looks up a signed-in visitor's profile besides the ins
 _Avoid_: discovery relays, lookup relays
 
 **Reach** (Privat / Öffentlich):
-What the instance publishes and where the site reads (ADR 0012). `private` (the default): nothing goes out but copies to the owner's mirror targets, and videos, creator data and comments come only from the instance relay. `public`: the channel's profile and relay list are published to the profile relays and the configured relay lists are served; not fully revocable. In both, the site looks a signed-in visitor's own profile up at public indexers (ADR 0008). Public needs a publicly reachable origin (not local-ca, `.local` or an IP). Code: `reach`.
+What the instance publishes and where the site reads (ADR 0012). `private` (the default): nothing goes out but copies to the owner's mirror targets, and videos, creator data and comments come only from the instance relay. `public`: the channel's profile and relay list are published to the profile relays and the configured relay lists are served; not fully revocable. In both, the site looks a signed-in visitor's own profile up at public indexers (ADR 0008). Public needs a publicly reachable origin (not local-ca, `.local` or an IP) or at least one mirror relay and one mirror Blossom server (ADR 0013). Code: `reach`.
 _Avoid_: visibility, mode, privacy setting
 
 **Admin**:
@@ -114,3 +114,13 @@ _Avoid_: self-signed cert, local root
 **Canonical origin**:
 The one origin of an instance that goes into the public config and into URLs inside published events. Every other name the instance answers to is an alias.
 _Avoid_: base URL, public URL, domain
+
+### Site hosting
+
+**Site hosting**:
+Which way the site is served: from the instance's canonical origin (`instance`) or as a static nsite that the instance's site routes only redirect to (`nsite`, ADR 0013). Independent of reach (ADR 0012); in `nsite` the relay, Blossom and Studio stay on the instance. Code: `siteHosting`.
+_Avoid_: deployment mode, static mode
+
+**nsite URL**:
+The baked origin of the site when site hosting is `nsite`: the gateway URL (`https://<npub>.<gateway>`) or the owner's custom domain. Distinct from the instance's canonical origin, which only redirects to it.
+_Avoid_: static URL, gateway origin

@@ -142,17 +142,19 @@
       "replaceConfirm": "Replace the current text of this language with the standard text?"
     },
     "branding": {
-      "title": "Logo, favicon and banner",
+      "title": "Logo, favicon, banner and app icon",
       "description": "Images for the public site. They apply right away, without saving.",
       "slots": {
         "logo": "Logo",
         "favicon": "Favicon",
-        "banner": "Banner"
+        "banner": "Banner",
+        "icon": "App icon"
       },
       "hints": {
         "logo": "In the header and on video pages, instead of the profile picture. PNG, JPEG, WebP or SVG, up to {{size}}.",
         "favicon": "The icon in the browser tab. PNG, JPEG, WebP, SVG or ICO, up to {{size}}.",
-        "banner": "A wide image above the videos on the start page. PNG, JPEG, WebP or SVG, up to {{size}}."
+        "banner": "A wide image above the videos on the start page. PNG, JPEG, WebP or SVG, up to {{size}}.",
+        "icon": "Used when visitors install the site as an app. A square PNG of at least 512×512 pixels, up to {{size}}."
       },
       "crop": {
         "title": "Crop {{image}}",
@@ -172,7 +174,8 @@
       "remove": "Remove",
       "errors": {
         "tooBig": "The file is too big: at most {{size}}.",
-        "wrongType": "This file type is not allowed here. See the formats above."
+        "wrongType": "This file type is not allowed here. See the formats above.",
+        "iconSize": "The app icon must be square and at least 512×512 pixels."
       }
     },
     "videos": {

@@ -23,7 +23,7 @@ const fresh = (canBePublic = true): AdminState => ({
   bootId: 'b1',
   nostrPubkey: null,
   canBePublic,
-  branding: { logo: null, favicon: null, banner: null },
+  branding: { logo: null, favicon: null, banner: null, icon: null },
   config: {
     title: 'My videos',
     creators: [],

@@ -83,7 +83,7 @@ const stateFor = (
       pages: noSitePages(),
     },
   },
-  branding: { logo: null, favicon: null, banner: null },
+  branding: { logo: null, favicon: null, banner: null, icon: null },
 })
 
 async function renderPage(state: AdminState) {

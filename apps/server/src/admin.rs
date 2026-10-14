@@ -878,6 +878,9 @@ async fn branding_put(
         let message = format!("the {} must be a {} image", slot.name(), slot.types());
         return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &message);
     };
+    if slot == Slot::Icon && crate::branding::icon_size(&bytes).is_none() {
+        return json_error(StatusCode::UNPROCESSABLE_ENTITY, crate::branding::ICON_REFUSAL);
+    }
     match state.stores.branding.store(slot, kind, bytes) {
         Ok(url) => {
             tracing::info!("branding: {} replaced", slot.name());
@@ -2163,6 +2166,19 @@ mod tests {
         // The banner may be larger.
         assert_eq!(branding_call(&app, "PUT", "banner", c, png, big).await.0, StatusCode::OK);
         assert_eq!(branding_call(&app, "PUT", "nope", c, png, PNG.to_vec()).await.0, StatusCode::NOT_FOUND);
+        // The icon: a square PNG of at least 512×512, nothing else.
+        let png_of = |w: u32, h: u32| [PNG, &w.to_be_bytes(), &h.to_be_bytes()].concat();
+        let (status, body) = branding_call(&app, "PUT", "icon", c, Some("image/svg+xml"), b"<svg></svg>".to_vec()).await;
+        assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
+        assert_eq!(body["error"], "the icon must be a PNG image");
+        for bad in [png_of(512, 256), png_of(256, 256), PNG.to_vec()] {
+            let (status, body) = branding_call(&app, "PUT", "icon", c, png, bad).await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+            assert_eq!(body["error"], crate::branding::ICON_REFUSAL);
+        }
+        assert!(public_site(&branding)["icon"].is_null());
+        assert_eq!(branding_call(&app, "PUT", "icon", c, png, png_of(512, 512)).await.0, StatusCode::OK);
+        assert!(public_site(&branding)["icon"].as_str().is_some_and(|u| u.starts_with("/branding/icon?v=")));
         let site = public_site(&branding);
         assert!(site["logo"].is_null(), "{site}");
         assert!(site["favicon"].as_str().is_some_and(|u| u.starts_with("/branding/favicon?v=")));

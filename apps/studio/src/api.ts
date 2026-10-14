@@ -35,7 +35,7 @@ export interface AdminState {
   /** False when the origin is not publicly reachable (local CA, `.local` host, IP address). */
   canBePublic: boolean
   config: AdminConfig
-  /** The uploaded logo, favicon and banner (their URLs), null where none is set. */
+  /** The uploaded logo, favicon, banner and app icon (their URLs), null where none is set. */
   branding: Record<BrandingSlot, string | null>
 }
 
@@ -53,6 +53,7 @@ export const BRANDING_LIMITS: Record<
     types: [...IMAGE_TYPES, 'image/x-icon', 'image/vnd.microsoft.icon'],
   },
   banner: { bytes: 2048 * 1024, size: '2 MB', types: IMAGE_TYPES },
+  icon: { bytes: 512 * 1024, size: '512 KB', types: ['image/png'] },
 }
 
 /** Why the server would refuse the file (checked here first), or null. */
@@ -75,6 +76,8 @@ export async function uploadBranding(slot: BrandingSlot, file: File): Promise<st
   if (res.status === 413)
     throw new Error(i18n.t('studio.branding.errors.tooBig', { size: BRANDING_LIMITS[slot].size }))
   if (res.status === 415) throw new Error(i18n.t('studio.branding.errors.wrongType'))
+  // Only the app icon has a shape rule (square, at least 512×512).
+  if (res.status === 422) throw new Error(i18n.t('studio.branding.errors.iconSize'))
   if (!res.ok) throw new Error(await errorMessage(res))
   const body: unknown = await res.json()
   if (body && typeof body === 'object' && 'url' in body && typeof body.url === 'string')

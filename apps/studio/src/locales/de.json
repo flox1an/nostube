@@ -142,17 +142,19 @@
       "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?"
     },
     "branding": {
-      "title": "Logo, Favicon und Banner",
+      "title": "Logo, Favicon, Banner und App-Symbol",
       "description": "Bilder für die öffentliche Seite. Sie gelten sofort, ohne Speichern.",
       "slots": {
         "logo": "Logo",
         "favicon": "Favicon",
-        "banner": "Banner"
+        "banner": "Banner",
+        "icon": "App-Symbol"
       },
       "hints": {
         "logo": "Im Kopf der Seite und auf Videoseiten, statt des Profilbilds. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
         "favicon": "Das Symbol im Browser-Tab. PNG, JPEG, WebP, SVG oder ICO, höchstens {{size}}.",
-        "banner": "Ein breites Bild über den Videos auf der Startseite. PNG, JPEG, WebP oder SVG, höchstens {{size}}."
+        "banner": "Ein breites Bild über den Videos auf der Startseite. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
+        "icon": "Wird verwendet, wenn Besucher die Seite als App installieren. Ein quadratisches PNG mit mindestens 512×512 Pixeln, höchstens {{size}}."
       },
       "crop": {
         "title": "{{image}} zuschneiden",
@@ -172,7 +174,8 @@
       "remove": "Entfernen",
       "errors": {
         "tooBig": "Die Datei ist zu groß: höchstens {{size}}.",
-        "wrongType": "Dieser Dateityp ist hier nicht erlaubt. Siehe die Formate oben."
+        "wrongType": "Dieser Dateityp ist hier nicht erlaubt. Siehe die Formate oben.",
+        "iconSize": "Das App-Symbol muss quadratisch sein und mindestens 512×512 Pixel haben."
       }
     },
     "videos": {

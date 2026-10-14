@@ -14,7 +14,7 @@ const state: AdminState = {
   bootId: 'b1',
   nostrPubkey: null,
   canBePublic: true,
-  branding: { logo: null, favicon: null, banner: null },
+  branding: { logo: null, favicon: null, banner: null, icon: null },
   config: {
     title: 'My videos',
     creators: [PK],

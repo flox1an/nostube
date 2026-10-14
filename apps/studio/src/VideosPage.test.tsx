@@ -61,7 +61,7 @@ vi.mock('./api', async importOriginal => ({
     nostrPubkey: null,
     canBePublic: true,
     config,
-    branding: { logo: null, favicon: null, banner: null },
+    branding: { logo: null, favicon: null, banner: null, icon: null },
   }),
   saveConfig: mocks.saveConfig,
   loadSchedule: async () => [],

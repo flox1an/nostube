@@ -28,7 +28,7 @@ export interface BrandingProps {
   onBranding: (slot: BrandingSlot, url: string | null) => void
 }
 
-/** Logo, favicon and banner: uploaded and removed at once, outside the config save. */
+/** Logo, favicon, banner and app icon: uploaded and removed at once, outside the config save. */
 export function BrandingCard({ branding, onBranding }: BrandingProps) {
   const { t } = useTranslation()
   return (
@@ -67,6 +67,8 @@ function SlotRow({
   const [source, setSource] = useState<File | null>(null)
   const { signer, pubkey } = useSigner()
   const label = t(`studio.branding.slots.${slot}`)
+  // Favicon and app icon go up as they are; logo and banner are cropped to a WebP first.
+  const direct = slot === 'favicon' || slot === 'icon'
 
   const run = async (action: () => Promise<string | null>) => {
     setError(null)
@@ -84,7 +86,7 @@ function SlotRow({
     if (input.current) input.current.value = ''
     if (!file) return
     setError(null)
-    if (slot === 'favicon') {
+    if (direct) {
       const problem = brandingProblem(slot, file)
       if (problem) setError(problem)
       else void run(() => uploadBranding(slot, file))
@@ -136,7 +138,7 @@ function SlotRow({
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">
           {t(`studio.branding.hints.${slot}`, {
-            size: slot === 'favicon' ? BRANDING_LIMITS[slot].size : '20 MB',
+            size: direct ? BRANDING_LIMITS[slot].size : '20 MB',
           })}
         </p>
         {error && (
@@ -181,7 +183,7 @@ function SlotRow({
           </Button>
         )}
       </div>
-      {source && slot !== 'favicon' && (
+      {source && !direct && (
         <ImageCropDialog
           file={source}
           slot={slot}

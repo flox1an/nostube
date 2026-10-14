@@ -12,6 +12,7 @@ function Harness() {
     logo: null,
     favicon: null,
     banner: null,
+    icon: null,
   })
   return (
     <BrandingCard
@@ -45,5 +46,21 @@ describe('BrandingCard', () => {
     choose('Logo', new File(['<html>'], 'page.html', { type: 'text/html' }))
     expect(screen.getByRole('alert')).toBeTruthy()
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('uploads the app icon as it is and explains a refused shape', async () => {
+    render(<Harness />)
+    choose('App icon', new File(['x'], 'icon.webp', { type: 'image/webp' }))
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(fetch).not.toHaveBeenCalled()
+    fetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'no' }), { status: 422 }))
+    choose('App icon', new File(['png'], 'icon.png', { type: 'image/png' }))
+    expect(
+      await screen.findByText('The app icon must be square and at least 512×512 pixels.')
+    ).toBeTruthy()
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/admin/branding/icon',
+      expect.objectContaining({ method: 'PUT' })
+    )
   })
 })

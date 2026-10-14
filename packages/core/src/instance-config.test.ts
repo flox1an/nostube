@@ -80,10 +80,12 @@ describe('parseInstanceConfig site', () => {
       logo: '/branding/logo?v=0123456789abcdef',
       favicon: 'https://evil.example/branding/favicon',
       banner: '/branding/logo?v=0123456789abcdef',
+      icon: '/branding/icon?v=fedcba9876543210',
     })
     expect(result.ok && result.config.site).toEqual({
       ...good().site,
       logo: '/branding/logo?v=0123456789abcdef',
+      icon: '/branding/icon?v=fedcba9876543210',
     })
     expect(withSite({ ...good().site, logo: 42, banner: '//evil.example/x' }).ok).toBe(true)
   })

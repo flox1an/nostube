@@ -38,7 +38,7 @@ const stats = (videos: number) =>
     )
   )
 
-const noBranding = { logo: null, favicon: null, banner: null }
+const noBranding = { logo: null, favicon: null, banner: null, icon: null }
 
 // The test runtime's own `localStorage` is not a usable Storage; a fresh in-memory one per test.
 beforeEach(() => {

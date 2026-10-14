@@ -18,7 +18,7 @@ use nostr::{
 };
 use serde::Deserialize;
 
-use crate::relay::Relay;
+use crate::{branding::THEME_COLOR, relay::Relay};
 
 /// NIP-71 video kinds: normal and short, regular and addressable.
 const VIDEO_KINDS: [u16; 4] = [21, 22, 34235, 34236];
@@ -55,6 +55,7 @@ struct PublicSite {
     logo: Option<String>,
     banner: Option<String>,
     favicon: Option<String>,
+    icon: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -475,6 +476,17 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     if let Some(icon) = p.site.favicon.as_deref() {
         let _ = write!(h, "<link rel=\"icon\" href=\"{}\" />", Esc(icon));
     }
+    // Installable: the manifest, the home screen icon for iOS (which ignores the manifest's) and the
+    // colours of the window an installed site opens in.
+    let touch_icon = p.site.icon.as_deref().unwrap_or("/apple-touch-icon.png");
+    let _ = write!(
+        h,
+        "<link rel=\"manifest\" href=\"/manifest.webmanifest\" /><link rel=\"apple-touch-icon\" href=\"{}\" />\
+         <meta name=\"theme-color\" content=\"{THEME_COLOR}\" /><meta name=\"mobile-web-app-capable\" content=\"yes\" />\
+         <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" /><meta name=\"apple-mobile-web-app-title\" content=\"{}\" />",
+        Esc(touch_icon),
+        Esc(&p.title),
+    );
     let _ = write!(h, "<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{}\" href=\"{}{RSS_PATH}\" />", Esc(&p.title), Esc(&p.origin));
     let _ = write!(h, "<link rel=\"alternate\" type=\"application/atom+xml\" title=\"{}\" href=\"{}{ATOM_PATH}\" />", Esc(&p.title), Esc(&p.origin));
     h
@@ -679,5 +691,28 @@ mod tests {
         let home = shell(&relay, &public, "/", SHELL).await;
         assert!(home.contains("rel=\"alternate\" type=\"application/rss+xml\" title=\"My &lt;Site&gt;\" href=\"https://videos.example/feed.xml\""), "{home}");
         assert!(home.contains("type=\"application/atom+xml\" title=\"My &lt;Site&gt;\" href=\"https://videos.example/atom.xml\""), "{home}");
+    }
+
+    #[tokio::test]
+    async fn every_page_is_installable_with_the_uploaded_icon_or_nostubes() {
+        let (relay, public, ..) = fixture().await;
+        let mut with_icon: serde_json::Value = serde_json::from_slice(&public).unwrap();
+        with_icon["site"]["icon"] = "/branding/icon?v=abc".into();
+        let with_icon = serde_json::to_vec(&with_icon).unwrap();
+        for (public, icon) in [(public, "/apple-touch-icon.png"), (with_icon, "/branding/icon?v=abc")] {
+            for path in ["/", "/about", "/v/nope", "/elsewhere"] {
+                let page = shell(&relay, &public, path, SHELL).await;
+                for tag in [
+                    "<link rel=\"manifest\" href=\"/manifest.webmanifest\" />".to_owned(),
+                    format!("<link rel=\"apple-touch-icon\" href=\"{icon}\" />"),
+                    format!("<meta name=\"theme-color\" content=\"{THEME_COLOR}\" />"),
+                    "<meta name=\"mobile-web-app-capable\" content=\"yes\" />".to_owned(),
+                    "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />".to_owned(),
+                    "<meta name=\"apple-mobile-web-app-title\" content=\"My &lt;Site&gt;\" />".to_owned(),
+                ] {
+                    assert!(page.contains(&tag), "{path}: {tag} missing in {page}");
+                }
+            }
+        }
     }
 }

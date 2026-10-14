@@ -423,8 +423,8 @@ fn revision(value: Option<String>) -> Option<String> {
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
 /// Blossom, branding images (`/branding/*`), NIP-05 (`/.well-known/nostr.json`), the studio
-/// (`/studio/*`), `sitemap.xml`, `feed.xml`,
-/// `atom.xml` and `robots.txt`, root files, app shell (with the head for its route).
+/// (`/studio/*`), `sitemap.xml`, `feed.xml`, `atom.xml`, `robots.txt` and
+/// `manifest.webmanifest`, root files, app shell (with the head for its route).
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
@@ -514,6 +514,13 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         "feed.xml" => return seo::feed(&app.relay, &app.branding.public_config(), false).await,
         "atom.xml" => return seo::feed(&app.relay, &app.branding.public_config(), true).await,
         "robots.txt" => return seo::robots(&app.branding.public_config()),
+        "manifest.webmanifest" => {
+            return (
+                [(header::CONTENT_TYPE, "application/manifest+json"), (header::CACHE_CONTROL, "no-cache")],
+                app.branding.manifest(),
+            )
+                .into_response()
+        }
         _ => {}
     }
     if let Some(asset) = (!file.is_empty()).then(|| Web::get(file)).flatten() {
@@ -734,6 +741,13 @@ mod tests {
         assert_eq!(res.headers()[header::CONTENT_TYPE], "application/json");
         let body = axum::body::to_bytes(res.into_body(), 1 << 10).await.unwrap();
         assert_eq!(serde_json::from_slice::<serde_json::Value>(&body).unwrap(), serde_json::json!({ "names": {} }));
+        // The manifest comes from the branding, not the shell.
+        let req = Request::builder().uri("/manifest.webmanifest").body(Body::empty()).unwrap();
+        let res = dispatch(State(app.clone()), req).await;
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "application/manifest+json");
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+        let body = axum::body::to_bytes(res.into_body(), 1 << 12).await.unwrap();
+        assert_eq!(body, app.branding.manifest());
         // The dispatch seam is identical for a successful PUT /mirror descriptor. Keep
         // this boundary test offline: Almond's fetching/SSRF policy is not replaced here.
         conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash]).unwrap();

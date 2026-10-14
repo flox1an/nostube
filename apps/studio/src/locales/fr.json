@@ -142,17 +142,19 @@
       "replaceConfirm": "Remplacer le texte actuel de cette langue par le texte standard ?"
     },
     "branding": {
-      "title": "Logo, favicon et bannière",
+      "title": "Logo, favicon, bannière et icône d'application",
       "description": "Images du site public. Elles s'appliquent immédiatement, sans enregistrer.",
       "slots": {
         "logo": "Logo",
         "favicon": "Favicon",
-        "banner": "Bannière"
+        "banner": "Bannière",
+        "icon": "Icône d'application"
       },
       "hints": {
         "logo": "Dans l'en-tête et sur les pages vidéo, à la place de la photo de profil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
         "favicon": "L'icône de l'onglet du navigateur. PNG, JPEG, WebP, SVG ou ICO, jusqu'à {{size}}.",
-        "banner": "Une image large au-dessus des vidéos de la page d'accueil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}."
+        "banner": "Une image large au-dessus des vidéos de la page d'accueil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
+        "icon": "Utilisée quand les visiteurs installent le site comme application. Un PNG carré d'au moins 512×512 pixels, jusqu'à {{size}}."
       },
       "crop": {
         "title": "Recadrer {{image}}",
@@ -172,7 +174,8 @@
       "remove": "Retirer",
       "errors": {
         "tooBig": "Le fichier est trop volumineux : {{size}} au maximum.",
-        "wrongType": "Ce type de fichier n'est pas autorisé ici. Voir les formats ci-dessus."
+        "wrongType": "Ce type de fichier n'est pas autorisé ici. Voir les formats ci-dessus.",
+        "iconSize": "L'icône d'application doit être carrée et mesurer au moins 512×512 pixels."
       }
     },
     "videos": {

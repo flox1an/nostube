@@ -1,7 +1,8 @@
-//! Instance branding (ADR 0005 addendum): a logo, a favicon and a banner, one image per slot in
-//! `<data>/branding/<slot>.<ext>`, served at `/branding/<slot>` and announced in the public config
-//! as `site.logo`, `site.favicon` and `site.banner`. The images are small, so they are held in
-//! memory; an upload or a removal rebuilds the public config bytes, no restart needed.
+//! Instance branding (ADR 0005 addendum): a logo, a favicon, a banner and an app icon, one image per
+//! slot in `<data>/branding/<slot>.<ext>`, served at `/branding/<slot>` and announced in the public
+//! config as `site.logo`, `site.favicon`, `site.banner` and `site.icon`. The images are small, so they
+//! are held in memory; an upload, a removal or a config change rebuilds the public config bytes and
+//! the web app manifest (`/manifest.webmanifest`), no restart needed.
 
 use std::path::{Path, PathBuf};
 
@@ -14,16 +15,23 @@ use parking_lot::RwLock;
 use sha2::{Digest, Sha256};
 
 const KIB: usize = 1024;
+/// The smallest side of the app icon: Android and the manifest want 512×512.
+const ICON_MIN: u32 = 512;
+/// `theme_color` and `background_color` of the manifest and the head's `theme-color`; the public
+/// config has no background colour, so the dark background of the Nostube web app.
+pub const THEME_COLOR: &str = "#141111";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Slot {
     Logo,
     Favicon,
     Banner,
+    /// What an installed site shows on the home screen: a square PNG (iOS takes no other type).
+    Icon,
 }
 
 impl Slot {
-    const ALL: [Slot; 3] = [Slot::Logo, Slot::Favicon, Slot::Banner];
+    const ALL: [Slot; 4] = [Slot::Logo, Slot::Favicon, Slot::Banner, Slot::Icon];
 
     pub fn parse(name: &str) -> Option<Slot> {
         Self::ALL.into_iter().find(|s| s.name() == name)
@@ -34,25 +42,31 @@ impl Slot {
             Slot::Logo => "logo",
             Slot::Favicon => "favicon",
             Slot::Banner => "banner",
+            Slot::Icon => "icon",
         }
     }
 
     pub fn max_bytes(self) -> usize {
         match self {
             Slot::Banner => 2048 * KIB,
-            Slot::Logo | Slot::Favicon => 512 * KIB,
+            Slot::Logo | Slot::Favicon | Slot::Icon => 512 * KIB,
         }
     }
 
-    /// ICO is a favicon format only.
+    /// ICO is a favicon format only; the icon is PNG only.
     pub fn accepts(self, kind: Kind) -> bool {
-        kind != Kind::Ico || self == Slot::Favicon
+        match self {
+            Slot::Icon => kind == Kind::Png,
+            Slot::Favicon => true,
+            Slot::Logo | Slot::Banner => kind != Kind::Ico,
+        }
     }
 
     pub fn types(self) -> &'static str {
         match self {
             Slot::Favicon => "PNG, JPEG, WebP, SVG or ICO",
             Slot::Logo | Slot::Banner => "PNG, JPEG, WebP or SVG",
+            Slot::Icon => "PNG",
         }
     }
 }
@@ -115,6 +129,23 @@ fn is_svg(b: &[u8]) -> bool {
     ["<?xml", "<svg", "<!--", "<!DOCTYPE svg"].iter().any(|p| text.starts_with(p)) && text.contains("<svg")
 }
 
+/// Width and height from a PNG's IHDR chunk, which always comes first.
+fn png_size(b: &[u8]) -> Option<(u32, u32)> {
+    if b.get(12..16) != Some(b"IHDR") {
+        return None;
+    }
+    let be = |at: usize| u32::from_be_bytes(b[at..at + 4].try_into().expect("four bytes"));
+    (b.len() >= 24).then(|| (be(16), be(20)))
+}
+
+/// The side of a usable app icon: a square PNG of at least `ICON_MIN` pixels, else `None`.
+pub fn icon_size(b: &[u8]) -> Option<u32> {
+    png_size(b).and_then(|(w, h)| (w == h && w >= ICON_MIN).then_some(w))
+}
+
+/// What the admin is told when `icon_size` refuses an upload.
+pub const ICON_REFUSAL: &str = "the icon must be a square PNG of at least 512×512 pixels";
+
 struct Asset {
     kind: Kind,
     bytes: Bytes,
@@ -136,8 +167,17 @@ impl Asset {
 struct State {
     /// `Config::public_json` of the applied config; the branding URLs go into its `site`.
     base: serde_json::Value,
-    assets: [Option<Asset>; 3],
+    assets: [Option<Asset>; Slot::ALL.len()],
     public_config: Bytes,
+    manifest: Bytes,
+}
+
+impl State {
+    /// The bytes served from `base` and `assets`: rebuilt on every change of either.
+    fn rebuild(&mut self) {
+        self.public_config = build(&self.base, &self.assets);
+        self.manifest = manifest(&self.base, self.assets[Slot::Icon as usize].as_ref());
+    }
 }
 
 pub struct Branding {
@@ -151,8 +191,9 @@ impl Branding {
     pub fn open(data: &Path, public_json: serde_json::Value) -> Branding {
         let dir = data.join("branding");
         let assets = Slot::ALL.map(|slot| load(&dir, slot));
-        let public_config = build(&public_json, &assets);
-        Branding { dir, state: RwLock::new(State { base: public_json, assets, public_config }) }
+        let mut state = State { base: public_json, assets, public_config: Bytes::new(), manifest: Bytes::new() };
+        state.rebuild();
+        Branding { dir, state: RwLock::new(state) }
     }
 
     /// The serialized public config (`/api/config`) with the current branding URLs.
@@ -160,14 +201,19 @@ impl Branding {
         self.state.read().public_config.clone()
     }
 
+    /// The web app manifest (`/manifest.webmanifest`) of the current title, tagline and icon.
+    pub fn manifest(&self) -> Bytes {
+        self.state.read().manifest.clone()
+    }
+
     /// Takes the public config of a config applied while running (no restart).
     pub fn set_base(&self, public_json: serde_json::Value) {
         let mut state = self.state.write();
-        state.public_config = build(&public_json, &state.assets);
         state.base = public_json;
+        state.rebuild();
     }
 
-    /// `{logo, favicon, banner}`: each the URL, or null when the slot is empty.
+    /// `{logo, favicon, banner, icon}`: each the URL, or null when the slot is empty.
     pub fn urls(&self) -> serde_json::Value {
         let state = self.state.read();
         Slot::ALL
@@ -189,7 +235,7 @@ impl Branding {
         let asset = Asset::new(kind, bytes);
         let url = asset.url(slot);
         state.assets[slot as usize] = Some(asset);
-        state.public_config = build(&state.base, &state.assets);
+        state.rebuild();
         Ok(url)
     }
 
@@ -203,7 +249,7 @@ impl Branding {
             }
         }
         state.assets[slot as usize] = None;
-        state.public_config = build(&state.base, &state.assets);
+        state.rebuild();
         Ok(())
     }
 
@@ -261,7 +307,7 @@ fn file_name(slot: Slot, kind: Kind) -> String {
     format!("{}.{}", slot.name(), kind.ext())
 }
 
-/// The slot's newest file, if it is what its name says and within the limit.
+/// The slot's newest file, if it is what its name says, within the limit and (the icon) square.
 fn load(dir: &Path, slot: Slot) -> Option<Asset> {
     let (_, kind, path) = Kind::ALL
         .into_iter()
@@ -273,11 +319,15 @@ fn load(dir: &Path, slot: Slot) -> Option<Asset> {
         })
         .max_by_key(|(modified, ..)| *modified)?;
     match std::fs::read(&path) {
-        Ok(bytes) if Kind::sniff(&bytes) == Some(kind) && bytes.len() <= slot.max_bytes() => {
+        Ok(bytes)
+            if Kind::sniff(&bytes) == Some(kind)
+                && bytes.len() <= slot.max_bytes()
+                && (slot != Slot::Icon || icon_size(&bytes).is_some()) =>
+        {
             Some(Asset::new(kind, bytes.into()))
         }
         Ok(_) => {
-            tracing::warn!("branding: ignoring {}: not a {} file within the limit", path.display(), kind.ext());
+            tracing::warn!("branding: ignoring {}: not a usable {} file within the limit", path.display(), kind.ext());
             None
         }
         Err(e) => {
@@ -287,7 +337,7 @@ fn load(dir: &Path, slot: Slot) -> Option<Asset> {
     }
 }
 
-fn build(base: &serde_json::Value, assets: &[Option<Asset>; 3]) -> Bytes {
+fn build(base: &serde_json::Value, assets: &[Option<Asset>]) -> Bytes {
     let mut json = base.clone();
     if let Some(site) = json.get_mut("site").and_then(serde_json::Value::as_object_mut) {
         for slot in Slot::ALL {
@@ -295,6 +345,52 @@ fn build(base: &serde_json::Value, assets: &[Option<Asset>; 3]) -> Bytes {
                 site.insert(slot.name().to_owned(), asset.url(slot).into());
             }
         }
+    }
+    serde_json::to_vec(&json).expect("a JSON value serializes").into()
+}
+
+/// Longest `short_name` (what fits under a home screen icon), in characters.
+const SHORT_NAME_MAX: usize = 12;
+
+/// The title, cut after the last whole word within `SHORT_NAME_MAX` characters; mid-word when
+/// that word would leave less than half.
+fn short_name(title: &str) -> &str {
+    let Some((cut, _)) = title.char_indices().nth(SHORT_NAME_MAX) else { return title };
+    let head = &title[..cut];
+    let whole = if title[cut..].starts_with(' ') { Some(head) } else { head.rfind(' ').map(|space| &head[..space]) };
+    whole.map(str::trim_end).filter(|w| w.chars().count() >= SHORT_NAME_MAX / 2).unwrap_or(head.trim_end())
+}
+
+/// `/manifest.webmanifest`: makes the site installable under the instance's title, with its icon
+/// or Nostube's (the site build's `public/` files).
+fn manifest(base: &serde_json::Value, icon: Option<&Asset>) -> Bytes {
+    let title = base["title"].as_str().unwrap_or("Nostube");
+    let icons = match icon.and_then(|a| Some((a, icon_size(&a.bytes)?))) {
+        Some((a, side)) => serde_json::json!([
+            { "src": a.url(Slot::Icon), "type": "image/png", "sizes": format!("{side}x{side}"), "purpose": "any" },
+        ]),
+        None => serde_json::json!([
+            { "src": "/nostube-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+            { "src": "/nostube.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+            { "src": "/nostube.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+            { "src": "/nostube-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" },
+        ]),
+    };
+    let mut json = serde_json::json!({
+        "id": "/",
+        "name": title,
+        "short_name": short_name(title),
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "lang": "en",
+        "categories": ["entertainment", "social", "video"],
+        "theme_color": THEME_COLOR,
+        "background_color": THEME_COLOR,
+        "icons": icons,
+    });
+    if let Some(tagline) = base["site"]["tagline"].as_str().filter(|t| !t.is_empty()) {
+        json["description"] = tagline.into();
     }
     serde_json::to_vec(&json).expect("a JSON value serializes").into()
 }
@@ -313,6 +409,67 @@ mod tests {
         assert_eq!(Kind::sniff(b"<!doctype html><html><svg></svg></html>"), None);
         assert_eq!(Kind::sniff(b""), None);
         assert!(!Slot::Logo.accepts(Kind::Ico) && Slot::Favicon.accepts(Kind::Ico));
+        assert!(Slot::Icon.accepts(Kind::Png) && !Slot::Icon.accepts(Kind::Svg) && !Slot::Icon.accepts(Kind::Ico));
+    }
+
+    fn png_of(w: u32, h: u32) -> Vec<u8> {
+        [&b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"[..], &w.to_be_bytes(), &h.to_be_bytes()].concat()
+    }
+
+    #[test]
+    fn the_icon_is_a_square_png_of_at_least_512() {
+        assert_eq!(icon_size(&png_of(512, 512)), Some(512));
+        assert_eq!(icon_size(&png_of(1024, 1024)), Some(1024));
+        assert_eq!(icon_size(&png_of(512, 513)), None);
+        assert_eq!(icon_size(&png_of(511, 511)), None);
+        assert_eq!(icon_size(&png_of(512, 512)[..20]), None);
+        assert_eq!(icon_size(b"\x89PNG\r\n\x1a\n"), None);
+    }
+
+    #[test]
+    fn the_short_name_keeps_whole_words_where_it_can() {
+        assert_eq!(short_name("My videos"), "My videos");
+        assert_eq!(short_name("Twelve chars"), "Twelve chars");
+        assert_eq!(short_name("Twelve chars and more"), "Twelve chars");
+        assert_eq!(short_name("My Great Video Channel"), "My Great");
+        assert_eq!(short_name("A Supercalifragilistic"), "A Supercalif");
+        assert_eq!(short_name("Überlängenvideos"), "Überlängenvi");
+    }
+
+    #[test]
+    fn the_manifest_follows_the_title_tagline_and_icon() {
+        let dir = std::env::temp_dir().join(format!("nss-manifest-test-{}", crate::admin::random_boot_id()));
+        let branding = Branding::open(&dir, serde_json::json!({ "title": "My Great Video Channel", "site": { "tagline": "" } }));
+        let read = || serde_json::from_slice::<serde_json::Value>(&branding.manifest()).unwrap();
+        let m = read();
+        assert_eq!((m["id"].as_str(), m["start_url"].as_str(), m["scope"].as_str()), (Some("/"), Some("/"), Some("/")));
+        assert_eq!(m["display"], "standalone");
+        assert_eq!(m["name"], "My Great Video Channel");
+        assert_eq!(m["short_name"], "My Great");
+        assert!(m.get("description").is_none(), "{m}");
+        assert_eq!(m["lang"], "en");
+        assert_eq!(m["categories"], serde_json::json!(["entertainment", "social", "video"]));
+        assert_eq!((m["theme_color"].as_str(), m["background_color"].as_str()), (Some(THEME_COLOR), Some(THEME_COLOR)));
+        let srcs: Vec<_> = m["icons"].as_array().unwrap().iter().map(|i| i["src"].as_str().unwrap()).collect();
+        assert_eq!(srcs, ["/nostube-192.png", "/nostube.png", "/nostube.svg", "/nostube-maskable.png"]);
+        assert_eq!(m["icons"][3]["purpose"], "maskable");
+
+        // A config applied while running and an uploaded icon show at once.
+        branding.set_base(serde_json::json!({ "title": "Tubes", "site": { "tagline": "Hello" } }));
+        let url = branding.store(Slot::Icon, Kind::Png, png_of(1024, 1024).into()).unwrap();
+        let m = read();
+        assert_eq!((m["name"].as_str(), m["short_name"].as_str(), m["description"].as_str()), (Some("Tubes"), Some("Tubes"), Some("Hello")));
+        assert_eq!(m["icons"], serde_json::json!([{ "src": url, "type": "image/png", "sizes": "1024x1024", "purpose": "any" }]));
+        let public: serde_json::Value = serde_json::from_slice(&branding.public_config()).unwrap();
+        assert_eq!(public["site"]["icon"], url.as_str());
+        assert_eq!(branding.urls()["icon"], url.as_str());
+
+        // A restart keeps the icon; a removal brings back Nostube's.
+        let reopened = Branding::open(&dir, serde_json::json!({ "title": "Tubes", "site": { "tagline": "Hello" } }));
+        assert_eq!(reopened.manifest(), branding.manifest());
+        branding.remove(Slot::Icon).unwrap();
+        assert_eq!(read()["icons"].as_array().unwrap().len(), 4);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

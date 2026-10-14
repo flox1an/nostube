@@ -79,9 +79,11 @@ export interface InstanceSite {
   logo?: string
   favicon?: string
   banner?: string
+  /** The square PNG (≥512×512) an installed site shows on the home screen. */
+  icon?: string
 }
 
-export const BRANDING_SLOTS = ['logo', 'favicon', 'banner'] as const
+export const BRANDING_SLOTS = ['logo', 'favicon', 'banner', 'icon'] as const
 export type BrandingSlot = (typeof BRANDING_SLOTS)[number]
 
 /** The URL the server gives a branding slot; anything else (another host, a path) is not used. */

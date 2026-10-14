@@ -142,17 +142,19 @@
       "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?"
     },
     "branding": {
-      "title": "Logotipo, favicon y banner",
+      "title": "Logotipo, favicon, banner e icono de la app",
       "description": "Imágenes para el sitio público. Se aplican al instante, sin guardar.",
       "slots": {
         "logo": "Logotipo",
         "favicon": "Favicon",
-        "banner": "Banner"
+        "banner": "Banner",
+        "icon": "Icono de la app"
       },
       "hints": {
         "logo": "En la cabecera y en las páginas de vídeo, en lugar de la foto de perfil. PNG, JPEG, WebP o SVG, hasta {{size}}.",
         "favicon": "El icono de la pestaña del navegador. PNG, JPEG, WebP, SVG o ICO, hasta {{size}}.",
-        "banner": "Una imagen ancha sobre los vídeos de la página de inicio. PNG, JPEG, WebP o SVG, hasta {{size}}."
+        "banner": "Una imagen ancha sobre los vídeos de la página de inicio. PNG, JPEG, WebP o SVG, hasta {{size}}.",
+        "icon": "Se usa cuando los visitantes instalan el sitio como app. Un PNG cuadrado de al menos 512×512 píxeles, hasta {{size}}."
       },
       "crop": {
         "title": "Recortar {{image}}",
@@ -172,7 +174,8 @@
       "remove": "Quitar",
       "errors": {
         "tooBig": "El archivo es demasiado grande: como máximo {{size}}.",
-        "wrongType": "Este tipo de archivo no está permitido aquí. Consulta los formatos de arriba."
+        "wrongType": "Este tipo de archivo no está permitido aquí. Consulta los formatos de arriba.",
+        "iconSize": "El icono de la app debe ser cuadrado y de al menos 512×512 píxeles."
       }
     },
     "videos": {

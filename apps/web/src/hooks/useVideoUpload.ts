@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { EventTemplate } from 'nostr-tools'
+import { imageFileName } from '@nostube/core/image-encode'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
@@ -524,7 +525,7 @@ export function useVideoUpload(
       setThumbnailBlob(blob)
 
       try {
-        const thumbnailFile = new File([blob], 'thumbnail.webp', {
+        const thumbnailFile = new File([blob], imageFileName('thumbnail', blob), {
           type: blob.type || 'image/webp',
         })
         const blurhash = await generateBlurhash(thumbnailFile)
@@ -988,10 +989,14 @@ export function useVideoUpload(
           }
 
           if (thumbnailSource === 'generated' && thumbnailBlob) {
-            const thumbnailFile = new File([thumbnailBlob], 'thumbnail.webp', {
-              type: thumbnailBlob.type || 'image/webp',
-              lastModified: Date.now(),
-            })
+            const thumbnailFile = new File(
+              [thumbnailBlob],
+              imageFileName('thumbnail', thumbnailBlob),
+              {
+                type: thumbnailBlob.type || 'image/webp',
+                lastModified: Date.now(),
+              }
+            )
 
             try {
               const result = await fileUpload.upload(thumbnailFile)

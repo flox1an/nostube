@@ -8,14 +8,19 @@ import {
   DialogTitle,
 } from '@nostube/widgets/components/dialog'
 import { cropRect } from './image-crop'
+import { encodeImage, imageFileName } from '@nostube/core/image-encode'
 
 export const CROP_SOURCE_LIMIT = 20 * 1024 * 1024
 const SIZES = {
-  logo: { width: 512, height: 512, bytes: 128 * 1024 },
+  // Shown at 64 px at most (header); 256 px covers 4x screens.
+  logo: { width: 256, height: 256, bytes: 128 * 1024 },
   banner: { width: 1500, height: 500, bytes: 300 * 1024 },
 }
 
-/** The source stays in the browser; only a confirmed, resized WebP leaves this dialog. */
+/**
+ * The source stays in the browser; only a confirmed, resized WebP leaves this dialog (PNG for the
+ * logo, JPEG for the banner where the browser cannot encode WebP, as in Safari).
+ */
 export function ImageCropDialog({
   file,
   slot,
@@ -81,18 +86,16 @@ export function ImageCropDialog({
           canvas.height
         )
         for (const quality of [0.85, 0.7, 0.5]) {
-          blob = await new Promise<Blob | null>(resolve =>
-            canvas.toBlob(resolve, 'image/webp', quality)
-          )
-          if (!blob || blob.type !== 'image/webp')
-            throw new Error(t('studio.branding.crop.encodeError'))
+          // A logo may be transparent: its non-WebP fallback (Safari) is PNG, not JPEG.
+          blob = await encodeImage(canvas, quality, slot === 'logo' ? 'image/png' : 'image/jpeg')
+          if (!blob) throw new Error(t('studio.branding.crop.encodeError'))
           if (blob.size <= size.bytes) break
         }
         if (blob && blob.size <= size.bytes) break
         width = Math.floor(width * 0.75)
       }
       if (!blob || blob.size > size.bytes) throw new Error(t('studio.branding.crop.encodeError'))
-      await onConfirm(new File([blob], `${slot}.webp`, { type: 'image/webp' }))
+      await onConfirm(new File([blob], imageFileName(slot, blob), { type: blob.type }))
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

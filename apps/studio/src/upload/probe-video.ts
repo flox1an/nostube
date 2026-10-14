@@ -3,6 +3,7 @@ import {
   probeMp4Conversion,
   type TranscodeSourceMeta,
 } from '@nostube/core/video-transcode'
+import { encodeThumbnail } from '@nostube/core/image-encode'
 import i18n from '../i18n'
 
 /** What the page learns from a video file before it is uploaded. */
@@ -10,7 +11,7 @@ export interface VideoProbe {
   width: number
   height: number
   duration: number
-  /** A still from the video, JPEG. */
+  /** A still from the video: WebP, or JPEG where the browser cannot encode WebP. */
   thumbnail: Blob
 }
 
@@ -86,13 +87,8 @@ export async function probeVideo(file: File): Promise<VideoProbe> {
     canvas.width = w
     canvas.height = h
     canvas.getContext('2d')!.drawImage(video, 0, 0, w, h)
-    const thumbnail = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob(
-        blob => (blob ? resolve(blob) : reject(new Error(i18n.t('studio.errors.noStill')))),
-        'image/jpeg',
-        0.85
-      )
-    )
+    const thumbnail = await encodeThumbnail(canvas)
+    if (!thumbnail) throw new Error(i18n.t('studio.errors.noStill'))
     return { width, height, duration, thumbnail }
   } finally {
     URL.revokeObjectURL(url)

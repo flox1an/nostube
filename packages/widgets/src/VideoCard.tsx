@@ -16,10 +16,19 @@ export interface VideoCardProps {
    * still goes to `onSelect` so the app keeps its routing and age gate.
    */
   href?: string
+  /** Above the fold: load the thumbnail at once and with high priority (it is likely the LCP). */
+  priority?: boolean
 }
 
 /** Thumbnail, title, duration and date of one video. Styling is Tailwind utilities only. */
-export function VideoCard({ video, onSelect, locked = false, lockedLabel, href }: VideoCardProps) {
+export function VideoCard({
+  video,
+  onSelect,
+  locked = false,
+  lockedLabel,
+  href,
+  priority = false,
+}: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
@@ -38,7 +47,8 @@ export function VideoCard({ video, onSelect, locked = false, lockedLabel, href }
             src={thumbnail}
             onError={() => setThumbnailFailed(true)}
             alt=""
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : undefined}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
         )}

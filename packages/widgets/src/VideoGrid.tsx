@@ -23,19 +23,23 @@ export function VideoGrid({ videos, onSelect, isLocked, emptyMessage, getHref }:
   }
   return (
     <ul className={GRID_CLASSES}>
-      {videos.map(video => (
+      {videos.map((video, index) => (
         <li key={video.id}>
           <VideoCard
             video={video}
             onSelect={onSelect}
             locked={isLocked?.(video)}
             href={getHref?.(video)}
+            priority={index < FIRST_ROW}
           />
         </li>
       ))}
     </ul>
   )
 }
+
+/** The widest grid shows four per row (`xl:grid-cols-4`); those load first. */
+const FIRST_ROW = 4
 
 const GRID_CLASSES = 'grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 

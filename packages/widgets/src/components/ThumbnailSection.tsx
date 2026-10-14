@@ -6,6 +6,7 @@ import { Trash2, Check, Link as LinkIcon, Upload as UploadIcon, Film, Loader2 } 
 import { Slider } from '@nostube/widgets/components/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 import { Input } from '@nostube/widgets/components/input'
+import { encodeThumbnail, imageFileName } from '@nostube/core/image-encode'
 
 interface ThumbnailSectionProps {
   thumbnailSource: 'generated' | 'upload'
@@ -79,22 +80,17 @@ export function ThumbnailSection({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    try {
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      canvas.toBlob(
-        blob => {
-          if (!blob) return
-          setPreviewBlob(blob)
-          callback?.(blob)
-        },
-        'image/webp',
-        0.85
-      )
-    } catch {
-      // Remote video URLs can taint the canvas. Manual thumbnail paths still work.
-    }
+    // Remote video URLs can taint the canvas (encoding then rejects). Manual thumbnail paths still work.
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    encodeThumbnail(canvas)
+      .then(blob => {
+        if (!blob) return
+        setPreviewBlob(blob)
+        callback?.(blob)
+      })
+      .catch(() => {})
   }, [])
 
   const updatePreview = useCallback(() => {
@@ -103,7 +99,9 @@ export function ThumbnailSection({
 
   const handleSetThumbnail = useCallback(() => {
     if (previewBlob) {
-      const thumbnailFile = new File([previewBlob], 'thumbnail.webp', { type: 'image/webp' })
+      const thumbnailFile = new File([previewBlob], imageFileName('thumbnail', previewBlob), {
+        type: previewBlob.type,
+      })
       onThumbnailDrop([thumbnailFile])
     }
   }, [previewBlob, onThumbnailDrop])

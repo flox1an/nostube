@@ -64,6 +64,7 @@ export function VideoEditor({
   const [dueText, setDueText] = useState(dueAt === undefined ? '' : toLocalInput(dueAt))
   const due = fromLocalInput(dueText)
   const [running, setRunning] = useState(false)
+  const [mirroring, setMirroring] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorDetail, setErrorDetail] = useState<string>()
   const [progress, setProgress] = useState(0)
@@ -120,7 +121,7 @@ export function VideoEditor({
     setErrorDetail(undefined)
     abort.current = new AbortController()
     try {
-      const deps = makeUploadDeps({ signer, pubkey, title })
+      const deps = makeUploadDeps({ signer, pubkey, title, onMirrorWait: () => setMirroring(true) })
       await runVideoEdit(
         getCurrent,
         pubkey,
@@ -168,6 +169,7 @@ export function VideoEditor({
     } finally {
       busy.current = false
       setRunning(false)
+      setMirroring(false)
     }
   }
   const canSave =
@@ -328,6 +330,7 @@ export function VideoEditor({
           {errorDetail && <p className="break-all text-xs text-muted-foreground">{errorDetail}</p>}
         </div>
       )}
+      {mirroring && <p role="status">{t('studio.upload.waitMirror')}</p>}
       <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background py-4">
         <Button type="button" disabled={!canSave} onClick={() => void save()}>
           {error ? t('studio.upload.retry') : t('studio.videos.save')}

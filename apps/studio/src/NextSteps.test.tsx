@@ -15,6 +15,8 @@ const config = (site: Partial<AdminConfig['site']> = {}): AdminConfig => ({
   interactionRelays: [],
   profileRelays: [],
   reach: 'private',
+  siteHosting: 'instance',
+  nsite: { gateway: 'nsite.lol', domain: '' },
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

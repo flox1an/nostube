@@ -214,7 +214,7 @@ impl Relay {
              WHERE created_at = 0;"
         )?;
         {
-            let mut rows = writer.prepare("SELECT event_hash, content FROM event WHERE kind IN (21,22,34235,34236)")?;
+            let mut rows = writer.prepare("SELECT event_hash, content FROM event")?;
             for row in rows.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)))? {
                 let (id, content) = row?;
                 for hash in media_hashes(&content) {
@@ -1052,19 +1052,22 @@ fn admit(
 fn parse_coordinate(value: &str) -> Option<(u16, PublicKey, &str)> {
     let mut parts = value.splitn(3, ':');
     let kind = parts.next()?.parse::<u16>().ok()?;
-    if !(30000..40000).contains(&kind) { return None; }
-    Some((kind, PublicKey::from_hex(parts.next()?).ok()?, parts.next()?))
+    let author = PublicKey::from_hex(parts.next()?).ok()?;
+    let identifier = parts.next()?;
+    if !(30000..40000).contains(&kind) && !(is_replaceable(kind) && identifier.is_empty()) { return None; }
+    Some((kind, author, identifier))
 }
 
 /// Only declared media fields count. URLs are parsed for their hash filename, never fetched.
 pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
     let mut hashes = HashSet::new();
+    let Ok(mut event) = serde_json::from_str::<serde_json::Value>(json) else { return hashes };
+    let tags: Vec<Vec<String>> = serde_json::from_value(event["tags"].take()).unwrap_or_default();
     let mut add_hash = |value: &str| {
         if almond::services::file_storage::validate_sha256_format(value).is_ok() {
             hashes.insert(value.to_ascii_lowercase());
         }
     };
-    let tags = stored_tags(json);
     for tag in &tags {
         if tag.first().is_some_and(|name| name == "imeta") {
             for field in tag.iter().skip(1) {
@@ -1072,6 +1075,8 @@ pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
             }
         } else if tag.first().is_some_and(|name| name == "x") {
             if let Some(hash) = tag.get(1) { add_hash(hash); }
+        } else if tag.first().is_some_and(|name| name == "path") {
+            if let Some(hash) = tag.get(2) { add_hash(hash); }
         }
     }
     let mut add_url = |value: &str| {
@@ -1083,6 +1088,13 @@ pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
             }
         }
     };
+    if event["kind"] == 0 {
+        if let Some(profile) = event["content"].as_str().and_then(|content| serde_json::from_str::<serde_json::Value>(content).ok()) {
+            for field in ["picture", "banner"] {
+                if let Some(url) = profile[field].as_str() { add_url(url); }
+            }
+        }
+    }
     for tag in &tags {
         match tag.first().map(String::as_str) {
             Some("imeta") => {
@@ -1149,7 +1161,7 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         if deleted.is_some() {
             return Ok(Saved::Deleted);
         }
-        if let Some(d) = &d_tag {
+        if let Some(d) = d_tag.as_deref().or_else(|| is_replaceable(kind).then_some("")) {
             let deleted = tx.query_row(
                 "SELECT 1 FROM deleted_coordinate WHERE author = ? AND kind = ? AND d_tag = ? AND deleted_at >= ?",
                 params![author, kind, d, created_at], |_| Ok(()),
@@ -1194,7 +1206,7 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         return Ok(Saved::Duplicate);
     }
     let row = tx.last_insert_rowid();
-    let retained = if is_video_kind(kind) { media_hashes(&json) } else { HashSet::new() };
+    let retained = media_hashes(&json);
 
     // Remember this video version so interactions referencing its id keep resolving after a
     // newer version replaces it.
@@ -1204,10 +1216,8 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
             params![id, author, kind, d_tag, created_at],
         )?;
     }
-    if is_video_kind(kind) {
-        for hash in &retained {
-            tx.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
-        }
+    for hash in &retained {
+        tx.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
     }
 
     {
@@ -1244,21 +1254,22 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         for tag in tags_named(&tag_list(ev), "a") {
             let Some((target_kind, target_author, identifier)) = parse_coordinate(&tag[1]) else { continue };
             if target_author != ev.pubkey { continue; }
+            let target_d = if is_replaceable(target_kind) { None } else { Some(identifier) };
             tx.execute(
                 "INSERT INTO deleted_coordinate VALUES (?, ?, ?, ?)
                  ON CONFLICT(author,kind,d_tag) DO UPDATE SET deleted_at = MAX(deleted_at, excluded.deleted_at)",
                 params![author, target_kind, identifier, created_at],
             )?;
             queue_removed_media(&tx,
-                "SELECT content FROM event WHERE author = ?1 AND kind = ?2 AND d_tag = ?3 AND created_at <= ?4",
-                params![author, target_kind, identifier, created_at], &HashSet::new())?;
+                "SELECT content FROM event WHERE author = ?1 AND kind = ?2 AND d_tag IS ?3 AND created_at <= ?4",
+                params![author, target_kind, target_d, created_at], &HashSet::new())?;
             tx.execute(
-                "DELETE FROM event WHERE author = ? AND kind = ? AND d_tag = ? AND created_at <= ?",
-                params![author, target_kind, identifier, created_at],
+                "DELETE FROM event WHERE author = ? AND kind = ? AND d_tag IS ? AND created_at <= ?",
+                params![author, target_kind, target_d, created_at],
             )?;
             tx.execute(
-                "DELETE FROM video_version WHERE author = ? AND kind = ? AND d_tag = ? AND created_at <= ?",
-                params![author, target_kind, identifier, created_at],
+                "DELETE FROM video_version WHERE author = ? AND kind = ? AND d_tag IS ? AND created_at <= ?",
+                params![author, target_kind, target_d, created_at],
             )?;
         }
     }
@@ -1636,6 +1647,26 @@ mod tests {
         // Even a foreign e target cannot erase another author's history.
         put(&relay, &ev(&a, 5, 40, "", &[&["e", &other.id.to_hex()]]));
         assert!(video_by_id(&relay.0.writer.lock(), &other.id).is_some());
+    }
+
+    #[tokio::test]
+    async fn root_site_coordinate_deletion_scopes_author_and_allows_newer_publication() {
+        let relay = open(vec![]);
+        let (owner, stranger) = (Keys::generate(), Keys::generate());
+        let address = format!("15128:{}:", owner.public_key());
+        let site = ev(&owner, 15128, 10, "site", &[]);
+        let foreign = ev(&stranger, 15128, 10, "foreign", &[]);
+        put(&relay, &site);
+        put(&relay, &foreign);
+        let sites = filter(r#"{"kinds":[15128]}"#);
+        put(&relay, &ev(&stranger, 5, 20, "", &[&["a", &address], &["k", "15128"]]));
+        assert_eq!(get(&relay, &[sites.clone()], 0).len(), 2);
+        put(&relay, &ev(&owner, 5, 20, "", &[&["a", &address], &["k", "15128"]]));
+        assert_eq!(get(&relay, &[sites.clone()], 0), vec![foreign]);
+        assert_eq!(put(&relay, &site), Saved::Deleted);
+        assert_eq!(put(&relay, &ev(&owner, 15128, 20, "stale", &[])), Saved::Deleted);
+        assert_eq!(put(&relay, &ev(&owner, 15128, 21, "new", &[])), Saved::Stored);
+        assert_eq!(get(&relay, &[sites], 0).len(), 2);
     }
 
     #[tokio::test]

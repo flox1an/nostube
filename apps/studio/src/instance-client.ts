@@ -1,6 +1,10 @@
 import { NostrConnectSigner } from 'applesauce-signers'
 import { createNostubeClient, type NostubeClient } from '@nostube/core/client'
-import { loadInstanceConfig, type InstanceConfig } from '@nostube/core/instance-config'
+import {
+  applyInstanceConfig,
+  loadInstanceConfig,
+  type InstanceConfig,
+} from '@nostube/core/instance-config'
 
 export interface InstanceClient {
   config: InstanceConfig
@@ -15,7 +19,14 @@ let booted: Promise<InstanceClient> | undefined
  * registered once.
  */
 export function bootInstanceClient(): Promise<InstanceClient> {
-  booted ??= loadInstanceConfig().then(config => {
+  booted ??= loadInstanceConfig().then(publicConfig => {
+    // Studio manages the local copy; the public site may read only mirrors in S2.
+    const relay = publicConfig.origin.replace('https://', 'wss://')
+    const config = applyInstanceConfig({
+      ...publicConfig,
+      videoSources: [relay],
+      interactionRelays: [relay],
+    })
     const client = createNostubeClient({
       defaultRelays: config.interactionRelays,
       instance: config,

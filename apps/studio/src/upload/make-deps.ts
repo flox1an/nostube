@@ -3,13 +3,14 @@ import { MP4_CONVERSION_VARIANT } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import i18n from '../i18n'
 import { bootInstanceClient } from '../instance-client'
-import { scheduleVideo } from '../api'
+import { loadAdmin, scheduleVideo, usesMirrorUrls, type AdminState } from '../api'
 import type { Signer } from '../signer'
 import { uploadBlob } from './blossom-upload'
 import { probeVideo } from './probe-video'
 import type { UploadDeps } from './run-upload'
 import { sha256File } from './sha256-file'
 import { publishChecked, signChecked } from './sign'
+import { mirrorMedia } from './mirror-media'
 
 const slug = (title: string) =>
   title
@@ -32,10 +33,14 @@ export function makeUploadDeps({
   pubkey,
   title,
   publishAt,
+  state,
+  onMirrorWait,
 }: {
   signer: Signer
   pubkey: string
   title: string
+  state?: AdminState
+  onMirrorWait?: () => void
   /** Unix seconds in the future: sign now, let the server publish then. */
   publishAt?: number
 }): UploadDeps {
@@ -73,6 +78,13 @@ export function makeUploadDeps({
         signal,
         sign: template => signChecked(signer, template, pubkey),
       }),
+    prepareMedia: async (template, signal) => {
+      const current = state ?? (await loadAdmin())
+      if (!current) throw new Error(i18n.t('studio.errors.notLoggedIn'))
+      if (!usesMirrorUrls(current)) return template
+      onMirrorWait?.()
+      return mirrorMedia(template, () => {}, signal)
+    },
     publish: async template => {
       const signed = await signChecked(signer, template, pubkey)
       if (publishAt) {

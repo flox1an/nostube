@@ -31,21 +31,22 @@ The signed-in visitor's name and avatar are always discovered through the mandat
 profile indexers (`wss://purplepag.es`, `wss://index.hzrd149.com`), their NIP-65 write relays,
 the instance relays and any additional visitor-profile relays configured in Studio, in both
 reaches. `profile_relays = []` means no additional relays, not a public-lookup opt-out. Only
-that visitor's kinds 0 and 10002 use this exception: video sources, creator metadata, embed
-queries and interaction publishing retain their instance scope. Public relays learn the
-visitor's IP address and queried public key; a public avatar URL can also contact its host.
+that visitor's kinds 0 and 10002 use this exception. In private reach, video sources, creator
+metadata, embed queries and interaction publishing stay on the instance; in public reach they
+use the configured public relays and mirrors. Public relays learn the visitor's IP address
+and queried public key; a public avatar URL can also contact its host.
 
 **Reach** (Studio: Privat / Öffentlich, `reach` in `config.toml`, ADR 0012) decides whether the
 instance announces its channel on the Nostr network. `private` is the default: the instance
 publishes nothing but copies to the `[mirror]` targets you enter, and the site reads videos,
 creator data and comments only from the instance relay, whatever relay lists are stored.
-`public` publishes the channel's profile (kind 0) and relay list (kind 10002: the instance
-relay plus the mirror relays) to the profile relays (`profile_relays`) through the outbox and
-serves the configured video and interaction relays. Public cannot be fully taken back:
-switching back to private stops further deliveries but deletes nothing already published.
-It needs a publicly reachable origin, so a local-ca instance, a `.local` name or an IP
-address origin stays private. `/.well-known/nostr.json` answers NIP-05 `_@<host>` in both
-reaches.
+`public` publishes the managed channel's profile, relay list (10002) and Blossom server list
+(10063) to `profile_relays` through the outbox. Public requires either a publicly reachable
+origin or at least one public mirror relay **and** one public mirror Blossom server. A LAN,
+local-ca, `.local` or IP origin can therefore publish through mirrors, but never appears in
+public event URLs or relay lists. Removing the last required mirror while public is refused.
+NIP-05 stays on the instance; a LAN-only profile does not advertise an unreachable NIP-05 name.
+Returning to private stops announcements but cannot revoke foreign copies.
 
 Signed-in visitors can also report a video or a comment. A report is a signed NIP-56 note on
 the relay, public like any other event and never anonymous; **Content → Moderation** in Studio
@@ -63,6 +64,43 @@ quota and free disk space. A refresh button reloads the numbers. Upload/download
 and bytes served are process-local counters and reset on restart. The quota bar is hidden
 when storage is unlimited. `GET /api/admin/stats` requires the admin session; it does not
 enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
+
+## Publishing the site as an nsite
+
+With a managed channel identity, configure any required mirrors under **Server → Advanced**,
+save them, and explicitly select **Public** reach. Under the site settings, **Site hosting**
+then offers **nsite**. Own identity and private reach do not offer this option.
+
+Select a gateway (initially `nsite.lol`), optionally enter a custom domain, save the settings,
+then press **Publish**. The gateway URL is `https://<channel npub>.<gateway>`. For a custom
+domain, point its CNAME at `<channel npub>.<gateway>`; check the gateway's custom-domain TLS
+support before using it. The custom domain becomes the baked origin for sharing and embeds.
+
+The instance stores the embedded site, branding and embed player in its Blossom, mirrors
+them where configured, and publishes a signed kind 15128 root manifest only after the files
+are publicly available. Studio shows the aggregate version, publication time and delivery
+state; outbox failures use the existing retry controls. Gateways cache manifests, so changes
+can take up to an hour to appear. Config/branding changes and new server builds automatically
+republish changed files; unchanged content publishes nothing. Superseded blobs are cleaned up
+after delivery, except files still used by the current site or another event.
+
+The instance's site routes redirect with 302, retaining the path and query. Relay, Blossom,
+Studio, admin/APIs, NIP-05, branding and `/embed.html` remain on the instance.
+
+For a LAN-only instance, Studio waits for confirmed mirror copies of video outputs, thumbnails
+and subtitles before publishing their public URLs. The managed profile's logo/banner also use
+confirmed mirror Blossom URLs. Mirror limits, quotas and availability are the owner's concern;
+there are no default mirror servers.
+
+Turning nsite off or selecting private asks whether to delete it: **Cancel** leaves settings
+unchanged, **Keep** stops redirects but preserves the public site, and **Delete** queues a
+manifest deletion plus unreferenced blob deletions with retries. Deletion is best effort;
+foreign copies may remain. Shared media and profile images are retained.
+
+The nsite has generic link previews, not per-video prerendered SEO, sitemaps or feeds. With
+a LAN-only origin, visitor interactions stay on foreign relays: Studio does not see them and
+local moderation has no effect there. The separately planned interaction importer
+(ADR 0014, #164) is not enabled or implemented by nsite hosting.
 
 ## What you have to set
 
@@ -191,8 +229,8 @@ Run it under systemd with `Restart=always` for the reason given above.
 Signed-in visitor identity always uses the public defaults and NIP-65 write relays (ADR 0008),
 in both reaches. There is no “Local only” visitor setting: Studio's visitor-profile list adds
 discovery relays, and `profile_relays = []` adds none. An instance with signed-in visitors
-therefore cannot promise zero internet traffic. Video catalog and creator queries remain
-instance-scoped, and an embed with the instance config uses only instance relays.
+therefore cannot promise zero internet traffic. In private reach video catalog, creator
+queries and the embed use the instance relay; public reach uses public configured sources.
 
 `apps/server/scripts/check-local-profile.mjs` checks this boundary on macOS. It starts a
 throwaway private-reach instance with `profile_relays = []` and seeds a creator video, profile,
@@ -203,8 +241,8 @@ external sockets. Every public `REQ` must filter only kinds 0/10002 and exactly 
 visitor's public key; public `CLOSE`s are allowed, writes and other messages are not.
 Unexpected hosts, external HTTP, public video queries and any external embed traffic exit 1.
 The check also requires both public sockets and visitor kind 0/10002 requests to be observed;
-it needs public-relay connectivity and may need a longer `--wait` on a slow connection. The
-local-ca `.local` instance cannot be public, so public reach is not covered by it.
+it needs public-relay connectivity and may need a longer `--wait` on a slow connection.
+This private-reach check does not cover public reach through mirrors or nsite hosting.
 
 Prerequisites: installed workspace dependencies, macOS `scutil`/mDNS, Brave or another
 Chromium browser, and freshly built Site/Studio/embed assets and server. The instance uses

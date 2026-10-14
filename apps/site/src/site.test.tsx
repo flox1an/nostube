@@ -7,11 +7,14 @@ import { MemoryRouter } from 'react-router-dom'
 import { EMPTY, NEVER, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
-import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
-import type { InstanceConfig } from '@nostube/core/instance-config'
+import {
+  getInstanceConfig,
+  loadInstanceConfig,
+  setInstanceConfig,
+  type InstanceConfig,
+} from '@nostube/core/instance-config'
 import { browserLanguage } from './i18n'
 import i18n from './i18n'
-import { INLINE_CONFIG_ID, loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
 import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
 import { startInstallPromptCapture } from '@nostube/widgets/install-prompt'
@@ -69,38 +72,40 @@ afterEach(() => {
   setInstanceConfig(null as unknown as InstanceConfig)
 })
 
-describe('loadSiteConfig', () => {
+describe('loadInstanceConfig', () => {
   it('validates the config and registers it', async () => {
-    const loaded = await loadSiteConfig(() => jsonResponse(config))
+    const loaded = await loadInstanceConfig(() => jsonResponse(config))
     expect(loaded.title).toBe('Site title')
     expect(getInstanceConfig()).toEqual(loaded)
   })
 
   it('rejects an invalid config and registers nothing', async () => {
     await expect(
-      loadSiteConfig(() => jsonResponse({ ...config, creators: ['nope'] }))
+      loadInstanceConfig(() => jsonResponse({ ...config, creators: ['nope'] }))
     ).rejects.toThrow(/creators must be a list of hex pubkeys/)
     expect(getInstanceConfig()).toBeNull()
   })
 
   it('reports a server error with its status', async () => {
-    await expect(loadSiteConfig(() => jsonResponse({ error: 'down' }, 503))).rejects.toThrow(/503/)
+    await expect(loadInstanceConfig(() => jsonResponse({ error: 'down' }, 503))).rejects.toThrow(
+      /503/
+    )
   })
 
   it('takes the config the server put into the page, validated, without a request', async () => {
     const inline = document.createElement('script')
     inline.type = 'application/json'
-    inline.id = INLINE_CONFIG_ID
+    inline.id = 'nostube-config'
     inline.textContent = JSON.stringify(config)
     document.head.append(inline)
     const fetchImpl = vi.fn()
     try {
-      const loaded = await loadSiteConfig(fetchImpl)
+      const loaded = await loadInstanceConfig(fetchImpl)
       expect(loaded.title).toBe('Site title')
       expect(getInstanceConfig()).toEqual(loaded)
       expect(fetchImpl).not.toHaveBeenCalled()
       inline.textContent = JSON.stringify({ ...config, creators: ['nope'] })
-      await expect(loadSiteConfig(fetchImpl)).rejects.toThrow(/creators must be a list/)
+      await expect(loadInstanceConfig(fetchImpl)).rejects.toThrow(/creators must be a list/)
     } finally {
       inline.remove()
     }

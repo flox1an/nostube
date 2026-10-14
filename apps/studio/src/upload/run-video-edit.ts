@@ -119,7 +119,14 @@ export async function runVideoEdit(
     if (!url) throw new Error(i18n.t('studio.videos.assetMissing'))
     subtitles!.push({ url, lang: subtitle.lang, extra: subtitle.extra })
   }
-  return deps.publish(
-    buildVideoUpdate(getCurrent(), pubkey, { ...input, video, thumbnail, subtitles })
-  )
+  for (;;) {
+    const current = getCurrent()
+    const template = await deps.prepareMedia(
+      buildVideoUpdate(current, pubkey, { ...input, video, thumbnail, subtitles }),
+      signal
+    )
+    signal?.throwIfAborted()
+    if (getCurrent().id !== current.id) continue
+    return deps.publish(template)
+  }
 }

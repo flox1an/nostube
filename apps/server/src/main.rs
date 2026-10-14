@@ -7,6 +7,7 @@ mod branding;
 mod config;
 mod data_lock;
 mod login_guard;
+mod nsite;
 mod outbox;
 mod profile;
 mod relay;
@@ -316,6 +317,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
     let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
     outbox.attach_storage(state.clone());
+    outbox.set_origin_public(cfg.origin_is_public());
+    let nsite = nsite::Nsite::open(&data)?;
 
     let branding = Arc::new(branding::Branding::open(&data, cfg.public_json()));
     // Broken secrets only disable the admin area, never the instance (#7).
@@ -326,7 +329,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         &setup_origin,
         boot_id.clone(),
         handle.clone(),
-        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone(), outbox: outbox.clone() },
+        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone(), outbox: outbox.clone(), nsite: nsite.clone() },
     ) {
         Ok(a) => Some(a),
         Err(e) => {
@@ -338,11 +341,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
     let admin = admin.map(admin::router);
     let worker = outbox::spawn(outbox.clone(), signer.clone());
-    // Restarts (and the first start with a managed key) publish a profile the settings changed.
-    {
-        let (relay, branding, outbox, signer) = (relay.clone(), branding.clone(), outbox.clone(), signer.clone());
-        tokio::spawn(async move { profile::sync(&relay, &branding, &outbox, &signer).await });
-    }
+    let nsite_worker = nsite::spawn(nsite, relay.clone(), branding.clone(), outbox.clone(), signer.clone());
     // The first scan releases anything that became due while the server was down.
     let releaser = schedule::spawn(outbox.clone(), relay.clone());
 
@@ -409,6 +408,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         let _ = worker.await;
     }
     releaser.abort();
+    nsite_worker.abort();
+    let _ = nsite_worker.await;
     let _ = releaser.await;
     // A config apply or a signal brought us here: a supervisor restarts the process if it should run.
     tracing::info!("stopped; restart the service to run the applied config");
@@ -508,6 +509,10 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     }
     if file == "studio" || file.starts_with("studio/") {
         return studio_asset(file);
+    }
+    let managed = app.signer.lock().clone().and_then(Result::ok).map(|key| key.public_key());
+    if let Some(location) = nsite::redirect(&app.branding.public_config(), managed, &path, req.uri().query()) {
+        return (StatusCode::FOUND, [(header::LOCATION, location)]).into_response();
     }
     match file {
         "sitemap.xml" => return seo::sitemap(&app.relay, &app.branding.public_config()).await,
@@ -760,9 +765,25 @@ mod tests {
         }));
         let (mut request, _) = upload(b"mirrored uploaded bytes", true);
         *request.uri_mut() = "/mirror".parse().unwrap();
-        let response = dispatch(State(mirror_app), request).await;
+        let response = dispatch(State(mirror_app.clone()), request).await;
         assert!(response.status().is_success());
         assert_eq!(owner(&mirrored_hash), (key.public_key().to_hex(), true));
         assert_eq!(count(&mirrored_hash), 0);
+        let mut public = Config::default_for_proxy("https://instance.example", 8080).unwrap();
+        public.reach = config::Reach::Public;
+        public.site_hosting = config::SiteHosting::Nsite;
+        public.nsite.domain = "site.example".into();
+        mirror_app.branding.set_base(public.public_json());
+        *mirror_app.signer.lock() = Some(Ok(key.clone()));
+        let req = Request::builder().uri("/?q=hello%20world").body(Body::empty()).unwrap();
+        let response = dispatch(State(mirror_app.clone()), req).await;
+        assert_eq!(response.status(), StatusCode::FOUND);
+        assert_eq!(response.headers()[header::LOCATION], "https://site.example/?q=hello%20world");
+        let req = Request::builder().uri("/").header(header::ACCEPT, "application/nostr+json").body(Body::empty()).unwrap();
+        let response = dispatch(State(mirror_app.clone()), req).await;
+        assert_eq!(response.status(), StatusCode::OK, "NIP-11 has precedence over the site redirect");
+        assert_eq!(response.headers()[header::CONTENT_TYPE], "application/nostr+json");
+        let req = Request::builder().uri("/embed.html").body(Body::empty()).unwrap();
+        assert_eq!(dispatch(State(mirror_app), req).await.status(), StatusCode::OK);
     }
 }

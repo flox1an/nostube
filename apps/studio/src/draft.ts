@@ -11,7 +11,7 @@ import {
   type SitePages,
   type Reach,
 } from '@nostube/core/instance-config'
-import type { AdminConfig, SearchConfig } from './api'
+import type { AdminConfig, SearchConfig, SiteHosting } from './api'
 import i18n from './i18n'
 
 /** The form's own shape: lists as one entry per line, numbers as typed. */
@@ -38,6 +38,9 @@ export interface Draft {
   quota: string
   reserve: string
   reach: Reach
+  siteHosting: SiteHosting
+  nsiteGateway: string
+  nsiteDomain: string
 }
 
 const toLines = (text: string) =>
@@ -67,6 +70,9 @@ export function toDraft(c: AdminConfig): Draft {
     quota: String(c.storage.quotaGib),
     reserve: String(c.storage.freeSpaceReserveGib),
     reach: c.reach,
+    siteHosting: c.siteHosting,
+    nsiteGateway: c.nsite.gateway,
+    nsiteDomain: c.nsite.domain,
   }
 }
 
@@ -107,6 +113,48 @@ function servers(label: string, text: string, errors: string[]): string[] {
   })
 }
 
+const PUBLIC_DNS =
+  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
+
+/** Matches the server's public-host rule: DNS names, not LAN names or IP addresses. */
+function publicHost(host: string): boolean {
+  const name = host.toLowerCase().replace(/\.$/, '')
+  return (
+    PUBLIC_DNS.test(name) &&
+    !name.endsWith('.local') &&
+    !name.endsWith('.localhost') &&
+    !/\.\d+$/.test(name)
+  )
+}
+
+/** Public eligibility follows the draft, not the server's last saved mirror lists. */
+export function draftCanBePublic(
+  originIsPublic: boolean,
+  draft: Pick<Draft, 'mirrorRelaysText' | 'mirrorBlossomText'>
+): boolean {
+  if (originIsPublic) return true
+  const hasTarget = (text: string, scheme: RegExp) =>
+    toLines(text).some(line => {
+      try {
+        const url = new URL(line)
+        return (
+          scheme.test(url.protocol) &&
+          !url.username &&
+          !url.password &&
+          (url.pathname === '' || url.pathname === '/') &&
+          !url.search &&
+          !url.hash &&
+          publicHost(url.hostname)
+        )
+      } catch {
+        return false
+      }
+    })
+  return (
+    hasTarget(draft.mirrorRelaysText, /^wss?:$/) && hasTarget(draft.mirrorBlossomText, /^https?:$/)
+  )
+}
+
 /** The server's rule: empty, or `local@domain` with a dot in the domain, no whitespace, ≤ 254 bytes. */
 export const isLightningAddress = (value: string) =>
   value === '' ||
@@ -134,7 +182,7 @@ function count(label: string, text: string, errors: string[]): number {
 export type DraftResult = { config: AdminConfig; errors: [] } | { config: null; errors: string[] }
 
 /** Checks the draft with the same rules as the server and builds what gets saved. */
-export function fromDraft(d: Draft): DraftResult {
+export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
   const errors: string[] = []
   if (!d.title.trim()) errors.push(i18n.t('studio.errors.titleEmpty'))
   const hidden = toLines(d.hiddenText).flatMap(line => {
@@ -196,6 +244,16 @@ export function fromDraft(d: Draft): DraftResult {
   const profileRelays = relays(label('profileRelays'), d.profileRelaysText, errors)
   const mirrorRelays = relays(label('mirrorRelays'), d.mirrorRelaysText, errors)
   const mirrorBlossom = servers(label('mirrorBlossom'), d.mirrorBlossomText, errors)
+  if (d.reach === 'public' && !draftCanBePublic(originIsPublic, d))
+    errors.push(i18n.t('studio.reach.unavailable'))
+  const gateway = d.nsiteGateway.trim().toLowerCase()
+  const domain = d.nsiteDomain.trim().toLowerCase()
+  if (
+    !PUBLIC_DNS.test(gateway) ||
+    !publicHost(gateway) ||
+    (domain !== '' && (!PUBLIC_DNS.test(domain) || !publicHost(domain)))
+  )
+    errors.push(i18n.t('studio.nsite.invalidHost'))
   const quotaGib = count(label('quota'), d.quota, errors)
   const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
   const search: AdminConfig['search'] = { mode: d.searchMode }
@@ -213,6 +271,8 @@ export function fromDraft(d: Draft): DraftResult {
       storage: { quotaGib, freeSpaceReserveGib },
       site: { ...site, lightning },
       reach: d.reach,
+      siteHosting: d.reach === 'private' ? 'instance' : d.siteHosting,
+      nsite: { gateway, domain },
     },
     errors: [],
   }

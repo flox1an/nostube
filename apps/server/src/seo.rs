@@ -98,8 +98,8 @@ impl Public {
     }
 }
 
-/// Where the site reads the public config from instead of `/api/config` (`INLINE_CONFIG_ID` in
-/// `apps/site/src/site-config.ts`).
+/// Where the shared instance config loader reads the baked config instead of `/api/config`
+/// (`packages/core/src/instance-config.ts`).
 const INLINE_CONFIG_ID: &str = "nostube-config";
 
 /// The app shell with the head for `path` and the public config inlined, so the site starts

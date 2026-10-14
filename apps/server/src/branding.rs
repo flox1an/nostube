@@ -83,7 +83,7 @@ pub enum Kind {
 impl Kind {
     const ALL: [Kind; 5] = [Kind::Png, Kind::Jpeg, Kind::Webp, Kind::Svg, Kind::Ico];
 
-    fn ext(self) -> &'static str {
+    pub(crate) fn ext(self) -> &'static str {
         match self {
             Kind::Png => "png",
             Kind::Jpeg => "jpg",
@@ -206,6 +206,21 @@ impl Branding {
         self.state.read().manifest.clone()
     }
 
+    /// A cheap snapshot of the nsite's branding paths, MIME types and shared image bytes.
+    pub fn files(&self) -> Vec<(&'static str, &'static str, Bytes)> {
+        let state = self.state.read();
+        Slot::ALL.into_iter().filter_map(|slot| {
+            let asset = state.assets[slot as usize].as_ref()?;
+            let path = match slot {
+                Slot::Logo => "/branding/logo",
+                Slot::Favicon => "/branding/favicon",
+                Slot::Banner => "/branding/banner",
+                Slot::Icon => "/branding/icon",
+            };
+            Some((path, asset.kind.mime(), asset.bytes.clone()))
+        }).collect()
+    }
+
     /// Takes the public config of a config applied while running (no restart).
     pub fn set_base(&self, public_json: serde_json::Value) {
         let mut state = self.state.write();
@@ -301,6 +316,40 @@ impl Branding {
         // A `Body`, not `Bytes`: those would add their own `application/octet-stream`.
         (AppendHeaders(headers), axum::body::Body::from(asset.bytes.clone())).into_response()
     }
+}
+
+/// Publishes generated site/branding bytes through Blossom's normal content-addressed storage.
+/// Reusing the incumbent blob makes profile and nsite paths share the same hash and upload.
+pub async fn store_blob(
+    state: &almond::models::AppState,
+    bytes: &[u8],
+    mime: &str,
+    ext: Option<&str>,
+) -> Result<String, String> {
+    use almond::{models::BlobOrigin, services::file_storage::{self, BlobPublication, TempBlob}};
+    let hash = format!("{:x}", Sha256::digest(bytes));
+    file_storage::ensure_not_quarantined(state, &hash).await.map_err(|e| e.to_string())?;
+    if let Some(metadata) = file_storage::get_file_metadata(state, &hash).await {
+        if metadata.size == bytes.len() as u64 && metadata.origin == BlobOrigin::Upload {
+            return Ok(hash);
+        }
+    }
+    file_storage::ensure_storage_capacity(state, bytes.len() as u64).await.map_err(|e| e.to_string())?;
+    file_storage::ensure_temp_dir(state).await.map_err(|e| e.to_string())?;
+    let temp = TempBlob::reserve(state, "nostube-generated", ext);
+    tokio::fs::write(temp.path(), bytes).await.map_err(|e| e.to_string())?;
+    let stored = file_storage::publish_blob(state, temp, BlobPublication {
+        sha256: hash.clone(),
+        origin: BlobOrigin::Upload,
+        extension: ext.map(str::to_owned),
+        mime_type: Some(mime.to_owned()),
+        size: bytes.len() as u64,
+        expiration: None,
+    }).await.map_err(|e| e.to_string())?;
+    if stored.metadata.size != bytes.len() as u64 {
+        return Err(format!("stored blob {hash} size {} differs from {}", stored.metadata.size, bytes.len()));
+    }
+    Ok(hash)
 }
 
 fn file_name(slot: Slot, kind: Kind) -> String {
@@ -505,5 +554,38 @@ mod tests {
         assert_eq!(res.headers()[header::CONTENT_TYPE], "image/png");
         assert!(res.headers().get(header::CONTENT_SECURITY_POLICY).is_none());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn nsite_branding_files_reuse_the_same_content_addressed_blossom_blob() {
+        let dir = std::env::temp_dir().join(format!("nss-branding-blob-test-{}", crate::admin::random_boot_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let branding = Branding::open(&dir, serde_json::json!({ "site": {} }));
+        let bytes = Bytes::from_static(b"\x89PNG\r\n\x1a\nbranding");
+        branding.store(Slot::Logo, Kind::Png, bytes.clone()).unwrap();
+        branding.store(Slot::Banner, Kind::Png, bytes.clone()).unwrap();
+        let files = branding.files();
+        assert_eq!(files.iter().map(|(path, mime, _)| (*path, *mime)).collect::<Vec<_>>(),
+            [("/branding/logo", "image/png"), ("/branding/banner", "image/png")]);
+        assert_eq!(files[0].2.as_ptr(), bytes.as_ptr(), "snapshot shares bytes rather than copying images");
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://tube.example".into());
+        cfg.storage_min_free = 0;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let hash = store_blob(&state, &files[0].2, files[0].1, Some("png")).await.unwrap();
+        let first = almond::services::file_storage::get_file_metadata(&state, &hash).await.unwrap();
+        assert_eq!(hash, format!("{:x}", Sha256::digest(&bytes)));
+        assert_eq!(first.extension.as_deref(), Some("png"));
+        assert_eq!(first.mime_type.as_deref(), Some("image/png"));
+        assert_eq!(first.size, bytes.len() as u64);
+        let same = store_blob(&state, &files[1].2, files[1].1, Some("png")).await.unwrap();
+        assert_eq!(same, hash);
+        let second = almond::services::file_storage::get_file_metadata(&state, &same).await.unwrap();
+        assert!(std::sync::Arc::ptr_eq(&first, &second), "the incumbent indexed blob is reused");
+        branding.remove(Slot::Logo).unwrap();
+        assert_eq!(branding.files().len(), 1);
+        assert_eq!(files.len(), 2, "a snapshot survives later branding edits");
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

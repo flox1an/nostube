@@ -283,6 +283,41 @@
     "advanced": {
       "privateNote": "Your instance is Private: video sources and interaction relays have no effect, the site uses only this server's relay for them. The lists keep their values and work only in Public. Profile relays still serve the lookup of signed-in visitors; the mirror lists work in both."
     },
+    "nsite": {
+      "title": "Site hosting",
+      "description": "Serve the site from your instance or publish it through an nsite gateway. Relay, Blossom and Studio stay on the instance.",
+      "managedRequired": "nsite requires a managed channel key. With own identity the server cannot publish or update the site.",
+      "publicRequired": "Switch to Public to publish and automatically update an nsite.",
+      "instance": "Website on this instance",
+      "instanceBody": "Visitors open the site at your instance's address. Nothing is published elsewhere.",
+      "nsite": "nsite hosting (public)",
+      "nsiteBody": "A static copy on public Blossom servers, served by an nsite gateway. It updates itself after changes.",
+      "gateway": "Gateway",
+      "gatewayHint": "A bare DNS hostname, for example nsite.lol. No scheme, port or path.",
+      "domain": "Custom domain",
+      "domainHint": "Optional bare DNS hostname. TLS for your custom domain is managed by the gateway; check that it supports your domain.",
+      "cname": "Point your custom domain's CNAME at {{host}}.",
+      "url": "nsite URL:",
+      "publish": "Publish nsite",
+      "publishing": "Queuing publication…",
+      "saveFirst": "Save and apply your changes before publishing. Publication uses saved settings only.",
+      "cache": "Changes republish automatically. Gateway caches can take up to an hour to show the new version.",
+      "version": "Last published version (aggregate hash)",
+      "publishedAt": "Published at",
+      "retained": "The last manifest and files remain public. Automatic publication and the instance redirect are off.",
+      "invalidHost": "Gateway and custom domain must be public DNS hostnames, without scheme, port or path.",
+      "deleteTitle": "Delete the nsite now?",
+      "deleteHint": "Either choice turns off nsite hosting and its redirect. Deletion requests remove the manifest and unused site files, but gateways, relays and Blossom servers may keep copies. Deletion is not guaranteed.",
+      "delete": "Delete now",
+      "keep": "Keep copies",
+      "cancel": "Cancel",
+      "status": {
+        "disabled": "nsite hosting is off",
+        "pending": "Publication pending: waiting for files and delivery",
+        "published": "Published",
+        "failed": "Publication failed"
+      }
+    },
     "reach": {
       "title": "Reach",
       "privateTitle": "Private",
@@ -292,7 +327,9 @@
       "publicTitle": "Public",
       "publicBody": "Your profile and your relay list are published on the Nostr network. Other Nostr apps find your channel and your videos on this instance; comments and zaps arrive here. This cannot be fully undone.",
       "confirmPublic": "Switch to Public? This cannot be fully undone: your profile and relay list stay on the Nostr network even if you switch back later. The mirror relays you entered appear in the published relay list.",
-      "unavailable": "Public needs an address the Nostr network can reach. This instance runs on a local name (.local), an IP address or its own certificate authority, so other Nostr apps cannot connect to its relay."
+      "unavailable": "Public needs a public origin or at least one public mirror relay and one public mirror Blossom server. Configure both on the Advanced page.",
+      "mirrorRequired": "This instance is not publicly reachable. Public requires mirror relays and Blossom servers. Videos live on those servers under their limits; public interactions do not return to this instance.",
+      "publicBodyMirror": "Your channel profile and public mirror relay list are published on Nostr. Videos are served by your mirrors, not by this instance. This cannot be fully undone."
     },
     "upload": {
       "publishedTitle": "Published",
@@ -319,7 +356,9 @@
       "tagsHint": "Press Enter to add tags. Separate multiple tags with spaces or commas.",
       "subtitles": "Subtitles (optional)",
       "progress": "Upload progress",
+      "waitMirror": "Waiting for confirmed public mirror copies…",
       "steps": {
+        "mirroring": "Wait for public mirrors",
         "convert": "Convert to MP4",
         "check": "Check the video",
         "hash": "Prepare the file",
@@ -430,6 +469,8 @@
       "pending": "Waiting",
       "failed": "Failed",
       "kinds": {
+        "cleanup": "Local file cleanup",
+        "blob-delete": "File deletion",
         "event": "Event",
         "blob": "File"
       },
@@ -442,6 +483,8 @@
       "retried_other": "{{count}} jobs queued again."
     },
     "errors": {
+      "mirrorFailed": "Public media mirroring failed: {{reason}}",
+      "notLoggedIn": "Your Studio session ended. Log in again before publishing.",
       "serverStatus": "The server answered {{status}}.",
       "noSigner": "No Nostr account is logged in in this browser.",
       "notPubkey": "The signer returned something that is not a public key.",

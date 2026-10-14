@@ -7,7 +7,7 @@
 //! Delivery is idempotent on the target side (a relay answers `duplicate`, a Blossom server
 //! keeps one copy per hash), so a job that is interrupted is simply delivered again.
 
-use std::{collections::HashSet, path::Path, sync::Arc, time::Duration};
+use std::{collections::HashSet, path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 
 use axum::{
     body::Body,
@@ -48,6 +48,40 @@ CREATE TABLE IF NOT EXISTS blob_owner (
   author TEXT NOT NULL,
   mirrored INTEGER NOT NULL CHECK (mirrored IN (0,1))
 );
+-- Jobs the owner sent to an explicit target (`deliver`, `delete_blobs`): due even when the target
+-- is not (or no longer) a configured mirror or indexer.
+CREATE TABLE IF NOT EXISTS outbox_forced (job INTEGER PRIMARY KEY);
+-- An event whose jobs wait until every blob it names is confirmed on every mirror Blossom server
+-- (`require_blobs`): an nsite manifest must not point at files the servers do not have yet.
+CREATE TABLE IF NOT EXISTS outbox_requires (
+  event_id TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  target TEXT NOT NULL,
+  PRIMARY KEY (event_id, hash, target)
+);
+-- Explicit events are held before relay ingestion, then released to an exact target allowlist.
+CREATE TABLE IF NOT EXISTS outbox_explicit (
+  event_id TEXT PRIMARY KEY,
+  ready INTEGER NOT NULL DEFAULT 0,
+  canceled INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS outbox_event_target (
+  event_id TEXT NOT NULL,
+  target TEXT NOT NULL,
+  PRIMARY KEY (event_id, target)
+);
+-- Blobs another feature still uses (`retain`, e.g. the published nsite's files): never cleaned.
+CREATE TABLE IF NOT EXISTS outbox_retain (
+  owner TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  PRIMARY KEY (owner, hash)
+);
+-- Historical targets explicitly authorized by the owner for nsite cleanup.
+CREATE TABLE IF NOT EXISTS outbox_delete_target (
+  hash TEXT NOT NULL,
+  target TEXT NOT NULL,
+  PRIMARY KEY (hash, target)
+);
 ";
 
 /// Sent with every delivery. A nostube-server receiving it does not pass the item on: copies
@@ -67,6 +101,13 @@ pub const MAX_ATTEMPTS: u32 = 24;
 const RELAY_TIMEOUT: Duration = Duration::from_secs(30);
 /// The target downloads the whole blob before it answers, so this is generous.
 const MIRROR_TIMEOUT: Duration = Duration::from_secs(600);
+/// The `HEAD` that tells whether a target has a blob already.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
+/// A push upload (S2) gets `MIRROR_TIMEOUT` plus its size at this rate (≈2 Mbit/s) in bytes/s.
+// ponytail: a whole-request deadline; an idle-stall timeout if slow uplinks hit it.
+const MIN_UPLOAD_RATE: u64 = 256 * 1024;
+/// `last_error` of a blob job that cleanup or a deletion closed: `done`, but no confirmed copy.
+const CANCELED: &str = "canceled";
 /// The reason a blob job fails without the managed key (ADR 0007): nothing else may sign.
 pub const NEEDS_KEY: &str = "mirroring blobs needs the managed signing key";
 /// Recent problems shown in the studio.
@@ -83,6 +124,9 @@ pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
     let existing: Option<String> = conn.query_row(
         "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'", [], |r| r.get(0),
     ).optional()?;
+    let unmarked: bool = conn.query_row(
+        "SELECT NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_retain')", [], |r| r.get(0),
+    )?;
     if existing.is_some_and(|sql| !sql.contains("'cleanup'")) {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch("DROP INDEX IF EXISTS outbox_due; ALTER TABLE outbox RENAME TO outbox_old;")?;
@@ -91,6 +135,16 @@ pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
         tx.commit()?;
     } else {
         conn.execute_batch(SCHEMA)?;
+    }
+    if unmarked {
+        // Once: cleanup used to close blob jobs as plain `done`. A delete job for the same copy
+        // that is not older means the copy is gone or going.
+        conn.execute(
+            "UPDATE outbox SET last_error = ?1 WHERE kind = 'blob' AND status = 'done' AND last_error IS NULL
+             AND EXISTS (SELECT 1 FROM outbox d WHERE d.kind = 'blob-delete' AND d.target = outbox.target
+               AND d.ref_id = outbox.ref_id AND d.updated_at >= outbox.updated_at)",
+            [CANCELED],
+        )?;
     }
     conn.execute_batch(crate::schedule::SCHEMA)?;
     Ok(())
@@ -132,6 +186,42 @@ pub(crate) fn enqueue_event(conn: &Connection, targets: &[String], id: &EventId)
     Ok(())
 }
 
+/// One blob job per target. A confirmed copy stays as it is; a failed or canceled job starts
+/// over; a pending one keeps going.
+fn enqueue_blob(conn: &Connection, targets: &[String], hash: &str, size: u64, source_url: &str) -> rusqlite::Result<()> {
+    let now = now();
+    let mut add = conn.prepare_cached(
+        "INSERT INTO outbox (kind, target, ref_id, size, source_url, next_attempt_at, created_at, updated_at)
+         VALUES ('blob', ?1, ?2, ?3, ?4, ?5, ?5, ?5)
+         ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending', attempts=0,
+         size=excluded.size, source_url=excluded.source_url, next_attempt_at=excluded.next_attempt_at,
+         last_error=NULL, updated_at=excluded.updated_at
+         WHERE outbox.status = 'failed' OR (outbox.status = 'done' AND outbox.last_error IS NOT NULL)",
+    )?;
+    for target in targets {
+        add.execute(params![target, hash, size as i64, source_url, now])?;
+    }
+    Ok(())
+}
+
+/// Closes every blob job of `hash` without a confirmed copy, then a BUD-02 `DELETE` job per
+/// target. Answers the delete jobs' ids.
+fn enqueue_deletes(conn: &Connection, targets: &[String], hash: &str) -> rusqlite::Result<Vec<i64>> {
+    let now = now();
+    conn.execute(
+        "UPDATE outbox SET status='done', last_error=?1, updated_at=?2 WHERE kind='blob' AND ref_id=?3",
+        params![CANCELED, now, hash],
+    )?;
+    let mut add = conn.prepare_cached(
+        "INSERT INTO outbox (kind,target,ref_id,next_attempt_at,created_at,updated_at)
+         VALUES ('blob-delete',?1,?2,?3,?3,?3)
+         ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending',attempts=0,
+         next_attempt_at=excluded.next_attempt_at,last_error=NULL,updated_at=excluded.updated_at
+         RETURNING id",
+    )?;
+    targets.iter().map(|target| add.query_row(params![target, hash, now], |r| r.get(0))).collect()
+}
+
 fn now() -> i64 {
     Timestamp::now().as_secs() as i64
 }
@@ -171,10 +261,11 @@ pub struct Outbox(Arc<Inner>);
 struct Inner {
     conn: Mutex<Connection>,
     mirror: Mirror,
-    /// Public reach only (ADR 0012): the indexers the channel's kinds 0 and 10002 go to; set by
+    /// Public reach only (ADR 0012): the indexers the channel's derived lists/profile go to; set by
     /// `profile::sync`, so it follows the config while running. Empty in private reach.
     indexers: parking_lot::RwLock<Vec<String>>,
     storage: parking_lot::RwLock<Option<almond::models::AppState>>,
+    origin_public: AtomicBool,
 }
 
 impl Outbox {
@@ -183,6 +274,7 @@ impl Outbox {
         initialize(&conn)?;
         Ok(Outbox(Arc::new(Inner {
             conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
+            origin_public: AtomicBool::new(true),
         })))
     }
 
@@ -190,7 +282,147 @@ impl Outbox {
         *self.0.storage.write() = Some(state);
     }
 
-    /// Sets the indexers and queues the channel's current kinds 0 and 10002 (`ids`) for them; a
+    pub fn set_origin_public(&self, public: bool) {
+        self.0.origin_public.store(public, Ordering::Relaxed);
+    }
+
+    pub fn mirror(&self) -> Mirror {
+        self.0.mirror.clone()
+    }
+
+    pub async fn queue_blob(&self, hash: String, size: u64, source_url: String) -> Result<(), String> {
+        almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
+        if size > i64::MAX as u64 { return Err("blob size exceeds database range".into()); }
+        let targets = self.0.mirror.blossom.clone();
+        self.db(move |conn| enqueue_blob(conn, &targets, &hash, size, &source_url)).await
+    }
+
+    /// Confirmed copies on current targets only; canceled jobs are not copies.
+    pub async fn blob_copies(&self, hash: String) -> Result<Vec<String>, String> {
+        let targets = self.0.mirror.blossom.clone();
+        self.db(move |conn| {
+            let mut stmt = conn.prepare("SELECT target FROM outbox WHERE kind='blob' AND ref_id=? AND status='done' AND last_error IS NULL ORDER BY id")?;
+            let copies = stmt.query_map([hash], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(copies.into_iter().filter(|t| targets.contains(t)).collect())
+        }).await
+    }
+
+    pub async fn blob_problems(&self, hash: String) -> Result<Option<String>, String> {
+        let targets = self.0.mirror.blossom.clone();
+        self.db(move |conn| {
+            let mut stmt = conn.prepare("SELECT target,last_error FROM outbox WHERE kind='blob' AND ref_id=? AND status!='done' AND last_error IS NOT NULL ORDER BY updated_at DESC,id DESC")?;
+            let rows = stmt.query_map([hash], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(rows.into_iter().find(|(t, _)| targets.contains(t)).map(|(t, e)| format!("{t}: {e}")))
+        }).await
+    }
+
+    pub async fn retain(&self, scope: &str, hashes: Vec<String>) -> Result<(), String> {
+        for hash in &hashes {
+            almond::services::file_storage::validate_sha256_format(hash).map_err(|e| e.to_string())?;
+        }
+        let _guard = MEDIA_LIFECYCLE.lock().await;
+        let scope = scope.to_owned();
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            tx.execute("DELETE FROM outbox_retain WHERE owner=?", [&scope])?;
+            for hash in hashes { tx.execute("INSERT OR IGNORE INTO outbox_retain VALUES (?,?)", params![scope, hash])?; }
+            tx.commit()
+        }).await
+    }
+
+    pub async fn store_local(&self, bytes: &[u8], mime: &str, ext: &str, owner: &str) -> Result<(String, u64), String> {
+        let owner = nostr::prelude::PublicKey::from_hex(owner).map_err(|e| e.to_string())?;
+        let _guard = MEDIA_LIFECYCLE.lock().await;
+        let state = storage(self)?;
+        let hash = crate::branding::store_blob(&state, bytes, mime, (!ext.is_empty()).then_some(ext)).await?;
+        self.record_owner(hash.clone(), owner, false).await?;
+        Ok((hash, bytes.len() as u64))
+    }
+
+    /// Install before ingesting the manifest: relay ingestion may immediately queue its jobs.
+    pub async fn require_blobs(&self, event: EventId, hashes: Vec<String>) -> Result<(), String> {
+        let targets = self.0.mirror.blossom.clone();
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            tx.execute("INSERT OR IGNORE INTO outbox_explicit (event_id) VALUES (?)", [event.to_hex()])?;
+            for hash in hashes {
+                for target in &targets {
+                    tx.execute("INSERT OR IGNORE INTO outbox_requires VALUES (?,?,?)", params![event.to_hex(), hash, target])?;
+                }
+            }
+            tx.commit()
+        }).await
+    }
+
+    /// Explicit owner-authorized targets stay eligible after removal from mirror configuration.
+    pub async fn deliver(&self, targets: Vec<String>, ids: Vec<EventId>) -> Result<(), String> {
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            for id in ids {
+                tx.execute(
+                    "INSERT INTO outbox_explicit (event_id,ready) VALUES (?,1) ON CONFLICT(event_id) DO UPDATE SET ready=1",
+                    [id.to_hex()],
+                )?;
+                tx.execute("DELETE FROM outbox_event_target WHERE event_id=?", [id.to_hex()])?;
+                for target in &targets {
+                    tx.execute("INSERT OR IGNORE INTO outbox_event_target VALUES (?,?)", params![id.to_hex(), target])?;
+                }
+                tx.execute(
+                    "UPDATE outbox SET status='done',last_error=?1,updated_at=?2
+                     WHERE kind='event' AND ref_id=?3 AND status!='done'
+                       AND target NOT IN (SELECT target FROM outbox_event_target WHERE event_id=?3)",
+                    params![CANCELED, now(), id.to_hex()],
+                )?;
+                enqueue_event(&tx, &targets, &id)?;
+                for target in &targets {
+                    tx.execute("INSERT OR IGNORE INTO outbox_forced SELECT id FROM outbox WHERE kind='event' AND target=? AND ref_id=?", params![target, id.to_hex()])?;
+                }
+            }
+            tx.commit()
+        }).await
+    }
+
+    pub async fn event_delivery(&self, event: EventId) -> Result<bool, String> {
+        self.db(move |conn| conn.query_row(
+            "SELECT NOT EXISTS (SELECT 1 FROM outbox_explicit WHERE event_id=?1 AND (ready=0 OR canceled=1))
+             AND NOT EXISTS (SELECT 1 FROM outbox WHERE kind='event' AND ref_id=?1 AND (status!='done' OR last_error IS NOT NULL)
+               AND (NOT EXISTS (SELECT 1 FROM outbox_explicit WHERE event_id=?1)
+                 OR target IN (SELECT target FROM outbox_event_target WHERE event_id=?1)))",
+            [event.to_hex()], |r| r.get(0),
+        )).await
+    }
+
+    pub async fn cancel_event(&self, event: EventId) -> Result<(), String> {
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            tx.execute(
+                "INSERT INTO outbox_explicit (event_id,canceled) VALUES (?,1) ON CONFLICT(event_id) DO UPDATE SET canceled=1",
+                [event.to_hex()],
+            )?;
+            tx.execute(
+                "UPDATE outbox SET status='done',last_error=?1,updated_at=?2 WHERE kind='event' AND ref_id=?3 AND status!='done'",
+                params![CANCELED, now(), event.to_hex()],
+            )?;
+            tx.commit()
+        }).await
+    }
+
+    pub async fn delete_blobs(&self, hash: String, owner: String, targets: Vec<String>) -> Result<(), String> {
+        almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
+        let author = nostr::prelude::PublicKey::from_hex(&owner).map_err(|e| e.to_string())?;
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            for target in targets {
+                tx.execute("INSERT OR IGNORE INTO outbox_delete_target VALUES (?,?)", params![hash, target])?;
+            }
+            enqueue_cleanup(&tx, &author, &hash)?;
+            tx.commit()
+        }).await
+    }
+
+    /// Sets the indexers and queues the channel's derived kinds 0, 10002 and 10063 (`ids`) for them; a
     /// job that exists already is kept as it is. Private reach passes none of either: jobs still
     /// pending for an indexer wait, and nothing goes there.
     pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>) -> Result<(), String> {
@@ -258,24 +490,7 @@ impl Outbox {
         }
         // PATCH chunks answer 204 without a body: no descriptor, nothing stored yet.
         if let Ok(d) = serde_json::from_slice::<Descriptor>(&bytes) {
-            let targets = self.0.mirror.blossom.clone();
-            let added = self
-                .db(move |conn| {
-                    let now = now();
-                    let mut add = conn.prepare_cached(
-                        "INSERT OR IGNORE INTO outbox (kind, target, ref_id, size, source_url, next_attempt_at, created_at, updated_at)
-                         VALUES ('blob', ?1, ?2, ?3, ?4, ?5, ?5, ?5)
-                         ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending', attempts=0,
-                         size=excluded.size, source_url=excluded.source_url, next_attempt_at=excluded.next_attempt_at,
-                         last_error=NULL, updated_at=excluded.updated_at
-                         WHERE outbox.status != 'pending'",
-                    )?;
-                    for target in &targets {
-                        add.execute(params![target, d.sha256, d.size as i64, d.url, now])?;
-                    }
-                    Ok(())
-                })
-                .await;
+            let added = self.queue_blob(d.sha256, d.size, d.url).await;
             if let Err(e) = added {
                 tracing::warn!("outbox: cannot queue the blob for mirroring: {e}");
             }
@@ -347,9 +562,8 @@ impl Outbox {
         .await
     }
 
-    /// Due cleanup jobs always run; outbound jobs run for configured targets only: the mirror
-    /// targets, and the indexers for event jobs. A target removed from config keeps its rows, but
-    /// nothing is sent there.
+    /// Cleanup always runs. Outbound jobs run for configured targets or explicit durable owner
+    /// authorizations; manifests also wait for their exact required blob copies.
     // ponytail: an indexer URL that was once a mirror relay also gets that relay's old pending
     // event jobs; filter by kind and author here if that ever matters.
     async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
@@ -361,7 +575,14 @@ impl Outbox {
             let mut stmt = conn.prepare(&format!(
                 "SELECT id, kind, target, ref_id, size, source_url, attempts FROM outbox
                  WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks})
-                   OR (kind = 'event' AND target IN ({indexer_marks})))
+                   OR id IN (SELECT job FROM outbox_forced) OR (kind = 'event' AND target IN ({indexer_marks})))
+                 AND (kind != 'event' OR NOT EXISTS (SELECT 1 FROM outbox_explicit e WHERE e.event_id=outbox.ref_id)
+                   OR EXISTS (SELECT 1 FROM outbox_explicit e JOIN outbox_event_target t ON t.event_id=e.event_id
+                     WHERE e.event_id=outbox.ref_id AND e.ready=1 AND e.canceled=0 AND t.target=outbox.target))
+                 AND (kind != 'event' OR NOT EXISTS (
+                   SELECT 1 FROM outbox_requires r WHERE r.event_id=outbox.ref_id AND NOT EXISTS (
+                     SELECT 1 FROM outbox b WHERE b.kind='blob' AND b.ref_id=r.hash AND b.target=r.target
+                       AND b.status='done' AND b.last_error IS NULL)))
                  AND (kind != 'blob-delete' OR NOT EXISTS (
                    SELECT 1 FROM outbox c JOIN blob_owner b ON b.hash=c.ref_id AND b.author=c.target
                    WHERE c.kind='cleanup' AND c.ref_id=outbox.ref_id AND c.status!='done'))
@@ -547,7 +768,7 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
                 // fails the fetch (a retry that `record` drops) or keeps a copy that the queued
                 // blob-delete removes after this job (`busy`).
                 let (size, url) = (job.size.unwrap_or_default() as u64, job.source_url.as_deref().unwrap_or_default());
-                match mirror(http, &k, &job.target, &job.ref_id, size, url).await {
+                match mirror(outbox, http, &k, &job.target, &job.ref_id, size, url).await {
                     Ok(()) => Outcome::Done,
                     Err(e) => Outcome::Retry(e),
                 }
@@ -600,6 +821,8 @@ async fn retained_hashes(outbox: &Outbox) -> Result<HashSet<String>, String> {
         let mut roots = rows.collect::<rusqlite::Result<HashSet<_>>>()?;
         // Scheduled videos are not in the relay yet, but their blobs must outlive any cleanup.
         roots.extend(crate::schedule::pending_media(conn)?);
+        let mut retained = conn.prepare("SELECT DISTINCT hash FROM outbox_retain")?;
+        roots.extend(retained.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
         Ok(roots)
     }).await?;
     let state = outbox.0.storage.read().clone();
@@ -642,16 +865,16 @@ async fn cleanup(outbox: &Outbox, job: &Job) -> Result<(), Outcome> {
     outbox.db(move |conn| {
         let tx = conn.unchecked_transaction()?;
         for child in descendants { enqueue_cleanup(&tx, &public_key, &child)?; }
-        tx.execute("UPDATE outbox SET status='done',last_error=NULL,updated_at=? WHERE kind='blob' AND ref_id=?",
-            params![now(), hash])?;
-        for target in targets {
-            tx.execute(
-                "INSERT INTO outbox (kind,target,ref_id,next_attempt_at,created_at,updated_at)
-                 VALUES ('blob-delete',?1,?2,?3,?3,?3)
-                 ON CONFLICT(kind,target,ref_id) DO UPDATE SET status='pending',attempts=0,
-                 next_attempt_at=excluded.next_attempt_at,last_error=NULL,updated_at=excluded.updated_at",
-                params![target, hash, now()],
-            )?;
+        let mut targets = targets;
+        let mut explicit = tx.prepare("SELECT target FROM outbox_delete_target WHERE hash=?")?;
+        let historical = explicit.query_map([&hash], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        drop(explicit);
+        targets.extend(historical.iter().cloned());
+        targets.sort();
+        targets.dedup();
+        let ids = enqueue_deletes(&tx, &targets, &hash)?;
+        for (target, id) in targets.iter().zip(ids) {
+            if historical.contains(target) { tx.execute("INSERT OR IGNORE INTO outbox_forced VALUES (?)", [id])?; }
         }
         tx.commit()
     }).await.map_err(Outcome::Retry)?;
@@ -718,32 +941,61 @@ async fn publish(target: &str, json: &str, id: &str) -> Result<(), String> {
     Err("connection closed before OK".into())
 }
 
-/// BUD-04 `PUT /mirror` of the blob at `url` (its public URL here), authorized with a BUD-11
-/// upload token (kind 24242, `t=upload`, `x=<sha256>`) signed by the managed key. Done only when
-/// the target's descriptor confirms the hash and the size.
-async fn mirror(http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64, url: &str) -> Result<(), String> {
+/// S1 keeps BUD-04 pull; S2 sends a streaming BUD-02 upload from the attached storage.
+async fn mirror(outbox: &Outbox, http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64, url: &str) -> Result<(), String> {
+    let base = target.trim_end_matches('/');
+    // A matching strong ETag and length confirm an existing content-addressed copy. Never trust
+    // an arbitrary 200 (a gateway may answer HTML); without both values do the normal upload.
+    if let Ok(existing) = http.head(format!("{base}/{sha256}")).timeout(PROBE_TIMEOUT).send().await {
+        if existing.status().is_success() {
+            let confirmed = existing.headers().get("x-sha-256").and_then(|v| v.to_str().ok())
+                .or_else(|| existing.headers().get(header::ETAG).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix('"')?.strip_suffix('"')));
+            let length = existing.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
+            if confirmed == Some(sha256) && length == Some(size) { return Ok(()); }
+        }
+    }
+    let push = !outbox.0.origin_public.load(Ordering::Relaxed);
+    let timeout = if push { MIRROR_TIMEOUT.saturating_add(Duration::from_secs(size / MIN_UPLOAD_RATE)) } else { MIRROR_TIMEOUT };
+    let expiration = Timestamp::now().as_secs().saturating_add(timeout.as_secs()).saturating_add(60).to_string();
     let tag = |t: &[&str]| Tag::parse(t.iter().copied()).map_err(|e| format!("cannot build the auth token: {e}"));
-    let expiration = (Timestamp::now().as_secs() + 600).to_string();
     let auth = EventBuilder::new(Kind::Custom(24242), "Mirror blob")
         .tags([tag(&["t", "upload"])?, tag(&["x", sha256])?, tag(&["expiration", &expiration])?])
-        .finalize(keys)
-        .map_err(|e| format!("cannot sign the auth token: {e}"))?;
+        .finalize(keys).map_err(|e| format!("cannot sign the auth token: {e}"))?;
     let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
-    let res = http
-        .put(format!("{}/mirror", target.trim_end_matches('/')))
-        .header(header::AUTHORIZATION, format!("Nostr {token}"))
-        .json(&serde_json::json!({ "url": url }))
-        .send()
-        .await
-        .map_err(|e| format!("request failed: {e}"))?;
+    let request = if push {
+        let state = storage(outbox)?;
+        let metadata = almond::services::file_storage::get_file_metadata(&state, sha256).await
+            .ok_or_else(|| format!("local blob {sha256} is unavailable"))?;
+        if metadata.size != size {
+            return Err(format!("local blob {sha256} has size {}, expected {size}", metadata.size));
+        }
+        let body = match &metadata.location {
+            almond::models::FileLocation::Local(path) => {
+                let file = tokio::fs::File::open(path).await.map_err(|e| format!("cannot open local blob {sha256}: {e}"))?;
+                reqwest::Body::from(file)
+            }
+            almond::models::FileLocation::S3 { key } => {
+                let s3 = state.native_s3.as_ref().ok_or("S3 storage is unavailable")?;
+                let output = s3.get(key, None).await.map_err(|e| e.to_string())?;
+                reqwest::Body::wrap_stream(futures_util::stream::try_unfold(output.body, |mut body| async move {
+                    body.next().await.transpose().map(|chunk| chunk.map(|chunk| (chunk, body)))
+                }))
+            }
+        };
+        http.put(format!("{base}/upload"))
+            .header("x-sha-256", sha256)
+            .header(header::CONTENT_LENGTH, size)
+            .header(header::CONTENT_TYPE, metadata.mime_type.as_deref().unwrap_or("application/octet-stream"))
+            .body(body)
+    } else {
+        http.put(format!("{base}/mirror")).json(&serde_json::json!({ "url": url }))
+    };
+    let res = request.header(header::AUTHORIZATION, format!("Nostr {token}"))
+        .timeout(timeout).send().await.map_err(|e| format!("request failed: {e}"))?;
     let status = res.status();
     if !status.is_success() {
-        // BUD-01: the reason is in `X-Reason`; fall back to the body.
         let reason = res.headers().get("x-reason").and_then(|v| v.to_str().ok()).map(str::to_owned);
-        let reason = match reason {
-            Some(r) => r,
-            None => res.text().await.unwrap_or_default(),
-        };
+        let reason = match reason { Some(r) => r, None => res.text().await.unwrap_or_default() };
         return Err(format!("{status}: {}", short(&reason)));
     }
     let d: serde_json::Value = res.json().await.map_err(|e| format!("not a blob descriptor: {e}"))?;
@@ -1347,5 +1599,254 @@ mod tests {
         outbox.announce(vec![], vec![]).await.unwrap();
         assert_eq!(due(outbox.due(100).await.unwrap()), [("wss://mirror.example".to_owned(), other.to_hex())]);
         assert_eq!(row(&outbox, "event", "wss://indexer.example").0, "pending");
+    }
+
+    #[tokio::test]
+    async fn s2_streams_every_output_to_real_blossom_and_accepts_existing_copies() {
+        let keys = Keys::generate();
+        let (_remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
+        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        outbox.set_origin_public(false);
+        let large = vec![7u8; 3 * 1024 * 1024];
+        for (bytes, ext) in [(large.as_slice(), "mp4"), (b"thumbnail".as_slice(), "jpg"), (b"WEBVTT\ncaptions".as_slice(), "vtt")] {
+            let (hash, _) = stored(&outbox, &state, &keys, bytes, ext, false).await;
+            outbox.queue_blob(hash.clone(), bytes.len() as u64, format!("https://unreachable.local/{hash}.{ext}")).await.unwrap();
+            run_due(&outbox, &shared(Some(keys.clone()))).await;
+            assert_eq!(outbox.blob_copies(hash.clone()).await.unwrap(), [target.clone()]);
+            let res = http_client().get(format!("{target}/{hash}")).send().await.unwrap();
+            assert_eq!(res.bytes().await.unwrap().as_ref(), bytes);
+            // Simulate the successful request's response being lost before durable recording.
+            outbox.db({
+                let hash = hash.clone();
+                move |conn| conn.execute("UPDATE outbox SET status='pending' WHERE kind='blob' AND ref_id=?", [hash]).map(|_| ())
+            }).await.unwrap();
+            run_due(&outbox, &shared(Some(keys.clone()))).await;
+            assert_eq!(outbox.blob_copies(hash.clone()).await.unwrap(), [target.clone()]);
+            outbox.queue_blob(hash.clone(), bytes.len() as u64, "ignored replay".into()).await.unwrap();
+            assert_eq!(outbox.blob_copies(hash).await.unwrap(), [target.clone()]);
+        }
+    }
+
+    #[tokio::test]
+    async fn s2_upload_checks_token_headers_descriptors_and_retries_interruption() {
+        let keys = Keys::generate();
+        let seen = Arc::new(AtomicUsize::new(0));
+        let signer = keys.public_key();
+        let target = {
+            let seen = seen.clone();
+            format!("http://{}", serve(Router::new().route("/upload", put(move |headers: HeaderMap, body: Body| {
+                let seen = seen.clone();
+                async move {
+                    let token = headers[header::AUTHORIZATION].to_str().unwrap().strip_prefix("Nostr ").unwrap();
+                    let auth = nostr::prelude::Event::from_json(base64::engine::general_purpose::STANDARD.decode(token).unwrap()).unwrap();
+                    auth.verify().unwrap();
+                    assert_eq!((auth.pubkey, auth.kind), (signer, Kind::Custom(24242)));
+                    let hash = headers["x-sha-256"].to_str().unwrap().to_owned();
+                    assert!(auth.tags.iter().any(|t| t.as_slice() == ["t", "upload"]));
+                    assert!(auth.tags.iter().any(|t| t.as_slice() == ["x", hash.as_str()]));
+                    assert_eq!(headers[header::CONTENT_TYPE], "video/mp4");
+                    assert_eq!(headers[header::CONTENT_LENGTH], "12");
+                    let bytes = axum::body::to_bytes(body, 1024).await.unwrap();
+                    assert_eq!(bytes.as_ref(), b"upload bytes");
+                    match seen.fetch_add(1, Ordering::SeqCst) {
+                        0 => Response::new(Body::from_stream(futures_util::stream::once(async {
+                            Err::<axum::body::Bytes, _>(std::io::Error::other("connection lost after upload"))
+                        }))),
+                        1 => Json(serde_json::json!({"sha256":"wrong-hash","size":999})).into_response(),
+                        _ => Json(serde_json::json!({"sha256":hash,"size":12})).into_response(),
+                    }
+                }
+            }))).await)
+        };
+        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        outbox.set_origin_public(false);
+        let (hash, _) = stored(&outbox, &state, &keys, b"upload bytes", "mp4", false).await;
+        outbox.queue_blob(hash.clone(), 12, "https://private.local/video".into()).await.unwrap();
+        run_due(&outbox, &shared(None)).await;
+        assert_eq!(outbox.blob_problems(hash.clone()).await.unwrap(), Some(format!("{target}: {NEEDS_KEY}")));
+        assert_eq!(seen.load(Ordering::SeqCst), 0);
+        outbox.retry(None).await.unwrap();
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        let first = row(&outbox, "blob", &target);
+        assert_eq!((first.0.as_str(), first.1), ("pending", 1));
+        assert!(first.2 > now());
+        outbox.0.conn.lock().execute("UPDATE outbox SET next_attempt_at=0", []).unwrap();
+        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        let error = outbox.blob_problems(hash.clone()).await.unwrap().unwrap();
+        assert!(error.contains("wrong-hash") && error.contains("999") && error.contains(&hash) && error.contains("12"), "{error}");
+        assert!(outbox.blob_copies(hash.clone()).await.unwrap().is_empty());
+        outbox.0.conn.lock().execute("UPDATE outbox SET next_attempt_at=0", []).unwrap();
+        run_due(&outbox, &shared(Some(keys))).await;
+        assert_eq!(outbox.blob_copies(hash).await.unwrap(), [target]);
+        assert_eq!(seen.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn manifest_waits_for_confirmed_blobs_across_restart_and_can_be_canceled() {
+        let keys = Keys::generate();
+        let seen = Arc::new(AtomicUsize::new(0));
+        let target = fake_relay(true, "", seen.clone()).await;
+        let forbidden_seen = Arc::new(AtomicUsize::new(0));
+        let forbidden = fake_relay(true, "", forbidden_seen.clone()).await;
+        let remote = "https://blossom.example".to_owned();
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
+            relays: vec![target.clone(), forbidden.clone()], blossom: vec![remote.clone()],
+        }).await;
+        let event = EventBuilder::new(Kind::Custom(15128), "").finalize(&keys).unwrap();
+        outbox.require_blobs(event.id, vec![SHA.into()]).await.unwrap();
+        outbox.queue_blob(SHA.into(), 42, "https://instance.example/file".into()).await.unwrap();
+        accepted(&relay, event.clone()).await;
+        assert!(!outbox.event_delivery(event.id).await.unwrap(), "registered event is held until explicit delivery");
+        outbox.deliver(vec![target.clone()], vec![event.id]).await.unwrap();
+        // Pending and failed blob jobs both keep the manifest behind the barrier.
+        run_due(&outbox, &shared(None)).await;
+        assert_eq!(seen.load(Ordering::SeqCst), 0);
+        assert!(!outbox.event_delivery(event.id).await.unwrap());
+        let db = state.storage.root.with_extension("sqlite");
+        drop(outbox);
+        drop(relay);
+        let reopened = Outbox::open(&db, Mirror { relays: vec![target.clone(), forbidden], blossom: vec![remote.clone()] }).unwrap();
+        reopened.require_blobs(event.id, vec![SHA.into()]).await.unwrap();
+        run_due(&reopened, &shared(None)).await;
+        assert_eq!(seen.load(Ordering::SeqCst), 0);
+        reopened.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob'", []).map(|_| ())).await.unwrap();
+        run_due(&reopened, &shared(None)).await;
+        assert_eq!(seen.load(Ordering::SeqCst), 1);
+        assert!(reopened.event_delivery(event.id).await.unwrap());
+        assert_eq!(forbidden_seen.load(Ordering::SeqCst), 0, "nsite never leaks to an unlisted mirror relay");
+        // Explicit delivery remains eligible after a relay leaves configuration.
+        let historical = Outbox::open(&db, Mirror::default()).unwrap();
+        let other = EventBuilder::new(Kind::Custom(15128), "")
+            .custom_created_at(Timestamp::from(Timestamp::now().as_secs() + 1)).finalize(&keys).unwrap();
+        historical.db({
+            let other = other.clone();
+            move |conn| conn.execute(
+                "INSERT INTO event (event_hash,created_at,author,kind,content) VALUES (?,?,?,?,?)",
+                params![other.id.as_bytes().as_slice(), other.created_at.as_secs() as i64, other.pubkey.as_bytes().as_slice(), 15128, other.as_json()],
+            ).map(|_| ())
+        }).await.unwrap();
+        historical.deliver(vec![target.clone()], vec![other.id]).await.unwrap();
+        historical.cancel_event(other.id).await.unwrap();
+        run_due(&historical, &shared(None)).await;
+        assert_eq!(seen.load(Ordering::SeqCst), 1, "disable prevents queued manifest delivery");
+        assert!(!historical.event_delivery(other.id).await.unwrap());
+        let deletion = EventBuilder::new(Kind::EventDeletion, "").finalize(&keys).unwrap();
+        historical.db({
+            let deletion = deletion.clone();
+            move |conn| conn.execute(
+                "INSERT INTO event (event_hash,created_at,author,kind,content) VALUES (?,?,?,?,?)",
+                params![deletion.id.as_bytes().as_slice(), deletion.created_at.as_secs() as i64, deletion.pubkey.as_bytes().as_slice(), 5, deletion.as_json()],
+            ).map(|_| ())
+        }).await.unwrap();
+        historical.deliver(vec![target], vec![deletion.id]).await.unwrap();
+        run_due(&historical, &shared(None)).await;
+        assert_eq!(seen.load(Ordering::SeqCst), 2);
+        assert!(historical.event_delivery(deletion.id).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn explicit_nsite_deletion_spares_retained_media_and_reaches_removed_targets() {
+        let keys = Keys::generate();
+        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let mut assets = Vec::new();
+        for bytes in [
+            b"nsite asset".as_slice(), b"pending profile image".as_slice(), b"video thumb".as_slice(),
+            b"scheduled thumb".as_slice(), b"signed profile image".as_slice(), b"note attachment".as_slice(), b"obsolete asset".as_slice(),
+        ] {
+            let (hash, path) = stored(&outbox, &state, &keys, bytes, "jpg", false).await;
+            stored(&remote_outbox, &remote, &keys, bytes, "jpg", true).await;
+            assets.push((hash, path));
+        }
+        outbox.retain("nsite", vec![assets[0].0.clone()]).await.unwrap();
+        outbox.retain("profile", vec![assets[1].0.clone()]).await.unwrap();
+        accepted(&relay, video_event(&keys, 10, "clip", &[("thumb", &assets[2].0)])).await;
+        let due = (Timestamp::now().as_secs() + 3600).to_string();
+        let scheduled_url = format!("https://instance.example/{}.jpg", assets[3].0);
+        let scheduled = EventBuilder::new(Kind::Custom(34235), "").tags([
+            Tag::parse(["d", "scheduled"]).unwrap(), Tag::parse(["published_at", due.as_str()]).unwrap(),
+            Tag::parse(["imeta", format!("url {scheduled_url}").as_str()]).unwrap(),
+        ]).finalize(&keys).unwrap();
+        assert!(crate::schedule::submit(&outbox, &[keys.public_key()], &[keys.public_key()], scheduled.as_json().as_bytes()).await.is_ok());
+        let profile = EventBuilder::new(Kind::Metadata, serde_json::json!({
+            "picture": format!("https://instance.example/{}.jpg", assets[4].0),
+        }).to_string()).finalize(&keys).unwrap();
+        accepted(&relay, profile).await;
+        accepted(&relay, EventBuilder::new(Kind::TextNote, "attachment")
+            .tags([Tag::parse(["x", assets[5].0.as_str()]).unwrap()]).finalize(&keys).unwrap()).await;
+        for (hash, _) in &assets {
+            outbox.delete_blobs(hash.clone(), keys.public_key().to_hex(), vec![target.clone()]).await.unwrap();
+        }
+        let db = state.storage.root.with_extension("sqlite");
+        drop(outbox);
+        let reopened = Outbox::open(&db, Mirror::default()).unwrap();
+        reopened.attach_storage(state.clone());
+        run_due(&reopened, &shared(Some(keys.clone()))).await;
+        run_due(&reopened, &shared(Some(keys.clone()))).await;
+        for (hash, path) in &assets[..6] {
+            assert!(path.exists(), "live reference keeps local {hash}");
+            assert!(remote.file_index.get(hash).await.is_some(), "live reference keeps historical remote {hash}");
+        }
+        assert!(!assets[6].1.exists());
+        assert!(remote.file_index.get(&assets[6].0).await.is_none(), "explicit DELETE reaches removed mirror");
+        // Clearing only nsite retention does not release profile/video media.
+        reopened.retain("nsite", vec![]).await.unwrap();
+        reopened.delete_blobs(assets[0].0.clone(), keys.public_key().to_hex(), vec![target]).await.unwrap();
+        run_due(&reopened, &shared(Some(keys.clone()))).await;
+        run_due(&reopened, &shared(Some(keys))).await;
+        assert!(!assets[0].1.exists() && remote.file_index.get(&assets[0].0).await.is_none());
+        assert!(assets[1..6].iter().all(|(_, path)| path.exists()));
+    }
+
+    #[tokio::test]
+    async fn s2_upload_streams_chunks_without_holding_the_lifecycle_lock() {
+        use sha2::{Digest, Sha256};
+        let keys = Keys::generate();
+        let bytes = vec![11u8; 3 * 1024 * 1024];
+        let hash = format!("{:x}", Sha256::digest(&bytes));
+        let size = bytes.len() as u64;
+        let started = Arc::new(tokio::sync::Notify::new());
+        let release = Arc::new(tokio::sync::Notify::new());
+        let target = {
+            let (started, release, expected) = (started.clone(), release.clone(), hash.clone());
+            format!("http://{}", serve(Router::new().route("/upload", put(move |body: Body| {
+                let (started, release, expected) = (started.clone(), release.clone(), expected.clone());
+                async move {
+                    let mut stream = body.into_data_stream();
+                    let first = stream.next().await.unwrap().unwrap();
+                    assert!(!first.is_empty() && first.len() < size as usize);
+                    let mut digest = Sha256::new();
+                    digest.update(&first);
+                    let mut received = first.len() as u64;
+                    started.notify_one();
+                    release.notified().await;
+                    while let Some(chunk) = stream.next().await {
+                        let chunk = chunk.unwrap();
+                        received += chunk.len() as u64;
+                        digest.update(&chunk);
+                    }
+                    assert_eq!(received, size);
+                    assert_eq!(format!("{:x}", digest.finalize()), expected);
+                    Json(serde_json::json!({"sha256":expected,"size":size}))
+                }
+            }))).await)
+        };
+        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        outbox.set_origin_public(false);
+        stored(&outbox, &state, &keys, &bytes, "mp4", false).await;
+        outbox.queue_blob(hash.clone(), size, "https://private.local/video".into()).await.unwrap();
+        let sending = {
+            let outbox = outbox.clone();
+            tokio::spawn(async move { run_due(&outbox, &shared(Some(keys))).await })
+        };
+        tokio::time::timeout(Duration::from_secs(5), started.notified()).await.unwrap();
+        let guard = tokio::time::timeout(Duration::from_secs(1), MEDIA_LIFECYCLE.lock()).await.expect("streaming upload holds lifecycle lock");
+        drop(guard);
+        assert!(!sending.is_finished());
+        release.notify_one();
+        sending.await.unwrap();
+        assert_eq!(outbox.blob_copies(hash).await.unwrap(), [target]);
     }
 }

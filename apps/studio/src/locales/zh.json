@@ -283,6 +283,41 @@
     "advanced": {
       "privateNote": "你的实例为私密：视频来源和互动中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。个人资料中继仍用于查找已登录访客的个人资料；镜像列表在两种模式下都有效。"
     },
+    "nsite": {
+      "title": "站点托管",
+      "description": "由实例提供站点，或通过 nsite 网关发布。中继、Blossom 和 Studio 仍留在实例上。",
+      "managedRequired": "nsite 需要托管的频道密钥。使用自己的身份时，服务器无法发布或更新站点。",
+      "publicRequired": "切换为公开以发布 nsite 并自动更新。",
+      "instance": "此实例上的网站",
+      "instanceBody": "访客通过你的实例地址打开网站。不会在其他地方发布任何内容。",
+      "nsite": "公开 nsite",
+      "nsiteBody": "公开 Blossom 服务器上的静态副本，由 nsite 网关提供。更改后会自动更新。",
+      "gateway": "网关",
+      "gatewayHint": "仅填写 DNS 主机名，例如 nsite.lol。不要填写协议、端口或路径。",
+      "domain": "自定义域名",
+      "domainHint": "可选的 DNS 主机名。网关负责自定义域名的 TLS；请确认它支持你的域名。",
+      "cname": "将自定义域名的 CNAME 指向 {{host}}。",
+      "url": "nsite 地址：",
+      "publish": "发布 nsite",
+      "publishing": "正在排队发布…",
+      "saveFirst": "发布前请保存并应用更改。只会发布已保存的设置。",
+      "cache": "更改会自动重新发布。网关缓存可能需要最多一小时才显示新版本。",
+      "version": "上次发布的版本（聚合哈希）",
+      "publishedAt": "发布时间",
+      "retained": "上次的清单和文件仍然公开。自动发布和实例重定向已关闭。",
+      "invalidHost": "网关和自定义域名必须是公共 DNS 主机名，不含协议、端口或路径。",
+      "deleteTitle": "现在删除 nsite 吗？",
+      "deleteHint": "两种选择都会关闭 nsite 托管和重定向。删除请求会移除清单和未使用的文件，但网关、中继和 Blossom 服务器可能保留副本。无法保证彻底删除。",
+      "delete": "现在删除",
+      "keep": "保留副本",
+      "cancel": "取消",
+      "status": {
+        "disabled": "nsite 托管已关闭",
+        "pending": "待发布：等待文件和交付",
+        "published": "已发布",
+        "failed": "发布失败"
+      }
+    },
     "reach": {
       "title": "可见范围",
       "privateTitle": "私密",
@@ -292,7 +327,9 @@
       "publicTitle": "公开",
       "publicBody": "你的个人资料和中继列表会发布到 Nostr 网络。其他 Nostr 应用可以在此实例上找到你的频道和视频；评论和 Zap 会到达这里。此操作无法完全撤回。",
       "confirmPublic": "切换为公开？此操作无法完全撤回：即使你以后切换回来，个人资料和中继列表也会留在 Nostr 网络中。你填写的镜像中继会出现在发布的中继列表中。",
-      "unavailable": "公开模式需要 Nostr 网络可以访问的地址。此实例使用本地名称（.local）、IP 地址或自有证书颁发机构运行，其他 Nostr 应用无法连接到它的中继。"
+      "unavailable": "公开模式需要公共实例地址，或至少一个公共镜像中继和一个公共镜像 Blossom 服务器。请在高级设置中配置两者。",
+      "mirrorRequired": "此实例无法从公网访问。公开模式需要镜像中继和 Blossom 服务器。视频存储在这些服务器上并受其限制；公开互动不会返回此实例。",
+      "publicBodyMirror": "频道资料和公共镜像中继列表会发布到 Nostr。视频由镜像提供，而不是此实例。此操作无法完全撤回。"
     },
     "upload": {
       "publishedTitle": "已发布",
@@ -318,7 +355,9 @@
       "tagsHint": "按 Enter 添加标签。多个标签用空格或逗号分隔。",
       "subtitles": "字幕（可选）",
       "progress": "上传进度",
+      "waitMirror": "正在等待确认的公共镜像副本…",
       "steps": {
+        "mirroring": "等待公共镜像",
         "convert": "转换为 MP4",
         "check": "检查视频",
         "hash": "准备文件",
@@ -429,6 +468,8 @@
       "pending": "等待中",
       "failed": "失败",
       "kinds": {
+        "cleanup": "本地文件清理",
+        "blob-delete": "文件删除",
         "event": "事件",
         "blob": "文件"
       },
@@ -440,6 +481,8 @@
       "retried_other": "已将 {{count}} 个任务重新排队。"
     },
     "errors": {
+      "mirrorFailed": "公共媒体镜像失败：{{reason}}",
+      "notLoggedIn": "Studio 会话已结束。发布前请重新登录。",
       "serverStatus": "服务器返回了 {{status}}。",
       "noSigner": "此浏览器中没有登录 Nostr 账户。",
       "notPubkey": "签名器返回的不是公钥。",

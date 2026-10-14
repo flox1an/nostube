@@ -138,7 +138,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
     try {
       if (!mayPublish) return setNotice(t('studio.upload.notConnected'))
       if (!signer) return setNotice(t('studio.errors.noSigner'))
-      const deps = makeUploadDeps({ signer, pubkey, title, publishAt })
+      const deps = makeUploadDeps({ signer, pubkey, title, publishAt, state })
       const input = {
         file,
         title: title.trim(),

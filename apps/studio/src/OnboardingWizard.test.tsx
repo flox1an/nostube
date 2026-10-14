@@ -31,6 +31,7 @@ const fresh = (canBePublic = true): AdminState => ({
   bootId: 'b1',
   nostrPubkey: null,
   canBePublic,
+  originIsPublic: canBePublic,
   branding: { logo: null, favicon: null, banner: null, icon: null },
   config: {
     title: 'My videos',
@@ -40,6 +41,8 @@ const fresh = (canBePublic = true): AdminState => ({
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: DEFAULT_PROFILE_RELAYS,
     reach: 'private',
+    siteHosting: 'instance',
+    nsite: { gateway: 'nsite.lol', domain: '' },
     mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
@@ -250,7 +253,9 @@ describe('Onboarding wizard', () => {
     expect(screen.getByRole('button', { name: /^Private/ }).getAttribute('aria-pressed')).toBe(
       'true'
     )
-    expect(screen.getByText(/Public needs an address the Nostr network can reach/)).toBeTruthy()
+    expect(
+      screen.getByText(/Public needs a public origin or at least one public mirror relay/)
+    ).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(false)
   })
 

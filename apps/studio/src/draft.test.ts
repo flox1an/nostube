@@ -16,6 +16,7 @@ import {
   linkPresetOf,
   setRefHidden,
   toDraft,
+  draftCanBePublic,
   type Draft,
 } from './draft'
 
@@ -28,6 +29,8 @@ const config: AdminConfig = {
   interactionRelays: [],
   profileRelays: DEFAULT_PROFILE_RELAYS,
   reach: 'public',
+  siteHosting: 'instance',
+  nsite: { gateway: 'nsite.lol', domain: '' },
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
@@ -45,6 +48,53 @@ describe('draft', () => {
   it('round-trips a config unchanged', () => {
     const result = fromDraft(toDraft(config))
     expect(result.config).toEqual(config)
+  })
+
+  it('round-trips nsite settings and turns hosting off with private reach', () => {
+    const hosted: AdminConfig = {
+      ...config,
+      siteHosting: 'nsite',
+      nsite: { gateway: 'gateway.example', domain: 'videos.example' },
+    }
+    expect(fromDraft(toDraft(hosted)).config).toEqual(hosted)
+    expect(fromDraft({ ...toDraft(hosted), reach: 'private' }).config?.siteHosting).toBe('instance')
+    expect(
+      fromDraft({ ...toDraft(hosted), nsiteGateway: 'https://gateway.example/path' }).config
+    ).toBeNull()
+    for (const host of [
+      'gateway.example.',
+      'gateway.123',
+      'gateway.local',
+      '127.0.0.1',
+      'https://gateway.example',
+      'gateway.example:443',
+    ]) {
+      expect(fromDraft({ ...toDraft(hosted), nsiteGateway: host }).config, host).toBeNull()
+    }
+  })
+
+  it('requires publicly reachable draft mirrors for public reach without a public origin', () => {
+    const base = toDraft(config)
+    expect(draftCanBePublic(true, base)).toBe(true)
+    expect(draftCanBePublic(false, base)).toBe(false)
+    const mirrors = {
+      ...base,
+      mirrorRelaysText: 'ws://relay.example',
+      mirrorBlossomText: 'http://blossom.example',
+    }
+    expect(draftCanBePublic(false, mirrors)).toBe(true)
+    expect(fromDraft(mirrors, false).config?.reach).toBe('public')
+    expect(fromDraft({ ...mirrors, mirrorRelaysText: '' }, false).config).toBeNull()
+    expect(fromDraft({ ...mirrors, mirrorBlossomText: '' }, false).config).toBeNull()
+    for (const target of [
+      'https://127.0.0.1',
+      'https://[::1]',
+      'https://home.local',
+      'https://localhost',
+      'https://user@blossom.example',
+    ]) {
+      expect(draftCanBePublic(false, { ...mirrors, mirrorBlossomText: target }), target).toBe(false)
+    }
   })
 
   it('accepts npub keys and pasted video links, and stores hex and video refs', () => {

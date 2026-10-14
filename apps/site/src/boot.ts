@@ -2,8 +2,7 @@ import { NostrConnectSigner } from 'applesauce-signers'
 import { AccountManager } from 'applesauce-accounts'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 import { createNostubeClient, type NostubeClient } from '@nostube/core/client'
-import type { InstanceConfig } from '@nostube/core/instance-config'
-import { loadSiteConfig } from './site-config'
+import { loadInstanceConfig, type InstanceConfig } from '@nostube/core/instance-config'
 import { applyTheme } from '@nostube/widgets/site-theme'
 
 export interface SiteBoot {
@@ -18,7 +17,7 @@ export interface SiteBoot {
  * create a client twice.
  */
 export async function bootSite(): Promise<SiteBoot> {
-  const config = await loadSiteConfig()
+  const config = await loadInstanceConfig()
   // Before the first render, so the page never flashes in the default look.
   applyTheme(config.site)
   document.title = config.title

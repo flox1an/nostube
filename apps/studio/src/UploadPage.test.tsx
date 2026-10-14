@@ -59,6 +59,7 @@ const stateFor = (
   bootId: 'b',
   nostrPubkey: null,
   canBePublic: true,
+  originIsPublic: true,
   config: {
     title: 'T',
     creators,
@@ -67,6 +68,8 @@ const stateFor = (
     interactionRelays: [],
     profileRelays: [],
     reach: 'private',
+    siteHosting: 'instance',
+    nsite: { gateway: 'nsite.lol', domain: '' },
     mirror: { relays: mirrorRelays, blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },

@@ -6,6 +6,9 @@ import type { Signer } from './signer'
 
 export type SearchConfig = { mode: 'off' } | { mode: 'local' }
 
+/** Where the creator site is served: by this instance, or as a NIP-5A nsite (server ADR 0013). */
+export type SiteHosting = 'instance' | 'nsite'
+
 /** What the server lets the studio edit (`GET/PUT /api/admin/config`). */
 export interface AdminConfig {
   title: string
@@ -24,6 +27,10 @@ export interface AdminConfig {
   site: InstanceSite & { lightning?: string }
   /** `private`: publishes nothing, only mirror targets get copies; `public`: published into Nostr (ADR 0012). */
   reach: Reach
+  /** `nsite` only with the managed key and in `public`; the server forces `instance` in `private`. */
+  siteHosting: SiteHosting
+  /** `gateway`: bare host the nsite URL `https://<npub>.<gateway>` uses; `domain`: optional CNAME. */
+  nsite: { gateway: string; domain: string }
 }
 
 export interface AdminState {
@@ -35,6 +42,8 @@ export interface AdminState {
   bootId: string
   nostrPubkey: string | null
   /** False when the origin is not publicly reachable (local CA, `.local` host, IP address). */
+  originIsPublic: boolean
+  /** The saved config may be public: a public origin, or public mirror relays and Blossom servers. */
   canBePublic: boolean
   config: AdminConfig
   /** The uploaded logo, favicon, banner and app icon (their URLs), null where none is set. */
@@ -131,19 +140,117 @@ export async function loadAdmin(): Promise<AdminState | null> {
 
 /**
  * Validates, keeps the previous config and applies the new one: at once, or (`restart`) by
- * restarting the instance when writers, storage or mirrors change.
+ * restarting the instance when writers, storage or mirrors change. `deleteNsite` answers "Delete
+ * the nsite now?" when the save turns a published nsite off; the server wants it then.
  */
 export async function saveConfig(
-  config: AdminConfig
+  config: AdminConfig,
+  deleteNsite?: boolean
 ): Promise<{ revision: number; restart: boolean }> {
   const res = await fetch('/api/admin/config', {
     method: 'PUT',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config),
+    body: JSON.stringify(deleteNsite === undefined ? config : { ...config, deleteNsite }),
   })
   if (!res.ok) throw new Error(await errorMessage(res))
   return (await res.json()) as { revision: number; restart: boolean }
+}
+
+/** The site as an nsite (`GET /api/admin/nsite`): the last published version and its delivery. */
+export interface NsiteStatus {
+  url: string | null
+  /** The NIP-5A aggregate hash of the last published manifest. */
+  aggregate: string | null
+  /** Unix seconds. */
+  publishedAt: number | null
+  status: 'disabled' | 'pending' | 'published' | 'failed'
+  error: string | null
+  /** Turned off with "Keep copies": the last manifest and its files stay public. */
+  retained: boolean
+}
+
+export async function loadNsite(): Promise<NsiteStatus> {
+  const res = await fetch('/api/admin/nsite', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as NsiteStatus
+}
+
+/** Has the server build and publish the nsite from the saved settings; its status follows. */
+export async function publishNsite(): Promise<void> {
+  const res = await fetch('/api/admin/nsite/publish', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  })
+  if (!res.ok) throw new Error(await errorMessage(res))
+}
+
+/**
+ * S2 (the origin is not public, mirror Blossom servers are set): published events carry only
+ * the mirrors' URLs, so publishing waits until a mirror holds every file (server ADR 0013).
+ */
+export const usesMirrorUrls = (state: AdminState) =>
+  state.config.reach === 'public' && !state.originIsPublic
+
+export interface MediaMirrorConfirmation {
+  ready: boolean
+  urls: Record<string, string>
+  error: string | null
+}
+
+/** Requests confirmed public copies; missing blobs remain pending, never publication-ready. */
+export async function confirmMediaMirrors(
+  hashes: string[],
+  signal?: AbortSignal
+): Promise<MediaMirrorConfirmation> {
+  const res = await fetch('/api/admin/media/mirrors', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hashes: [...new Set(hashes)] }),
+    signal,
+  })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as MediaMirrorConfirmation
+}
+
+/**
+ * Waits until a mirror Blossom server confirmed every blob (`POST /api/admin/media/mirrors`) and
+ * answers each hash's public URL. Throws the server's reason when a copy failed.
+ */
+export async function waitForMirrors(
+  hashes: string[],
+  onProgress: (done: number, total: number) => void,
+  signal?: AbortSignal,
+  { intervalMs = 3000 } = {}
+): Promise<Record<string, string>> {
+  hashes = [...new Set(hashes)]
+  for (;;) {
+    signal?.throwIfAborted()
+    const { ready, urls, error } = await confirmMediaMirrors(hashes, signal)
+    if (error) throw new Error(i18n.t('studio.errors.mirrorFailed', { reason: error }))
+    const done = hashes.filter(hash => urls[hash]).length
+    onProgress(done, hashes.length)
+    signal?.throwIfAborted()
+    // Every hash needs its URL: an instance URL left in the event would not load in S2.
+    if (ready && done === hashes.length) return urls
+    await new Promise<void>((resolve, reject) => {
+      const finish = () => {
+        signal?.removeEventListener('abort', abort)
+        resolve()
+      }
+      const timer = setTimeout(finish, intervalMs)
+      const abort = () => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', abort)
+        reject(signal?.reason)
+      }
+      signal?.addEventListener('abort', abort, { once: true })
+      if (signal?.aborted) abort()
+    })
+  }
 }
 
 /** A studio write the server only accepts as JSON (`POST`); answers the JSON reply. */
@@ -220,14 +327,14 @@ export interface OutboxStatus {
   blossom: string[]
   counts: {
     target: string
-    kind: 'event' | 'blob'
+    kind: 'event' | 'blob' | 'cleanup' | 'blob-delete'
     pending: number
     done: number
     failed: number
   }[]
   /** Failed jobs and jobs waiting for a retry, newest first. */
   problems: {
-    kind: 'event' | 'blob'
+    kind: 'event' | 'blob' | 'cleanup' | 'blob-delete'
     target: string
     ref: string
     status: 'pending' | 'failed'

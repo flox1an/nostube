@@ -283,6 +283,41 @@
     "advanced": {
       "privateNote": "Tu instancia es privada: las fuentes de vídeo y los relays de interacción no tienen efecto, el sitio solo usa para ello el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Los relays de perfiles siguen sirviendo para buscar el perfil de los visitantes que inician sesión; las listas de réplica funcionan en ambos casos."
     },
+    "nsite": {
+      "title": "Alojamiento del sitio",
+      "description": "Sirve el sitio desde tu instancia o publícalo mediante una pasarela nsite. El relay, Blossom y Studio permanecen en la instancia.",
+      "managedRequired": "nsite requiere una clave de canal gestionada. Con tu propia identidad, el servidor no puede publicar ni actualizar el sitio.",
+      "publicRequired": "Cambia a Público para publicar un nsite y actualizarlo automáticamente.",
+      "instance": "Sitio en esta instancia",
+      "instanceBody": "Los visitantes abren el sitio en la dirección de tu instancia. No se publica nada en otro lugar.",
+      "nsite": "nsite público",
+      "nsiteBody": "Una copia estática en servidores Blossom públicos, servida por una pasarela nsite. Se actualiza sola tras los cambios.",
+      "gateway": "Pasarela",
+      "gatewayHint": "Solo un nombre de host DNS, por ejemplo nsite.lol. Sin protocolo, puerto ni ruta.",
+      "domain": "Dominio personalizado",
+      "domainHint": "Nombre de host DNS opcional. La pasarela gestiona TLS para el dominio; comprueba que lo admite.",
+      "cname": "Apunta el CNAME de tu dominio a {{host}}.",
+      "url": "URL del nsite:",
+      "publish": "Publicar nsite",
+      "publishing": "Encolando publicación…",
+      "saveFirst": "Guarda y aplica los cambios antes de publicar. Solo se publican los ajustes guardados.",
+      "cache": "Los cambios se publican automáticamente. Las cachés de las pasarelas pueden tardar hasta una hora en mostrar la nueva versión.",
+      "version": "Última versión publicada (hash agregado)",
+      "publishedAt": "Fecha de publicación",
+      "retained": "El último manifiesto y sus archivos siguen siendo públicos. La publicación automática y la redirección de la instancia están desactivadas.",
+      "invalidHost": "La pasarela y el dominio deben ser nombres de host DNS públicos, sin protocolo, puerto ni ruta.",
+      "deleteTitle": "¿Eliminar el nsite ahora?",
+      "deleteHint": "Ambas opciones desactivan el alojamiento nsite y la redirección. Las solicitudes eliminan el manifiesto y los archivos sin uso, pero pasarelas, relays y servidores Blossom pueden guardar copias. La eliminación no está garantizada.",
+      "delete": "Eliminar ahora",
+      "keep": "Conservar copias",
+      "cancel": "Cancelar",
+      "status": {
+        "disabled": "Alojamiento nsite desactivado",
+        "pending": "Publicación pendiente: esperando archivos y entrega",
+        "published": "Publicado",
+        "failed": "Error de publicación"
+      }
+    },
     "reach": {
       "title": "Alcance",
       "privateTitle": "Privado",
@@ -292,7 +327,9 @@
       "publicTitle": "Público",
       "publicBody": "Tu perfil y tu lista de relays se publican en la red Nostr. Otras apps de Nostr encuentran tu canal y tus vídeos en esta instancia; los comentarios y los zaps llegan aquí. Esto no se puede deshacer por completo.",
       "confirmPublic": "¿Cambiar a Público? Esto no se puede deshacer por completo: tu perfil y tu lista de relays siguen en la red Nostr aunque más tarde vuelvas atrás. Los relays de réplica que has introducido aparecen en la lista de relays publicada.",
-      "unavailable": "Público necesita una dirección que la red Nostr pueda alcanzar. Esta instancia funciona con un nombre local (.local), una dirección IP o su propia autoridad de certificación, así que otras apps de Nostr no pueden conectarse a su relay."
+      "unavailable": "Público requiere un origen público o al menos un relay de réplica público y un servidor Blossom de réplica público. Configura ambos en Avanzado.",
+      "mirrorRequired": "Esta instancia no es accesible públicamente. Público requiere relays y servidores Blossom de réplica. Los videos viven en esos servidores bajo sus límites; las interacciones públicas no vuelven a esta instancia.",
+      "publicBodyMirror": "El perfil del canal y la lista de relays de réplica públicos se publican en Nostr. Los videos se sirven desde las réplicas, no desde esta instancia. Esto no se puede deshacer por completo."
     },
     "upload": {
       "publishedTitle": "Publicado",
@@ -320,7 +357,9 @@
       "tagsHint": "Pulsa Intro para añadir etiquetas. Separa varias etiquetas con espacios o comas.",
       "subtitles": "Subtítulos (opcional)",
       "progress": "Progreso de la subida",
+      "waitMirror": "Esperando copias públicas confirmadas en las réplicas…",
       "steps": {
+        "mirroring": "Esperar las réplicas públicas",
         "convert": "Convertir a MP4",
         "check": "Comprobar el video",
         "hash": "Preparar el archivo",
@@ -431,6 +470,8 @@
       "pending": "En espera",
       "failed": "Fallido",
       "kinds": {
+        "cleanup": "Limpieza de archivos locales",
+        "blob-delete": "Eliminación de archivo",
         "event": "Evento",
         "blob": "Archivo"
       },
@@ -444,6 +485,8 @@
       "retried_other": "{{count}} tareas puestas de nuevo en cola."
     },
     "errors": {
+      "mirrorFailed": "Error al replicar los medios públicamente: {{reason}}",
+      "notLoggedIn": "Tu sesión de Studio ha finalizado. Inicia sesión de nuevo antes de publicar.",
       "serverStatus": "El servidor respondió {{status}}.",
       "noSigner": "No hay ninguna cuenta Nostr conectada en este navegador.",
       "notPubkey": "El firmante devolvió algo que no es una clave pública.",

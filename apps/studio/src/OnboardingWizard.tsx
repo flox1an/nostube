@@ -207,6 +207,7 @@ export function Onboarding({
               reach={reach}
               onChange={setReach}
               canBePublic={state.canBePublic}
+              originIsPublic={state.originIsPublic}
               own={identity === 'own'}
             />
           </>

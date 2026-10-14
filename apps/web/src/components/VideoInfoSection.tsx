@@ -7,6 +7,8 @@ import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Badge } from '@nostube/widgets/components/badge'
 import { formatDistance } from 'date-fns/formatDistance'
+import { format } from 'date-fns/format'
+import { badgeVariants } from '@nostube/widgets/components/badge-variants'
 import { Separator } from '@nostube/widgets/components/separator'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
@@ -126,7 +128,7 @@ export function VideoCommentsSection({
   if (!video) return null
 
   return (
-    <div className="pt-4 px-2 md:px-0">
+    <div className="pt-4 px-4 md:px-0">
       <VideoComments
         videoId={video.id}
         authorPubkey={video.pubkey}
@@ -250,7 +252,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 pt-^4">
+      <div className="flex flex-col gap-4 pt-4 px-4 md:px-0">
         <Skeleton className="mt-4 h-8 w-3/4" />
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -351,15 +353,22 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const allTags = video.tags.slice(0, 20)
   const previewTags = allTags.slice(0, 3)
   const remainingTags = allTags.slice(3)
-  const hasMoreMetadata =
-    remainingTags.length > 0 ||
-    videoLanguages.length > 0 ||
-    video.origins.length > 0 ||
-    Boolean(geohash)
+
+  const now = new Date()
+  const publishedDate = new Date(getPublishDate(video) * 1000)
+  const updatedDate = new Date(video.created_at * 1000)
+  const wasUpdated = video.created_at !== getPublishDate(video)
+  const updatedAgo = formatDistance(updatedDate, now, { locale: dateLocale })
+  // Only mention the update when it reads differently at the displayed granularity;
+  // the exact timestamps stay reachable under "More details".
+  const showUpdatedAgo =
+    wasUpdated && updatedAgo !== formatDistance(publishedDate, now, { locale: dateLocale })
+  // 44px hit area around small pills without enlarging them.
+  const pillHitArea = 'inline-flex min-h-11 items-center'
 
   return (
     <>
-      <div className="flex flex-col gap-3 px-2 md:px-0 min-w-0">
+      <div className="flex flex-col gap-3 px-4 md:px-0 min-w-0">
         {((!hideTitle && video?.title) || expirationDate) && (
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -367,7 +376,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 <h1
                   ref={titleRef}
                   className={cn(
-                    'text-lg md:text-xl font-bold leading-snug',
+                    'text-lg md:text-xl font-semibold leading-snug',
                     !titleExpanded && 'line-clamp-2 md:line-clamp-none'
                   )}
                 >
@@ -397,7 +406,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 type="button"
                 onClick={() => setTitleExpanded(prev => !prev)}
                 aria-expanded={titleExpanded}
-                className="self-start text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                className="self-start -my-3 py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
                 {titleExpanded
                   ? t('video.showLessTitle', { defaultValue: 'Show less' })
@@ -416,30 +425,18 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         >
           <Link
             to={buildProfileUrlFromPubkey(video?.pubkey || '', relaysToUse)}
-            className="flex items-center gap-4"
+            className="flex min-w-0 items-center gap-4"
           >
             <UserAvatar picture={metadata?.picture} pubkey={video?.pubkey} name={authorName} />
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5 font-semibold">
-                {authorName}
+                <span className="min-w-0 break-words">{authorName}</span>
                 {video?.pubkey && <TrustBadge pubkey={video.pubkey} />}
               </div>
               <div className="text-sm text-muted-foreground">
-                {video &&
-                  formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
-                    addSuffix: true,
-                    locale: dateLocale,
-                  })}
-                {video?.published_at && video.created_at !== video.published_at && (
-                  <span className="ml-1">
-                    (
-                    {t('video.updatedAgo', {
-                      time: formatDistance(new Date(video.created_at * 1000), new Date(), {
-                        locale: dateLocale,
-                      }),
-                    })}
-                    )
-                  </span>
+                {formatDistance(publishedDate, now, { addSuffix: true, locale: dateLocale })}
+                {showUpdatedAgo && (
+                  <span className="ml-1">({t('video.updatedAgo', { time: updatedAgo })})</span>
                 )}
               </div>
             </div>
@@ -449,7 +446,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             className={
               desktop
                 ? 'flex w-full flex-wrap items-center gap-2'
-                : 'flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto'
+                : 'flex flex-wrap items-center gap-2 mt-3 md:mt-0 w-full md:w-auto'
             }
           >
             <VideoReactionButtons
@@ -458,6 +455,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               kind={video.kind}
               relays={relaysToUse}
               layout="inline"
+              className="h-11"
               currentTime={currentTime}
               identifier={video.identifier}
             />
@@ -474,13 +472,15 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               shareOpen={shareOpen}
               setShareOpen={setShareOpen}
               shareUrl={shareUrl}
+              shareTitle={video.title}
               includeTimestamp={includeTimestamp}
               setIncludeTimestamp={setIncludeTimestamp}
               shareLinks={shareLinks}
+              className="h-11 w-11 px-0 bg-transparent hover:bg-accent hover:text-accent-foreground"
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="secondary" aria-label="More actions">
+                <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="More actions">
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -589,8 +589,9 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         {video?.description ? (
           <CollapsibleText
             alwaysExpanded={desktop}
+            maxLines={3}
             text={video.description}
-            className="bg-muted p-4 rounded-lg text-muted-foreground"
+            className="bg-muted px-4 py-3 rounded-lg text-sm text-muted-foreground"
             videoLink={video.link}
             authorPubkey={video.pubkey}
           />
@@ -598,129 +599,147 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           <Separator />
         )}
 
-        {/* Display tags, languages, location, and origins */}
-        {allTags.length > 0 || videoLanguages.length > 0 || video.origins.length > 0 || geohash ? (
-          <div className="flex flex-wrap items-center gap-2 pb-1">
-            {/* Small tag preview — always visible */}
-            {previewTags.map(tag => (
-              <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
-                >
-                  #{tag}
-                </Badge>
-              </Link>
-            ))}
-
-            {hasMoreMetadata && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-muted-foreground"
-                onClick={() => setShowMoreMeta(prev => !prev)}
-                aria-expanded={showMoreMeta}
+        {/* Tags preview plus details (dates, languages, more tags, location, origins) */}
+        <div className="flex flex-wrap items-center gap-x-2">
+          {/* Small tag preview — always visible */}
+          {previewTags.map(tag => (
+            <Link key={tag} to={`/tag/${tag.toLowerCase()}`} className={pillHitArea}>
+              <Badge
+                variant="secondary"
+                className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
               >
-                {showMoreMeta ? (
+                #{tag}
+              </Badge>
+            </Link>
+          ))}
+
+          <button
+            type="button"
+            className={cn(pillHitArea, 'group focus-visible:outline-none')}
+            onClick={() => setShowMoreMeta(prev => !prev)}
+            aria-expanded={showMoreMeta}
+          >
+            <span
+              className={cn(
+                badgeVariants({ variant: 'outline' }),
+                'gap-1 font-medium text-muted-foreground group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring'
+              )}
+            >
+              {showMoreMeta
+                ? t('video.lessDetails', { defaultValue: 'Less details' })
+                : t('video.moreDetails', { defaultValue: 'More details' })}
+              {showMoreMeta ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </span>
+          </button>
+
+          {showMoreMeta && (
+            <>
+              <p className="w-full text-xs text-muted-foreground">
+                <time dateTime={publishedDate.toISOString()}>
+                  {t('video.publishedAt', {
+                    defaultValue: 'Published {{date}}',
+                    date: format(publishedDate, 'PPp', { locale: dateLocale }),
+                  })}
+                </time>
+                {wasUpdated && (
                   <>
-                    {t('video.lessDetails', { defaultValue: 'Less details' })}
-                    <ChevronUp className="ml-1 h-3 w-3" />
-                  </>
-                ) : (
-                  <>
-                    {t('video.moreDetails', { defaultValue: 'More details' })}
-                    <ChevronDown className="ml-1 h-3 w-3" />
+                    {' · '}
+                    <time dateTime={updatedDate.toISOString()}>
+                      {t('video.updatedAt', {
+                        defaultValue: 'Updated {{date}}',
+                        date: format(updatedDate, 'PPp', { locale: dateLocale }),
+                      })}
+                    </time>
                   </>
                 )}
-              </Button>
-            )}
+              </p>
+              {/* Language badges with flag + shortcode */}
+              {videoLanguages.map(lang => {
+                const { flag, code } = getLanguageDisplay(lang)
+                return (
+                  <Badge
+                    key={`lang-${lang}`}
+                    variant="outline"
+                    className="shrink-0 whitespace-nowrap"
+                  >
+                    {flag} {code}
+                  </Badge>
+                )
+              })}
+              {/* Remaining tag badges */}
+              {remainingTags.map(tag => (
+                <Link key={tag} to={`/tag/${tag.toLowerCase()}`} className={pillHitArea}>
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
+                  >
+                    #{tag}
+                  </Badge>
+                </Link>
+              ))}
+              {/* Origin (source) badges */}
+              {video.origins.map((origin, index) => {
+                const originUrl = getOriginLink(origin.originalUrl)
 
-            {showMoreMeta && (
-              <>
-                {/* Language badges with flag + shortcode */}
-                {videoLanguages.map(lang => {
-                  const { flag, code } = getLanguageDisplay(lang)
-                  return (
-                    <Badge
-                      key={`lang-${lang}`}
-                      variant="outline"
-                      className="shrink-0 whitespace-nowrap"
-                    >
-                      {flag} {code}
-                    </Badge>
-                  )
-                })}
-                {/* Remaining tag badges */}
-                {remainingTags.map(tag => (
-                  <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                    <Badge
-                      variant="secondary"
-                      className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
-                    >
-                      #{tag}
-                    </Badge>
-                  </Link>
-                ))}
-                {/* Origin (source) badges */}
-                {video.origins.map((origin, index) => {
-                  const originUrl = getOriginLink(origin.originalUrl)
-
-                  return originUrl ? (
-                    <a
-                      key={`origin-${index}`}
-                      href={originUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={origin.platform}
-                      className="inline-flex"
-                    >
-                      <Badge
-                        variant="secondary"
-                        className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
-                      </Badge>
-                    </a>
-                  ) : (
-                    <Badge
-                      key={`origin-${index}`}
-                      variant="secondary"
-                      title={origin.platform}
-                      className="shrink-0 whitespace-nowrap"
-                    >
-                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
-                    </Badge>
-                  )
-                })}
-                {geohash && (
+                return originUrl ? (
                   <a
-                    href={(() => {
-                      try {
-                        const decoded = ngeohash.decode(geohash)
-                        return `https://www.openstreetmap.org/?mlat=${decoded.latitude}&mlon=${decoded.longitude}&zoom=15`
-                      } catch {
-                        return '#'
-                      }
-                    })()}
+                    key={`origin-${index}`}
+                    href={originUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title={t('video.viewLocation')}
+                    title={origin.platform}
+                    className={pillHitArea}
                   >
                     <Badge
                       variant="secondary"
-                      className="shrink-0 cursor-pointer hover:bg-secondary/80 inline-flex items-center"
+                      className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
                     >
-                      <MapPin className="w-3.5 h-3.5 mr-1" />
-                      {t('video.location')}
+                      <ExternalLink className="w-3 h-3" />
+                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
                     </Badge>
                   </a>
-                )}
-              </>
-            )}
-          </div>
-        ) : null}
+                ) : (
+                  <Badge
+                    key={`origin-${index}`}
+                    variant="secondary"
+                    title={origin.platform}
+                    className="shrink-0 whitespace-nowrap"
+                  >
+                    {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                  </Badge>
+                )
+              })}
+              {geohash && (
+                <a
+                  href={(() => {
+                    try {
+                      const decoded = ngeohash.decode(geohash)
+                      return `https://www.openstreetmap.org/?mlat=${decoded.latitude}&mlon=${decoded.longitude}&zoom=15`
+                    } catch {
+                      return '#'
+                    }
+                  })()}
+                  target="_blank"
+                  className={pillHitArea}
+                  rel="noopener noreferrer"
+                  title={t('video.viewLocation')}
+                >
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 cursor-pointer hover:bg-secondary/80 inline-flex items-center"
+                  >
+                    <MapPin className="w-3.5 h-3.5 mr-1" />
+                    {t('video.location')}
+                  </Badge>
+                </a>
+              )}
+            </>
+          )}
+        </div>
       </div>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

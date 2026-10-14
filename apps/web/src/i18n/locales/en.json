@@ -150,6 +150,8 @@
     "expiresIn": "Expires in {{time}}",
     "expired": "Expired",
     "updatedAgo": "updated {{time}} ago",
+    "publishedAt": "Published {{date}}",
+    "updatedAt": "Updated {{date}}",
     "showFullTitle": "Show full title",
     "showLessTitle": "Show less",
     "moreDetails": "More details",
@@ -319,6 +321,8 @@
     "debugInfoDescription": "Technical details about this video event, relays, and blossom servers"
   },
   "upload": {
+    "reloadDeferred": "New version available – reload after the upload",
+    "reloadNow": "Reload now",
     "title": "Upload Video",
     "stepIndicator": "Step {{current}} of {{total}}",
     "previous": "Previous",
@@ -713,20 +717,23 @@
     },
     "cache": {
       "title": "Cache Management",
-      "description": "Clear cached events and data to free up storage space. This will remove all locally stored Nostr events.",
+      "description": "Clear cached data to free up storage space. Cached events are fetched again from relays as needed.",
       "cacheSize": "Cache Size",
       "calculating": "Calculating...",
-      "clearButton": "Clear All Cache",
-      "clearDescription": "Remove all cached events and data. The app will reload.",
+      "persistent": "Persistent storage",
+      "persistentOn": "On: the browser will not delete app data on its own.",
+      "persistentOff": "Off: the browser may delete app data when space runs low. Install the app to request persistent storage.",
+      "persistentUnsupported": "Not supported by this browser.",
+      "clearButton": "Clear cache",
+      "clearDescription": "Delete cached events, trust scores and playlist checks. The app will reload.",
       "clearing": "Clearing...",
       "whatGetsCleared": "What gets cleared:",
-      "item1": "All cached Nostr events",
-      "item2": "Event metadata and profiles",
-      "item3": "Timeline data",
-      "item4": "Local database storage (IndexedDB)",
-      "note": "Note: The app will reload to close database connections before clearing. Your account settings, relay configuration, and app preferences will not be affected.",
-      "confirmTitle": "Clear All Cache?",
-      "confirmMessage": "This will permanently delete all cached Nostr events and data from your browser. The app will reload to reinitialize the cache.",
+      "item1": "Cached Nostr events (videos, profiles, comments)",
+      "item2": "Trust scores",
+      "item3": "Playlist validation results",
+      "note": "Kept: play positions, unsent view events, the offline app files, your account, relays and preferences. The app reloads first to close database connections.",
+      "confirmTitle": "Clear cache?",
+      "confirmMessage": "This deletes cached Nostr events, trust scores and playlist validation results from this browser. Play positions, unsent view events and the offline app stay. The app will reload.",
       "confirmWarning": "This action cannot be undone, but events will be re-fetched from relays as needed.",
       "clearingTitle": "Clearing Cache",
       "clearingMessage": "The app will reload and clear the cache..."
@@ -845,6 +852,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "Opening link…",
+      "invalidTitle": "Can't open this link",
+      "invalidDescription": "This nostr link is invalid or not supported."
+    },
     "home": {
       "latestVideos": "Latest videos",
       "newestFirst": "Newest first",
@@ -888,9 +900,9 @@
     },
     "author": {
       "joined": "Joined {{date}}",
-      "allVideos": "All videos ({{count}})",
-      "allShorts": "All shorts ({{count}})",
-      "liked": "Liked ({{count}})",
+      "videosTab": "Videos",
+      "shortsTab": "Shorts",
+      "liked": "Liked",
       "loadingPlaylists": "Loading playlists...",
       "tags": "Tags",
       "noVideos": "No videos found.",
@@ -900,7 +912,7 @@
       "loadingMoreShorts": "Loading more shorts...",
       "noMoreShorts": "No more shorts to load.",
       "noLikedVideos": "No liked or zapped videos found.",
-      "following": "Following ({{count}})",
+      "following": "Following",
       "noFollowing": "Not following anyone on nostube.",
       "showMore": "Show more",
       "showLess": "Show less",
@@ -1058,7 +1070,8 @@
     "notFound": "Not Found",
     "error": "Error",
     "tryAgain": "Try Again",
-    "debugInfo": "Debug Info"
+    "debugInfo": "Debug Info",
+    "pageLoadFailed": "This page couldn't be loaded. Check your connection and try again."
   },
   "onboarding": {
     "followImport": {
@@ -1214,6 +1227,18 @@
       "add": "Add",
       "hint": "Enter the full URL of a compatible server"
     }
+  },
+  "install": {
+    "title": "Install app",
+    "install": "Install",
+    "dismiss": "Dismiss",
+    "bannerText": "Install the app for full-screen playback and a faster start.",
+    "iosHint": "Install the app: tap Share, then “Add to Home Screen”.",
+    "settingsDescription": "Install the app on this device so it starts from the home screen and runs full screen.",
+    "iosDialogTitle": "Add to Home Screen",
+    "iosStep1": "Tap the Share button in the browser toolbar.",
+    "iosStep2": "Scroll down and choose “Add to Home Screen”.",
+    "iosStep3": "Tap “Add”."
   },
   "languages": {
     "en": "English",

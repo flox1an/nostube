@@ -18,7 +18,7 @@ describe('RichTextContent', () => {
   it('does not include trailing punctuation in regular links', () => {
     render(<RichTextContent content="Read https://example.com/path, then continue." />)
 
-    const link = screen.getByRole('link', { name: 'https://example.com/path' })
+    const link = screen.getByRole('link', { name: 'example.com/path' })
 
     expect(link).toHaveAttribute('href', 'https://example.com/path')
     expect(screen.getByText(/, then continue\./)).toBeInTheDocument()

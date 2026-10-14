@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppContext, useVideoHistory } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
+import { EmptyState } from '@/components/EmptyState'
 import {
   isAudioVideo,
   isYouTubeVideo,
@@ -77,7 +78,7 @@ export function HistoryPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:p-4">
-      <div className="p-2 flex justify-between items-center mb-4">
+      <div className="px-4 py-2 flex justify-between items-center sm:px-2 sm:mb-4">
         <h1 className="text-2xl font-bold">{t('pages.history.title')}</h1>
         {history.length > 0 && (
           <AlertDialog>
@@ -104,10 +105,14 @@ export function HistoryPage() {
       </div>
 
       {videos.length === 0 ? (
-        <div className="text-center py-12 space-y-3">
-          <p className="text-muted-foreground">{t('pages.history.emptyState')}</p>
-          <Button onClick={() => navigate('/')}>{t('pages.history.browseButton')}</Button>
-        </div>
+        <EmptyState
+          title={t('pages.library.historyEmpty', { defaultValue: 'Nothing watched yet' })}
+          description={t('pages.history.emptyState')}
+        >
+          <Button className="h-11 px-6" onClick={() => navigate('/')}>
+            {t('pages.history.browseButton')}
+          </Button>
+        </EmptyState>
       ) : (
         <VideoGrid
           videos={videos}

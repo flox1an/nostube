@@ -150,6 +150,8 @@
     "expiresIn": "{{time}} 後に期限切れ",
     "expired": "期限切れ",
     "updatedAgo": "{{time}} 前に更新",
+    "publishedAt": "公開日時：{{date}}",
+    "updatedAt": "更新日時：{{date}}",
     "comments": {
       "title": "コメント",
       "addComment": "コメントを追加...",
@@ -303,6 +305,8 @@
     "debugInfoDescription": "この動画イベント、リレー、Blossomサーバーに関する技術詳細"
   },
   "upload": {
+    "reloadDeferred": "新しいバージョンがあります – アップロード後に再読み込みしてください",
+    "reloadNow": "今すぐ再読み込み",
     "title": "動画をアップロード",
     "stepIndicator": "ステップ {{current}} / {{total}}",
     "previous": "前へ",
@@ -697,20 +701,23 @@
     },
     "cache": {
       "title": "キャッシュ管理",
-      "description": "キャッシュされたイベントとデータを消去してストレージ容量を解放します。ローカルに保存されているすべての Nostr イベントが削除されます。",
+      "description": "キャッシュデータを消去してストレージ容量を解放します。キャッシュされたイベントは必要に応じてリレーから再取得されます。",
       "cacheSize": "キャッシュサイズ",
       "calculating": "計算中...",
-      "clearButton": "すべてのキャッシュを消去",
-      "clearDescription": "すべてのキャッシュされたイベントとデータを削除します。アプリがリロードされます。",
+      "persistent": "永続ストレージ",
+      "persistentOn": "オン：ブラウザがアプリのデータを勝手に削除することはありません。",
+      "persistentOff": "オフ：容量が不足するとブラウザがアプリのデータを削除することがあります。アプリをインストールすると永続ストレージを要求します。",
+      "persistentUnsupported": "このブラウザではサポートされていません。",
+      "clearButton": "キャッシュを消去",
+      "clearDescription": "キャッシュされたイベント、信頼スコア、プレイリストの検証結果を削除します。アプリがリロードされます。",
       "clearing": "消去中...",
       "whatGetsCleared": "消去されるもの：",
-      "item1": "すべてのキャッシュされた Nostr イベント",
-      "item2": "イベントメタデータとプロフィール",
-      "item3": "タイムラインデータ",
-      "item4": "ローカルデータベースストレージ（IndexedDB）",
-      "note": "注意：アプリはリロードしてデータベース接続を閉じてから消去します。アカウント設定、リレー設定、アプリの環境設定は影響を受けません。",
-      "confirmTitle": "すべてのキャッシュを消去しますか？",
-      "confirmMessage": "ブラウザからすべてのキャッシュされた Nostr イベントとデータが完全に削除されます。アプリはリロードしてキャッシュを再初期化します。",
+      "item1": "キャッシュされた Nostr イベント（動画、プロフィール、コメント）",
+      "item2": "信頼スコア",
+      "item3": "プレイリストの検証結果",
+      "note": "保持されるもの：再生位置、未送信の視聴記録、オフライン用アプリファイル、アカウント、リレー、環境設定。アプリは先にリロードしてデータベース接続を閉じます。",
+      "confirmTitle": "キャッシュを消去しますか？",
+      "confirmMessage": "このブラウザからキャッシュされた Nostr イベント、信頼スコア、プレイリストの検証結果を削除します。再生位置、未送信の視聴記録、オフライン用アプリは保持されます。アプリがリロードされます。",
       "confirmWarning": "この操作は元に戻せませんが、イベントは必要に応じてリレーから再フェッチされます。",
       "clearingTitle": "キャッシュ消去中",
       "clearingMessage": "アプリがリロードされ、キャッシュを消去します..."
@@ -829,6 +836,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "リンクを開いています…",
+      "invalidTitle": "このリンクを開けません",
+      "invalidDescription": "この nostr リンクは無効か、サポートされていません。"
+    },
     "home": {
       "latestVideos": "最新の動画",
       "newestFirst": "新しい順",
@@ -872,9 +884,9 @@
     },
     "author": {
       "joined": "{{date}} に参加",
-      "allVideos": "すべての動画（{{count}}）",
-      "allShorts": "すべてのショート（{{count}}）",
-      "liked": "いいね（{{count}}）",
+      "videosTab": "動画",
+      "shortsTab": "ショート",
+      "liked": "いいね",
       "loadingPlaylists": "プレイリストを読み込み中...",
       "tags": "タグ",
       "noVideos": "動画が見つかりません。",
@@ -884,7 +896,7 @@
       "loadingMoreShorts": "さらにショートを読み込み中...",
       "noMoreShorts": "これ以上読み込めるショートはありません。",
       "noLikedVideos": "いいねまたは zap された動画が見つかりません。",
-      "following": "フォロー中（{{count}}）",
+      "following": "フォロー中",
       "noFollowing": "nostube で誰もフォローしていません。",
       "showMore": "もっと表示",
       "showLess": "折りたたむ",
@@ -1042,7 +1054,8 @@
     "notFound": "見つかりません",
     "error": "エラー",
     "tryAgain": "再試行",
-    "debugInfo": "デバッグ情報"
+    "debugInfo": "デバッグ情報",
+    "pageLoadFailed": "このページを読み込めませんでした。接続を確認して、もう一度お試しください。"
   },
   "onboarding": {
     "followImport": {
@@ -1198,6 +1211,18 @@
       "add": "追加",
       "hint": "互換性のあるサーバーの完全な URL を入力"
     }
+  },
+  "install": {
+    "title": "アプリをインストール",
+    "install": "インストール",
+    "dismiss": "閉じる",
+    "bannerText": "アプリをインストールすると、全画面で再生でき、すばやく起動できます。",
+    "iosHint": "アプリのインストール：共有をタップし、「ホーム画面に追加」を選択します。",
+    "settingsDescription": "このデバイスにアプリをインストールすると、ホーム画面から全画面で起動できます。",
+    "iosDialogTitle": "ホーム画面に追加",
+    "iosStep1": "ブラウザのツールバーにある共有ボタンをタップします。",
+    "iosStep2": "下にスクロールして「ホーム画面に追加」を選択します。",
+    "iosStep3": "「追加」をタップします。"
   },
   "languages": {
     "en": "英語",

@@ -235,7 +235,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg p-0 rounded-2xl">
+      <DialogContent className="sm:max-w-lg p-0 rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
             {t('auth.login.title')}
@@ -259,22 +259,25 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                 showExtensionTab ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
               }`}
             >
-              <TabsTrigger value="qr" className="min-w-0 gap-1 text-xs sm:text-sm">
+              <TabsTrigger value="qr" className="min-h-11 min-w-0 gap-1 text-xs sm:text-sm">
                 <QrCode className="w-4 h-4 shrink-0" />
                 <span className="truncate">{t('auth.login.qr', 'QR')}</span>
               </TabsTrigger>
               {showExtensionTab && (
-                <TabsTrigger value="extension" className="min-w-0 gap-1 text-xs sm:text-sm">
+                <TabsTrigger
+                  value="extension"
+                  className="min-h-11 min-w-0 gap-1 text-xs sm:text-sm"
+                >
                   <span className="truncate">{t('auth.login.extension')}</span>
                   <Badge variant="secondary" className="px-1 py-0 text-[10px] leading-4 shrink-0">
                     {t('auth.login.recommended', 'Recommended')}
                   </Badge>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="protected" className="min-w-0 text-xs sm:text-sm">
+              <TabsTrigger value="protected" className="min-h-11 min-w-0 text-xs sm:text-sm">
                 <span className="truncate">{t('auth.login.protectedKey', 'Secret Key')}</span>
               </TabsTrigger>
-              <TabsTrigger value="bunker" className="min-w-0 text-xs sm:text-sm">
+              <TabsTrigger value="bunker" className="min-h-11 min-w-0 text-xs sm:text-sm">
                 <span className="truncate">{t('auth.login.bunker')}</span>
               </TabsTrigger>
             </TabsList>

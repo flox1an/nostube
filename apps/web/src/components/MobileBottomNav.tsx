@@ -1,20 +1,33 @@
-import { MoreHorizontal } from 'lucide-react'
+import { Download, MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useNavigationMenu } from '@/hooks/useNavigationMenu'
+import { useInstallState } from '@/hooks/useInstallState'
+import { getInstallMode, promptInstall } from '@/lib/install-prompt'
+import { IosInstallDialog } from '@/components/InstallHint'
 
 export function MobileBottomNav() {
   const { t } = useTranslation()
   const location = useLocation()
   const [isMoreOpen, setIsMoreOpen] = useState(false)
   const { mobilePrimaryItems, mobileMoreItems } = useNavigationMenu()
+  const installMode = getInstallMode(useInstallState())
+  const [isIosInstallOpen, setIsIosInstallOpen] = useState(false)
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 border-t border-border bg-background/95 px-2 pb-safe-area-inset-bottom backdrop-blur-sm lg:hidden">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-start justify-around border-t border-border bg-background/95 backdrop-blur-sm lg:hidden"
+        style={{
+          height: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingLeft: 'max(0.5rem, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(0.5rem, env(safe-area-inset-right, 0px))',
+        }}
+      >
         {mobilePrimaryItems.map(item => {
           const isActive = location.pathname === item.href
           return (
@@ -23,12 +36,14 @@ export function MobileBottomNav() {
               to={item.href}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex h-full w-full flex-col items-center justify-center gap-1 transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                'flex h-16 w-full flex-col items-center justify-center gap-1 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+                isActive
+                  ? 'text-primary bg-primary/5'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className={cn('h-5 w-5', isActive && 'fill-current')} />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           )
         })}
@@ -38,19 +53,22 @@ export function MobileBottomNav() {
           aria-label={t('navigation.more')}
           onClick={() => setIsMoreOpen(true)}
           className={cn(
-            'flex h-full w-full flex-col items-center justify-center gap-1 transition-colors',
-            isMoreOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            'flex h-16 w-full flex-col items-center justify-center gap-1 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+            isMoreOpen ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
           )}
         >
           <MoreHorizontal className="h-5 w-5" />
-          <span className="text-[10px] font-medium">{t('navigation.more')}</span>
+          <span className="text-xs font-medium">{t('navigation.more')}</span>
         </button>
       </nav>
 
       <Sheet open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <SheetContent side="bottom" className="px-4 pb-8 pt-6 lg:hidden">
-          <SheetHeader className="mb-4">
-            <SheetTitle>{t('navigation.more')}</SheetTitle>
+        <SheetContent
+          side="bottom"
+          className="px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:hidden"
+        >
+          <SheetHeader className="mb-2 pr-12">
+            <SheetTitle className="text-lg">{t('navigation.more')}</SheetTitle>
           </SheetHeader>
           <nav className="space-y-1">
             {mobileMoreItems.map(item => {
@@ -71,9 +89,24 @@ export function MobileBottomNav() {
                 </Link>
               )
             })}
+            {installMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMoreOpen(false)
+                  if (installMode === 'prompt') void promptInstall()
+                  else setIsIosInstallOpen(true)
+                }}
+                className="flex w-full items-center gap-4 rounded-lg px-3 py-3 transition-colors hover:bg-accent"
+              >
+                <Download className="h-5 w-5" />
+                <span className="font-medium">{t('install.title')}</span>
+              </button>
+            )}
           </nav>
         </SheetContent>
       </Sheet>
+      <IosInstallDialog open={isIosInstallOpen} onOpenChange={setIsIosInstallOpen} />
     </>
   )
 }

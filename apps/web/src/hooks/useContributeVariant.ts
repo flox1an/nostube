@@ -11,6 +11,7 @@ import {
 } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import { uploadAndProcessFile } from '@/lib/transcode-upload'
+import { beginUploadWork } from '@/lib/active-work'
 import type { VideoVariant as UploadedVideoVariant } from '@/lib/video-processing'
 import type { VideoVariant } from '@nostube/core/video-event'
 import {
@@ -130,6 +131,7 @@ export function useContributeVariant(): UseContributeVariantReturn {
       setVariantProgress([])
       setDownloadProgress(null)
 
+      const endWork = beginUploadWork()
       try {
         setStatus('downloading')
         const { file, meta } = await loadSourceForContribution(
@@ -249,6 +251,7 @@ export function useContributeVariant(): UseContributeVariantReturn {
         setStatus('error')
         setError(err instanceof Error ? err.message : t('video.contribute.errorGeneric'))
       } finally {
+        endWork()
         if (controllerRef.current === controller) controllerRef.current = null
       }
     },

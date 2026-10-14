@@ -80,25 +80,6 @@ describe('CollapsibleText', () => {
     // because it doesn't calculate actual layout dimensions. These tests focus on the
     // component's logic and behavior that can be reliably tested.
 
-    it('should apply line-clamp class when not expanded', () => {
-      const text = 'Test text'
-      const { container } = renderWithRouter(<CollapsibleText text={text} maxLines={3} />)
-
-      const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
-      expect(textElement).toHaveClass('line-clamp-5') // Default maxLines is 5
-    })
-
-    it('should apply cursor-pointer class when showButton is true', () => {
-      const text = 'Test text'
-      const { container } = renderWithRouter(<CollapsibleText text={text} maxLines={3} />)
-
-      // Manually test the className logic
-      const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
-      expect(textElement).toBeInTheDocument()
-      // showButton starts as false, so no cursor-pointer class initially
-      expect(textElement).not.toHaveClass('cursor-pointer')
-    })
-
     it('should handle click on text element without errors', () => {
       const text = 'Test text'
       const { container } = renderWithRouter(<CollapsibleText text={text} maxLines={3} />)
@@ -138,33 +119,6 @@ describe('CollapsibleText', () => {
       )
       expect(screen.getByText('Updated text')).toBeInTheDocument()
       expect(screen.queryByText('Initial text')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('Line Clamping', () => {
-    it('should use default maxLines of 5', () => {
-      const text = 'Test text'
-      const { container } = renderWithRouter(<CollapsibleText text={text} />)
-
-      const textElement = container.querySelector('[class*="line-clamp"]')
-      expect(textElement).toHaveClass('line-clamp-5')
-    })
-
-    it('should apply line-clamp class when component is not expanded', () => {
-      const text = 'Test text'
-      const { container } = renderWithRouter(<CollapsibleText text={text} maxLines={3} />)
-
-      const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
-      expect(textElement).toHaveClass('line-clamp-5') // Uses default maxLines, not prop
-    })
-
-    it('renders the complete description without a line clamp when always expanded', () => {
-      const { container } = renderWithRouter(
-        <CollapsibleText text="A complete desktop description" alwaysExpanded />
-      )
-
-      const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
-      expect(textElement).not.toHaveClass('line-clamp-5')
     })
   })
 

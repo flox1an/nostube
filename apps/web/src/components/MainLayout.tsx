@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { Header } from '@/components/Header'
 import { OfflineBanner } from '@/components/OfflineBanner'
+import { InstallBanner } from '@/components/InstallHint'
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { MiniSidebar } from './MiniSidebar'
@@ -37,7 +39,13 @@ export function MainLayout() {
     <div className="min-h-screen flex flex-col">
       {isDesktop ? <DesktopMainHeader /> : <Header />}
       <OfflineBanner />
-      <div className={cn('flex flex-1 relative w-full lg:mb-0', !isVideoPage && 'mb-16')}>
+      {!isDesktop && !isVideoPage && <InstallBanner />}
+      <div
+        className={cn(
+          'flex flex-1 relative w-full lg:mb-0',
+          !isVideoPage && 'mb-[calc(4rem+env(safe-area-inset-bottom,0px))]'
+        )}
+      >
         {/* Desktop Sidebar - Inline toggle between Mini and Full (hidden on video pages) */}
         {!isVideoPage && (
           <div className="hidden lg:block shrink-0">
@@ -73,7 +81,9 @@ export function MainLayout() {
             isVideoPage ? 'overflow-x-clip' : 'overflow-x-hidden'
           )}
         >
-          <Outlet />
+          <RouteErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </RouteErrorBoundary>
         </main>
       </div>
       <footer className="py-4 text-center text-xs text-muted-foreground">

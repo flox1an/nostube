@@ -57,7 +57,9 @@
       "onX": "Partager sur X",
       "onReddit": "Partager sur Reddit",
       "onFacebook": "Partager sur Facebook",
-      "onPinterest": "Partager sur Pinterest"
+      "onPinterest": "Partager sur Pinterest",
+      "email": "E-mail",
+      "moreApps": "Partager via une autre application"
     },
     "comments": {
       "addComment": "Ajouter un commentaire...",
@@ -69,7 +71,8 @@
     "copy": "Copier",
     "back": "Retour",
     "cancel": "Annuler",
-    "copied": "Copié !"
+    "copied": "Copié !",
+    "copyFailed": "Impossible de copier. Sélectionne le texte et copie-le manuellement."
   },
   "richText": {
     "video": "Vidéo",
@@ -171,7 +174,10 @@
       "qrDescription": "Scanne avec ton app de signature Nostr",
       "qrApps": "Amber, Nostrudel ou autres signers NIP-46",
       "qrMobileDescription": "Connecte-toi avec ton app de signature Nostr sur cet appareil",
-      "qrAnotherDevice": "Ou scanne ce code depuis un autre appareil :"
+      "thisDevice": "Sur cet appareil",
+      "otherDevice": "Sur un autre appareil",
+      "qrShow": "Afficher le code QR",
+      "qrHide": "Masquer le code QR"
     },
     "signup": {
       "title": "Créer votre compte",

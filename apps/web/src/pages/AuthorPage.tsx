@@ -79,6 +79,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '@nostube/widgets/components
 const avatarFallbackUrl = (pubkey: string) =>
   getInstanceConfig() ? undefined : `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
 
+/** 44px touch target for h-9 controls without growing them visually. */
+const TAP_TARGET = 'relative after:absolute after:inset-x-0 after:-inset-y-1'
+/** Shelf row: bleeds to the screen edge on mobile so the next card peeks; thumbnails start at 16px. */
+const SHELF_SCROLLER = '-mx-4 overflow-x-auto scrollbar-hide px-3 sm:mx-0 sm:px-0'
+
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
 const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
 
@@ -221,16 +226,13 @@ function AuthorProfile({
       ? t('pages.author.nip05Verified', { nip05: displayNip05(nip05) })
       : undefined
 
+  const actionClass = cn('bg-white/10 backdrop-blur-md hover:bg-white/30', TAP_TARGET)
+
   return (
-    <div
-      className={cn(
-        'flex items-start space-x-4 relative',
-        hasBanner && 'ml-6 -mt-16 sm:-mt-20',
-        className
-      )}
-    >
-      <div className="shrink-0">
-        <Avatar className="w-24 h-24 rounded-full ring-2 ring-background">
+    <div className={cn('relative', hasBanner && '-mt-14 sm:-mt-20 sm:ml-6', className)}>
+      {/* Head row: avatar beside name and actions; the bio gets the full width below. */}
+      <div className="flex items-start gap-3 sm:gap-4">
+        <Avatar className="h-20 w-20 shrink-0 rounded-full ring-2 ring-background sm:h-24 sm:w-24">
           <AvatarImage
             src={profilePicture.src ?? undefined}
             alt={displayName}
@@ -241,17 +243,20 @@ function AuthorProfile({
           <AvatarImage src={avatarFallbackUrl(pubkey)} alt={displayName} />
           <AvatarFallback>{displayName.charAt(0) || pubkey.charAt(0)}</AvatarFallback>
         </Avatar>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
+        <div className="min-w-0 flex-1 pt-1 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1
+              className="truncate text-[22px] font-semibold leading-7 text-foreground sm:text-2xl"
+              title={displayName}
+            >
+              {displayName}
+            </h1>
             <TrustBadge pubkey={pubkey} />
             {verifiedLabel && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <BadgeCheck
-                    className="h-4 w-4 text-primary"
+                    className="h-4 w-4 shrink-0 text-primary"
                     role="img"
                     tabIndex={0}
                     aria-label={verifiedLabel}
@@ -261,13 +266,13 @@ function AuthorProfile({
               </Tooltip>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 pr-4">
+          <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0 sm:shrink-0 sm:pr-4">
             {isOwnProfile && (
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setIsEditOpen(true)}
-                className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+                className={actionClass}
               >
                 {t('pages.author.editProfile', 'Edit profile')}
               </Button>
@@ -278,7 +283,7 @@ function AuthorProfile({
                 size="sm"
                 onClick={handleFollowClick}
                 disabled={isFollowLoading}
-                className=" bg-white/10 backdrop-blur-md hover:bg-white/30"
+                className={actionClass}
               >
                 {isFollowing ? (
                   <>
@@ -296,7 +301,7 @@ function AuthorProfile({
             {canZap && (
               <ZapButton
                 authorPubkey={pubkey}
-                className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+                className={actionClass}
                 layout="inline"
                 showZapText={true}
                 size="sm"
@@ -304,29 +309,32 @@ function AuthorProfile({
             )}
             <UserActionsMenu
               pubkey={pubkey}
-              className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+              className="relative bg-white/10 backdrop-blur-md hover:bg-white/30 after:absolute after:-inset-1.5"
             />
           </div>
         </div>
-        {metadata?.about && (
-          <div className="mt-1">
-            <div
-              ref={aboutRef}
-              className={cn('text-sm text-muted-foreground', !isAboutExpanded && 'line-clamp-3')}
-            >
-              <RichTextContent content={metadata.about} authorPubkey={pubkey} />
-            </div>
-            {(isAboutClamped || isAboutExpanded) && (
-              <button
-                onClick={() => setIsAboutExpanded(!isAboutExpanded)}
-                className="text-sm text-primary hover:underline mt-1"
-              >
-                {isAboutExpanded ? t('pages.author.showLess') : t('pages.author.showMore')}
-              </button>
-            )}
-          </div>
-        )}
       </div>
+      {metadata?.about && (
+        <div className="mt-3">
+          <div
+            ref={aboutRef}
+            className={cn(
+              'break-words text-sm leading-6 text-muted-foreground',
+              !isAboutExpanded && 'line-clamp-3'
+            )}
+          >
+            <RichTextContent content={metadata.about} authorPubkey={pubkey} />
+          </div>
+          {(isAboutClamped || isAboutExpanded) && (
+            <button
+              onClick={() => setIsAboutExpanded(!isAboutExpanded)}
+              className="mt-1 min-h-11 text-sm text-primary hover:underline sm:min-h-0"
+            >
+              {isAboutExpanded ? t('pages.author.showLess') : t('pages.author.showMore')}
+            </button>
+          )}
+        </div>
+      )}
       {isOwnProfile && (
         <EditProfileDialog
           open={isEditOpen}
@@ -1157,123 +1165,113 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
     <div className="max-w-560 mx-auto sm:p-4">
       <AuthorBanner pubkey={pubkey} onLoad={handleBannerLoad} onError={handleBannerError} />
       {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} pubkey={pubkey} />}
-      <AuthorProfile className="p-2" pubkey={pubkey} hasBanner={!!bannerUrl} />
+      <AuthorProfile className="px-4 py-2 sm:p-2" pubkey={pubkey} hasBanner={!!bannerUrl} />
 
-      <div className="p-2">
-        {/* Scrollable tab bar */}
-        <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide -mx-2 px-2 py-2">
-          <div className="flex gap-2 min-w-max">
-            <Button
-              variant={activeTab === 'overview' ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4"
-              asChild
-            >
-              <Link to={getTabPath('overview')}>{t('pages.author.overview', 'Overview')}</Link>
-            </Button>
-            {videos.length > 0 && (
-              <Button
-                variant={activeTab === 'videos' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                asChild
-              >
-                <Link to={getTabPath('videos')}>
-                  {t('pages.author.allVideos', { count: videos.length })}
-                </Link>
-              </Button>
-            )}
-            {shorts.length > 0 && (
-              <Button
-                variant={activeTab === 'shorts' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                asChild
-              >
-                <Link to={getTabPath('shorts')}>
-                  {t('pages.author.allShorts', { count: shorts.length })}
-                </Link>
-              </Button>
-            )}
-
-            {(isLoadingPlaylists || playlists.length > 0 || isOwnProfile) && (
-              <Button
-                variant={activeTab === 'playlists' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                asChild
-              >
-                <Link to={getTabPath('playlists')}>
-                  {t('pages.author.playlists', 'Playlists ({{count}})', {
-                    count: playlists.length,
-                  })}
-                </Link>
-              </Button>
-            )}
-            {likedCount > 0 && (
-              <Button
-                variant={activeTab === 'liked' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                asChild
-              >
-                <Link to={getTabPath('liked')}>
-                  {t('pages.author.liked', { count: likedCount })}
-                </Link>
-              </Button>
-            )}
-            {authorFollowing.length > 0 && (
-              <Button
-                variant={activeTab === 'following' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                asChild
-              >
-                <Link to={getTabPath('following')}>
-                  {t('pages.author.following', { count: authorFollowing.length })}
-                </Link>
-              </Button>
-            )}
+      <div className="px-4 py-2 sm:p-2">
+        {/* Scrollable tab bar; the right-edge fade hints at more tabs (end padding clears it). */}
+        <div className="-mx-4 overflow-x-auto scroll-smooth scrollbar-hide py-2 [mask-image:linear-gradient(to_left,transparent,black_24px)] sm:mx-0">
+          <div className="flex min-w-max gap-2 pr-6 pl-4 sm:pl-0">
+            {(
+              [
+                { id: 'overview', label: t('pages.author.overview', 'Overview'), show: true },
+                {
+                  id: 'videos',
+                  label: t('pages.author.videosTab'),
+                  count: videos.length,
+                  show: videos.length > 0,
+                },
+                {
+                  id: 'shorts',
+                  label: t('pages.author.shortsTab'),
+                  count: shorts.length,
+                  show: shorts.length > 0,
+                },
+                {
+                  id: 'playlists',
+                  label: t('navigation.playlists'),
+                  count: playlists.length,
+                  show: isLoadingPlaylists || playlists.length > 0 || isOwnProfile,
+                },
+                {
+                  id: 'liked',
+                  label: t('pages.author.liked'),
+                  count: likedCount,
+                  show: likedCount > 0,
+                },
+                {
+                  id: 'following',
+                  label: t('pages.author.following'),
+                  count: authorFollowing.length,
+                  show: authorFollowing.length > 0,
+                },
+              ] satisfies { id: Tabs; label: string; count?: number; show: boolean }[]
+            )
+              .filter(tab => tab.show)
+              .map(tab => (
+                <Button
+                  key={tab.id}
+                  variant={activeTab === tab.id ? 'default' : 'outline'}
+                  size="sm"
+                  className={cn('shrink-0 rounded-full px-3.5', TAP_TARGET)}
+                  asChild
+                >
+                  <Link to={getTabPath(tab.id)}>
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className="text-xs font-normal tabular-nums opacity-70">
+                        {tab.count}
+                      </span>
+                    )}
+                  </Link>
+                </Button>
+              ))}
           </div>
         </div>
 
         {/* Tab content */}
         {activeTab === 'overview' && (
-          <div className="mt-6 space-y-8">
+          <div className="mt-4 space-y-6">
             {pinnedVideos.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-semibold">{t('pages.author.pinned', 'Pinned')}</h2>
+                <div className="mb-3 flex min-h-9 items-center justify-between">
+                  <h2 className="text-lg font-semibold">{t('pages.author.pinned', 'Pinned')}</h2>
                 </div>
-                <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-2 min-w-max">
-                    {pinnedVideos.map(video => (
-                      <div key={`pinned-${video.id}`} className="w-72 shrink-0">
-                        <VideoCard
-                          video={video}
-                          format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-                        />
-                      </div>
-                    ))}
+                <div className={SHELF_SCROLLER}>
+                  <div className="flex min-w-max gap-2">
+                    {pinnedVideos.map(video => {
+                      const format = video.type === 'shorts' ? 'vertical' : 'horizontal'
+                      return (
+                        <div
+                          key={`pinned-${video.id}`}
+                          className={`video-shelf-item shrink-0 ${format === 'vertical' ? 'video-shelf-short' : ''}`}
+                        >
+                          <VideoCard
+                            video={video}
+                            format={format}
+                            hideAuthor={video.pubkey === pubkey}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </section>
             )}
             {videos.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-semibold">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">
                     {t('pages.author.latestVideos', 'Latest videos')}
                   </h2>
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button variant="ghost" size="sm" className={TAP_TARGET} asChild>
                     <Link to={getTabPath('videos')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
-                <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-2 min-w-max">
+                <div className={SHELF_SCROLLER}>
+                  <div className="flex min-w-max gap-2">
                     {videos.slice(0, 10).map(video => (
-                      <div key={`latest-video-${video.id}`} className="w-80 shrink-0">
-                        <VideoCard video={video} format="horizontal" />
+                      <div key={`latest-video-${video.id}`} className="video-shelf-item shrink-0">
+                        <VideoCard video={video} format="horizontal" hideAuthor />
                       </div>
                     ))}
                   </div>
@@ -1282,23 +1280,27 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
             )}
             {shorts.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-semibold">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">
                     {t('pages.author.latestShorts', 'Latest shorts')}
                   </h2>
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button variant="ghost" size="sm" className={TAP_TARGET} asChild>
                     <Link to={getTabPath('shorts')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
-                <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-2 min-w-max">
+                <div className={SHELF_SCROLLER}>
+                  <div className="flex min-w-max gap-2">
                     {shorts.slice(0, 10).map((video, index) => (
-                      <div key={`latest-short-${video.id}`} className="w-44 shrink-0">
+                      <div
+                        key={`latest-short-${video.id}`}
+                        className="video-shelf-item video-shelf-short shrink-0"
+                      >
                         <VideoCard
                           video={video}
                           format="vertical"
                           allVideos={shorts}
                           videoIndex={index}
+                          hideAuthor
                         />
                       </div>
                     ))}
@@ -1308,16 +1310,16 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
             )}
             {overviewPlaylists.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-semibold">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">
                     {t('pages.author.playlistsTitle', 'Playlists')}
                   </h2>
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button variant="ghost" size="sm" className={TAP_TARGET} asChild>
                     <Link to={getTabPath('playlists')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
-                <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-3 min-w-max">
+                <div className={SHELF_SCROLLER}>
+                  <div className="flex min-w-max gap-2">
                     {overviewPlaylists.map(playlist => {
                       const playlistNaddr = nip19.naddrEncode({
                         kind: 30005,
@@ -1330,7 +1332,10 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
                         <Link
                           key={`playlist-overview-${playlist.identifier}`}
                           to={`/playlist/${playlistNaddr}`}
-                          className="group w-72 shrink-0 rounded-lg p-2 transition-colors hover:bg-accent"
+                          className={cn(
+                            'group rounded-lg p-1 transition-colors hover:bg-accent',
+                            'video-shelf-item shrink-0'
+                          )}
                         >
                           <PlaylistThumbnailCollage
                             videoIds={videoIds}
@@ -1338,9 +1343,11 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
                             contentWarning={playlist.contentWarning}
                             className="rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
                           />
-                          <div className="pt-3">
-                            <div className="font-medium line-clamp-1">{playlist.name}</div>
-                            <div className="text-xs text-muted-foreground">
+                          <div className="px-1 pt-3">
+                            <div className="line-clamp-1 text-[15px] font-semibold leading-5">
+                              {playlist.name}
+                            </div>
+                            <div className="text-[13px] leading-5 text-muted-foreground">
                               {playlist.videos.length} videos
                             </div>
                           </div>
@@ -1355,7 +1362,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         )}
 
         {activeTab === 'videos' && (
-          <div className="mt-6 -mx-2 sm:mx-0">
+          <div className="mt-4 -mx-4 sm:mx-0">
             <VideoGrid
               videos={videos}
               isLoading={loading}
@@ -1380,7 +1387,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         )}
 
         {activeTab === 'shorts' && (
-          <div className="mt-6 -mx-2 sm:mx-0">
+          <div className="mt-4 -mx-4 sm:mx-0">
             <VideoGrid
               videos={shorts}
               isLoading={loading}
@@ -1405,7 +1412,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         )}
 
         {activeTab === 'liked' && (
-          <div className="mt-6 -mx-2 sm:mx-0">
+          <div className="mt-4 -mx-4 sm:mx-0">
             <VideoGrid
               videos={likedVideos}
               isLoading={loadingLikedVideos || isLoadingLiked}
@@ -1422,7 +1429,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         )}
 
         {activeTab === 'playlists' && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-4 space-y-6">
             {isOwnProfile && (
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => setCreatePlaylistOpen(true)}>
@@ -1458,22 +1465,27 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
               const previewVideos = (playlistVideos[playlist.identifier] || []).slice(0, 10)
               return (
                 <section key={`playlist-tab-${playlist.identifier}`} className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="text-base font-semibold truncate">
+                      <h2 className="truncate text-lg font-semibold">
                         <Link to={`/playlist/${playlistNaddr}`} className="hover:underline">
                           {playlist.name}
                         </Link>
                       </h2>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[13px] text-muted-foreground">
                         {playlist.videos.length} videos
                       </p>
                     </div>
-                    <Link to={`/playlist/${playlistNaddr}`}>
-                      <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn('shrink-0', TAP_TARGET)}
+                      asChild
+                    >
+                      <Link to={`/playlist/${playlistNaddr}`}>
                         {t('pages.author.openPlaylist', 'Open playlist')}
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </div>
                   {isLoading && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1481,24 +1493,28 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
                       {t('pages.author.loadingPreview', 'Loading preview...')}
                     </div>
                   )}
-                  <div className="w-full overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-2 min-w-max">
+                  <div className={SHELF_SCROLLER}>
+                    <div className="flex min-w-max gap-2">
                       {previewVideos.length === 0 && !isLoading && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="px-1 text-[13px] text-muted-foreground">
                           {t('pages.author.noPlaylistVideos', 'No videos in this playlist.')}
                         </div>
                       )}
-                      {previewVideos.map(video => (
-                        <div
-                          key={`playlist-tab-video-${playlist.identifier}-${video.id}`}
-                          className="w-72 shrink-0"
-                        >
-                          <VideoCard
-                            video={video}
-                            format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-                          />
-                        </div>
-                      ))}
+                      {previewVideos.map(video => {
+                        const format = video.type === 'shorts' ? 'vertical' : 'horizontal'
+                        return (
+                          <div
+                            key={`playlist-tab-video-${playlist.identifier}-${video.id}`}
+                            className={`video-shelf-item shrink-0 ${format === 'vertical' ? 'video-shelf-short' : ''}`}
+                          >
+                            <VideoCard
+                              video={video}
+                              format={format}
+                              hideAuthor={video.pubkey === pubkey}
+                            />
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </section>
@@ -1508,7 +1524,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         )}
 
         {activeTab === 'following' && (
-          <div className="mt-6">
+          <div className="mt-4">
             <FollowingList
               pubkeys={authorFollowing}
               relays={relays}

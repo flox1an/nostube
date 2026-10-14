@@ -57,7 +57,9 @@
       "onX": "Поделиться в X",
       "onReddit": "Поделиться в Reddit",
       "onFacebook": "Поделиться в Facebook",
-      "onPinterest": "Поделиться в Pinterest"
+      "onPinterest": "Поделиться в Pinterest",
+      "email": "Email",
+      "moreApps": "Поделиться через другое приложение"
     },
     "comments": {
       "addComment": "Добавить комментарий...",
@@ -69,7 +71,8 @@
     "copy": "Копировать",
     "back": "Назад",
     "cancel": "Отмена",
-    "copied": "Скопировано!"
+    "copied": "Скопировано!",
+    "copyFailed": "Не удалось скопировать. Выделите текст и скопируйте вручную."
   },
   "richText": {
     "video": "Видео",
@@ -171,7 +174,10 @@
       "qrDescription": "Отсканируйте вашим Nostr-подписантом",
       "qrApps": "Amber, Nostrudel и другие NIP-46 подписанты",
       "qrMobileDescription": "Войдите с помощью Nostr-подписанта на этом устройстве",
-      "qrAnotherDevice": "Или отсканируйте этот код с другого устройства:"
+      "thisDevice": "На этом устройстве",
+      "otherDevice": "На другом устройстве",
+      "qrShow": "Показать QR-код",
+      "qrHide": "Скрыть QR-код"
     },
     "signup": {
       "title": "Создать аккаунт",

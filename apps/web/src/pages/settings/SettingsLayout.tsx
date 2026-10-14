@@ -102,10 +102,10 @@ function SettingsSidebar() {
   return (
     <>
       {/* Mobile: dropdown select */}
-      <div className="md:hidden w-full mb-6">
+      <div className="md:hidden w-full">
         <Select value={activeCategory} onValueChange={handleCategoryChange}>
           <SelectTrigger
-            className="w-full"
+            className="w-full min-h-11"
             aria-label={t('settings.selectSection', { defaultValue: 'Settings section' })}
           >
             <SelectValue placeholder={t('settings.selectSection')} />
@@ -197,13 +197,13 @@ export function SettingsLayout() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-6 px-4 md:py-8">
       <div className="flex items-center gap-3 mb-6">
         <Settings className="h-6 w-6 text-muted-foreground" />
         <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
         <SettingsSidebar />
         <main className="flex-1 min-w-0 max-w-2xl">
           <Outlet />

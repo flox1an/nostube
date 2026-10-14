@@ -31,7 +31,10 @@ export function Header({ transparent = false }: HeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const isVideoPage = location.pathname.startsWith('/v/') || location.pathname.startsWith('/video/')
+  const isVideoPage =
+    location.pathname.startsWith('/v/') ||
+    location.pathname.startsWith('/video/') ||
+    location.pathname.startsWith('/short/')
 
   // Only real in-app history (idx > 0) can be popped back into; a
   // direct-linked/refreshed video has none, so fall back to Home.
@@ -54,17 +57,33 @@ export function Header({ transparent = false }: HeaderProps) {
   const barBackground =
     'bg-sidebar/90 supports-[backdrop-filter]:bg-sidebar/80 dark:bg-background/90 dark:supports-[backdrop-filter]:bg-background/80'
 
-  if (isMobile && isSearchExpanded) {
+  if (isSearchExpanded) {
     return (
       <header
-        className={`sticky top-0 z-50 flex h-14 items-center gap-2 border-b border-border/70 px-4 backdrop-blur-xl ${barBackground}`}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
+        className={`mobile-header sticky top-0 z-[60] border-b border-border/70 backdrop-blur-xl ${barBackground}`}
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+        }}
       >
-        <Button variant="ghost" size="icon" onClick={() => setIsSearchExpanded(false)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <GlobalSearchBar isMobileExpanded onSearch={() => setIsSearchExpanded(false)} />
+        <div className="flex h-14 items-center gap-2 px-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 shrink-0"
+            aria-label={t('video.back', 'Back')}
+            onClick={() => setIsSearchExpanded(false)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <GlobalSearchBar
+              isMobileExpanded
+              syncWithSearchParam
+              onSearch={() => setIsSearchExpanded(false)}
+            />
+          </div>
         </div>
       </header>
     )
@@ -72,10 +91,14 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b transition-[transform,background-color,border-color] duration-300 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'border-border/70' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
-        shouldHide ? '-translate-y-full' : 'translate-y-0'
+      className={`mobile-header sticky top-0 z-50 border-b transition-[transform,background-color,border-color] duration-300 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
+        shouldHide && !transparent ? '-translate-y-full' : 'translate-y-0'
       }`}
-      style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
     >
       <div className={`w-full px-4 py-2 flex items-center justify-between h-14`}>
         <div className="flex items-center gap-2">
@@ -83,6 +106,7 @@ export function Header({ transparent = false }: HeaderProps) {
             <Button
               variant="ghost"
               size="icon"
+              className="size-11 shrink-0"
               onClick={handleBack}
               aria-label={t('video.back', 'Back')}
             >
@@ -121,15 +145,16 @@ export function Header({ transparent = false }: HeaderProps) {
           </Link>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-4 hidden md:block">
-          {!isSearchOff() && <GlobalSearchBar />}
+        <div className="header-desktop-search flex-1 max-w-2xl mx-4 hidden md:block">
+          {!isSearchOff() && <GlobalSearchBar syncWithSearchParam />}
         </div>
 
         <div className="flex items-center gap-1 lg:gap-2">
-          {isMobile && !isSearchOff() && (
+          {!isSearchOff() && (
             <Button
               variant="ghost"
               size="icon"
+              className="header-mobile-search size-11 md:hidden"
               onClick={() => setIsSearchExpanded(true)}
               aria-label={t('common.search', 'Search')}
             >

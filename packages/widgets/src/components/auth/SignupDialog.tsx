@@ -60,7 +60,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onComplete
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md p-0 rounded-2xl">
+      <DialogContent className="sm:max-w-md p-0 rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
             {step === 'generate' && t('auth.signup.title')}

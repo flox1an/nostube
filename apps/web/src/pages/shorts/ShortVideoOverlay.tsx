@@ -31,10 +31,12 @@ import {
   buildEventRelays,
 } from '@nostube/core/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
+import { buildShareLinks } from '@nostube/core/share-links'
+import ShareButton from '@nostube/widgets/components/ShareButton'
 import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
 import { useProfile, useReadRelays, useCommentCount, usePreloadVideoData } from '@/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { MessageCircle, Share2, ExternalLink, Flag, Volume2, VolumeX } from 'lucide-react'
+import { MessageCircle, ExternalLink, Flag, Volume2, VolumeX } from 'lucide-react'
 import { ReportDialog } from '@/components/ReportDialog'
 import { combineRelays } from '@/lib/utils'
 import { buildProfileUrl } from '@/lib/nprofile'
@@ -67,6 +69,7 @@ export const ShortVideoOverlay = memo(
     const eventStore = useEventStore()
     const userReadRelays = useReadRelays()
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const [shareOpen, setShareOpen] = useState(false)
     const [showReportDialog, setShowReportDialog] = useState(false)
     const [muted, setMuted] = useState(isMuted)
     useEffect(() => setMuted(isMuted), [isMuted])
@@ -127,13 +130,20 @@ export const ShortVideoOverlay = memo(
     }, [event, video.link, pointerRelays])
 
     const shareUrl = `${baseUrl}${buildVideoPath(freshLink, 'shorts')}`
+    const shareLinks = useMemo(
+      () => buildShareLinks(shareUrl, shareUrl, video.title, video.images[0] || ''),
+      [shareUrl, video.title, video.images]
+    )
 
     return (
-      <div className="relative w-full h-full pointer-events-none">
+      <div className="relative w-full h-full pointer-events-none text-white">
         {/* Action sidebar — right rail, TikTok-style */}
         <div
-          className="absolute right-4 md:right-0 flex flex-col items-center gap-3 md:gap-4 pointer-events-auto md:pr-8 pb-8 [&_.rounded-full.bg-secondary]:bg-secondary/50"
-          style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
+          className="short-actions absolute flex flex-col items-center gap-3 pointer-events-auto text-white"
+          style={{
+            right: 'calc(1rem + env(safe-area-inset-right, 0px))',
+            bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))',
+          }}
         >
           <VideoReactionButtons
             eventId={video.id}
@@ -148,7 +158,7 @@ export const ShortVideoOverlay = memo(
             <Button
               variant="secondary"
               size="icon"
-              className="rounded-full"
+              className="size-11 rounded-full bg-black/60 text-white hover:bg-black/80"
               onClick={() => setCommentsOpen(true)}
               aria-label="Comments"
             >
@@ -159,17 +169,14 @@ export const ShortVideoOverlay = memo(
 
           {/* Share */}
           <div className="flex flex-col items-center gap-1">
-            <Button
-              variant="secondary"
-              size="icon"
-              className="rounded-full"
-              onClick={() => {
-                void navigator.clipboard.writeText(shareUrl)
-              }}
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-            </Button>
+            <ShareButton
+              shareOpen={shareOpen}
+              setShareOpen={setShareOpen}
+              shareUrl={shareUrl}
+              shareTitle={video.title}
+              shareLinks={shareLinks}
+              className="size-11 rounded-full bg-black/60 p-0 text-white hover:bg-black/80"
+            />
           </div>
 
           {/* Report (logged-in users only) */}
@@ -178,7 +185,7 @@ export const ShortVideoOverlay = memo(
               <Button
                 variant="secondary"
                 size="icon"
-                className="rounded-full"
+                className="size-11 rounded-full bg-black/60 text-white hover:bg-black/80"
                 onClick={() => setShowReportDialog(true)}
                 aria-label="Report"
               >
@@ -191,7 +198,7 @@ export const ShortVideoOverlay = memo(
             <Button
               variant="secondary"
               size="icon"
-              className="rounded-full"
+              className="size-11 rounded-full bg-black/60 text-white hover:bg-black/80"
               onClick={() => {
                 setMuted(previousMuted => !previousMuted)
                 onToggleMute()
@@ -204,9 +211,16 @@ export const ShortVideoOverlay = memo(
         </div>
 
         {/* Bottom info bar */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 md:px-8 md:pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent pointer-events-auto">
+        <div
+          className="short-info absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/90 via-black/60 to-transparent pointer-events-auto"
+          style={{
+            paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
+            paddingRight: 'calc(5rem + env(safe-area-inset-right, 0px))',
+            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           <div className="w-full" style={{ maxWidth }}>
-            <div className="flex flex-col gap-4">
+            <div className="short-author flex flex-col gap-3">
               <FollowButton pubkey={video.pubkey} className="text-white self-start" />
               <div className="flex items-center gap-4">
                 <Link to={authorProfileUrl}>
@@ -231,10 +245,12 @@ export const ShortVideoOverlay = memo(
               </div>
             </div>
 
-            <div className="text-white my-2 line-clamp-3">{video.title || video.description}</div>
+            <div className="short-title text-white my-2 line-clamp-3">
+              {video.title || video.description}
+            </div>
 
             {(video.tags.length > 0 || (video.origins && video.origins.length > 0)) && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="short-tags flex flex-wrap gap-2 mb-2">
                 {video.tags.slice(0, 3).map(tag => (
                   <Link
                     key={tag}
@@ -273,8 +289,6 @@ export const ShortVideoOverlay = memo(
               </div>
             )}
           </div>
-          {/* Safe-area spacer for the iOS home indicator */}
-          <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} aria-hidden="true" />
         </div>
 
         {/* Dialogs — rendered as portals so they are unaffected by z-index */}
@@ -287,7 +301,10 @@ export const ShortVideoOverlay = memo(
         />
 
         <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
-          <SheetContent side="bottom" className="h-[85vh] overflow-y-auto max-w-2xl mx-auto">
+          <SheetContent
+            side="bottom"
+            className="h-[85dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px))] overflow-y-auto max-w-2xl mx-auto pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+          >
             <SheetHeader>
               <SheetTitle>Comments</SheetTitle>
             </SheetHeader>

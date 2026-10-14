@@ -57,7 +57,9 @@
       "onX": "X でシェア",
       "onReddit": "Reddit でシェア",
       "onFacebook": "Facebook でシェア",
-      "onPinterest": "Pinterest でシェア"
+      "onPinterest": "Pinterest でシェア",
+      "email": "メール",
+      "moreApps": "他のアプリで共有"
     },
     "comments": {
       "addComment": "コメントを追加...",
@@ -69,7 +71,8 @@
     "copy": "コピー",
     "back": "戻る",
     "cancel": "キャンセル",
-    "copied": "コピーしました！"
+    "copied": "コピーしました！",
+    "copyFailed": "コピーできませんでした。テキストを選択して手動でコピーしてください。"
   },
   "richText": {
     "video": "動画",
@@ -171,7 +174,10 @@
       "qrDescription": "Nostrサイナーアプリでスキャンしてください",
       "qrApps": "Amber、Nostrudel、その他のNIP-46サイナー",
       "qrMobileDescription": "この端末のNostrサイナーアプリでサインイン",
-      "qrAnotherDevice": "または別の端末でこのコードをスキャンしてください："
+      "thisDevice": "この端末で",
+      "otherDevice": "別の端末で",
+      "qrShow": "QRコードを表示",
+      "qrHide": "QRコードを隠す"
     },
     "signup": {
       "title": "アカウント作成",

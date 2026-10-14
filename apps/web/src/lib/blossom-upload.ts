@@ -5,6 +5,7 @@ import {
   extractServerDomain,
   normalizeServerUrl,
 } from '@nostube/core/blossom-utils'
+import { beginUploadWork } from '@/lib/active-work'
 
 export interface UploadFileWithProgressProps {
   file: File
@@ -757,9 +758,21 @@ export async function uploadFileChunked(
 }
 
 /**
- * Upload file using chunked upload to multiple servers
+ * Upload file using chunked upload to multiple servers. Counts as active upload work
+ * (no automatic reload, screen kept awake) until it settles.
  */
-export async function uploadFileToMultipleServersChunked({
+export async function uploadFileToMultipleServersChunked(
+  args: Parameters<typeof uploadToServersChunked>[0]
+): Promise<BlobDescriptor[]> {
+  const endWork = beginUploadWork()
+  try {
+    return await uploadToServersChunked(args)
+  } finally {
+    endWork()
+  }
+}
+
+async function uploadToServersChunked({
   file,
   servers,
   signer,

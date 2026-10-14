@@ -144,7 +144,10 @@ export function VideoGrid({
             </div>
           ))}
           {chunk(Array.from({ length: 24 }), portraitCols).map((row, i) => (
-            <div key={'portrait-skel-' + i} className={`grid ${gridColsClass(portraitCols)}`}>
+            <div
+              key={'portrait-skel-' + i}
+              className={cn('grid', gridColsClass(portraitCols), fullBleed && 'gap-0.5 sm:gap-0')}
+            >
               {row.map((_, j) => (
                 <VideoCardSkeleton key={j} format="vertical" fullBleed={fullBleed} />
               ))}
@@ -165,7 +168,8 @@ export function VideoGrid({
             ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
             : isHorizontal
               ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6',
+          isShort && fullBleed && 'gap-0.5 sm:gap-0'
         )}
       >
         {Array.from({ length: 24 }).map((_, i) => (
@@ -246,6 +250,7 @@ export function VideoGrid({
             className={cn(
               'grid',
               gridColsClass(getCols('vertical')),
+              fullBleed && 'gap-0.5 sm:gap-0',
               // Full-bleed portrait cards drop their padding on mobile; keep a gap before a wide row.
               fullBleed && wideIdx < wideRows.length && 'mb-6 sm:mb-0'
             )}
@@ -284,7 +289,8 @@ export function VideoGrid({
           ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
           : isHorizontal
             ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6',
+        isShort && fullBleed && 'gap-0.5 sm:gap-0'
       )}
     >
       {filteredVideos.map((video, index) => (

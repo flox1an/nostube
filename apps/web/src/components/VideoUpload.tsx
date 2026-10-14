@@ -8,6 +8,7 @@ import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { AuthDialog } from './auth/AuthDialog'
+import { EmptyState } from './EmptyState'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
 import { deleteBlobsFromServers, type DeleteBlobsProgress } from '@/lib/blossom-upload'
@@ -23,6 +24,7 @@ import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { isBetaUser } from '@/lib/beta-users'
 import { getBrowserTranscodeUploadDraft } from '@/lib/browser-transcode-upload-manager'
+import { takeSharedFile } from '@/lib/shared-file'
 import { UploadFlowFooter } from './video-upload/UploadFlowFooter'
 import type { UploadScreen } from './video-upload/UploadFlowFooter'
 import { UploadSourceScreen } from './video-upload/UploadSourceScreen'
@@ -85,7 +87,7 @@ interface UploadFormProps {
 
 export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const { t } = useTranslation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const { updateDraft, deleteDraft } = useUploadDrafts()
@@ -408,6 +410,26 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     [onPersist, onDrop, setInputMethod]
   )
 
+  // Video shared into the installed app (/upload?shared=1, see lib/shared-file.ts): it waits
+  // in the service worker's cache through the sign-in gate, then lands in this fresh draft.
+  const sharedTaken = useRef(false)
+  useEffect(() => {
+    if (!user || !searchParams.has('shared') || sharedTaken.current) return
+    if (file || uploadInfo.videos.length > 0) return
+    sharedTaken.current = true
+    void takeSharedFile()
+      .then(shared => shared && wrappedOnDrop([shared]))
+      .finally(() =>
+        setSearchParams(
+          params => {
+            params.delete('shared')
+            return params
+          },
+          { replace: true }
+        )
+      )
+  }, [user, searchParams, setSearchParams, file, uploadInfo.videos.length, wrappedOnDrop])
+
   const wrappedOnUrlProcess = useCallback(
     (url: string) => {
       onPersist?.()
@@ -528,40 +550,38 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   if (!user) {
     return (
-      <div className="mt-4 max-w-lg mx-auto text-center space-y-6 py-16">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">
-            {t('upload.signedOut.title', { defaultValue: 'Share your video with nostube' })}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t('upload.signedOut.subtitle', {
-              defaultValue: 'Sign in to publish. Uploading takes three quick steps.',
-            })}
-          </p>
-        </div>
-        <ol className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
-          <li className="flex items-center gap-2">
-            <UploadCloud className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {t('upload.signedOut.stepChoose', { defaultValue: 'Choose video' })}
-          </li>
-          <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
-            →
-          </span>
-          <li className="flex items-center gap-2">
-            <Film className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {t('upload.signedOut.stepDetails', { defaultValue: 'Add details' })}
-          </li>
-          <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
-            →
-          </span>
-          <li className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {t('upload.signedOut.stepPublish', { defaultValue: 'Publish' })}
-          </li>
-        </ol>
-        <Button className="rounded-full px-8" onClick={() => setAuthDialogOpen(true)}>
-          {t('upload.signedOut.cta', { defaultValue: 'Sign in to upload' })}
-        </Button>
+      <div className="max-w-560 mx-auto sm:p-4">
+        <EmptyState
+          heading="h1"
+          title={t('upload.signedOut.title', { defaultValue: 'Share your video with nostube' })}
+          description={t('upload.signedOut.subtitle', {
+            defaultValue: 'Sign in to publish. Uploading takes three quick steps.',
+          })}
+        >
+          <ol className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
+            <li className="flex items-center gap-2">
+              <UploadCloud className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {t('upload.signedOut.stepChoose', { defaultValue: 'Choose video' })}
+              <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
+                →
+              </span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Film className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {t('upload.signedOut.stepDetails', { defaultValue: 'Add details' })}
+              <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
+                →
+              </span>
+            </li>
+            <li className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {t('upload.signedOut.stepPublish', { defaultValue: 'Publish' })}
+            </li>
+          </ol>
+          <Button className="h-11 px-6" onClick={() => setAuthDialogOpen(true)}>
+            {t('upload.signedOut.cta', { defaultValue: 'Sign in to upload' })}
+          </Button>
+        </EmptyState>
         <AuthDialog
           isOpen={authDialogOpen}
           onClose={() => setAuthDialogOpen(false)}

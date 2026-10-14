@@ -13,6 +13,7 @@ import {
 } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import { probeTranscodeSource } from '@/lib/codec-detection'
+import { beginUploadWork } from '@/lib/active-work'
 
 export type VideoTranscodeStatus =
   'idle' | 'analyzing' | 'waiting' | 'transcoding' | 'done' | 'error'
@@ -141,7 +142,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
       setStatus('transcoding')
       setVariantProgress(variants.map(v => ({ variant: v, progress: 0, status: 'pending' })))
       setError(null)
-
+      const endWork = beginUploadWork()
       const results = await runBrowserTranscodeJob(
         file,
         variants,
@@ -166,6 +167,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
         },
         signal
       ).finally(() => {
+        endWork()
         if (abortRef.current === controller) {
           abortRef.current = null
         }

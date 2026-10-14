@@ -819,11 +819,12 @@ export function ShortsVideoPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [currentVideoIndex, handleVideoClick, navigate, startSettlingToIndex])
 
-  // Fullscreen mode - hide main layout elements
+  // Lock document scrolling while the measured media surface fills the screen.
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
     }
   }, [])
 
@@ -875,52 +876,68 @@ export function ShortsVideoPage() {
   const videoTransition =
     deckPhase === 'settling' ? `transform ${SETTLE_TRANSITION_MS}ms ${SETTLE_EASING}` : 'none'
 
+  const header = (
+    <div className="fixed top-0 left-0 right-0 z-[60]">
+      <Header transparent />
+    </div>
+  )
   // Direct link to a short that the viewer's NSFW setting hides.
   if (
     initialVideo &&
     getVideoPlayback(initialVideo.contentWarning, config.nsfwFilter) === 'hidden'
   ) {
-    return <ContentSafetyGate state="hidden" />
+    return (
+      <>
+        <Header />
+        <ContentSafetyGate state="hidden" />
+      </>
+    )
   }
 
   // Show loading state while fetching initial event OR while loading videos from relays
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
     return (
-      <div
-        className="fixed inset-x-0 top-0 bg-black flex flex-col items-center justify-center gap-4"
-        style={FULL_SCREEN_STYLE}
-      >
-        <Skeleton className="w-full h-full max-w-md aspect-9/16" />
-        <div className="text-white/70 text-sm">Looking for videos...</div>
-      </div>
+      <>
+        {header}
+        <div
+          className="absolute inset-x-0 top-0 bg-black flex flex-col items-center justify-center gap-4"
+          style={FULL_SCREEN_STYLE}
+        >
+          <Skeleton className="w-full h-full max-w-md aspect-9/16" />
+          <div className="text-white/70 text-sm">Looking for videos...</div>
+        </div>
+      </>
     )
   }
 
   // Only show "not found" after loading is complete and we have no videos
   if (!isLoadingVideos && !currentVideo && allVideos.length === 0) {
     return (
-      <div
-        className="fixed inset-x-0 top-0 bg-black flex items-center justify-center text-white"
-        style={FULL_SCREEN_STYLE}
-      >
-        <div className="text-center">
-          <div className="text-xl mb-2">Video not found</div>
-          <div className="text-white/70 text-sm">
-            The video may have been deleted or is unavailable
+      <>
+        {header}
+        <div
+          className="absolute inset-x-0 top-0 bg-black flex items-center justify-center text-white"
+          style={FULL_SCREEN_STYLE}
+        >
+          <div className="text-center">
+            <div className="text-xl mb-2">Video not found</div>
+            <div className="text-white/70 text-sm">
+              The video may have been deleted or is unavailable
+            </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-100">
-        <Header transparent />
-      </div>
+      {header}
+      {/* WebKit clips fixed layers to the short standalone viewport despite their measured
+          height. An absolute media surface paints to --app-height, including the safe areas. */}
       <div
-        className="fixed inset-x-0 top-0 z-50 bg-black overflow-hidden touch-none select-none"
-        style={{ ...FULL_SCREEN_STYLE, paddingTop: 'calc(56px + env(safe-area-inset-top, 0))' }}
+        className="absolute inset-x-0 top-0 z-50 bg-black overflow-hidden touch-none select-none"
+        style={FULL_SCREEN_STYLE}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

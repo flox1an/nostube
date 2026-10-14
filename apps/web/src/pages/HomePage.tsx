@@ -28,23 +28,32 @@ function HomeShelf({
   const { t } = useTranslation()
   if (videos.length === 0) return null
   return (
-    <section className="mb-2">
-      <div className="mb-3 flex items-baseline justify-between px-1 sm:px-2">
+    <section>
+      <div className="mb-3 flex items-center justify-between px-1 sm:px-2">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        <Button variant="ghost" size="sm" asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="relative after:absolute after:inset-x-0 after:-inset-y-1"
+          asChild
+        >
           <Link to={viewAllTo}>{t('common.viewAll', 'View all')}</Link>
         </Button>
       </div>
-      <div className="w-full overflow-x-auto scrollbar-hide">
+      {/* Bleeds to the screen edge on mobile so the next card peeks. */}
+      <div className="-mx-3 overflow-x-auto scrollbar-hide px-3 sm:mx-0 sm:px-0">
         <div className="flex gap-2 min-w-max">
-          {videos.map(video => (
-            <div key={video.id} className="w-72 shrink-0">
-              <VideoCard
-                video={video}
-                format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-              />
-            </div>
-          ))}
+          {videos.map(video => {
+            const format = video.type === 'shorts' ? 'vertical' : 'horizontal'
+            return (
+              <div
+                key={video.id}
+                className={`video-shelf-item shrink-0 ${format === 'vertical' ? 'video-shelf-short' : ''}`}
+              >
+                <VideoCard video={video} format={format} />
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -152,7 +161,7 @@ export function HomePage() {
         videos={subscriptionsVideos.slice(0, 12)}
       />
       <div className="mb-4 flex items-baseline justify-between px-1 sm:mb-5 sm:px-2">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+        <h1 className="text-[22px] font-semibold tracking-tight sm:text-2xl">
           {t('pages.home.latestVideos')}
         </h1>
         <span className="text-sm text-muted-foreground">{t('pages.home.newestFirst')}</span>

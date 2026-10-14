@@ -1,7 +1,16 @@
 {
+  "id": "/",
   "short_name": "nostube",
   "name": "nostube",
+  "description": "A modern Nostr video client",
+  "lang": "en",
+  "categories": ["entertainment", "social", "video"],
   "icons": [
+    {
+      "src": "/nostube-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
     {
       "src": "/nostube.png",
       "type": "image/png",
@@ -11,10 +20,52 @@
       "src": "/nostube.svg",
       "type": "image/svg+xml",
       "sizes": "any"
+    },
+    {
+      "src": "/nostube-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#141111",
-  "background_color": "#141111"
+  "background_color": "#141111",
+  "shortcuts": [
+    {
+      "name": "Upload video",
+      "short_name": "Upload",
+      "url": "/upload",
+      "icons": [{ "src": "/shortcut-upload.png", "type": "image/png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Shorts",
+      "short_name": "Shorts",
+      "url": "/shorts",
+      "icons": [{ "src": "/shortcut-shorts.png", "type": "image/png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Subscriptions",
+      "short_name": "Subs",
+      "url": "/subscriptions",
+      "icons": [{ "src": "/shortcut-subscriptions.png", "type": "image/png", "sizes": "96x96" }]
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "url": "/history",
+      "icons": [{ "src": "/shortcut-history.png", "type": "image/png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "video", "accept": ["video/*"] }]
+    }
+  },
+  "protocol_handlers": [{ "protocol": "web+nostr", "url": "/nostr-handler?uri=%s" }]
 }

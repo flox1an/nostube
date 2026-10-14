@@ -217,6 +217,7 @@ function VideoDetails({
             shareOpen={shareOpen}
             setShareOpen={onShareOpenChange}
             shareUrl={shareUrl}
+            shareTitle={video.title}
             shareLinks={shareLinks}
             includeTimestamp={includeTimestamp}
             setIncludeTimestamp={setIncludeTimestamp}

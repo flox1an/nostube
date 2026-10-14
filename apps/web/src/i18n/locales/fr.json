@@ -150,6 +150,8 @@
     "expiresIn": "Expire dans {{time}}",
     "expired": "Expiré",
     "updatedAgo": "mis à jour il y a {{time}}",
+    "publishedAt": "Publié le {{date}}",
+    "updatedAt": "Mis à jour le {{date}}",
     "comments": {
       "title": "Commentaires",
       "addComment": "Ajouter un commentaire...",
@@ -303,6 +305,8 @@
     "debugInfoDescription": "Détails techniques sur cet événement vidéo, les relais et les serveurs Blossom"
   },
   "upload": {
+    "reloadDeferred": "Nouvelle version disponible – rechargez après la mise en ligne",
+    "reloadNow": "Recharger maintenant",
     "title": "Mettre en ligne une vidéo",
     "stepIndicator": "Étape {{current}} sur {{total}}",
     "previous": "Précédent",
@@ -697,20 +701,23 @@
     },
     "cache": {
       "title": "Gestion du cache",
-      "description": "Effacez les événements et données en cache pour libérer de l'espace de stockage. Cela supprimera tous les événements Nostr stockés localement.",
+      "description": "Effacez les données en cache pour libérer de l'espace de stockage. Les événements en cache seront récupérés à nouveau depuis les relais si nécessaire.",
       "cacheSize": "Taille du cache",
       "calculating": "Calcul...",
-      "clearButton": "Effacer tout le cache",
-      "clearDescription": "Supprimer tous les événements et données en cache. L'application va se recharger.",
+      "persistent": "Stockage persistant",
+      "persistentOn": "Activé : le navigateur ne supprimera pas les données de l'application de lui-même.",
+      "persistentOff": "Désactivé : le navigateur peut supprimer les données de l'application en cas de manque d'espace. Installez l'application pour demander un stockage persistant.",
+      "persistentUnsupported": "Non pris en charge par ce navigateur.",
+      "clearButton": "Vider le cache",
+      "clearDescription": "Supprime les événements en cache, les scores de confiance et les vérifications de playlists. L'application va se recharger.",
       "clearing": "Effacement...",
       "whatGetsCleared": "Ce qui sera effacé :",
-      "item1": "Tous les événements Nostr en cache",
-      "item2": "Métadonnées d'événements et profils",
-      "item3": "Données de la chronologie",
-      "item4": "Stockage de base de données locale (IndexedDB)",
-      "note": "Remarque : L'application va se recharger pour fermer les connexions à la base de données avant l'effacement. Vos paramètres de compte, la configuration des relais et les préférences de l'application ne seront pas affectés.",
-      "confirmTitle": "Effacer tout le cache ?",
-      "confirmMessage": "Cela supprimera définitivement tous les événements et données Nostr en cache de votre navigateur. L'application va se recharger pour réinitialiser le cache.",
+      "item1": "Événements Nostr en cache (vidéos, profils, commentaires)",
+      "item2": "Scores de confiance",
+      "item3": "Résultats de validation des playlists",
+      "note": "Conservés : positions de lecture, vues non envoyées, fichiers de l'application hors ligne, votre compte, vos relais et préférences. L'application se recharge d'abord pour fermer les connexions aux bases de données.",
+      "confirmTitle": "Vider le cache ?",
+      "confirmMessage": "Cela supprime de ce navigateur les événements Nostr en cache, les scores de confiance et les résultats de validation des playlists. Les positions de lecture, les vues non envoyées et l'application hors ligne sont conservées. L'application va se recharger.",
       "confirmWarning": "Cette action ne peut pas être annulée, mais les événements seront récupérés à nouveau depuis les relais si nécessaire.",
       "clearingTitle": "Effacement du cache",
       "clearingMessage": "L'application va se recharger et effacer le cache..."
@@ -829,6 +836,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "Ouverture du lien…",
+      "invalidTitle": "Impossible d'ouvrir ce lien",
+      "invalidDescription": "Ce lien nostr est invalide ou n'est pas pris en charge."
+    },
     "home": {
       "latestVideos": "Vidéos récentes",
       "newestFirst": "Les plus récentes d’abord",
@@ -872,9 +884,9 @@
     },
     "author": {
       "joined": "Inscrit le {{date}}",
-      "allVideos": "Toutes les vidéos ({{count}})",
-      "allShorts": "Tous les shorts ({{count}})",
-      "liked": "Aimés ({{count}})",
+      "videosTab": "Vidéos",
+      "shortsTab": "Shorts",
+      "liked": "Aimés",
       "loadingPlaylists": "Chargement des listes de lecture...",
       "tags": "Tags",
       "noVideos": "Aucune vidéo trouvée.",
@@ -884,7 +896,7 @@
       "loadingMoreShorts": "Chargement de plus de shorts...",
       "noMoreShorts": "Plus de shorts à charger.",
       "noLikedVideos": "Aucune vidéo aimée ou zappée trouvée.",
-      "following": "Abonnements ({{count}})",
+      "following": "Abonnements",
       "noFollowing": "Ne suit personne sur nostube.",
       "showMore": "Afficher plus",
       "showLess": "Afficher moins",
@@ -1042,7 +1054,8 @@
     "notFound": "Introuvable",
     "error": "Erreur",
     "tryAgain": "Réessayer",
-    "debugInfo": "Informations de débogage"
+    "debugInfo": "Informations de débogage",
+    "pageLoadFailed": "Impossible de charger cette page. Vérifiez votre connexion et réessayez."
   },
   "onboarding": {
     "followImport": {
@@ -1198,6 +1211,18 @@
       "add": "Ajouter",
       "hint": "Entrez l'URL complète d'un serveur compatible"
     }
+  },
+  "install": {
+    "title": "Installer l'application",
+    "install": "Installer",
+    "dismiss": "Masquer",
+    "bannerText": "Installez l'application pour une lecture en plein écran et un démarrage plus rapide.",
+    "iosHint": "Installer l'application : touchez Partager, puis « Sur l'écran d'accueil ».",
+    "settingsDescription": "Installez l'application sur cet appareil pour la lancer depuis l'écran d'accueil en plein écran.",
+    "iosDialogTitle": "Sur l'écran d'accueil",
+    "iosStep1": "Touchez le bouton Partager dans la barre du navigateur.",
+    "iosStep2": "Faites défiler et choisissez « Sur l'écran d'accueil ».",
+    "iosStep3": "Touchez « Ajouter »."
   },
   "languages": {
     "en": "Anglais",

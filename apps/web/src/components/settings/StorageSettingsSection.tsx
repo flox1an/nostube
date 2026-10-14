@@ -19,6 +19,7 @@ import { RefreshCw } from 'lucide-react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { getDateLocale } from '@/lib/date-locale'
 import { clearBrowserCacheDataOnReload } from '@/lib/cache-clear'
+import { isStoragePersisted } from '@/lib/persistent-storage'
 import { resetNostrRuntimeCache } from '@/nostr/core'
 
 // ─── Cache Clear Section ─────────────────────────────
@@ -28,6 +29,7 @@ function CacheClearSection() {
   const [showClearDialog, setShowClearDialog] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
   const [cacheSize, setCacheSize] = useState<string>(t('settings.cache.calculating'))
+  const [persisted, setPersisted] = useState<boolean | null>(null)
 
   const estimateCacheSize = useCallback(async () => {
     try {
@@ -53,6 +55,8 @@ function CacheClearSection() {
     const run = async () => {
       const size = await estimateCacheSize()
       if (!cancelled) setCacheSize(size)
+      const isPersisted = await isStoragePersisted()
+      if (!cancelled) setPersisted(isPersisted)
     }
     run()
     return () => {
@@ -92,6 +96,17 @@ function CacheClearSection() {
           </Button>
         </div>
 
+        <div className="rounded-lg border p-4">
+          <p className="font-medium">{t('settings.cache.persistent')}</p>
+          <p className="text-sm text-muted-foreground">
+            {persisted === null
+              ? t('settings.cache.persistentUnsupported')
+              : persisted
+                ? t('settings.cache.persistentOn')
+                : t('settings.cache.persistentOff')}
+          </p>
+        </div>
+
         <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/5 p-4">
           <div>
             <p className="font-medium text-destructive">{t('settings.cache.clearButton')}</p>
@@ -125,7 +140,6 @@ function CacheClearSection() {
             <li>{t('settings.cache.item1')}</li>
             <li>{t('settings.cache.item2')}</li>
             <li>{t('settings.cache.item3')}</li>
-            <li>{t('settings.cache.item4')}</li>
           </ul>
           <p className="mt-2">{t('settings.cache.note')}</p>
         </details>

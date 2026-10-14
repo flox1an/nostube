@@ -138,9 +138,11 @@ export function SearchPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:p-4">
-      <div className="flex flex-col gap-3 p-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-start justify-between gap-3 px-4 py-3 sm:p-2">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">{t('pages.search.resultsFor', { query })}</h1>
+          <h1 className="line-clamp-2 break-words text-xl font-bold sm:text-2xl">
+            {t('pages.search.resultsFor', { query })}
+          </h1>
           {activeFilterCount > 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
               Showing {filteredVideos.length} of {videos.length} results

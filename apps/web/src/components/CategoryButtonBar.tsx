@@ -127,12 +127,12 @@ export function CategoryButtonBar({
             : undefined,
         }}
       >
-        <div className="flex min-w-max gap-2 p-2">
+        <div className="flex min-w-max gap-2 py-2 pr-2 pl-4 sm:pl-2">
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              'h-10 shrink-0 rounded-full px-4',
+              'relative h-10 shrink-0 rounded-full px-4 after:absolute after:inset-x-0 after:-inset-y-0.5',
               !activeSlug
                 ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
                 : 'border border-transparent bg-secondary/70 hover:border-border'
@@ -150,7 +150,7 @@ export function CategoryButtonBar({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-10 shrink-0 rounded-full px-4',
+                  'relative h-10 shrink-0 rounded-full px-4 after:absolute after:inset-x-0 after:-inset-y-0.5',
                   isActive
                     ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
                     : 'border border-transparent bg-secondary/70 hover:border-border'
@@ -164,7 +164,8 @@ export function CategoryButtonBar({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 py-2 pr-2 pl-1">
+      {/* Source + safety: compact on mobile so categories stay the primary row. */}
+      <div className="flex shrink-0 items-center gap-1 py-2 pr-4 pl-1 sm:gap-2 sm:pr-2">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -176,10 +177,18 @@ export function CategoryButtonBar({
                 source: displayLabel,
                 defaultValue: 'Content source: {{source}}',
               })}
-              className="h-10 shrink-0 rounded-full px-3 gap-1.5 border-border/80 bg-card shadow-none"
+              className="relative h-10 shrink-0 rounded-full px-3 gap-1.5 border-border/80 bg-card shadow-none after:absolute after:inset-x-0 after:-inset-y-0.5"
             >
               {selectedRelay ? <Wifi className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-              <span className="max-w-32 truncate">{displayLabel}</span>
+              {/* Default "Global" collapses to its icon on mobile; a chosen relay stays named. */}
+              <span
+                className={cn(
+                  'max-w-24 truncate sm:max-w-32',
+                  !selectedRelay && 'hidden sm:inline'
+                )}
+              >
+                {displayLabel}
+              </span>
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </PopoverTrigger>

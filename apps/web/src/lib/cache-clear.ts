@@ -1,14 +1,17 @@
 /**
  * Cache clearing utility
- * This runs on app initialization to clear IndexedDB if requested.
+ * This runs on app initialization to clear the cache databases if requested.
  */
 
-const FALLBACK_INDEXED_DB_CACHE_NAMES = [
-  'nostr-events',
+/**
+ * Only real caches: Nostr event cache (nostr-idb), trust scores, playlist validation verdicts.
+ * Play positions, the view-event outbox and the service-worker precache must survive a clear.
+ */
+export const CACHE_DATABASE_NAMES = [
   'nostr-idb',
-  'nostube-p2p-hls-blob-cache',
-  'nostube-play-positions',
-]
+  'nostube-trust-scores',
+  'nostube-playlist-validation',
+] as const
 
 const CLEAR_ON_LOAD_KEY = 'clearCacheOnLoad'
 const CLEAR_TIMEOUT_MS = 5000
@@ -50,41 +53,9 @@ function deleteDatabase(name: string): Promise<void> {
   })
 }
 
-async function getIndexedDatabaseNames(): Promise<string[]> {
-  if ('databases' in window.indexedDB) {
-    const databases = await withTimeout(window.indexedDB.databases(), [])
-
-    if (import.meta.env.DEV) {
-      console.log(
-        '[Cache Clear] Found databases:',
-        databases.map(db => db.name)
-      )
-    }
-
-    return databases
-      .map(database => database.name)
-      .filter((name): name is string => typeof name === 'string' && name.length > 0)
-  }
-
-  return FALLBACK_INDEXED_DB_CACHE_NAMES
-}
-
-async function deleteIndexedDatabaseCaches(): Promise<void> {
-  const databaseNames = await getIndexedDatabaseNames()
-
-  await withTimeout(Promise.all(databaseNames.map(deleteDatabase)), [])
-}
-
-async function deleteCacheStorageCaches(): Promise<void> {
-  if (!('caches' in window)) return
-
-  const cacheNames = await withTimeout(window.caches.keys(), [])
-  await withTimeout(Promise.all(cacheNames.map(cacheName => window.caches.delete(cacheName))), [])
-}
-
 export async function clearBrowserCacheData(): Promise<boolean> {
   try {
-    await Promise.all([deleteIndexedDatabaseCaches(), deleteCacheStorageCaches()])
+    await withTimeout(Promise.all(CACHE_DATABASE_NAMES.map(deleteDatabase)), [])
 
     if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
     return true

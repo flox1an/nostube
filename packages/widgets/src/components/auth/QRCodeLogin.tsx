@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useContext } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Loader2, Smartphone, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react'
+import { Loader2, Smartphone, RefreshCw, Copy, Check, ExternalLink, QrCode } from 'lucide-react'
 import { NostrConnectSigner } from 'applesauce-signers'
 import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
@@ -31,18 +31,13 @@ function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string)
   return `bunker://${remotePubkey}?${params.toString()}`
 }
 
-interface QRCodeLoginProps {
-  onLogin: () => void
-  onError: (error: string) => void
-  /** Phones prioritize the same-device signer-app deep link; desktop keeps QR as primary. */
-  isMobile?: boolean
-}
-
 export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCodeLoginProps) {
   const { t } = useTranslation()
   const accountManager = useContext(AccountsContext)
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // Phones lead with the same-device signer link; the QR (for another device) shows on request.
+  const [showQr, setShowQr] = useState(!isMobile)
   const signerRef = useRef<NostrConnectSigner | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -140,7 +135,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
     <div className="flex flex-col items-center space-y-4">
       {isMobile ? (
         <div className="w-full text-center space-y-3">
-          <Smartphone className="w-10 h-10 mx-auto text-primary" />
+          <h3 className="text-sm font-semibold">{t('auth.login.thisDevice', 'On this device')}</h3>
           <p className="text-sm text-muted-foreground">
             {t(
               'auth.login.qrMobileDescription',
@@ -174,20 +169,39 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
       )}
 
       {isMobile && (
-        <p className="text-xs text-muted-foreground">
-          {t('auth.login.qrAnotherDevice', 'Or scan this code from another device:')}
-        </p>
+        <div className="w-full border-t pt-4 text-center space-y-3">
+          <h3 className="text-sm font-semibold">
+            {t('auth.login.otherDevice', 'On another device')}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {t('auth.login.qrDescription', 'Scan with your Nostr signer app')}
+          </p>
+          {/* The pairing stays active either way; this only toggles its display. */}
+          <Button
+            variant="outline"
+            className="h-11 w-full rounded-full"
+            aria-expanded={showQr}
+            onClick={() => setShowQr(!showQr)}
+          >
+            <QrCode className="w-4 h-4 mr-2" />
+            {showQr
+              ? t('auth.login.qrHide', 'Hide QR code')
+              : t('auth.login.qrShow', 'Show QR code')}
+          </Button>
+        </div>
       )}
 
-      <div className="p-4 bg-white rounded-xl">
-        {nostrConnectUri ? (
-          <QRCodeSVG value={nostrConnectUri} size={200} level="M" includeMargin={false} />
-        ) : (
-          <div className="w-[200px] h-[200px] flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-      </div>
+      {showQr && (
+        <div className="p-4 bg-white rounded-xl">
+          {nostrConnectUri ? (
+            <QRCodeSVG value={nostrConnectUri} size={200} level="M" includeMargin={false} />
+          ) : (
+            <div className="w-[200px] h-[200px] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Button
@@ -195,7 +209,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
           size="sm"
           onClick={handleCopy}
           disabled={!nostrConnectUri}
-          className="text-muted-foreground"
+          className="h-11 min-w-11 text-muted-foreground sm:h-9 sm:min-w-0"
           aria-label={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
           title={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
         >
@@ -219,7 +233,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
           variant="ghost"
           size="icon"
           onClick={handleRefresh}
-          className="h-8 w-8 shrink-0 text-muted-foreground"
+          className="h-11 w-11 shrink-0 text-muted-foreground sm:h-8 sm:w-8"
           aria-label={t('auth.login.qrRefresh', 'New Code')}
           title={t('auth.login.qrRefresh', 'New Code')}
         >

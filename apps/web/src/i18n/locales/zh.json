@@ -150,6 +150,8 @@
     "expiresIn": "{{time}}后过期",
     "expired": "已过期",
     "updatedAgo": "{{time}}前更新",
+    "publishedAt": "发布于 {{date}}",
+    "updatedAt": "更新于 {{date}}",
     "comments": {
       "title": "评论",
       "addComment": "添加评论...",
@@ -303,6 +305,8 @@
     "debugInfoDescription": "此视频事件、中继节点和 Blossom 服务器的技术详情"
   },
   "upload": {
+    "reloadDeferred": "有新版本可用 – 请在上传完成后重新加载",
+    "reloadNow": "立即重新加载",
     "title": "上传视频",
     "stepIndicator": "第 {{current}} 步，共 {{total}} 步",
     "previous": "上一步",
@@ -697,20 +701,23 @@
     },
     "cache": {
       "title": "缓存管理",
-      "description": "清除缓存的事件和数据以释放存储空间。这将删除所有本地存储的 Nostr 事件。",
+      "description": "清除缓存数据以释放存储空间。缓存的事件会在需要时从中继重新获取。",
       "cacheSize": "缓存大小",
       "calculating": "正在计算...",
-      "clearButton": "清除所有缓存",
-      "clearDescription": "删除所有缓存的事件和数据。应用将重新加载。",
+      "persistent": "持久存储",
+      "persistentOn": "已开启：浏览器不会自行删除应用数据。",
+      "persistentOff": "已关闭：存储空间不足时浏览器可能删除应用数据。安装应用即可请求持久存储。",
+      "persistentUnsupported": "此浏览器不支持。",
+      "clearButton": "清除缓存",
+      "clearDescription": "删除缓存的事件、信任评分和播放列表校验结果。应用将重新加载。",
       "clearing": "正在清除...",
       "whatGetsCleared": "会被清除的内容：",
-      "item1": "所有缓存的 Nostr 事件",
-      "item2": "事件元数据和个人资料",
-      "item3": "时间线数据",
-      "item4": "本地数据库存储（IndexedDB）",
-      "note": "注意：应用将重新加载以关闭数据库连接后再清除。您的账户设置、中继配置和应用偏好不受影响。",
-      "confirmTitle": "清除所有缓存？",
-      "confirmMessage": "这将永久删除浏览器中所有缓存的 Nostr 事件和数据。应用将重新加载以重新初始化缓存。",
+      "item1": "缓存的 Nostr 事件（视频、个人资料、评论）",
+      "item2": "信任评分",
+      "item3": "播放列表校验结果",
+      "note": "保留：播放位置、未发送的观看记录、离线应用文件、您的账户、中继和偏好设置。应用会先重新加载以关闭数据库连接。",
+      "confirmTitle": "清除缓存？",
+      "confirmMessage": "这将从此浏览器中删除缓存的 Nostr 事件、信任评分和播放列表校验结果。播放位置、未发送的观看记录和离线应用将保留。应用将重新加载。",
       "confirmWarning": "此操作无法撤消，但事件将根据需要从中继重新获取。",
       "clearingTitle": "正在清除缓存",
       "clearingMessage": "应用将重新加载并清除缓存..."
@@ -829,6 +836,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "正在打开链接…",
+      "invalidTitle": "无法打开此链接",
+      "invalidDescription": "此 nostr 链接无效或不受支持。"
+    },
     "home": {
       "latestVideos": "最新视频",
       "newestFirst": "最新优先",
@@ -872,9 +884,9 @@
     },
     "author": {
       "joined": "{{date}} 加入",
-      "allVideos": "所有视频（{{count}}）",
-      "allShorts": "所有短视频（{{count}}）",
-      "liked": "已赞（{{count}}）",
+      "videosTab": "视频",
+      "shortsTab": "短视频",
+      "liked": "已赞",
       "loadingPlaylists": "正在加载播放列表...",
       "tags": "标签",
       "noVideos": "未找到视频。",
@@ -884,7 +896,7 @@
       "loadingMoreShorts": "正在加载更多短视频...",
       "noMoreShorts": "没有更多短视频可加载。",
       "noLikedVideos": "未找到已赞或已打赏的视频。",
-      "following": "正在关注（{{count}}）",
+      "following": "正在关注",
       "noFollowing": "在 nostube 上未关注任何人。",
       "showMore": "展开",
       "showLess": "收起",
@@ -1042,7 +1054,8 @@
     "notFound": "未找到",
     "error": "错误",
     "tryAgain": "重试",
-    "debugInfo": "调试信息"
+    "debugInfo": "调试信息",
+    "pageLoadFailed": "无法加载此页面。请检查网络连接后重试。"
   },
   "onboarding": {
     "followImport": {
@@ -1198,6 +1211,18 @@
       "add": "添加",
       "hint": "输入兼容服务器的完整 URL"
     }
+  },
+  "install": {
+    "title": "安装应用",
+    "install": "安装",
+    "dismiss": "关闭",
+    "bannerText": "安装应用，享受全屏播放和更快的启动速度。",
+    "iosHint": "安装应用：点击“分享”，然后选择“添加到主屏幕”。",
+    "settingsDescription": "在此设备上安装应用，即可从主屏幕启动并全屏运行。",
+    "iosDialogTitle": "添加到主屏幕",
+    "iosStep1": "点击浏览器工具栏中的“分享”按钮。",
+    "iosStep2": "向下滚动并选择“添加到主屏幕”。",
+    "iosStep3": "点击“添加”。"
   },
   "languages": {
     "en": "英语",

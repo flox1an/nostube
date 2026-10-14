@@ -57,7 +57,9 @@
       "onX": "分享到 X",
       "onReddit": "分享到 Reddit",
       "onFacebook": "分享到 Facebook",
-      "onPinterest": "分享到 Pinterest"
+      "onPinterest": "分享到 Pinterest",
+      "email": "邮件",
+      "moreApps": "通过其他应用分享"
     },
     "comments": {
       "addComment": "添加评论...",
@@ -69,7 +71,8 @@
     "copy": "复制",
     "back": "返回",
     "cancel": "取消",
-    "copied": "已复制！"
+    "copied": "已复制！",
+    "copyFailed": "无法复制。请选中文本后手动复制。"
   },
   "richText": {
     "video": "视频",
@@ -171,7 +174,10 @@
       "qrDescription": "用你的 Nostr 签名应用扫码",
       "qrApps": "Amber、Nostrudel 或其他 NIP-46 签名器",
       "qrMobileDescription": "在本设备上用你的 Nostr 签名应用登录",
-      "qrAnotherDevice": "或用其他设备扫描此二维码："
+      "thisDevice": "在本设备上",
+      "otherDevice": "在其他设备上",
+      "qrShow": "显示二维码",
+      "qrHide": "隐藏二维码"
     },
     "signup": {
       "title": "创建账户",

@@ -150,6 +150,8 @@
     "expiresIn": "Expira en {{time}}",
     "expired": "Expirado",
     "updatedAgo": "actualizado hace {{time}}",
+    "publishedAt": "Publicado {{date}}",
+    "updatedAt": "Actualizado {{date}}",
     "comments": {
       "title": "Comentarios",
       "addComment": "Agregar un comentario...",
@@ -303,6 +305,8 @@
     "debugInfoDescription": "Detalles técnicos sobre este evento de video, relays y servidores Blossom"
   },
   "upload": {
+    "reloadDeferred": "Nueva versión disponible: recarga después de la subida",
+    "reloadNow": "Recargar ahora",
     "title": "Subir Video",
     "stepIndicator": "Paso {{current}} de {{total}}",
     "previous": "Anterior",
@@ -697,20 +701,23 @@
     },
     "cache": {
       "title": "Administración de Caché",
-      "description": "Borre eventos y datos almacenados en caché para liberar espacio de almacenamiento. Esto eliminará todos los eventos de Nostr almacenados localmente.",
+      "description": "Borra los datos en caché para liberar espacio de almacenamiento. Los eventos en caché se volverán a obtener de los relays cuando sea necesario.",
       "cacheSize": "Tamaño de Caché",
       "calculating": "Calculando...",
-      "clearButton": "Borrar Toda la Caché",
-      "clearDescription": "Eliminar todos los eventos y datos almacenados en caché. La aplicación se recargará.",
+      "persistent": "Almacenamiento persistente",
+      "persistentOn": "Activado: el navegador no eliminará los datos de la aplicación por sí solo.",
+      "persistentOff": "Desactivado: el navegador puede eliminar los datos de la aplicación si falta espacio. Instala la aplicación para solicitar almacenamiento persistente.",
+      "persistentUnsupported": "No compatible con este navegador.",
+      "clearButton": "Borrar caché",
+      "clearDescription": "Elimina los eventos en caché, las puntuaciones de confianza y las comprobaciones de listas. La aplicación se recargará.",
       "clearing": "Borrando...",
       "whatGetsCleared": "Lo que se borrará:",
-      "item1": "Todos los eventos de Nostr en caché",
-      "item2": "Metadatos de eventos y perfiles",
-      "item3": "Datos de línea de tiempo",
-      "item4": "Almacenamiento de base de datos local (IndexedDB)",
-      "note": "Nota: La aplicación se recargará para cerrar las conexiones de la base de datos antes de borrar. La configuración de su cuenta, configuración de relays y preferencias de la aplicación no se verán afectadas.",
-      "confirmTitle": "¿Borrar Toda la Caché?",
-      "confirmMessage": "Esto eliminará permanentemente todos los eventos y datos de Nostr en caché de su navegador. La aplicación se recargará para reinicializar la caché.",
+      "item1": "Eventos de Nostr en caché (vídeos, perfiles, comentarios)",
+      "item2": "Puntuaciones de confianza",
+      "item3": "Resultados de validación de listas de reproducción",
+      "note": "Se conservan: posiciones de reproducción, vistas no enviadas, los archivos de la aplicación sin conexión, tu cuenta, relays y preferencias. La aplicación se recarga primero para cerrar las conexiones de base de datos.",
+      "confirmTitle": "¿Borrar caché?",
+      "confirmMessage": "Esto elimina de este navegador los eventos de Nostr en caché, las puntuaciones de confianza y los resultados de validación de listas de reproducción. Las posiciones de reproducción, las vistas no enviadas y la aplicación sin conexión se conservan. La aplicación se recargará.",
       "confirmWarning": "Esta acción no se puede deshacer, pero los eventos se volverán a obtener de los relays según sea necesario.",
       "clearingTitle": "Borrando Caché",
       "clearingMessage": "La aplicación se recargará y borrará la caché..."
@@ -829,6 +836,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "Abriendo enlace…",
+      "invalidTitle": "No se puede abrir este enlace",
+      "invalidDescription": "Este enlace de nostr no es válido o no es compatible."
+    },
     "home": {
       "latestVideos": "Últimos vídeos",
       "newestFirst": "Más recientes primero",
@@ -872,9 +884,9 @@
     },
     "author": {
       "joined": "Se unió {{date}}",
-      "allVideos": "Todos los videos ({{count}})",
-      "allShorts": "Todos los shorts ({{count}})",
-      "liked": "Me gusta ({{count}})",
+      "videosTab": "Videos",
+      "shortsTab": "Shorts",
+      "liked": "Me gusta",
       "loadingPlaylists": "Cargando listas de reproducción...",
       "tags": "Etiquetas",
       "noVideos": "No se encontraron videos.",
@@ -884,7 +896,7 @@
       "loadingMoreShorts": "Cargando más shorts...",
       "noMoreShorts": "No hay más shorts para cargar.",
       "noLikedVideos": "No se encontraron videos con me gusta o zapeados.",
-      "following": "Siguiendo ({{count}})",
+      "following": "Siguiendo",
       "noFollowing": "No sigue a nadie en nostube.",
       "showMore": "Mostrar más",
       "showLess": "Mostrar menos",
@@ -1042,7 +1054,8 @@
     "notFound": "No Encontrado",
     "error": "Error",
     "tryAgain": "Intentar de Nuevo",
-    "debugInfo": "Información de Depuración"
+    "debugInfo": "Información de Depuración",
+    "pageLoadFailed": "No se pudo cargar esta página. Comprueba tu conexión e inténtalo de nuevo."
   },
   "onboarding": {
     "followImport": {
@@ -1198,6 +1211,18 @@
       "add": "Añadir",
       "hint": "Introduce la URL completa de un servidor compatible"
     }
+  },
+  "install": {
+    "title": "Instalar app",
+    "install": "Instalar",
+    "dismiss": "Ocultar",
+    "bannerText": "Instala la app para reproducir a pantalla completa y abrirla más rápido.",
+    "iosHint": "Instalar la app: toca Compartir y luego «Añadir a pantalla de inicio».",
+    "settingsDescription": "Instala la app en este dispositivo para abrirla desde la pantalla de inicio a pantalla completa.",
+    "iosDialogTitle": "Añadir a pantalla de inicio",
+    "iosStep1": "Toca el botón Compartir en la barra del navegador.",
+    "iosStep2": "Desplázate hacia abajo y elige «Añadir a pantalla de inicio».",
+    "iosStep3": "Toca «Añadir»."
   },
   "languages": {
     "en": "Inglés",

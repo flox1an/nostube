@@ -458,14 +458,12 @@ describe('SiteHome', () => {
     player.currentTime = 95
     fireEvent.timeUpdate(player)
     expect(new URL(link.value).searchParams.get('t')).toBe('83')
-    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Embed' }))
-    const embed = await screen.findByRole('textbox')
-    expect((embed as HTMLTextAreaElement).value).toContain('&t=83')
-    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Embed' }))
+    const embed = (await screen.findByLabelText('Embed Code')) as HTMLTextAreaElement
+    expect(embed.value).toContain('&t=83')
     fireEvent.click(screen.getByRole('checkbox', { name: 'Include current timestamp' }))
-    expect(
-      new URL((screen.getByRole('textbox') as HTMLInputElement).value).searchParams.has('t')
-    ).toBe(false)
+    expect(new URL(link.value).searchParams.has('t')).toBe(false)
+    expect(embed.value).not.toContain('&t=')
     fireEvent.keyDown(screen.getByRole('button', { name: 'Close' }), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(screen.getByTestId('player')).toBeTruthy()
@@ -510,7 +508,13 @@ describe('SiteHome', () => {
     renderSite(describedClient)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     fireEvent.click(screen.getByText('My first upload'))
-    const external = await screen.findByRole('link', { name: 'https://example.com/more' })
+    const external = await waitFor(() => {
+      const link = screen
+        .getAllByRole('link')
+        .find(link => link.getAttribute('href') === 'https://example.com/more')
+      expect(link).toBeDefined()
+      return link!
+    })
     expect(external.getAttribute('target')).toBe('_blank')
     expect(external.getAttribute('rel')).toContain('noopener')
     const seek = screen.getByRole('link', { name: '1:23' })

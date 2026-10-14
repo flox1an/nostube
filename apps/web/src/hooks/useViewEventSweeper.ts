@@ -10,7 +10,8 @@ import { flushPendingViewEvents, resetPublishingToPending } from '@/lib/view-eve
  * Responsibilities:
  * - On user login: reset any `publishing` rows left over from a crash back to
  *   `pending`, then run an immediate flush.
- * - On tab foreground (visibilitychange → visible, pagehide recovery): flush.
+ * - On tab foreground (visibilitychange → visible, pagehide recovery) and when
+ *   the browser comes back online: flush.
  * - Respects the `viewTrackingEnabled` config flag — no-ops when disabled.
  *
  * Place this hook inside a render-nothing component (`<ViewEventSweeperInit />`)
@@ -45,12 +46,16 @@ export function useViewEventSweeper() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.pubkey, enabled])
 
-  // Sweep whenever the tab becomes visible again.
+  // Sweep whenever the tab becomes visible again or the network comes back.
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') sweep()
     }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('online', sweep)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('online', sweep)
+    }
   }, [sweep])
 }

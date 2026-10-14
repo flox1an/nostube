@@ -150,6 +150,8 @@
     "expiresIn": "Läuft ab in {{time}}",
     "expired": "Abgelaufen",
     "updatedAgo": "aktualisiert vor {{time}}",
+    "publishedAt": "Veröffentlicht {{date}}",
+    "updatedAt": "Aktualisiert {{date}}",
     "comments": {
       "title": "Kommentare",
       "addComment": "Kommentar hinzufügen...",
@@ -303,6 +305,8 @@
     "debugInfoDescription": "Technische Details zu diesem Video-Event, Relays und Blossom-Servern"
   },
   "upload": {
+    "reloadDeferred": "Neue Version verfügbar – nach dem Upload neu laden",
+    "reloadNow": "Jetzt neu laden",
     "title": "Video hochladen",
     "stepIndicator": "Schritt {{current}} von {{total}}",
     "previous": "Zurück",
@@ -697,20 +701,23 @@
     },
     "cache": {
       "title": "Cache-Verwaltung",
-      "description": "Lösche gecachte Events und Daten, um Speicherplatz freizugeben. Dies entfernt alle lokal gespeicherten Nostr-Events.",
+      "description": "Lösche gecachte Daten, um Speicherplatz freizugeben. Gecachte Events werden bei Bedarf erneut von Relays geladen.",
       "cacheSize": "Cache-Größe",
       "calculating": "Wird berechnet...",
-      "clearButton": "Gesamten Cache löschen",
-      "clearDescription": "Entferne alle gecachten Events und Daten. Die App wird neu geladen.",
+      "persistent": "Dauerhafter Speicher",
+      "persistentOn": "An: Der Browser löscht App-Daten nicht von selbst.",
+      "persistentOff": "Aus: Der Browser kann App-Daten löschen, wenn der Speicher knapp wird. Installiere die App, um dauerhaften Speicher anzufordern.",
+      "persistentUnsupported": "Wird von diesem Browser nicht unterstützt.",
+      "clearButton": "Cache leeren",
+      "clearDescription": "Löscht gecachte Events, Vertrauenswerte und Playlist-Prüfungen. Die App wird neu geladen.",
       "clearing": "Wird gelöscht...",
       "whatGetsCleared": "Was wird gelöscht:",
-      "item1": "Alle gecachten Nostr-Events",
-      "item2": "Event-Metadaten und Profile",
-      "item3": "Timeline-Daten",
-      "item4": "Lokaler Datenbankspeicher (IndexedDB)",
-      "note": "Hinweis: Die App wird neu geladen, um Datenbankverbindungen zu schließen, bevor gelöscht wird. Deine Kontoeinstellungen, Relay-Konfiguration und App-Einstellungen sind nicht betroffen.",
-      "confirmTitle": "Gesamten Cache löschen?",
-      "confirmMessage": "Dies löscht dauerhaft alle gecachten Nostr-Events und Daten aus deinem Browser. Die App wird neu geladen, um den Cache neu zu initialisieren.",
+      "item1": "Gecachte Nostr-Events (Videos, Profile, Kommentare)",
+      "item2": "Vertrauenswerte",
+      "item3": "Ergebnisse der Playlist-Prüfung",
+      "note": "Bleibt erhalten: Wiedergabepositionen, noch nicht gesendete Aufrufe, die Offline-App-Dateien, dein Konto, Relays und Einstellungen. Die App lädt zuerst neu, um Datenbankverbindungen zu schließen.",
+      "confirmTitle": "Cache leeren?",
+      "confirmMessage": "Dies löscht gecachte Nostr-Events, Vertrauenswerte und Ergebnisse der Playlist-Prüfung aus diesem Browser. Wiedergabepositionen, nicht gesendete Aufrufe und die Offline-App bleiben erhalten. Die App wird neu geladen.",
       "confirmWarning": "Diese Aktion kann nicht rückgängig gemacht werden, aber Events werden bei Bedarf von Relays erneut abgerufen.",
       "clearingTitle": "Cache wird gelöscht",
       "clearingMessage": "Die App wird neu geladen und der Cache gelöscht..."
@@ -829,6 +836,11 @@
     }
   },
   "pages": {
+    "nostrHandler": {
+      "opening": "Link wird geöffnet…",
+      "invalidTitle": "Dieser Link lässt sich nicht öffnen",
+      "invalidDescription": "Dieser Nostr-Link ist ungültig oder wird nicht unterstützt."
+    },
     "home": {
       "latestVideos": "Neueste Videos",
       "newestFirst": "Neueste zuerst",
@@ -872,9 +884,9 @@
     },
     "author": {
       "joined": "Beigetreten {{date}}",
-      "allVideos": "Alle Videos ({{count}})",
-      "allShorts": "Alle Shorts ({{count}})",
-      "liked": "Gefällt mir ({{count}})",
+      "videosTab": "Videos",
+      "shortsTab": "Shorts",
+      "liked": "Gefällt mir",
       "loadingPlaylists": "Lädt Playlists...",
       "tags": "Tags",
       "noVideos": "Keine Videos gefunden.",
@@ -884,7 +896,7 @@
       "loadingMoreShorts": "Lädt mehr Shorts...",
       "noMoreShorts": "Keine weiteren Shorts zum Laden.",
       "noLikedVideos": "Keine gelikten oder gezappten Videos gefunden.",
-      "following": "Folgt ({{count}})",
+      "following": "Folgt",
       "noFollowing": "Folgt niemandem auf nostube.",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen",
@@ -1042,7 +1054,8 @@
     "notFound": "Nicht gefunden",
     "error": "Fehler",
     "tryAgain": "Erneut versuchen",
-    "debugInfo": "Debug-Info"
+    "debugInfo": "Debug-Info",
+    "pageLoadFailed": "Diese Seite konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
   },
   "onboarding": {
     "followImport": {
@@ -1198,6 +1211,18 @@
       "add": "Hinzufügen",
       "hint": "Gib die vollständige URL eines kompatiblen Servers ein"
     }
+  },
+  "install": {
+    "title": "App installieren",
+    "install": "Installieren",
+    "dismiss": "Ausblenden",
+    "bannerText": "Installiere die App für Vollbild-Wiedergabe und einen schnelleren Start.",
+    "iosHint": "App installieren: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+    "settingsDescription": "Installiere die App auf diesem Gerät, damit sie vom Home-Bildschirm startet und im Vollbild läuft.",
+    "iosDialogTitle": "Zum Home-Bildschirm",
+    "iosStep1": "Tippe in der Browser-Leiste auf „Teilen“.",
+    "iosStep2": "Scrolle nach unten und wähle „Zum Home-Bildschirm“.",
+    "iosStep3": "Tippe auf „Hinzufügen“."
   },
   "languages": {
     "en": "Englisch",

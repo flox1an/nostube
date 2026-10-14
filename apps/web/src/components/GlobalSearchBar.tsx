@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type FormEvent } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Input } from '@nostube/widgets/components/input'
 import { Button } from '@nostube/widgets/components/button'
@@ -67,6 +67,30 @@ export function GlobalSearchBar({
   const showDropdown = isOpen && trimmedQuery.length >= 2
   // History: empty input, has entries
   const showHistory = isOpen && trimmedQuery.length === 0 && history.length > 0
+  const isListOpen = showDropdown || showHistory
+  const [listMaxHeight, setListMaxHeight] = useState<number>()
+
+  // Keep suggestions inside the visible area (above the on-screen keyboard), so the
+  // creator list scrolls and "Search videos" stays reachable.
+  useLayoutEffect(() => {
+    if (!isListOpen) return
+    const viewport = window.visualViewport
+    const fit = () => {
+      const input = inputRef.current
+      if (!input) return
+      const visibleBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight
+      setListMaxHeight(Math.max(visibleBottom - input.getBoundingClientRect().bottom - 12, 64))
+    }
+    fit()
+    viewport?.addEventListener('resize', fit)
+    viewport?.addEventListener('scroll', fit)
+    window.addEventListener('resize', fit)
+    return () => {
+      viewport?.removeEventListener('resize', fit)
+      viewport?.removeEventListener('scroll', fit)
+      window.removeEventListener('resize', fit)
+    }
+  }, [isListOpen])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -251,19 +275,30 @@ export function GlobalSearchBar({
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className={cn('pl-10', inputClassName)}
+          className={cn('h-11 pl-10 pr-12 md:h-10', inputClassName)}
           aria-label="Search"
           placeholder="Search videos and creators..."
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
         />
         <Search
-          className={cn('absolute left-3 top-3 h-4 w-4 text-muted-foreground', iconClassName)}
+          className={cn(
+            'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
+            iconClassName
+          )}
         />
         {searchQuery && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className={cn('absolute right-1 top-1 h-8 w-8 p-0', clearButtonClassName)}
+            className={cn(
+              'absolute right-0 top-0 h-11 w-11 p-0 md:h-10 md:w-10',
+              clearButtonClassName
+            )}
             aria-label="Clear search"
             onClick={clearSearch}
           >
@@ -275,7 +310,8 @@ export function GlobalSearchBar({
         {showHistory && (
           <div
             ref={dropdownRef}
-            className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-hidden"
+            style={{ maxHeight: listMaxHeight }}
+            className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-y-auto overscroll-contain"
           >
             <div className="p-2">
               <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -288,7 +324,7 @@ export function GlobalSearchBar({
                   type="button"
                   onClick={() => handleHistoryClick(query)}
                   className={cn(
-                    'group w-full flex items-center gap-3 px-2 py-2 rounded-sm text-left hover:bg-accent transition-colors',
+                    'group w-full flex min-h-11 items-center gap-3 px-2 py-2 rounded-sm text-left hover:bg-accent transition-colors',
                     selectedIndex === index && 'bg-accent'
                   )}
                 >
@@ -298,7 +334,7 @@ export function GlobalSearchBar({
                     role="button"
                     aria-label={`Remove "${query}" from history`}
                     onClick={e => handleHistoryDelete(e, query)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 p-1 pointer-coarse:p-2.5 rounded hover:bg-background transition-opacity"
                   >
                     <X className="h-3 w-3 text-muted-foreground" />
                   </span>
@@ -312,11 +348,12 @@ export function GlobalSearchBar({
         {showDropdown && (
           <div
             ref={dropdownRef}
-            className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-hidden"
+            style={{ maxHeight: listMaxHeight }}
+            className="absolute top-full left-0 right-0 mt-1 flex flex-col bg-popover border rounded-md shadow-lg z-50 overflow-hidden"
           >
-            {/* People section */}
+            {/* People section — scrolls; the video search below stays visible */}
             {(loading || profiles.length > 0) && (
-              <div className="p-2">
+              <div className="min-h-0 overflow-y-auto overscroll-contain p-2">
                 <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
                   <User className="h-3 w-3" />
                   Creators
@@ -357,18 +394,18 @@ export function GlobalSearchBar({
             )}
 
             {/* Divider */}
-            {profiles.length > 0 && <div className="border-t" />}
+            {profiles.length > 0 && <div className="shrink-0 border-t" />}
 
             {/* Search videos option */}
             <button
               type="submit"
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent transition-colors',
+                'w-full shrink-0 flex items-center gap-3 px-4 py-3 text-left hover:bg-accent transition-colors',
                 selectedIndex === profiles.length && 'bg-accent'
               )}
             >
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <span>
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 truncate">
                 Search videos for "<span className="font-medium">{trimmedQuery}</span>"
               </span>
             </button>

@@ -480,10 +480,10 @@ export function RichTextContent({
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent-foreground hover:underline break-all"
+                className="text-accent-foreground hover:underline wrap-anywhere"
                 title={url}
               >
-                {shortenUrl(url)}
+                {shortenUrl(url.replace(/^https?:\/\//, '').replace(/\/$/, ''))}
               </a>
             )
           }

@@ -4,6 +4,7 @@ import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Shield, TriangleAlert } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,13 +95,13 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
   // skeletons, otherwise the empty grid flashes and infinite scroll pages on.
   const pending = enabled && filteredVideos?.length === 0 && hasPendingTrustScores(authorPubkeys)
 
-  const trustFilterLabel = enabled
-    ? t('pages.home.trustFilterOn', {
-        defaultValue: 'Trust filter on — hiding low-score authors',
-      })
-    : t('pages.home.trustFilterOff', {
-        defaultValue: 'Trust filter off — showing all videos',
-      })
+  const onLabel = t('pages.home.trustFilterOn', {
+    defaultValue: 'Trust filter on — hiding low-score authors',
+  })
+  const offLabel = t('pages.home.trustFilterOff', {
+    defaultValue: 'Trust filter off — showing all videos',
+  })
+  const trustFilterLabel = enabled ? onLabel : offLabel
 
   const filterButton = (
     <>
@@ -109,14 +110,16 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
           <Button
             variant="secondary"
             size="sm"
-            className={`h-10 w-10 shrink-0 rounded-full border ${enabled ? 'border-green-500' : 'border-transparent'}`}
+            className={`relative h-10 w-10 shrink-0 rounded-full border after:absolute after:-inset-0.5 ${enabled ? 'border-green-500' : 'border-transparent'}`}
             aria-label={trustFilterLabel}
             aria-pressed={enabled}
             onClick={() => {
               if (enabled && !localStorage.getItem('trustFilter.warningShown')) {
                 setShowWarning(true)
               } else {
-                setEnabled(prev => !prev)
+                // Tooltips don't open on touch: announce the new state visibly.
+                toast(enabled ? offLabel : onLabel)
+                setEnabled(!enabled)
               }
             }}
           >

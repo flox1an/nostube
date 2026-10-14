@@ -395,13 +395,20 @@ export function VideoComments({
 
   const isResolvedEmpty = !isLoadingComments && threadedComments.length === 0
 
+  const signInButton = (
+    <Button variant="outline" className="h-11" onClick={() => setAuthDialogOpen(true)}>
+      {t('video.comments.signInToComment', { defaultValue: 'Sign in to comment' })}
+    </Button>
+  )
+
   return (
     <div>
-      <h2 className="mb-4">
-        {threadedComments.length} {t('video.comments.title')}
+      <h2 className="mb-3 text-lg font-semibold">
+        {threadedComments.length > 0 && `${threadedComments.length} `}
+        {t('video.comments.title')}
       </h2>
       {user ? (
-        <div className="mb-8">
+        <div className="mb-4">
           <CommentInput
             value={newComment}
             onChange={setNewComment}
@@ -412,11 +419,7 @@ export function VideoComments({
           />
         </div>
       ) : (
-        <div className="mb-8">
-          <Button variant="outline" onClick={() => setAuthDialogOpen(true)}>
-            {t('video.comments.signInToComment', { defaultValue: 'Sign in to comment' })}
-          </Button>
-        </div>
+        !isResolvedEmpty && <div className="mb-4">{signInButton}</div>
       )}
 
       {isLoadingComments && threadedComments.length === 0 ? (
@@ -425,9 +428,13 @@ export function VideoComments({
           <CommentSkeleton />
         </div>
       ) : isResolvedEmpty ? (
-        <p className="py-4 text-sm text-muted-foreground">
-          {t('video.comments.startConversation', { defaultValue: 'Start the conversation.' })}
-        </p>
+        // One compact empty state: short hint plus the sign-in CTA for guests.
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-foreground">
+            {t('video.comments.startConversation', { defaultValue: 'Start the conversation.' })}
+          </p>
+          {!user && signInButton}
+        </div>
       ) : (
         <div>
           {visibleThreadedComments.map(comment => (

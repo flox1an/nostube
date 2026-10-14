@@ -82,7 +82,7 @@ export function VideoPageLayout({
         {/* Right column: sidebar - hidden on lg-xl screens in favor of sheet */}
         <div
           className={cn(
-            'w-full p-2 md:p-0 space-y-4',
+            'w-full px-4 py-2 md:p-0 space-y-4',
             // Hide on lg-xl screens where we use sheet overlay instead
             !cinemaMode && 'lg:hidden xl:block',
             !cinemaMode && 'xl:col-start-2 xl:row-start-1',

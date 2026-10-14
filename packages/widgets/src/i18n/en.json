@@ -57,7 +57,9 @@
       "onX": "Share on X",
       "onReddit": "Share on Reddit",
       "onFacebook": "Share on Facebook",
-      "onPinterest": "Share on Pinterest"
+      "onPinterest": "Share on Pinterest",
+      "email": "Email",
+      "moreApps": "Share via another app"
     },
     "comments": {
       "addComment": "Add a comment...",
@@ -69,7 +71,8 @@
     "copy": "Copy",
     "back": "Back",
     "cancel": "Cancel",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "copyFailed": "Couldn't copy. Select the text and copy it manually."
   },
   "richText": {
     "video": "Video",
@@ -171,7 +174,10 @@
       "qrDescription": "Scan with your Nostr signer app",
       "qrApps": "Amber, Nostrudel, or other NIP-46 signers",
       "qrMobileDescription": "Sign in with your Nostr signer app on this device",
-      "qrAnotherDevice": "Or scan this code from another device:"
+      "thisDevice": "On this device",
+      "otherDevice": "On another device",
+      "qrShow": "Show QR code",
+      "qrHide": "Hide QR code"
     },
     "signup": {
       "title": "Create Your Account",

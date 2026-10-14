@@ -13,6 +13,7 @@ import {
 } from '@/hooks'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { AuthDialog } from '@/components/auth/AuthDialog'
+import { EmptyState } from '@/components/EmptyState'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 interface LibrarySectionProps {
@@ -96,21 +97,22 @@ export function LibraryPage() {
   if (!user) {
     return (
       <div className="max-w-560 mx-auto sm:p-4">
-        <div className="rounded-xl border p-8 text-center space-y-3">
-          <h1 className="text-xl font-semibold">
-            {t('pages.library.signInTitle', { defaultValue: 'Sign in to see your library' })}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('pages.library.signInDescription', {
-              defaultValue:
-                'History, playlists and liked videos are saved to your account, not this device.',
-            })}
-          </p>
-          <Button onClick={() => setAuthDialogOpen(true)}>
+        <EmptyState
+          heading="h1"
+          title={t('pages.library.signInTitle', { defaultValue: 'Sign in to see your library' })}
+          description={t('pages.library.signInDescription', {
+            defaultValue:
+              'History, playlists and liked videos are saved to your account, not this device.',
+          })}
+        >
+          <Button className="h-11 px-6" onClick={() => setAuthDialogOpen(true)}>
             <LogIn className="h-4 w-4 mr-2" />
             {t('auth.login.signIn', { defaultValue: 'Sign in' })}
           </Button>
-        </div>
+          <Button asChild variant="link" className="h-11">
+            <Link to="/">{t('pages.history.browseButton')}</Link>
+          </Button>
+        </EmptyState>
 
         <AuthDialog
           isOpen={authDialogOpen}

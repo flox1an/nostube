@@ -57,11 +57,17 @@ export function CollapsibleText({
     <div className={className}>
       <div
         ref={textRef}
-        className={cn(
-          'whitespace-pre-wrap break-words break-all',
-          !alwaysExpanded && !isExpanded && 'line-clamp-5',
-          showButton && 'cursor-pointer'
-        )}
+        className={cn('whitespace-pre-wrap break-words break-all', showButton && 'cursor-pointer')}
+        style={
+          !alwaysExpanded && !isExpanded
+            ? {
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: maxLines,
+                overflow: 'hidden',
+              }
+            : undefined
+        }
         onClick={handleClick}
       >
         <RichTextContent content={text} videoLink={videoLink} authorPubkey={authorPubkey} />
@@ -70,7 +76,8 @@ export function CollapsibleText({
         <Button
           variant="ghost"
           size="sm"
-          className="mt-2 h-8 px-2"
+          className="-mx-2 -mb-2 h-11 px-2"
+          aria-expanded={isExpanded}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? (

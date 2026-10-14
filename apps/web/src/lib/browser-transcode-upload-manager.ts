@@ -25,6 +25,7 @@ import {
   updateBrowserTranscodeJob,
   upsertBrowserTranscodeJob,
 } from '@/lib/browser-transcode-job-storage'
+import { beginUploadWork } from '@/lib/active-work'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 
@@ -322,6 +323,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     message: 'Browser transcode queued.',
   })
 
+  const endWork = beginUploadWork()
   try {
     updateBrowserState(draftId, state => ({
       ...state,
@@ -939,5 +941,6 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     }))
   } finally {
     activeJobs.delete(draftId)
+    endWork()
   }
 }

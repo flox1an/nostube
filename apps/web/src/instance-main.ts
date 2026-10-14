@@ -13,6 +13,8 @@ import {
   type ConfigResponse,
   type InstanceConfig,
 } from '@nostube/core/instance-config'
+// Static is safe here: it only pulls sonner and the bare i18next instance, no app config.
+import { reloadUnlessBusy } from './lib/active-work'
 
 async function fetchConfig(): Promise<ConfigResponse> {
   try {
@@ -54,12 +56,15 @@ function showScreen(title: string, reason: string, button: string) {
   root.replaceChildren(h1, p, btn)
 }
 
-/** A different applied revision reloads the page, which rebuilds every loader from the new scope. */
+/**
+ * A different applied revision reloads the page, which rebuilds every loader from the new scope
+ * (deferred while an upload or transcode runs).
+ */
 async function recheckRevision(revision: number) {
   const res = await fetchConfig()
   if (res.kind !== 'http' || res.status !== 200) return
   const parsed = parseInstanceConfig(res.body)
-  if (parsed.ok && parsed.config.revision !== revision) location.reload()
+  if (parsed.ok && parsed.config.revision !== revision) reloadUnlessBusy()
 }
 
 async function boot() {

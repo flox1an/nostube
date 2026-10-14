@@ -57,7 +57,9 @@
       "onX": "Compartir en X",
       "onReddit": "Compartir en Reddit",
       "onFacebook": "Compartir en Facebook",
-      "onPinterest": "Compartir en Pinterest"
+      "onPinterest": "Compartir en Pinterest",
+      "email": "Correo",
+      "moreApps": "Compartir con otra aplicación"
     },
     "comments": {
       "addComment": "Agregar un comentario...",
@@ -69,7 +71,8 @@
     "copy": "Copiar",
     "back": "Volver",
     "cancel": "Cancelar",
-    "copied": "¡Copiado!"
+    "copied": "¡Copiado!",
+    "copyFailed": "No se pudo copiar. Selecciona el texto y cópialo manualmente."
   },
   "richText": {
     "video": "Vídeo",
@@ -171,7 +174,10 @@
       "qrDescription": "Escanea con tu app firmadora de Nostr",
       "qrApps": "Amber, Nostrudel u otros firmadores NIP-46",
       "qrMobileDescription": "Inicia sesión con tu app firmadora de Nostr en este dispositivo",
-      "qrAnotherDevice": "O escanea este código desde otro dispositivo:"
+      "thisDevice": "En este dispositivo",
+      "otherDevice": "En otro dispositivo",
+      "qrShow": "Mostrar código QR",
+      "qrHide": "Ocultar código QR"
     },
     "signup": {
       "title": "Crear Su Cuenta",

@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Download } from 'lucide-react'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Select,
   SelectContent,
@@ -10,10 +13,15 @@ import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-gr
 import { Label } from '@nostube/widgets/components/label'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
+import { useInstallState } from '@/hooks/useInstallState'
+import { getInstallMode, promptInstall } from '@/lib/install-prompt'
+import { IosInstallDialog } from '@/components/InstallHint'
 
 export function AppearanceSection() {
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
   const { t, i18n } = useTranslation()
+  const installMode = getInstallMode(useInstallState())
+  const [isIosInstallOpen, setIsIosInstallOpen] = useState(false)
 
   const handleLanguageChange = (lng: string) => {
     i18n.changeLanguage(lng)
@@ -31,24 +39,27 @@ export function AppearanceSection() {
           value={theme}
           onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}
         >
-          <div className="flex items-center space-x-2">
+          <Label
+            htmlFor="appearance-theme-light"
+            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+          >
             <RadioGroupItem value="light" id="appearance-theme-light" />
-            <Label htmlFor="appearance-theme-light" className="font-normal cursor-pointer">
-              {t('settings.general.light')}
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
+            {t('settings.general.light')}
+          </Label>
+          <Label
+            htmlFor="appearance-theme-dark"
+            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+          >
             <RadioGroupItem value="dark" id="appearance-theme-dark" />
-            <Label htmlFor="appearance-theme-dark" className="font-normal cursor-pointer">
-              {t('settings.general.dark')}
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
+            {t('settings.general.dark')}
+          </Label>
+          <Label
+            htmlFor="appearance-theme-system"
+            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+          >
             <RadioGroupItem value="system" id="appearance-theme-system" />
-            <Label htmlFor="appearance-theme-system" className="font-normal cursor-pointer">
-              {t('settings.general.system')}
-            </Label>
-          </div>
+            {t('settings.general.system')}
+          </Label>
         </RadioGroup>
         <p className="text-xs text-muted-foreground">
           {t('settings.general.themeModeDescription')}
@@ -82,7 +93,7 @@ export function AppearanceSection() {
         <h3 id="appearance-language-label" className="text-base font-semibold">
           {t('settings.general.language')}
         </h3>
-        <Select value={i18n.language} onValueChange={handleLanguageChange}>
+        <Select value={i18n.resolvedLanguage} onValueChange={handleLanguageChange}>
           <SelectTrigger id="appearance-language" aria-labelledby="appearance-language-label">
             <SelectValue placeholder={t('settings.general.selectLanguage')} />
           </SelectTrigger>
@@ -98,6 +109,24 @@ export function AppearanceSection() {
         </Select>
         <p className="text-xs text-muted-foreground">{t('settings.general.languageDescription')}</p>
       </div>
+
+      {/* Install app (hidden once installed or running standalone) */}
+      {installMode && (
+        <div className="space-y-2 py-6">
+          <h3 className="text-base font-semibold">{t('install.title')}</h3>
+          <Button
+            variant="outline"
+            onClick={() =>
+              installMode === 'prompt' ? void promptInstall() : setIsIosInstallOpen(true)
+            }
+          >
+            <Download />
+            {t('install.install')}
+          </Button>
+          <p className="text-xs text-muted-foreground">{t('install.settingsDescription')}</p>
+          <IosInstallDialog open={isIosInstallOpen} onOpenChange={setIsIosInstallOpen} />
+        </div>
+      )}
     </div>
   )
 }

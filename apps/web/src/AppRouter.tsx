@@ -103,6 +103,9 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m
 const Mp4DebugPage = lazy(() =>
   import('./pages/Mp4DebugPage').then(m => ({ default: m.Mp4DebugPage }))
 )
+const NostrHandlerPage = lazy(() =>
+  import('./pages/NostrHandlerPage').then(m => ({ default: m.NostrHandlerPage }))
+)
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function VideoPageLoader() {
@@ -427,6 +430,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<Mp4DebugPageLoader />}>
                 <Mp4DebugPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/nostr-handler"
+            element={
+              <Suspense fallback={null}>
+                <NostrHandlerPage />
               </Suspense>
             }
           />

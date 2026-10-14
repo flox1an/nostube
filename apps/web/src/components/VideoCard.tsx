@@ -33,7 +33,7 @@ interface VideoCardProps {
   videoIndex?: number // Index of this video in the allVideos array
   /**
    * Card sits in a grid: below `sm` it renders edge-to-edge with square corners
-   * (horizontal: full width, vertical: ~1px gap, titles hidden). Rounded from `sm` up.
+   * (horizontal: full width, vertical: grid gap only, title/creator as overlay). Rounded from `sm` up.
    */
   fullBleed?: boolean
   /**
@@ -75,6 +75,9 @@ export const VideoCard = React.memo(function VideoCard({
   // Determine if we should show NSFW warning based on filter setting (default to 'hide' if not set)
   const nsfwFilter = config.nsfwFilter ?? 'hide'
   const showNsfwWarning = video.contentWarning && nsfwFilter === 'warning'
+
+  // Full-bleed shorts tiles show title/creator on the thumbnail below `sm`.
+  const overlayMeta = fullBleed && format === 'vertical'
 
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
@@ -151,7 +154,7 @@ export const VideoCard = React.memo(function VideoCard({
         'group rounded-xl px-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2',
         fullBleed && 'rounded-none sm:rounded-xl',
         fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
-        fullBleed && format === 'vertical' && 'p-[0.5px] sm:pt-0 sm:pb-6'
+        overlayMeta && 'p-0 sm:pb-6'
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -240,10 +243,23 @@ export const VideoCard = React.memo(function VideoCard({
                 </div>
               </div>
             )}
+            {overlayMeta && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/75 via-black/35 to-transparent px-2 pt-10 pb-2 text-white sm:hidden">
+                <p className="line-clamp-2 break-words text-[13px] font-semibold leading-4 drop-shadow">
+                  {video.title}
+                </p>
+                {!hideAuthor && <p className="mt-0.5 truncate text-xs text-white/80">{name}</p>}
+              </div>
+            )}
             {/* Progress bar at bottom of thumbnail */}
             <PlayProgressBar videoId={video.id} duration={video.duration} />
             {video.duration > 0 && (
-              <div className="absolute bottom-2 right-2 bg-black/50 text-white px-1 rounded text-sm">
+              <div
+                className={cn(
+                  'absolute bottom-2 right-2 bg-black/50 text-white px-1 rounded text-sm',
+                  overlayMeta && 'max-sm:top-2 max-sm:bottom-auto'
+                )}
+              >
                 {formatDuration(video.duration)}
               </div>
             )}
@@ -252,12 +268,15 @@ export const VideoCard = React.memo(function VideoCard({
         <div
           className={cn(
             'pt-3 px-1',
-            fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-3 sm:px-1')
+            fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-4 sm:px-1')
           )}
         >
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
-              <Link to={authorProfileUrl} className="shrink-0">
+              <Link
+                to={authorProfileUrl}
+                className="relative shrink-0 after:absolute after:-inset-0.5"
+              >
                 <UserAvatar
                   picture={metadata?.picture}
                   pubkey={video.pubkey}
@@ -274,29 +293,23 @@ export const VideoCard = React.memo(function VideoCard({
                 desktopRoute={desktopPlayerRoute}
                 className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <h3
-                  className={cn(
-                    'line-clamp-2 break-words font-semibold leading-5 tracking-[-0.01em]',
-                    format === 'vertical' ? 'text-sm' : 'text-[0.95rem]'
-                  )}
-                >
+                <h3 className="line-clamp-2 break-words text-[15px] font-semibold leading-5 tracking-[-0.01em]">
                   {video.title}
                 </h3>
               </DesktopVideoLink>
-              <div className="mt-1 flex items-center text-xs">
+              <div className="mt-1 flex min-w-0 items-center text-[13px] leading-5 text-muted-foreground">
                 {!hideAuthor && (
                   <>
-                    <Link
-                      to={authorProfileUrl}
-                      className="block text-muted-foreground hover:text-primary"
-                    >
+                    <Link to={authorProfileUrl} className="min-w-0 truncate hover:text-primary">
                       {name}
                     </Link>
+                    <span aria-hidden="true" className="shrink-0">
+                      &nbsp;•&nbsp;
+                    </span>
                   </>
                 )}
-                {name && <>&nbsp;•&nbsp;</>}
                 <div
-                  className="text-muted-foreground"
+                  className="shrink-0 whitespace-nowrap"
                   title={formatDate(new Date(getPublishDate(video) * 1000), 'PPpp', {
                     locale: dateLocale,
                   })}
@@ -313,7 +326,7 @@ export const VideoCard = React.memo(function VideoCard({
               pubkey={video.pubkey}
               videoId={video.id}
               videoTitle={video.title}
-              className="-mr-1 shrink-0 transition-opacity data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+              className="relative -mr-1 shrink-0 transition-opacity after:absolute after:-inset-1.5 data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             />
           </div>
         </div>
@@ -338,7 +351,7 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
       className={cn(
         'px-1 pb-6 sm:px-2',
         fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
-        fullBleed && format === 'vertical' && 'p-[0.5px] sm:pt-0 sm:pb-6'
+        fullBleed && format === 'vertical' && 'p-0 sm:pb-6'
       )}
     >
       <Skeleton
@@ -351,7 +364,7 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
       <div
         className={cn(
           'pt-3 px-1',
-          fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-3 sm:px-1')
+          fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-4 sm:px-1')
         )}
       >
         <div className="flex gap-3">

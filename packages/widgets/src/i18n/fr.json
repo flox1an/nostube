@@ -142,6 +142,7 @@
       "advanced": "Avancé",
       "bunker": "Bunker",
       "extensionDescription": "Connexion en un clic à l'aide de l'extension de navigateur",
+      "noExtension": "Aucune extension trouvée dans ce navigateur. Installez une extension NIP-07 comme Alby ou nos2x ; elle est détectée dès qu'elle est active.",
       "loggingIn": "Connexion en cours...",
       "loginWithExtension": "Se connecter avec l'extension",
       "enterProtectedKey": "Clé protégée par mot de passe",

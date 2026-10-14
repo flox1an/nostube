@@ -142,6 +142,7 @@
       "advanced": "Advanced",
       "bunker": "Bunker",
       "extensionDescription": "Login with one click using the browser extension",
+      "noExtension": "No extension found in this browser. Install a NIP-07 extension such as Alby or nos2x; it is picked up as soon as it is active.",
       "loggingIn": "Logging in...",
       "loginWithExtension": "Login with Extension",
       "enterProtectedKey": "Password-protected key",

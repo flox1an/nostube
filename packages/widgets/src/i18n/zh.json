@@ -142,6 +142,7 @@
       "advanced": "高级",
       "bunker": "远程签名",
       "extensionDescription": "使用浏览器扩展一键登录",
+      "noExtension": "此浏览器中未找到扩展。请安装 NIP-07 扩展，例如 Alby 或 nos2x；启用后会立即被识别。",
       "loggingIn": "正在登录...",
       "loginWithExtension": "使用扩展登录",
       "enterProtectedKey": "密码保护的密钥",

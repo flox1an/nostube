@@ -142,6 +142,7 @@
       "advanced": "詳細",
       "bunker": "バンカー",
       "extensionDescription": "ブラウザ拡張機能でワンクリックログイン",
+      "noExtension": "このブラウザで拡張機能が見つかりません。Alby や nos2x などの NIP-07 拡張機能をインストールしてください。有効になるとすぐに認識されます。",
       "loggingIn": "ログイン中...",
       "loginWithExtension": "拡張機能でログイン",
       "enterProtectedKey": "パスワード保護キー",

@@ -142,6 +142,7 @@
       "advanced": "Erweitert",
       "bunker": "Bunker",
       "extensionDescription": "Mit einem Klick über die Browser-Erweiterung anmelden",
+      "noExtension": "In diesem Browser wurde keine Erweiterung gefunden. Installiere eine NIP-07-Erweiterung wie Alby oder nos2x; sie wird erkannt, sobald sie aktiv ist.",
       "loggingIn": "Wird angemeldet...",
       "loginWithExtension": "Mit Erweiterung anmelden",
       "enterProtectedKey": "Passwortgeschützter Schlüssel",

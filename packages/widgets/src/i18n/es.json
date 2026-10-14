@@ -142,6 +142,7 @@
       "advanced": "Avanzado",
       "bunker": "Bunker",
       "extensionDescription": "Inicie sesión con un clic usando la extensión del navegador",
+      "noExtension": "No se encontró ninguna extensión en este navegador. Instala una extensión NIP-07 como Alby o nos2x; se detecta en cuanto está activa.",
       "loggingIn": "Iniciando sesión...",
       "loginWithExtension": "Iniciar sesión con Extensión",
       "enterProtectedKey": "Clave protegida con contraseña",

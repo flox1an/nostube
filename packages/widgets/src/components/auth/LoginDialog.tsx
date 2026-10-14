@@ -55,9 +55,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
   const isEncryptedKey = isNcryptsec(keyInput)
-  // Only offer the Extension tab when a real NIP-07 provider is present AND we
-  // are not on a mobile browser (extensions don't run there).
-  const showExtensionTab = hasNostrExtension && !isMobileBrowser
+  // The Extension tab shows on every desktop browser: a NIP-07 extension may inject late or
+  // answer the probe below oddly, and the login itself only needs `window.nostr`. Without a
+  // detected extension it says how to get one and is not recommended. Mobile browsers never get
+  // it (extensions don't run there).
+  const showExtensionTab = !isMobileBrowser
 
   useEffect(() => {
     if (!isOpen) return
@@ -76,14 +78,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
       setHasNostrExtension(hasSigningMethods)
     }
 
+    // Extensions inject `window.nostr` at their own pace: keep looking while the dialog is open.
     detectExtension()
-    const detectionTimers = [
-      window.setTimeout(detectExtension, 100),
-      window.setTimeout(detectExtension, 500),
-    ]
+    const detection = window.setInterval(detectExtension, 250)
 
     return () => {
-      detectionTimers.forEach(window.clearTimeout)
+      window.clearInterval(detection)
     }
   }, [isOpen])
 
@@ -103,13 +103,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     if (
       isOpen &&
       showExtensionTab &&
+      hasNostrExtension &&
       !autoSelectedExtensionRef.current &&
       !manualTabSelectRef.current
     ) {
       autoSelectedExtensionRef.current = true
       setActiveTab('extension')
     }
-  }, [isOpen, showExtensionTab])
+  }, [isOpen, showExtensionTab, hasNostrExtension])
 
   const handleTabChange = (value: string) => {
     manualTabSelectRef.current = true
@@ -269,9 +270,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                   className="min-h-11 min-w-0 gap-1 text-xs sm:text-sm"
                 >
                   <span className="truncate">{t('auth.login.extension')}</span>
-                  <Badge variant="secondary" className="px-1 py-0 text-[10px] leading-4 shrink-0">
-                    {t('auth.login.recommended', 'Recommended')}
-                  </Badge>
+                  {hasNostrExtension && (
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px] leading-4 shrink-0">
+                      {t('auth.login.recommended', 'Recommended')}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               )}
               <TabsTrigger value="protected" className="min-h-11 min-w-0 text-xs sm:text-sm">
@@ -299,6 +302,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                 <div className="text-center p-4 rounded-lg bg-card">
                   <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
                   <p className="text-sm mb-4">{t('auth.login.extensionDescription')}</p>
+                  {!hasNostrExtension && (
+                    <p className="text-sm mb-4 text-muted-foreground">
+                      {t('auth.login.noExtension')}
+                    </p>
+                  )}
                   <Button
                     className="w-full rounded-full py-6"
                     onClick={handleExtensionLogin}
@@ -428,17 +436,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <div className="text-center text-sm">
-            <p className="text-gray-600 dark:text-gray-400">
-              {t('auth.login.noAccount')}{' '}
-              <button
-                onClick={handleSignupClick}
-                className="text-primary hover:underline font-medium"
-              >
-                {t('auth.login.signUp')}
-              </button>
-            </p>
-          </div>
+          {onSignup && (
+            <div className="text-center text-sm">
+              <p className="text-gray-600 dark:text-gray-400">
+                {t('auth.login.noAccount')}{' '}
+                <button
+                  onClick={handleSignupClick}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {t('auth.login.signUp')}
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

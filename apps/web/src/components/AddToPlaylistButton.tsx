@@ -125,7 +125,7 @@ export function AddToPlaylistButton({
             &nbsp; {isAdding ? t('addToPlaylist.adding') : t('addToPlaylist.playlist')}
           </DropdownMenuItem>
         ) : (
-          <Button variant="secondary" className="w-full justify-start" disabled={isAdding}>
+          <Button variant="secondary" className="justify-start" disabled={isAdding}>
             {isAdding ? <Skeleton className="mr-2 h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {isAdding ? t('addToPlaylist.adding') : t('addToPlaylist.playlist')}
           </Button>

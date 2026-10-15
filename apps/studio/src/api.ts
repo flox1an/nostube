@@ -408,7 +408,9 @@ export async function waitForRestart(
     const remainingMs = deadline - Date.now()
     if (remainingMs <= 0) return false
     try {
-      const res = await fetch('/api/health', {
+      // A unique query: a proxy that caches /api/health (a Cloudflare "cache everything" rule)
+      // would otherwise keep answering the old boot id.
+      const res = await fetch(`/api/health?t=${Date.now()}`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(Math.min(5000, remainingMs)),
       })

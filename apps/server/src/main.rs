@@ -450,12 +450,15 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
                 app.branding.public_config(),
             )
                 .into_response(),
-            (&Method::GET, "/api/health") => Json(serde_json::json!({
-                "ok": true,
-                "boot": app.boot_id,
-                "revision": revision(std::env::var("NOSTUBE_REVISION").ok()),
-            }))
-            .into_response(),
+            (&Method::GET, "/api/health") => (
+                [(header::CACHE_CONTROL, "no-store")],
+                Json(serde_json::json!({
+                    "ok": true,
+                    "boot": app.boot_id,
+                    "revision": revision(std::env::var("NOSTUBE_REVISION").ok()),
+                })),
+            )
+                .into_response(),
             _ => StatusCode::NOT_FOUND.into_response(),
         };
     }

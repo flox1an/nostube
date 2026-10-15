@@ -384,6 +384,14 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/schedule", get(schedule_get).post(schedule_post))
         .route("/api/admin/schedule/cancel", post(schedule_cancel))
         .with_state(state)
+        .layer(axum::middleware::map_response(no_store))
+}
+
+/// Admin answers belong to one session: a shared cache (a CDN in front of the instance) must
+/// neither keep them nor hand them to another visitor.
+async fn no_store(mut res: Response) -> Response {
+    res.headers_mut().insert(header::CACHE_CONTROL, header::HeaderValue::from_static("private, no-store"));
+    res
 }
 
 // ── Pages ───────────────────────────────────────────────────────────────────
@@ -1254,7 +1262,7 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
         Ok(n) => n,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     };
-    ([(header::CACHE_CONTROL, "no-store")], Json(serde_json::json!({ "nsec": nsec }))).into_response()
+    Json(serde_json::json!({ "nsec": nsec })).into_response()
 }
 
 // ── Config apply ────────────────────────────────────────────────────────────
@@ -2338,7 +2346,7 @@ mod tests {
 
         let (status, headers, body) = send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(headers[header::CACHE_CONTROL], "no-store");
+        assert_eq!(headers[header::CACHE_CONTROL], "private, no-store");
         let secret = SecretKey::from_bech32(body["nsec"].as_str().unwrap()).unwrap();
         assert_eq!(Keys::new(secret).public_key().to_hex(), pubkey);
 

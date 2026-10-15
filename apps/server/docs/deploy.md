@@ -121,11 +121,13 @@ says so, because the server cannot know under which address it is published.
 - **WebSockets** must pass: the relay is `wss://<origin>` on the same address.
 - **No small upload limits.** Blossom takes files up to 4 GiB. nginx defaults to 1 MB
   (`client_max_body_size`), Cloudflare's free plan stops at 100 MB per request.
-- **Let the server's `Cache-Control` decide.** The studio page, `/api/config` and `/api/health`
-  must not be cached, hashed assets may be cached for a year; the server says so in its headers.
+- **Let the server's `Cache-Control` decide.** The studio page, `/api/config`, `/api/health` and
+  everything under `/admin` and `/api/admin` must not be cached (admin answers are
+  `private, no-store`), hashed assets may be cached for a year; the server says so in its headers.
   A Cloudflare rule that caches everything (Cache Rule with an Edge TTL override, or the "Cache
-  Everything" page rule) keeps serving an old studio for days after an update and old site
-  settings after every save. Exclude the instance's host from such rules.
+  Everything" page rule) ignores these headers: it serves an old studio for days after an update,
+  old site settings after every save, and the admin answers of one logged-in session (config,
+  stats, signer) to anyone who asks. Exclude the instance's host from such rules.
 - **Do not publish the instance's own port to the internet.** It speaks plain HTTP, including the
   admin login. In Compose, give only the proxy `ports:`; the instance is reached over the Compose
   network. (The binary alone listens on `127.0.0.1` in proxy mode for the same reason.)

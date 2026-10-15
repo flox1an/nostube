@@ -5,18 +5,22 @@ import { AccountsContext, AccountsProvider } from 'applesauce-react/providers'
 import type { AccountManager } from 'applesauce-accounts'
 import type { NostubeClient } from '@nostube/core/client'
 import { SITE_PAGES, type InstanceConfig } from '@nostube/core/instance-config'
+import { cn } from '@nostube/widgets/cn'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { InstallBanner } from '@nostube/widgets/components/InstallHint'
 import { OfflineBanner } from '@nostube/widgets/components/OfflineBanner'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AuthArea } from './AuthArea'
+import { Breadcrumb } from './Breadcrumb'
 import { GridPage, SearchBox, SearchPage } from './GridPage'
 import { SiteFooter, SitePage } from './SitePage'
 import { SiteDonate } from './SiteDonate'
 import { VideoView } from './VideoView'
 import { useAgeGate } from './use-age-gate'
 import { useCreatorProfile } from './use-creator-profile'
+import { useVideoById } from './use-video-by-id'
 
 export interface SiteHomeProps {
   client: NostubeClient
@@ -55,8 +59,11 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
   const profile = useCreatorProfile(client, config)
   const gate = useAgeGate()
   useBatchedProfileLoader()
-  // The banner would push a video below the fold; the header (title, sign-in) stays everywhere.
-  const onVideoPage = useMatch('/v/:id') !== null
+  // The banner would push a video below the fold. On a video page the header is a breadcrumb
+  // (site › video) instead of the logo, title and tagline; sign-in and search stay everywhere.
+  const videoMatch = useMatch('/v/:id')
+  const onVideoPage = videoMatch !== null
+  const lookup = useVideoById(videoMatch?.params.id, config)
   const search = config.search.mode === 'local'
   // A new page shows its own query in the box (empty outside `/search`).
   const { key: pageKey } = useLocation()
@@ -71,35 +78,55 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
           className="-mx-4 aspect-[3/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:aspect-[5/1] sm:w-full sm:rounded-lg"
         />
       )}
-      <header className="relative flex items-start justify-between gap-4">
-        <Link to="/" className="flex min-w-0 items-center gap-4">
-          {config.site.logo ? (
-            <img
-              src={config.site.logo}
-              alt=""
-              className="h-16 w-auto max-w-[40vw] shrink-0 object-contain sm:max-w-xs"
-            />
-          ) : profile?.picture ? (
-            <img
-              src={profile.picture}
-              alt=""
-              className="h-16 w-16 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-muted text-2xl font-semibold text-muted-foreground"
-            >
-              {[...config.title][0]?.toUpperCase()}
-            </span>
-          )}
-          <div className="min-w-0">
-            <h1 className="break-words text-xl font-semibold sm:text-2xl">{config.title}</h1>
-            {config.site.tagline && (
-              <p className="text-sm text-muted-foreground">{config.site.tagline}</p>
+      <header
+        className={cn(
+          'relative flex justify-between gap-4',
+          onVideoPage ? 'items-center' : 'items-start'
+        )}
+      >
+        {onVideoPage ? (
+          <Breadcrumb
+            title={config.title}
+            logo={config.site.logo}
+            picture={profile?.picture}
+            current={
+              lookup.status === 'found' ? (
+                lookup.video.title
+              ) : lookup.status === 'loading' ? (
+                <Skeleton className="inline-block h-4 w-40 align-middle" />
+              ) : undefined
+            }
+          />
+        ) : (
+          <Link to="/" className="flex min-w-0 items-center gap-4">
+            {config.site.logo ? (
+              <img
+                src={config.site.logo}
+                alt=""
+                className="h-16 w-auto max-w-[40vw] shrink-0 object-contain sm:max-w-xs"
+              />
+            ) : profile?.picture ? (
+              <img
+                src={profile.picture}
+                alt=""
+                className="h-16 w-16 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-muted text-2xl font-semibold text-muted-foreground"
+              >
+                {[...config.title][0]?.toUpperCase()}
+              </span>
             )}
-          </div>
-        </Link>
+            <div className="min-w-0">
+              <h1 className="break-words text-xl font-semibold sm:text-2xl">{config.title}</h1>
+              {config.site.tagline && (
+                <p className="text-sm text-muted-foreground">{config.site.tagline}</p>
+              )}
+            </div>
+          </Link>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           {search && <SearchBox key={pageKey} />}
           {config.startPage && <SiteDonate pubkey={config.startPage.creator} config={config} />}
@@ -119,12 +146,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
         <Route
           path="/v/:id"
           element={
-            <VideoView
-              config={config}
-              gate={gate}
-              authorName={profile?.name}
-              picture={profile?.picture}
-            />
+            <VideoView config={config} gate={gate} authorName={profile?.name} lookup={lookup} />
           }
         />
         {SITE_PAGES.map(page => (

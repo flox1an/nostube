@@ -491,15 +491,16 @@ describe('SiteHome', () => {
     expect(screen.getByTestId('player')).toBeTruthy()
   })
 
-  it('shows a breadcrumb on a video page and leaves it with Esc', async () => {
+  it('replaces the site header with a breadcrumb on a video page and leaves it with Esc', async () => {
     renderSite(client)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     fireEvent.click(screen.getByText('My first upload'))
     const crumb = await screen.findByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumb.closest('header')).toBeTruthy()
     expect(crumb.textContent).toContain('Site title')
     await waitFor(() => expect(crumb.textContent).toContain('My first upload'))
-    // The site header (title, sign-in) stays above the breadcrumb.
-    expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
+    // The breadcrumb names the site: no second site title above the video.
+    expect(screen.queryByRole('heading', { name: 'Site title' })).toBeNull()
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
     expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()

@@ -1,15 +1,6 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { buildShareLinks } from '@nostube/core/share-links'
 import { getPublishDate, type VideoEvent } from '@nostube/core/video-event'
@@ -22,7 +13,6 @@ import ShareButton from '@nostube/widgets/components/ShareButton'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { AgeConfirm } from './AgeConfirm'
-import { Breadcrumb } from './Breadcrumb'
 import { Comments } from './Comments'
 import { VideoLinks } from './GridPage'
 import type { AgeGate } from './use-age-gate'
@@ -34,24 +24,25 @@ import { SiteZap } from './SiteZap'
 import { useCreatorVideos } from './use-creator-videos'
 import { useEscapeToHome } from './use-escape-to-home'
 import { useSeekEvents } from './use-seek-events'
-import { useVideoById } from './use-video-by-id'
+import type { VideoLookup } from './use-video-by-id'
 import { tagPath, videoPath } from './video-path'
 
-/** One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. */
+/**
+ * One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. The site
+ * header resolves the video (its breadcrumb names it) and hands the lookup down.
+ */
 export function VideoView({
   config,
   gate,
   authorName,
-  picture,
+  lookup,
 }: {
   config: InstanceConfig
   gate: AgeGate
   authorName?: string
-  picture?: string
+  lookup: VideoLookup
 }) {
   const { t } = useTranslation()
-  const { id } = useParams()
-  const lookup = useVideoById(id, config)
   const navigate = useNavigate()
   const video = lookup.status === 'found' ? lookup.video : null
   useEscapeToHome()
@@ -63,22 +54,16 @@ export function VideoView({
     }
   }, [video, config.title])
 
-  const crumb = (current?: ReactNode) => (
-    <Breadcrumb title={config.title} logo={config.site.logo} picture={picture} current={current} />
-  )
-  const notice = (message: string) => (
-    <div className="space-y-2">
-      {crumb()}
-      <p className="py-12 text-center text-muted-foreground">{message}</p>
-    </div>
-  )
-
-  if (lookup.status === 'invalid') return notice(t('site.video.invalidLink'))
-  if (lookup.status === 'not-found') return notice(t('site.video.notFound'))
+  if (lookup.status === 'invalid' || lookup.status === 'not-found') {
+    return (
+      <p className="py-12 text-center text-muted-foreground">
+        {t(lookup.status === 'invalid' ? 'site.video.invalidLink' : 'site.video.notFound')}
+      </p>
+    )
+  }
   if (!video) {
     return (
       <div className="space-y-4" aria-busy="true" aria-label={t('site.video.loading')}>
-        {crumb(<Skeleton className="inline-block h-4 w-40 align-middle" />)}
         <Skeleton className="aspect-video w-full rounded-lg" />
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="h-4 w-1/4" />
@@ -88,7 +73,6 @@ export function VideoView({
 
   return (
     <div className="space-y-4">
-      {crumb(video.title)}
       {gate.isLocked(video) ? (
         <AgeConfirm onConfirm={gate.confirm} onCancel={() => navigate('/')} />
       ) : (
@@ -201,7 +185,7 @@ function VideoDetails({
       </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h2 className="break-words text-xl font-semibold">{video.title}</h2>
+          <h1 className="break-words text-xl font-semibold">{video.title}</h1>
           <p className="text-sm text-muted-foreground">
             {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
           </p>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 
-/** `Site title › current page` at the top of a video page; the site title leads back to the grid. */
+/** `Site title › current page`: the site header of a video page; the site title leads back to the grid. */
 export function Breadcrumb({
   title,
   logo,

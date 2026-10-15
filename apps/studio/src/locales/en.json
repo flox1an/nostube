@@ -8,7 +8,7 @@
     "app": {
       "loadFailed": "The studio could not load",
       "stalledTitle": "The server did not come back",
-      "stalledBody": "The new settings are saved, but nothing restarted the server. Start it again, or run <code>nostube-server config rollback</code> to return to the previous settings.",
+      "stalledBody": "The new settings are saved, but nothing restarted the server. Start it again, or run <code>nostube-server config rollback</code> to return to the previous settings. This page keeps waiting and goes on by itself once the server is back.",
       "notSaved": "Not saved",
       "saving": "Saving…",
       "restarting": "Restarting the server…",

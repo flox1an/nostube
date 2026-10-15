@@ -8,7 +8,7 @@
     "app": {
       "loadFailed": "Le studio n'a pas pu se charger",
       "stalledTitle": "Le serveur n'est pas revenu",
-      "stalledBody": "Les nouveaux réglages sont enregistrés, mais rien n'a redémarré le serveur. Redémarrez-le, ou exécutez <code>nostube-server config rollback</code> pour revenir aux réglages précédents.",
+      "stalledBody": "Les nouveaux réglages sont enregistrés, mais rien n'a redémarré le serveur. Redémarrez-le, ou exécutez <code>nostube-server config rollback</code> pour revenir aux réglages précédents. Cette page continue d'attendre et reprend d'elle-même dès que le serveur est revenu.",
       "notSaved": "Non enregistré",
       "saving": "Enregistrement…",
       "restarting": "Redémarrage du serveur…",

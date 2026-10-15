@@ -281,7 +281,10 @@ export async function loadSigner(): Promise<SignerInfo> {
   return (await res.json()) as SignerInfo
 }
 
-/** Has the server create the managed key (once); it is not a creator until the config says so. */
+/**
+ * Has the server create the managed key, or answers the one it holds already (a retried
+ * onboarding); it is not a creator until the config says so.
+ */
 export const createManagedKey = () => postJson<SignerInfo>('/api/admin/signer', {})
 
 /** The managed key as `nsec`; the server wants the admin password again. */

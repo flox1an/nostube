@@ -8,7 +8,7 @@
     "app": {
       "loadFailed": "工作室无法加载",
       "stalledTitle": "服务器没有恢复",
-      "stalledBody": "新设置已保存，但没有任何程序重启服务器。请重新启动它，或运行 <code>nostube-server config rollback</code> 恢复到之前的设置。",
+      "stalledBody": "新设置已保存，但没有任何程序重启服务器。请重新启动它，或运行 <code>nostube-server config rollback</code> 恢复到之前的设置。此页面会继续等待，服务器恢复后会自动继续。",
       "notSaved": "未保存",
       "saving": "正在保存…",
       "restarting": "正在重启服务器…",

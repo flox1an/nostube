@@ -209,11 +209,12 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
     // on all come from the new revision (the address, and with it the page, stays).
     if (!restart) return location.reload()
     setSaving('restarting')
-    if (await waitForRestart(state.bootId)) {
-      location.reload()
-    } else {
+    // Stalled: say so, but keep waiting; the page reloads once the server is back.
+    if (!(await waitForRestart(state.bootId))) {
       setSaving('stalled')
+      await waitForRestart(state.bootId, { timeoutMs: Infinity })
     }
+    location.reload()
   }
 
   const save = () => (result.config ? apply(result.config) : Promise.resolve())

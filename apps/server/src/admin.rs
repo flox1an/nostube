@@ -1159,8 +1159,10 @@ fn managed_json(keys: &Keys) -> Response {
 }
 
 /// Generates the managed key and stores it encrypted. Once only: replacing it would throw away
-/// the identity (switching keys is not part of the first cut, see the studio spec). Adding the
-/// key to `creators` and `allowed_writers` is the studio's config save, as for a NIP-07 key.
+/// the identity (switching keys is not part of the first cut, see the studio spec). A key that
+/// exists already is answered as it is, so an onboarding that failed after this step can simply
+/// be finished again. Adding the key to `creators` and `allowed_writers` is the studio's config
+/// save, as for a NIP-07 key.
 async fn signer_create(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
@@ -1168,7 +1170,12 @@ async fn signer_create(State(state): State<Arc<AdminState>>, headers: HeaderMap)
     // Under the secrets lock, so two parallel requests cannot both create a key.
     let mut secrets = state.secrets.lock().unwrap();
     if secrets.managed_key.is_some() {
-        return json_error(StatusCode::CONFLICT, "the managed key already exists");
+        drop(secrets);
+        return match managed_keys(&state) {
+            Ok(Some(keys)) => managed_json(&keys),
+            Ok(None) => json_error(StatusCode::INTERNAL_SERVER_ERROR, "the managed key is stored but not loaded"),
+            Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+        };
     }
     let keys = Keys::generate();
     let ncryptsec = match signer_password(&state.data, true).and_then(|pw| crate::signer::encrypt(keys.secret_key(), &pw)) {
@@ -2191,8 +2198,9 @@ mod tests {
         assert_eq!(created["mode"], "managed");
         let pubkey = created["pubkey"].as_str().unwrap().to_owned();
         assert_eq!(send(&app, "/api/admin/signer", c, None).await.2, created);
-        // Once only: a second key would replace the identity.
-        assert_eq!(send(&app, "/api/admin/signer", c, Some("{}")).await.0, StatusCode::CONFLICT);
+        // Once only: a second call (a retried onboarding) answers the same key, never a new one.
+        let (status, _, again) = send(&app, "/api/admin/signer", c, Some("{}")).await;
+        assert_eq!((status, again), (StatusCode::OK, created.clone()));
 
         // Signing needs the session and refuses a body that is not an unsigned event.
         assert_eq!(send(&app, "/api/admin/signer/sign", None, Some(event)).await.0, StatusCode::UNAUTHORIZED);

@@ -129,7 +129,11 @@ export function Onboarding({
       const { restart } = await saveConfig(result.config)
       if (restart) {
         setPhase('restarting')
-        if (!(await waitForRestart(state.bootId))) return setPhase('stalled')
+        // Stalled: say so, but keep waiting; the wizard goes on once the server is back.
+        if (!(await waitForRestart(state.bootId))) {
+          setPhase('stalled')
+          await waitForRestart(state.bootId, { timeoutMs: Infinity })
+        }
       }
       if (profile) {
         await Promise.allSettled(relays.publish([state.origin.replace(/^https:/, 'wss:')], profile))

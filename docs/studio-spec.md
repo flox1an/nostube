@@ -33,7 +33,7 @@ Anforderungen an Managed:
 **Umsetzung (Server-ADR 0007):** Der Server hält den Managed-Key als NIP-49-`ncryptsec` in `secrets.toml`; dessen Passwort sind 256 Zufallsbits in `<data>/signer.key` (nur für den Server-Benutzer lesbar). Die Endpunkte unter `/api/admin/signer` brauchen die Admin-Sitzung, Schreibzugriffe nur als JSON:
 
 - `GET` liefert `{ mode, pubkey }`: `managed` mit der Pubkey, `own` (die Instanz hat Creators, der Server hält keinen ihrer Keys; Pubkey `null`) oder `none`.
-- `POST` erzeugt den Key, einmalig (sonst 409).
+- `POST` erzeugt den Key, einmalig; gibt es ihn schon, antwortet er mit diesem (ein wiederholtes Onboarding), nie mit einem neuen.
 - `POST /sign` signiert `{ kind, created_at, tags, content }` und gibt das signierte Event zurück. Andere Felder, leere Tags und zu große Events (wie am Relay: 128 KiB, höchstens 30 Minuten in der Zukunft) lehnt er ab.
 - `POST /export` gibt den `nsec` nur gegen das Admin-Passwort heraus; Fehlversuche zählen zur Login-Drossel (ADR 0002).
 

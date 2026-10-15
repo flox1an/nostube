@@ -8,7 +8,7 @@
     "app": {
       "loadFailed": "No se pudo cargar el estudio",
       "stalledTitle": "El servidor no volvió",
-      "stalledBody": "La nueva configuración está guardada, pero nada reinició el servidor. Inícialo de nuevo o ejecuta <code>nostube-server config rollback</code> para volver a la configuración anterior.",
+      "stalledBody": "La nueva configuración está guardada, pero nada reinició el servidor. Inícialo de nuevo o ejecuta <code>nostube-server config rollback</code> para volver a la configuración anterior. Esta página sigue esperando y continúa sola en cuanto el servidor vuelva.",
       "notSaved": "No guardado",
       "saving": "Guardando…",
       "restarting": "Reiniciando el servidor…",

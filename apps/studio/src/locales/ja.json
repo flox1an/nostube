@@ -8,7 +8,7 @@
     "app": {
       "loadFailed": "スタジオを読み込めませんでした",
       "stalledTitle": "サーバーが復帰しませんでした",
-      "stalledBody": "新しい設定は保存されましたが、サーバーを再起動するものがありませんでした。もう一度起動するか、<code>nostube-server config rollback</code> を実行して以前の設定に戻してください。",
+      "stalledBody": "新しい設定は保存されましたが、サーバーを再起動するものがありませんでした。もう一度起動するか、<code>nostube-server config rollback</code> を実行して以前の設定に戻してください。このページは待機を続け、サーバーが復帰すると自動的に続行します。",
       "notSaved": "保存されていません",
       "saving": "保存中…",
       "restarting": "サーバーを再起動中…",

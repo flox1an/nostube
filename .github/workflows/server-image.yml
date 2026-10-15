@@ -1,13 +1,14 @@
 name: Server image
 
 # Builds the Nostube Server image (apps/server/Dockerfile: web assets and binary are built inside
-# the image). Every run builds it and smoke-tests the container; only main and server-v* tags
-# push it to ghcr.io.
+# the image). Every run builds it and smoke-tests the container; only main pushes it to ghcr.io.
+# A release commit carries a server-v<version> tag, pushed together with main
+# (`git push origin main server-v<version>`): the same build then also gets the tag <version>.
+# Tags have no trigger of their own, so a release is built once.
 
 on:
   push:
     branches: ['main']
-    tags: ['server-v*']
     paths:
       - 'apps/server/**'
       - 'apps/site/**'
@@ -47,6 +48,15 @@ jobs:
         id: name
         run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nostube-server" >> "$GITHUB_OUTPUT"
 
+      # The server-v* tag of this commit, if it is a release (the tag is pushed with main).
+      - name: Release version
+        id: version
+        run: |
+          version=$(git ls-remote --tags origin 'server-v*' \
+            | awk -v sha="$GITHUB_SHA" '$1 == sha { sub("refs/tags/server-v", "", $2); sub(/\^\{\}$/, "", $2); print $2; exit }')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release version: ${version:-none}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -58,7 +68,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-
-            type=match,pattern=server-v(.*),group=1
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.version != '' }}
 
       - name: Build the image
         uses: docker/build-push-action@v6

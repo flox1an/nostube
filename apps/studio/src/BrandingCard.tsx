@@ -17,7 +17,7 @@ import {
   type AdminState,
   setBrandingBlob,
 } from './api'
-import { CROP_SOURCE_LIMIT, ImageCropDialog } from './ImageCropDialog'
+import { CROP_SOURCE_LIMIT, CROP_SOURCE_TYPES, ImageCropDialog } from './ImageCropDialog'
 import { useSigner } from './signer-context'
 import { uploadBlob } from './upload/blossom-upload'
 import { sha256File } from './upload/sha256-file'
@@ -67,8 +67,8 @@ function SlotRow({
   const [source, setSource] = useState<File | null>(null)
   const { signer, pubkey } = useSigner()
   const label = t(`studio.branding.slots.${slot}`)
-  // Favicon and app icon go up as they are; logo and banner are cropped to a WebP first.
-  const direct = slot === 'favicon' || slot === 'icon'
+  // The favicon goes up as it is; logo, banner and app icon are cropped and resized first.
+  const direct = slot === 'favicon'
 
   const run = async (action: () => Promise<string | null>) => {
     setError(null)
@@ -90,7 +90,7 @@ function SlotRow({
       const problem = brandingProblem(slot, file)
       if (problem) setError(problem)
       else void run(() => uploadBranding(slot, file))
-    } else if (!BRANDING_LIMITS[slot].types.includes(file.type)) {
+    } else if (!CROP_SOURCE_TYPES.includes(file.type)) {
       setError(t('studio.branding.errors.wrongType'))
     } else if (file.size > CROP_SOURCE_LIMIT) {
       setError(t('studio.branding.errors.tooBig', { size: '20 MB' }))
@@ -151,7 +151,7 @@ function SlotRow({
         <input
           ref={input}
           type="file"
-          accept={BRANDING_LIMITS[slot].types.join(',')}
+          accept={(direct ? BRANDING_LIMITS[slot].types : CROP_SOURCE_TYPES).join(',')}
           aria-label={label}
           className="sr-only"
           tabIndex={-1}
@@ -183,7 +183,7 @@ function SlotRow({
           </Button>
         )}
       </div>
-      {source && !direct && (
+      {source && slot !== 'favicon' && (
         <ImageCropDialog
           file={source}
           slot={slot}

@@ -165,11 +165,12 @@
         "logo": "En la cabecera y en las páginas de vídeo, en lugar de la foto de perfil. PNG, JPEG, WebP o SVG, hasta {{size}}.",
         "favicon": "El icono de la pestaña del navegador. PNG, JPEG, WebP, SVG o ICO, hasta {{size}}.",
         "banner": "Una imagen ancha sobre los vídeos de la página de inicio. PNG, JPEG, WebP o SVG, hasta {{size}}.",
-        "icon": "Se usa cuando los visitantes instalan el sitio como app. Un PNG cuadrado de al menos 512×512 píxeles, hasta {{size}}."
+        "icon": "Se usa cuando los visitantes instalan el sitio como app. PNG, JPEG, WebP o SVG, hasta {{size}}; lo recortas en cuadrado."
       },
       "crop": {
         "title": "Recortar {{image}}",
         "description": "Arrastra para posicionar y ajusta el zoom. Solo se sube el recorte: WebP, como máximo {{width}} × {{height}} px y {{kilobytes}} KB.",
+        "descriptionIcon": "Arrastra para posicionar y ajusta el zoom. Solo se sube el recorte: un PNG de {{width}} × {{height}} px.",
         "preview": "Vista previa del recorte",
         "zoom": "Zoom",
         "x": "Posición horizontal",

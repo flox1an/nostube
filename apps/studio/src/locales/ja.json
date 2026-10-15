@@ -165,11 +165,12 @@
         "logo": "ヘッダーと動画ページで、プロフィール画像の代わりに表示されます。PNG、JPEG、WebP、SVG、最大 {{size}}。",
         "favicon": "ブラウザのタブに表示されるアイコンです。PNG、JPEG、WebP、SVG、ICO、最大 {{size}}。",
         "banner": "トップページの動画の上に表示される横長の画像です。PNG、JPEG、WebP、SVG、最大 {{size}}。",
-        "icon": "訪問者がサイトをアプリとしてインストールしたときに使われます。512×512 ピクセル以上の正方形の PNG、最大 {{size}}。"
+        "icon": "訪問者がサイトをアプリとしてインストールしたときに使われます。PNG、JPEG、WebP、SVG、最大 {{size}}。正方形に切り抜きます。"
       },
       "crop": {
         "title": "{{image}}を切り抜く",
         "description": "ドラッグで位置を調整し、ズームしてください。切り抜いた画像だけをアップロードします。WebP、最大 {{width}} × {{height}} px、{{kilobytes}} KB。",
+        "descriptionIcon": "ドラッグで位置を調整し、ズームしてください。切り抜いた画像だけをアップロードします。{{width}} × {{height}} px の PNG。",
         "preview": "切り抜きプレビュー",
         "zoom": "ズーム",
         "x": "横の位置",

@@ -64,7 +64,7 @@ export const BRANDING_LIMITS: Record<
     types: [...IMAGE_TYPES, 'image/x-icon', 'image/vnd.microsoft.icon'],
   },
   banner: { bytes: 2048 * 1024, size: '2 MB', types: IMAGE_TYPES },
-  icon: { bytes: 512 * 1024, size: '512 KB', types: ['image/png'] },
+  icon: { bytes: 2048 * 1024, size: '2 MB', types: ['image/png'] },
 }
 
 /** Why the server would refuse the file (checked here first), or null. */

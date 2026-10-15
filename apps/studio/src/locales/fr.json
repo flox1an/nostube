@@ -165,11 +165,12 @@
         "logo": "Dans l'en-tête et sur les pages vidéo, à la place de la photo de profil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
         "favicon": "L'icône de l'onglet du navigateur. PNG, JPEG, WebP, SVG ou ICO, jusqu'à {{size}}.",
         "banner": "Une image large au-dessus des vidéos de la page d'accueil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
-        "icon": "Utilisée quand les visiteurs installent le site comme application. Un PNG carré d'au moins 512×512 pixels, jusqu'à {{size}}."
+        "icon": "Utilisée quand les visiteurs installent le site comme application. PNG, JPEG, WebP ou SVG, jusqu'à {{size}} ; vous la recadrez en carré."
       },
       "crop": {
         "title": "Recadrer {{image}}",
         "description": "Faites glisser pour positionner, puis zoomez. Seul le recadrage est envoyé : WebP, au maximum {{width}} × {{height}} px et {{kilobytes}} Ko.",
+        "descriptionIcon": "Faites glisser pour positionner, puis zoomez. Seul le recadrage est envoyé : un PNG de {{width}} × {{height}} px.",
         "preview": "Aperçu du recadrage",
         "zoom": "Zoom",
         "x": "Position horizontale",

@@ -48,8 +48,9 @@ impl Slot {
 
     pub fn max_bytes(self) -> usize {
         match self {
-            Slot::Banner => 2048 * KIB,
-            Slot::Logo | Slot::Favicon | Slot::Icon => 512 * KIB,
+            // A 512×512 PNG from the studio's crop can exceed 512 KiB when it is photographic.
+            Slot::Banner | Slot::Icon => 2048 * KIB,
+            Slot::Logo | Slot::Favicon => 512 * KIB,
         }
     }
 

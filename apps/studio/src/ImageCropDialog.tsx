@@ -11,15 +11,21 @@ import { cropRect } from './image-crop'
 import { encodeImage, imageFileName } from '@nostube/core/image-encode'
 
 export const CROP_SOURCE_LIMIT = 20 * 1024 * 1024
+/** What the dialog can open: anything a canvas draws (the export decides the stored type). */
+export const CROP_SOURCE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 const SIZES = {
   // Shown at 64 px at most (header); 256 px covers 4x screens.
   logo: { width: 256, height: 256, bytes: 128 * 1024 },
   banner: { width: 1500, height: 500, bytes: 300 * 1024 },
+  // The manifest and iOS want a square PNG of 512×512 (the server refuses less): exactly that,
+  // small sources are scaled up. Any 512×512 PNG fits the server's 2 MB.
+  icon: { width: 512, height: 512, bytes: 2048 * 1024 },
 }
 
 /**
- * The source stays in the browser; only a confirmed, resized WebP leaves this dialog (PNG for the
- * logo, JPEG for the banner where the browser cannot encode WebP, as in Safari).
+ * The source stays in the browser; only a confirmed, resized image leaves this dialog: WebP for
+ * logo and banner (PNG for the logo, JPEG for the banner where the browser cannot encode WebP, as
+ * in Safari), PNG for the app icon.
  */
 export function ImageCropDialog({
   file,
@@ -28,7 +34,7 @@ export function ImageCropDialog({
   onClose,
 }: {
   file: File
-  slot: 'logo' | 'banner'
+  slot: 'logo' | 'banner' | 'icon'
   onConfirm: (file: File) => Promise<void>
   onClose: () => void
 }) {
@@ -65,8 +71,9 @@ export function ImageCropDialog({
     setError(null)
     try {
       const canvas = document.createElement('canvas')
-      // Do not upscale small source images.
-      let width = Math.max(1, Math.min(size.width, Math.floor(crop.width)))
+      // Logo and banner never upscale small sources; the icon is always 512×512.
+      let width =
+        slot === 'icon' ? size.width : Math.max(1, Math.min(size.width, Math.floor(crop.width)))
       const context = canvas.getContext('2d')
       if (!context) throw new Error(t('studio.branding.crop.encodeError'))
       let blob: Blob | null = null
@@ -86,8 +93,11 @@ export function ImageCropDialog({
           canvas.height
         )
         for (const quality of [0.85, 0.7, 0.5]) {
-          // A logo may be transparent: its non-WebP fallback (Safari) is PNG, not JPEG.
-          blob = await encodeImage(canvas, quality, slot === 'logo' ? 'image/png' : 'image/jpeg')
+          blob =
+            slot === 'icon'
+              ? await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
+              : // A logo may be transparent: its non-WebP fallback (Safari) is PNG, not JPEG.
+                await encodeImage(canvas, quality, slot === 'logo' ? 'image/png' : 'image/jpeg')
           if (!blob) throw new Error(t('studio.branding.crop.encodeError'))
           if (blob.size <= size.bytes) break
         }
@@ -125,7 +135,15 @@ export function ImageCropDialog({
           {t('studio.branding.crop.title', { image: t(`studio.branding.slots.${slot}`) })}
         </DialogTitle>
         <DialogDescription>
-          {t('studio.branding.crop.description', { ...size, kilobytes: size.bytes / 1024 })}
+          {t(
+            slot === 'icon'
+              ? 'studio.branding.crop.descriptionIcon'
+              : 'studio.branding.crop.description',
+            {
+              ...size,
+              kilobytes: size.bytes / 1024,
+            }
+          )}
         </DialogDescription>
         <div
           className={`relative mx-auto shrink-0 touch-none overflow-hidden rounded-md bg-muted ${busy ? '' : 'cursor-grab active:cursor-grabbing'}`}

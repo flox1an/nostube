@@ -165,11 +165,12 @@
         "logo": "显示在页眉和视频页面中，替代头像。PNG、JPEG、WebP 或 SVG，最大 {{size}}。",
         "favicon": "浏览器标签页上的图标。PNG、JPEG、WebP、SVG 或 ICO，最大 {{size}}。",
         "banner": "首页视频上方的宽幅图片。PNG、JPEG、WebP 或 SVG，最大 {{size}}。",
-        "icon": "访客将站点安装为应用时使用。至少 512×512 像素的正方形 PNG，最大 {{size}}。"
+        "icon": "访客将站点安装为应用时使用。PNG、JPEG、WebP 或 SVG，最大 {{size}}；裁剪为正方形。"
       },
       "crop": {
         "title": "裁剪{{image}}",
         "description": "拖动调整位置，再缩放。仅上传裁剪后的图片：WebP，最大 {{width}} × {{height}} 像素和 {{kilobytes}} KB。",
+        "descriptionIcon": "拖动调整位置，再缩放。仅上传裁剪后的图片：{{width}} × {{height}} 像素的 PNG。",
         "preview": "裁剪预览",
         "zoom": "缩放",
         "x": "水平位置",

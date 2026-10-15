@@ -165,11 +165,12 @@
         "logo": "In the header and on video pages, instead of the profile picture. PNG, JPEG, WebP or SVG, up to {{size}}.",
         "favicon": "The icon in the browser tab. PNG, JPEG, WebP, SVG or ICO, up to {{size}}.",
         "banner": "A wide image above the videos on the start page. PNG, JPEG, WebP or SVG, up to {{size}}.",
-        "icon": "Used when visitors install the site as an app. A square PNG of at least 512×512 pixels, up to {{size}}."
+        "icon": "Used when visitors install the site as an app. PNG, JPEG, WebP or SVG, up to {{size}}; you crop it to a square."
       },
       "crop": {
         "title": "Crop {{image}}",
         "description": "Drag to position, then zoom. Only the crop is uploaded: WebP, at most {{width}} × {{height}} px and {{kilobytes}} KB.",
+        "descriptionIcon": "Drag to position, then zoom. Only the crop is uploaded: a PNG of {{width}} × {{height}} px.",
         "preview": "Crop preview",
         "zoom": "Zoom",
         "x": "Horizontal position",

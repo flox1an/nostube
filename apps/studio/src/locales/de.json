@@ -165,11 +165,12 @@
         "logo": "Im Kopf der Seite und auf Videoseiten, statt des Profilbilds. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
         "favicon": "Das Symbol im Browser-Tab. PNG, JPEG, WebP, SVG oder ICO, höchstens {{size}}.",
         "banner": "Ein breites Bild über den Videos auf der Startseite. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
-        "icon": "Wird verwendet, wenn Besucher die Seite als App installieren. Ein quadratisches PNG mit mindestens 512×512 Pixeln, höchstens {{size}}."
+        "icon": "Wird verwendet, wenn Besucher die Seite als App installieren. PNG, JPEG, WebP oder SVG, höchstens {{size}}; du schneidest es quadratisch zu."
       },
       "crop": {
         "title": "{{image}} zuschneiden",
         "description": "Zum Positionieren ziehen und zoomen. Nur der Ausschnitt wird hochgeladen: WebP, höchstens {{width}} × {{height}} px und {{kilobytes}} KB.",
+        "descriptionIcon": "Zum Positionieren ziehen und zoomen. Nur der Ausschnitt wird hochgeladen: ein PNG mit {{width}} × {{height}} px.",
         "preview": "Vorschau des Ausschnitts",
         "zoom": "Zoom",
         "x": "Horizontale Position",

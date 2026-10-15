@@ -171,6 +171,7 @@
         "title": "裁剪{{image}}",
         "description": "拖动调整位置，再缩放。仅上传裁剪后的图片：WebP，最大 {{width}} × {{height}} 像素和 {{kilobytes}} KB。",
         "descriptionIcon": "拖动调整位置，再缩放。仅上传裁剪后的图片：{{width}} × {{height}} 像素的 PNG。",
+        "wideHint": "手机上显示完整横幅。更宽的屏幕只显示中间的亮色条带，请把文字和人脸放在其中。",
         "preview": "裁剪预览",
         "zoom": "缩放",
         "x": "水平位置",

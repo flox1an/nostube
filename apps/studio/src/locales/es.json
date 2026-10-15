@@ -171,6 +171,7 @@
         "title": "Recortar {{image}}",
         "description": "Arrastra para posicionar y ajusta el zoom. Solo se sube el recorte: WebP, como máximo {{width}} × {{height}} px y {{kilobytes}} KB.",
         "descriptionIcon": "Arrastra para posicionar y ajusta el zoom. Solo se sube el recorte: un PNG de {{width}} × {{height}} px.",
+        "wideHint": "En el móvil se ve el banner entero. Las pantallas más anchas solo muestran la franja clara del centro; deja dentro el texto y las caras.",
         "preview": "Vista previa del recorte",
         "zoom": "Zoom",
         "x": "Posición horizontal",

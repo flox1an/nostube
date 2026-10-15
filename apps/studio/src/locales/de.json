@@ -171,6 +171,7 @@
         "title": "{{image}} zuschneiden",
         "description": "Zum Positionieren ziehen und zoomen. Nur der Ausschnitt wird hochgeladen: WebP, höchstens {{width}} × {{height}} px und {{kilobytes}} KB.",
         "descriptionIcon": "Zum Positionieren ziehen und zoomen. Nur der Ausschnitt wird hochgeladen: ein PNG mit {{width}} × {{height}} px.",
+        "wideHint": "Auf dem Handy ist das ganze Banner zu sehen. Breitere Bildschirme zeigen nur den hellen Streifen in der Mitte; Text und Gesichter gehören dort hinein.",
         "preview": "Vorschau des Ausschnitts",
         "zoom": "Zoom",
         "x": "Horizontale Position",

@@ -171,6 +171,7 @@
         "title": "Recadrer {{image}}",
         "description": "Faites glisser pour positionner, puis zoomez. Seul le recadrage est envoyé : WebP, au maximum {{width}} × {{height}} px et {{kilobytes}} Ko.",
         "descriptionIcon": "Faites glisser pour positionner, puis zoomez. Seul le recadrage est envoyé : un PNG de {{width}} × {{height}} px.",
+        "wideHint": "Sur téléphone, la bannière s'affiche en entier. Les écrans plus larges ne montrent que la bande claire du milieu ; gardez-y le texte et les visages.",
         "preview": "Aperçu du recadrage",
         "zoom": "Zoom",
         "x": "Position horizontale",

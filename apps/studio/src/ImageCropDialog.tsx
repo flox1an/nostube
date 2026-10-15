@@ -22,6 +22,9 @@ const SIZES = {
   icon: { width: 512, height: 512, bytes: 2048 * 1024 },
 }
 
+/** The banner's shape on wide screens (phones show the whole 3:1 crop). */
+const WIDE_BANNER = 5
+
 /**
  * The source stays in the browser; only a confirmed, resized image leaves this dialog: WebP for
  * logo and banner (PNG for the logo, JPEG for the banner where the browser cannot encode WebP, as
@@ -145,6 +148,9 @@ export function ImageCropDialog({
             }
           )}
         </DialogDescription>
+        {slot === 'banner' && (
+          <p className="text-sm text-muted-foreground">{t('studio.branding.crop.wideHint')}</p>
+        )}
         <div
           className={`relative mx-auto shrink-0 touch-none overflow-hidden rounded-md bg-muted ${busy ? '' : 'cursor-grab active:cursor-grabbing'}`}
           style={{ aspectRatio: aspect, width: `min(100%, ${40 * aspect}dvh)` }}
@@ -203,6 +209,24 @@ export function ImageCropDialog({
                 fill="none"
                 pointerEvents="none"
               />
+              {slot === 'banner' && (
+                // Wide screens show the banner at 5:1 (`sm:aspect-[5/1] object-cover` in
+                // apps/site/src/SiteHome.tsx, also the studio preview): only the middle band.
+                <g fill="black" fillOpacity="0.5" pointerEvents="none">
+                  <rect
+                    x={crop.x}
+                    y={crop.y}
+                    width={crop.width}
+                    height={(crop.height - crop.width / WIDE_BANNER) / 2}
+                  />
+                  <rect
+                    x={crop.x}
+                    y={crop.y + (crop.height + crop.width / WIDE_BANNER) / 2}
+                    width={crop.width}
+                    height={(crop.height - crop.width / WIDE_BANNER) / 2}
+                  />
+                </g>
+              )}
             </svg>
           )}
         </div>

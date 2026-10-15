@@ -171,6 +171,7 @@
         "title": "Crop {{image}}",
         "description": "Drag to position, then zoom. Only the crop is uploaded: WebP, at most {{width}} × {{height}} px and {{kilobytes}} KB.",
         "descriptionIcon": "Drag to position, then zoom. Only the crop is uploaded: a PNG of {{width}} × {{height}} px.",
+        "wideHint": "Phones show the whole banner. Wider screens show only the bright band in the middle; keep text and faces inside it.",
         "preview": "Crop preview",
         "zoom": "Zoom",
         "x": "Horizontal position",

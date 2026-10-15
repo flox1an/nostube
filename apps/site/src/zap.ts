@@ -7,7 +7,6 @@ export class ZapError extends Error {
   constructor(
     readonly code:
       | 'providerFailed'
-      | 'providerNoNostr'
       | 'providerInvalid'
       | 'invalidAmount'
       | 'videoUnavailable'
@@ -20,15 +19,15 @@ export class ZapError extends Error {
   }
 }
 
-/** A validated LNURL-pay endpoint that accepts NIP-57 zaps. */
+/** A validated LNURL-pay endpoint (LUD-06), able to take NIP-57 zaps when `nostrPubkey` is set. */
 export interface ZapEndpoint {
   /** The LNURL-pay URL the endpoint was resolved from. */
   lnurl: string
   callback: string
   minSats: number
   maxSats: number
-  /** The provider key that must sign the zap receipts. */
-  nostrPubkey: string
+  /** The provider key that must sign the zap receipts; absent when the provider takes no zaps. */
+  nostrPubkey?: string
   /** LUD-12 comment length limit, if the provider sets one. */
   commentAllowed?: number
 }
@@ -87,21 +86,22 @@ export function lnurlFromProfile(profile: { lud16?: unknown; lud06?: unknown }):
   return null
 }
 
-/** Validates an LNURL-pay response (LUD-06 + NIP-57); throws a ZapError for anything unusable. */
+/**
+ * Validates an LNURL-pay response (LUD-06, NIP-57 if `allowsNostr`); throws a ZapError for
+ * anything unusable. A provider without zaps still takes plain payments.
+ */
 export function parseZapEndpoint(lnurl: string, body: unknown): ZapEndpoint {
   if (!body || typeof body !== 'object') throw new ZapError('providerInvalid')
   const data = body as Record<string, unknown>
   if (data.status === 'ERROR') {
     throw new ZapError('providerFailed', { reason: String(data.reason ?? 'ERROR') })
   }
-  if (data.allowsNostr !== true) throw new ZapError('providerNoNostr')
   const callback = httpsUrl(data.callback)
   const { minSendable: min, maxSendable: max, nostrPubkey } = data
   if (
     data.tag !== 'payRequest' ||
     !callback ||
-    typeof nostrPubkey !== 'string' ||
-    !HEX64.test(nostrPubkey) ||
+    (data.allowsNostr === true && (typeof nostrPubkey !== 'string' || !HEX64.test(nostrPubkey))) ||
     typeof min !== 'number' ||
     typeof max !== 'number' ||
     !Number.isSafeInteger(min) ||
@@ -116,7 +116,14 @@ export function parseZapEndpoint(lnurl: string, body: unknown): ZapEndpoint {
   const limit = data.commentAllowed
   const commentAllowed =
     typeof limit === 'number' && Number.isSafeInteger(limit) && limit > 0 ? limit : undefined
-  return { lnurl, callback, minSats, maxSats, nostrPubkey, commentAllowed }
+  return {
+    lnurl,
+    callback,
+    minSats,
+    maxSats,
+    nostrPubkey: data.allowsNostr === true ? (nostrPubkey as string) : undefined,
+    commentAllowed,
+  }
 }
 
 /** Fetches and validates the LNURL-pay endpoint. */
@@ -159,6 +166,55 @@ export function checkInvoice(invoice: unknown, sats: number): string {
     throw new ZapError('invoiceMismatch')
   }
   return invoice
+}
+
+/** An invoice from the provider; `verify` (LUD-21) can tell whether it was paid. */
+export interface Invoice {
+  bolt11: string
+  verify?: string
+}
+
+/**
+ * Asks the provider for an invoice of `sats`: a zap with `zapRequest`, else a plain payment
+ * carrying `comment` (LUD-12). Only an invoice for exactly `sats` is returned.
+ */
+export async function fetchInvoice(
+  endpoint: ZapEndpoint,
+  sats: number,
+  { zapRequest, comment }: { zapRequest?: NostrEvent; comment?: string }
+): Promise<Invoice> {
+  const url = new URL(endpoint.callback)
+  url.searchParams.set('amount', String(sats * 1000))
+  if (zapRequest) url.searchParams.set('nostr', JSON.stringify(zapRequest))
+  else if (comment) url.searchParams.set('comment', comment)
+  let data: Record<string, unknown>
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    data = (await response.json()) as Record<string, unknown>
+    if (data?.status === 'ERROR') throw new Error(String(data.reason ?? 'ERROR'))
+  } catch (err) {
+    throw new ZapError('invoiceFailed', {
+      reason: err instanceof Error ? err.message : String(err),
+    })
+  }
+  return { bolt11: checkInvoice(data.pr, sats), verify: httpsUrl(data.verify) ?? undefined }
+}
+
+/** LUD-21: whether the provider reports `bolt11` as paid; false when it cannot say. */
+export async function invoiceSettled(
+  verify: string,
+  bolt11: string,
+  signal?: AbortSignal
+): Promise<boolean> {
+  try {
+    const response = await fetch(verify, { signal })
+    const data = (await response.json()) as Record<string, unknown>
+    const pr = typeof data.pr === 'string' ? data.pr.toLowerCase() : undefined
+    return data.settled === true && (pr === undefined || pr === bolt11.toLowerCase())
+  } catch {
+    return false
+  }
 }
 
 const tag = (event: NostrEvent, name: string) => event.tags.find(t => t[0] === name)?.[1]

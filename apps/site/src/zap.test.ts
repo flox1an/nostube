@@ -104,10 +104,11 @@ describe('provider metadata', () => {
     nostrPubkey: 'a'.repeat(64),
   }
 
-  it('rejects providers that cannot take a verifiable whole-sat zap', () => {
-    expect(zapError(() => parseZapEndpoint(LNURL, { ...valid, allowsNostr: false }))).toBe(
-      'providerNoNostr'
-    )
+  it('rejects providers that cannot take a whole-sat payment or a verifiable zap', () => {
+    // No zaps: still a plain LNURL payment, whose receipts never count as zaps.
+    const plain = parseZapEndpoint(LNURL, { ...valid, allowsNostr: false })
+    expect(plain.nostrPubkey).toBeUndefined()
+    expect(validZapReceipt(receipt(), { ...target, endpoint: plain })).toBeNull()
     for (const bad of [
       { callback: 'http://pay.example/cb' },
       { nostrPubkey: 'zz' },

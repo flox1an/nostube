@@ -17,7 +17,7 @@ export function SiteAuthDialog({
   action,
   ...props
 }: Omit<AuthDialogProps, 'description' | 'equalChoices'> & {
-  action?: 'like' | 'zap' | 'comment'
+  action?: 'like' | 'comment'
 }) {
   const { t } = useTranslation()
   return <AuthDialog {...props} equalChoices description={t(`site.auth.why.${action ?? 'any'}`)} />

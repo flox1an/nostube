@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { lastValueFrom, toArray } from 'rxjs'
-import { use$, useActiveAccount, useEventStore } from 'applesauce-react/hooks'
+import { use$, useEventStore } from 'applesauce-react/hooks'
 import { verifyEvent } from 'nostr-tools'
 import { QRCodeSVG } from 'qrcode.react'
 import { HandHeart, Zap } from 'lucide-react'
@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@nostube/widgets/components/dialog'
-import { SiteAuthDialog } from './AuthArea'
 import {
   PAYMENT_TARGETS_KIND,
   PAYMENT_TYPE_LABELS,
@@ -148,18 +147,17 @@ function PaymentTargetItem({ target }: { target: PaymentTarget }) {
 }
 
 /**
- * The site's "Support" button: one dialog with a Lightning zap of the creator's profile
- * (NIP-57) and their other payment addresses (NIP-A3). Nothing when the creator has neither.
+ * The site's "Support" button: one dialog with a Lightning payment to the creator's profile (a
+ * zap when the provider takes them, anonymous without an account) and their other payment
+ * addresses (NIP-A3). Nothing when the creator has neither.
  */
 export function SiteDonate({ pubkey, config }: { pubkey: string; config: InstanceConfig }) {
   const { t } = useTranslation()
-  const account = useActiveAccount()
   const relays = config.interactionRelays
   const profile = useProfile({ pubkey, relays })
   const lnurl = profile ? lnurlFromProfile(profile) : null
   const targets = usePaymentTargets(pubkey, instanceRelays(config))
   const [open, setOpen] = useState(false)
-  const [authOpen, setAuthOpen] = useState(false)
   const [paying, setPaying] = useState(false)
 
   if (!lnurl && targets.length === 0) return null
@@ -189,19 +187,13 @@ export function SiteDonate({ pubkey, config }: { pubkey: string; config: Instanc
                 <Zap className="h-4 w-4" />
                 {t('site.donate.lightning')}
               </h3>
-              {account ? (
-                <ProfileZap
-                  pubkey={pubkey}
-                  lnurl={lnurl}
-                  relays={relays}
-                  onClose={() => setOpen(false)}
-                  onPayingChange={setPaying}
-                />
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => setAuthOpen(true)}>
-                  {t('site.zap.signIn')}
-                </Button>
-              )}
+              <ProfileZap
+                pubkey={pubkey}
+                lnurl={lnurl}
+                relays={relays}
+                onClose={() => setOpen(false)}
+                onPayingChange={setPaying}
+              />
             </section>
           )}
           {targets.length > 0 && (
@@ -216,16 +208,6 @@ export function SiteDonate({ pubkey, config }: { pubkey: string; config: Instanc
           )}
         </DialogContent>
       </Dialog>
-
-      {!account && (
-        <SiteAuthDialog
-          action="zap"
-          isOpen={authOpen}
-          onClose={() => setAuthOpen(false)}
-          onLogin={() => setAuthOpen(false)}
-          relays={relays}
-        />
-      )}
     </>
   )
 }

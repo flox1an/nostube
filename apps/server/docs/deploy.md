@@ -156,13 +156,9 @@ matters in the application:
 Coolify's default restart policy (`unless-stopped`) restarts the container after the clean exit that
 saving in the studio causes.
 
-**Rolling it out from CI.** `server-image.yml` can deploy after it pushed the image from `main`: it
-joins the private network the Coolify host is on and calls Coolify's deploy endpoint. It needs the
-repository secrets `TS_AUTHKEY`, `COOLIFY_TAILNET_HOST`, `COOLIFY_DEPLOY_TOKEN`,
-`COOLIFY_SERVER_UUID` (the application's id) and, optionally, `NOSTUBE_SERVER_URL` (its public
-address). Without the first four the deploy steps are skipped. With the last one the workflow then
-waits until the running instance reports exactly the commit that was built: `/api/health` carries a
-`revision`, because a green deploy alone does not prove that the new image is the one running.
+**Rolling it out.** `server-image.yml` only builds, tests and pushes the image; it does not deploy.
+Redeploy the application in Coolify to pull it. `/api/health` carries a `revision` (the commit of
+the image), so you can check that the new image is the one running.
 
 ## Login protection
 

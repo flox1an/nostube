@@ -1,3 +1,7 @@
+## Releases
+
+A server release is one commit `chore(server): release <version>` that bumps `version` in `Cargo.toml` and `Cargo.lock` (`cargo update -p nostube-server --offline`). Tag that commit `server-v<version>` and push the tag with it (`git push origin main server-v<version>`): the tag makes `server-image.yml` publish the image as `:<version>` next to `:main`.
+
 ## Agent skills
 
 ### Issue tracker

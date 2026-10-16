@@ -58,6 +58,25 @@ export const isPageText = (v: unknown): v is string =>
 export const pageText = (texts: Record<string, string>, language: string): string | undefined =>
   texts[language] ?? texts.en ?? texts[Object.keys(texts).sort()[0]]
 
+/** The creator's curated homepage; video choices use stable addresses or event ids. */
+export interface SiteHomepage {
+  intro: string
+  featured: string
+  featuredText: string
+  selected: string[]
+  links: { label: string; url: string }[]
+  action: { label: string; url: string } | null
+}
+
+export const noSiteHomepage = (): SiteHomepage => ({
+  intro: '',
+  featured: '',
+  featuredText: '',
+  selected: [],
+  links: [],
+  action: null,
+})
+
 /** How the instance's site looks and which videos it shows (the viewer's light/dark follows the system). */
 export interface InstanceSite {
   tagline: string
@@ -72,6 +91,8 @@ export interface InstanceSite {
   links: { profile: string; video: string; note: string }
   /** The about, imprint and privacy texts; a page without any text does not exist. */
   pages: SitePages
+  /** Absent on older instances: the chronological video grid remains the homepage. */
+  homepage?: SiteHomepage
   /**
    * Images the admin uploaded (`/branding/<slot>?v=<hash>`, same origin); absent when the slot
    * is empty. Not part of the studio's config edit: the server adds them to the public config.
@@ -175,6 +196,33 @@ const HIDDEN_VIDEO = /^(?:[0-9a-f]{64}|\d+:[0-9a-f]{64}:.+)$/
 const isWs = (u: unknown) => typeof u === 'string' && /^wss?:\/\/[^/\s]+\/?$/.test(u)
 const isOrigin = (u: unknown) => typeof u === 'string' && /^https:\/\/[^/\s]+$/.test(u)
 
+const isHomepageVideoRef = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  [...value].length <= 1024 &&
+  !/\p{Cc}/u.test(value) &&
+  (HEX64.test(value) || /^3423[56]:[0-9a-f]{64}:.+$/.test(value))
+
+function isHomepageLink(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const link = value as { label?: unknown; url?: unknown }
+  if (
+    typeof link.label !== 'string' ||
+    !link.label.trim() ||
+    [...link.label].length > 80 ||
+    typeof link.url !== 'string' ||
+    [...link.url].length > 2048 ||
+    !link.url.startsWith('https://') ||
+    /[\s\p{Cc}]/u.test(link.url)
+  )
+    return false
+  try {
+    const url = new URL(link.url)
+    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password
+  } catch {
+    return false
+  }
+}
+
 /** Strict validation of the `site` object; the server and the studio apply the same rules. */
 export function validateSite(value: unknown): string[] {
   const e: string[] = []
@@ -184,6 +232,7 @@ export function validateSite(value: unknown): string[] {
     videos?: { hidden?: unknown } | null
     links?: Record<string, unknown> | null
     pages?: Record<string, unknown> | null
+    homepage?: unknown
   } | null
   if (!site || typeof site !== 'object') return ['site must be an object']
   if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
@@ -223,6 +272,32 @@ export function validateSite(value: unknown): string[] {
             `site.pages.${key} must map two-letter language codes to non-empty texts of at most ${SITE_PAGE_MAX_CHARS} characters`
           )
       }
+  }
+  if (site.homepage !== undefined) {
+    const home = site.homepage as Partial<SiteHomepage> | null
+    if (!home || typeof home !== 'object' || Array.isArray(home))
+      e.push('site.homepage must be an object')
+    else {
+      if (typeof home.intro !== 'string' || [...home.intro].length > 2000)
+        e.push('site.homepage.intro must be a text of at most 2000 characters')
+      if (home.featured !== '' && !isHomepageVideoRef(home.featured))
+        e.push('site.homepage.featured must be empty or a video address or event id')
+      if (typeof home.featuredText !== 'string' || [...home.featuredText].length > 500)
+        e.push('site.homepage.featuredText must be a text of at most 500 characters')
+      if (
+        !Array.isArray(home.selected) ||
+        home.selected.length > 12 ||
+        !home.selected.every(isHomepageVideoRef) ||
+        new Set(home.selected).size !== home.selected.length
+      )
+        e.push(
+          'site.homepage.selected must contain at most 12 distinct video addresses or event ids'
+        )
+      if (!Array.isArray(home.links) || home.links.length > 5 || !home.links.every(isHomepageLink))
+        e.push('site.homepage.links must contain at most 5 named HTTPS links without credentials')
+      if (home.action !== null && !isHomepageLink(home.action))
+        e.push('site.homepage.action must be null or a named HTTPS link without credentials')
+    }
   }
   return e
 }
@@ -318,6 +393,14 @@ export function parseInstanceConfig(json: unknown): ParseResult {
         pages: Object.fromEntries(
           SITE_PAGES.map(k => [k, { ...(site.pages as Partial<SitePages> | undefined)?.[k] }])
         ) as SitePages,
+        ...(site.homepage && {
+          homepage: {
+            ...site.homepage,
+            selected: [...site.homepage.selected],
+            links: site.homepage.links.map(link => ({ ...link })),
+            action: site.homepage.action ? { ...site.homepage.action } : null,
+          },
+        }),
         // Optional: a field that is not a branding URL of this server is left out, the rest stays.
         ...Object.fromEntries(
           BRANDING_SLOTS.filter(s => isBrandingUrl(s, site[s])).map(s => [s, site[s]])

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SITE_FONTS } from '@nostube/core/instance-config'
+import type { VideoEvent } from '@nostube/core/video-event'
 import { Button } from '@nostube/widgets/components/button'
 import {
   Card,
@@ -14,6 +15,7 @@ import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/s
 import { BrandingCard, type BrandingProps } from './BrandingCard'
 import { LINK_PRESETS, isLightningAddress, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
+import { HomepageCard, findVideo, safeThumbnail } from './HomepageCard'
 
 const ACCENT = /^#[0-9a-fA-F]{6}$/
 
@@ -30,11 +32,16 @@ export interface PageProps {
   update: (patch: Partial<Draft>) => void
 }
 
-/** Title, tagline, logo, favicon, banner, accent colour, font and where links to other Nostr content go. */
+/** Title, tagline, homepage curation, logo, favicon, banner, accent colour, font and where links to other Nostr content go. */
 export function AppearancePage({ draft, update, branding, onBranding }: PageProps & BrandingProps) {
   const { t } = useTranslation()
   const preview = useRef<HTMLDivElement>(null)
   const lowContrast = lowContrastModes(draft.accent)
+  // The creator's videos the homepage card loaded: titles and thumbnails for the preview.
+  const [videos, setVideos] = useState<VideoEvent[]>([])
+  const home = draft.homepage
+  const featured = home?.featured ? findVideo(videos, home.featured) : undefined
+  const featuredThumbnail = safeThumbnail(featured)
 
   useEffect(() => {
     if (!preview.current || !ACCENT.test(draft.accent)) return
@@ -42,8 +49,8 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
   }, [draft.accent, draft.font])
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-      <div className="space-y-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="min-w-0 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>{t('studio.appearance.siteTitle')}</CardTitle>
@@ -92,6 +99,14 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
             </Field>
           </CardContent>
         </Card>
+
+        <HomepageCard
+          homepage={draft.homepage}
+          hiddenText={draft.hiddenText}
+          onChange={homepage => update({ homepage })}
+          videos={videos}
+          onVideos={setVideos}
+        />
 
         <BrandingCard branding={branding} onBranding={onBranding} />
 
@@ -212,7 +227,7 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
         </Card>
       </div>
 
-      <aside>
+      <aside className="min-w-0">
         <p className="mb-2 text-sm font-medium">{t('studio.appearance.preview')}</p>
         <div
           ref={preview}
@@ -226,7 +241,11 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
           <div className="space-y-3 p-4">
             <div className="flex items-center gap-3">
               {branding.logo ? (
-                <img src={branding.logo} alt="" className="h-12 w-auto max-w-[40%] object-contain" />
+                <img
+                  src={branding.logo}
+                  alt=""
+                  className="h-12 w-auto max-w-[40%] object-contain"
+                />
               ) : (
                 <div className="h-12 w-12 shrink-0 rounded-full bg-muted" />
               )}
@@ -239,16 +258,74 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[0, 1, 2, 3].map(n => (
-                <div key={n} className="space-y-1">
+            {home?.intro.trim() && (
+              <p className="line-clamp-4 whitespace-pre-line text-sm">{home.intro.trim()}</p>
+            )}
+            {home?.featured && (
+              <div className="space-y-1">
+                {featuredThumbnail ? (
+                  <img
+                    src={featuredThumbnail}
+                    alt=""
+                    className="aspect-video w-full rounded-md object-cover"
+                  />
+                ) : (
                   <div className="aspect-video rounded-md bg-muted" />
-                  <div className="h-2 w-3/4 rounded bg-muted" />
-                </div>
-              ))}
+                )}
+                <p className="line-clamp-2 text-sm font-medium">
+                  {featured?.title ?? t('studio.homepage.featured')}
+                </p>
+                {home.featuredText.trim() && (
+                  <p className="line-clamp-3 text-xs text-muted-foreground">
+                    {home.featuredText.trim()}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              {home?.selected.length
+                ? home.selected.map(ref => {
+                    const video = findVideo(videos, ref)
+                    const thumbnail = safeThumbnail(video)
+                    return (
+                      <div key={ref} className="space-y-1">
+                        {thumbnail ? (
+                          <img
+                            src={thumbnail}
+                            alt=""
+                            className="aspect-video w-full rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="aspect-video rounded-md bg-muted" />
+                        )}
+                        {video ? (
+                          <p className="line-clamp-1 text-xs">{video.title}</p>
+                        ) : (
+                          <div className="h-2 w-3/4 rounded bg-muted" />
+                        )}
+                      </div>
+                    )
+                  })
+                : [0, 1, 2, 3].map(n => (
+                    <div key={n} className="space-y-1">
+                      <div className="aspect-video rounded-md bg-muted" />
+                      <div className="h-2 w-3/4 rounded bg-muted" />
+                    </div>
+                  ))}
             </div>
+            {home && home.links.some(l => l.label.trim()) && (
+              <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                {home.links
+                  .filter(l => l.label.trim())
+                  .map((l, i) => (
+                    <span key={i} className="text-primary underline">
+                      {l.label.trim()}
+                    </span>
+                  ))}
+              </p>
+            )}
             <Button type="button" size="sm">
-              {t('studio.appearance.previewButton')}
+              {home?.action?.label.trim() || t('studio.appearance.previewButton')}
             </Button>
           </div>
         </div>

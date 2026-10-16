@@ -33,7 +33,7 @@ const en: Policy = {
     ],
     [
       'What is stored in your browser',
-      "The website sets no cookies. It uses your browser's local storage and cache for: your language choice, your confirmation that you are 18 or older, the volume and loop setting of the player, a copy of the latest site settings, a cache of received Nostr events and a short-lived cache of zap totals. If you sign in, your public key and the sign-in method are stored too. This data stays in your browser and is not sent to the operator. You can delete it in your browser's settings (site data).",
+      'The website sets no cookies. It uses your browser\'s local storage and cache for: your language choice, your confirmation that you are 18 or older, the volume and loop setting of the player, the playback position of videos you started but did not finish (shown as "Continue watching" and removable there), a copy of the latest site settings, a cache of received Nostr events and a short-lived cache of zap totals. If you sign in, your public key and the sign-in method are stored too. This data stays in your browser and is not sent to the operator. You can delete it in your browser\'s settings (site data).',
     ],
     [
       'Signing in (optional)',
@@ -84,7 +84,7 @@ const de: Policy = {
     ],
     [
       'Was in Ihrem Browser gespeichert wird',
-      'Die Website setzt keine Cookies. Sie nutzt den lokalen Speicher und den Cache Ihres Browsers für: Ihre Sprachwahl, Ihre Bestätigung, dass Sie mindestens 18 Jahre alt sind, Lautstärke und Wiederholungs-Einstellung des Players, eine Kopie der zuletzt geladenen Website-Einstellungen, einen Zwischenspeicher empfangener Nostr-Ereignisse und einen kurzlebigen Zwischenspeicher für Zap-Summen. Wenn Sie sich anmelden, werden außerdem Ihr öffentlicher Schlüssel und die Anmeldeart gespeichert. Diese Daten bleiben in Ihrem Browser und werden nicht an den Betreiber gesendet. Sie können sie in den Einstellungen Ihres Browsers löschen (Websitedaten).',
+      'Die Website setzt keine Cookies. Sie nutzt den lokalen Speicher und den Cache Ihres Browsers für: Ihre Sprachwahl, Ihre Bestätigung, dass Sie mindestens 18 Jahre alt sind, Lautstärke und Wiederholungs-Einstellung des Players, die Abspielposition begonnener, aber nicht beendeter Videos (als „Weiterschauen“ angezeigt und dort löschbar), eine Kopie der zuletzt geladenen Website-Einstellungen, einen Zwischenspeicher empfangener Nostr-Ereignisse und einen kurzlebigen Zwischenspeicher für Zap-Summen. Wenn Sie sich anmelden, werden außerdem Ihr öffentlicher Schlüssel und die Anmeldeart gespeichert. Diese Daten bleiben in Ihrem Browser und werden nicht an den Betreiber gesendet. Sie können sie in den Einstellungen Ihres Browsers löschen (Websitedaten).',
     ],
     [
       'Anmeldung (optional)',
@@ -135,7 +135,7 @@ const fr: Policy = {
     ],
     [
       'Ce qui est enregistré dans votre navigateur',
-      "Le site ne dépose aucun cookie. Il utilise le stockage local et le cache de votre navigateur pour : votre choix de langue, votre confirmation d'avoir 18 ans ou plus, le volume et le réglage de lecture en boucle du lecteur, une copie des derniers paramètres du site, un cache des événements Nostr reçus et un cache de courte durée des totaux de zaps. Si vous vous connectez, votre clé publique et la méthode de connexion sont aussi enregistrées. Ces données restent dans votre navigateur et ne sont pas envoyées à l'exploitant. Vous pouvez les supprimer dans les réglages de votre navigateur (données de sites).",
+      "Le site ne dépose aucun cookie. Il utilise le stockage local et le cache de votre navigateur pour : votre choix de langue, votre confirmation d'avoir 18 ans ou plus, le volume et le réglage de lecture en boucle du lecteur, la position de lecture des vidéos commencées mais non terminées (affichée sous « Reprendre la lecture » et effaçable à cet endroit), une copie des derniers paramètres du site, un cache des événements Nostr reçus et un cache de courte durée des totaux de zaps. Si vous vous connectez, votre clé publique et la méthode de connexion sont aussi enregistrées. Ces données restent dans votre navigateur et ne sont pas envoyées à l'exploitant. Vous pouvez les supprimer dans les réglages de votre navigateur (données de sites).",
     ],
     [
       'Connexion (facultative)',
@@ -186,7 +186,7 @@ const es: Policy = {
     ],
     [
       'Qué se guarda en su navegador',
-      'El sitio no instala cookies. Usa el almacenamiento local y la caché de su navegador para: su elección de idioma, su confirmación de que tiene 18 años o más, el volumen y el ajuste de repetición del reproductor, una copia de la última configuración del sitio, una caché de eventos Nostr recibidos y una caché de corta duración de los totales de zaps. Si inicia sesión, también se guardan su clave pública y el método de inicio de sesión. Estos datos permanecen en su navegador y no se envían al operador. Puede borrarlos en los ajustes de su navegador (datos de sitios).',
+      'El sitio no instala cookies. Usa el almacenamiento local y la caché de su navegador para: su elección de idioma, su confirmación de que tiene 18 años o más, el volumen y el ajuste de repetición del reproductor, la posición de reproducción de los vídeos que empezó pero no terminó (se muestra como «Seguir viendo» y se puede borrar ahí), una copia de la última configuración del sitio, una caché de eventos Nostr recibidos y una caché de corta duración de los totales de zaps. Si inicia sesión, también se guardan su clave pública y el método de inicio de sesión. Estos datos permanecen en su navegador y no se envían al operador. Puede borrarlos en los ajustes de su navegador (datos de sitios).',
     ],
     [
       'Inicio de sesión (opcional)',
@@ -237,7 +237,7 @@ const ru: Policy = {
     ],
     [
       'Что хранится в вашем браузере',
-      'Сайт не устанавливает cookie. Он использует локальное хранилище и кэш вашего браузера для: выбранного вами языка, вашего подтверждения, что вам 18 лет или больше, громкости и настройки повтора плеера, копии последних настроек сайта, кэша полученных событий Nostr и кратковременного кэша сумм зэпов. Если вы входите в систему, также сохраняются ваш публичный ключ и способ входа. Эти данные остаются в вашем браузере и не отправляются оператору. Вы можете удалить их в настройках браузера (данные сайтов).',
+      'Сайт не устанавливает cookie. Он использует локальное хранилище и кэш вашего браузера для: выбранного вами языка, вашего подтверждения, что вам 18 лет или больше, громкости и настройки повтора плеера, позиции воспроизведения начатых, но не досмотренных видео (показывается как «Продолжить просмотр» и удаляется там же), копии последних настроек сайта, кэша полученных событий Nostr и кратковременного кэша сумм зэпов. Если вы входите в систему, также сохраняются ваш публичный ключ и способ входа. Эти данные остаются в вашем браузере и не отправляются оператору. Вы можете удалить их в настройках браузера (данные сайтов).',
     ],
     [
       'Вход (необязательно)',
@@ -288,7 +288,7 @@ const zh: Policy = {
     ],
     [
       '浏览器中保存的内容',
-      '本网站不设置 Cookie。它使用浏览器的本地存储和缓存来保存：您选择的语言、您已年满 18 岁的确认、播放器的音量和循环设置、最近一次站点设置的副本、已接收 Nostr 事件的缓存，以及短期的 Zap 总额缓存。如果您登录，还会保存您的公钥和登录方式。这些数据只保留在您的浏览器中，不会发送给运营者。您可以在浏览器设置中删除它们（网站数据）。',
+      '本网站不设置 Cookie。它使用浏览器的本地存储和缓存来保存：您选择的语言、您已年满 18 岁的确认、播放器的音量和循环设置、已开始但未看完的视频的播放位置（显示为“继续观看”，可在那里清除）、最近一次站点设置的副本、已接收 Nostr 事件的缓存，以及短期的 Zap 总额缓存。如果您登录，还会保存您的公钥和登录方式。这些数据只保留在您的浏览器中，不会发送给运营者。您可以在浏览器设置中删除它们（网站数据）。',
     ],
     [
       '登录（可选）',
@@ -339,7 +339,7 @@ const ja: Policy = {
     ],
     [
       'ブラウザに保存されるもの',
-      'このウェブサイトは Cookie を設定しません。ブラウザのローカルストレージとキャッシュを、次の目的で使用します：言語の選択、18 歳以上であることの確認、プレーヤーの音量とループ設定、最新のサイト設定のコピー、受信した Nostr イベントのキャッシュ、短期間の Zap 合計のキャッシュ。ログインした場合は、公開鍵とログイン方法も保存されます。これらのデータはブラウザ内にとどまり、運営者には送信されません。ブラウザの設定（サイトデータ）から削除できます。',
+      'このウェブサイトは Cookie を設定しません。ブラウザのローカルストレージとキャッシュを、次の目的で使用します：言語の選択、18 歳以上であることの確認、プレーヤーの音量とループ設定、再生を始めたが最後まで見ていない動画の再生位置（「続きから再生」に表示され、そこで消去できます）、最新のサイト設定のコピー、受信した Nostr イベントのキャッシュ、短期間の Zap 合計のキャッシュ。ログインした場合は、公開鍵とログイン方法も保存されます。これらのデータはブラウザ内にとどまり、運営者には送信されません。ブラウザの設定（サイトデータ）から削除できます。',
     ],
     [
       'ログイン（任意）',

@@ -26,6 +26,11 @@ import { useEscapeToHome } from './use-escape-to-home'
 import { useSeekEvents } from './use-seek-events'
 import type { VideoLookup } from './use-video-by-id'
 import { tagPath, videoPath } from './video-path'
+import { videoRef } from '@nostube/core/hidden-videos'
+import { startPosition } from '@nostube/core/watch-progress'
+import { chooseNextVideo } from './next-up'
+import { forgetProgress, savedProgress, saveProgress } from './use-watch-progress'
+import { ChapterList, Transcript } from './VideoPanels'
 
 /**
  * One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. The site
@@ -127,13 +132,48 @@ function VideoDetails({
 }) {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
-  const startAt = Math.max(0, Number.parseInt(searchParams.get('t') ?? '', 10) || 0)
+  const reference = videoRef(video)
+  // An explicit link time (`?t=`, even 0) always wins over the position saved on this device.
+  const [startAt] = useState(() => {
+    const raw = searchParams.get('t')
+    const parsed = raw === null ? Number.NaN : Number.parseInt(raw, 10)
+    return startPosition(Number.isFinite(parsed) ? parsed : null, savedProgress(reference))
+  })
   const [shareOpen, setShareOpen] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
   const [shareTime, setShareTime] = useState(startAt)
   const [currentTime, setCurrentTime] = useState(startAt)
   const [mediaElement, setMediaElement] = useState<HTMLMediaElement | null>(null)
-  const updateTime = useCallback((time: number) => setCurrentTime(Math.floor(time)), [])
+  const [attempt, setAttempt] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const [ended, setEnded] = useState(false)
+  const lastTime = useRef(startAt)
+  const updateTime = useCallback(
+    (time: number) => {
+      setCurrentTime(Math.floor(time))
+      lastTime.current = time
+      const known = mediaElement?.duration
+      saveProgress(reference, time, known && Number.isFinite(known) ? known : video.duration)
+    },
+    [mediaElement, reference, video.duration]
+  )
+  const handleEnded = useCallback(() => {
+    forgetProgress(reference)
+    setEnded(true)
+  }, [reference])
+  useEffect(() => {
+    if (!mediaElement) return
+    const playing = () => setEnded(false)
+    // A jump (chapter, transcript line, timestamp link, scrubbing) shows at once, not on the
+    // player's next once-a-second time update.
+    const seeked = () => setCurrentTime(Math.floor(mediaElement.currentTime))
+    mediaElement.addEventListener('play', playing)
+    mediaElement.addEventListener('seeked', seeked)
+    return () => {
+      mediaElement.removeEventListener('play', playing)
+      mediaElement.removeEventListener('seeked', seeked)
+    }
+  }, [mediaElement])
   useSeekEvents(mediaElement)
   const links = useMemo(() => siteLinks(config), [config])
   // The canonical origin (not whatever host the viewer used) makes the link and the embed stable.
@@ -161,7 +201,7 @@ function VideoDetails({
           style={playerBoxStyle(video.dimensions)}
         >
           <VideoPlayer
-            key={video.id}
+            key={`${video.id}:${attempt}`}
             urls={video.urls}
             textTracks={video.textTracks}
             mime={video.mimeType ?? ''}
@@ -176,13 +216,46 @@ function VideoDetails({
             title={video.title}
             authorName={authorName}
             className="h-full w-full"
-            initialPlayPos={startAt}
+            initialPlayPos={attempt > 0 ? Math.floor(lastTime.current) : startAt}
             onVideoElementReady={setMediaElement}
             onTimeUpdate={updateTime}
             chapters={chapters}
+            onEnded={handleEnded}
+            onAllSourcesFailed={() => setFailed(true)}
           />
         </div>
       </div>
+      {failed && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/50 p-3 text-sm"
+        >
+          <p>{t('site.watch.playbackFailed')}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFailed(false)
+              setAttempt(value => value + 1)
+            }}
+          >
+            {t('site.watch.retry')}
+          </Button>
+        </div>
+      )}
+      {ended && !failed && (
+        <UpNext
+          config={config}
+          gate={gate}
+          current={video}
+          onReplay={() => {
+            if (!mediaElement) return
+            mediaElement.currentTime = 0
+            void Promise.resolve(mediaElement.play()).catch(() => {})
+          }}
+        />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <h1 className="break-words text-xl font-semibold">{video.title}</h1>
@@ -225,6 +298,18 @@ function VideoDetails({
           ))}
         </ul>
       )}
+      <ChapterList
+        chapters={chapters}
+        currentTime={currentTime}
+        element={mediaElement}
+        onJump={setCurrentTime}
+      />
+      <Transcript
+        tracks={video.textTracks}
+        currentTime={currentTime}
+        element={mediaElement}
+        onJump={setCurrentTime}
+      />
       <Comments
         target={{
           videoId: video.id,
@@ -288,5 +373,42 @@ function Description({ video, links }: { video: VideoEvent; links: RichTextLinks
         </Button>
       )}
     </div>
+  )
+}
+
+/** After the video: the next one in the creator's order, or watching it again. */
+function UpNext({
+  config,
+  gate,
+  current,
+  onReplay,
+}: {
+  config: InstanceConfig
+  gate: AgeGate
+  current: VideoEvent
+  onReplay: () => void
+}) {
+  const { t } = useTranslation()
+  const { videos } = useCreatorVideos(config)
+  const next = useMemo(
+    () => chooseNextVideo(videos, current, config.site.homepage?.selected ?? []),
+    [videos, current, config.site.homepage?.selected]
+  )
+  return (
+    <section className="space-y-3 rounded-lg border p-4" aria-labelledby="up-next">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="up-next" className="text-lg font-semibold">
+          {t('site.watch.upNext')}
+        </h2>
+        <Button type="button" variant="outline" size="sm" onClick={onReplay}>
+          {t('site.watch.replay')}
+        </Button>
+      </div>
+      {next && (
+        <div className="max-w-xs">
+          <VideoLinks videos={[next]} gate={gate} />
+        </div>
+      )}
+    </section>
   )
 }

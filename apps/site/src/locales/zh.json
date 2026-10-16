@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "章节",
+      "showTranscript": "显示文字记录",
+      "hideTranscript": "隐藏文字记录",
+      "transcriptLoading": "正在加载文字记录…",
+      "transcriptFailed": "无法加载文字记录。",
+      "transcriptEmpty": "这些字幕没有可读的内容。",
+      "transcriptSearch": "搜索文字记录",
+      "transcriptNoMatch": "没有与“{{query}}”匹配的行。",
+      "upNext": "接下来",
+      "replay": "再看一次",
+      "playbackFailed": "无法播放此视频。",
+      "retry": "重试"
+    },
+    "home": {
+      "about": "关于创作者",
+      "featured": "从这里开始",
+      "selected": "精选作品",
+      "latest": "最新视频",
+      "continue": "继续观看",
+      "clearProgress": "清除",
+      "clearProgressLabel": "清除此设备上的观看进度",
+      "watch": "观看视频"
+    },
     "app": {
       "loading": "加载中…",
       "loadFailed": "无法加载此网站。"

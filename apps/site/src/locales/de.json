@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "Kapitel",
+      "showTranscript": "Transkript anzeigen",
+      "hideTranscript": "Transkript ausblenden",
+      "transcriptLoading": "Transkript wird geladen…",
+      "transcriptFailed": "Das Transkript konnte nicht geladen werden.",
+      "transcriptEmpty": "Diese Untertitel enthalten keine lesbaren Zeilen.",
+      "transcriptSearch": "Transkript durchsuchen",
+      "transcriptNoMatch": "Keine Zeile passt zu „{{query}}“.",
+      "upNext": "Als Nächstes",
+      "replay": "Noch einmal ansehen",
+      "playbackFailed": "Dieses Video konnte nicht abgespielt werden.",
+      "retry": "Erneut versuchen"
+    },
+    "home": {
+      "about": "Über den Creator",
+      "featured": "Hier anfangen",
+      "selected": "Ausgewählte Arbeiten",
+      "latest": "Neueste Videos",
+      "continue": "Weiterschauen",
+      "clearProgress": "Leeren",
+      "clearProgressLabel": "Wiedergabefortschritt auf diesem Gerät löschen",
+      "watch": "Video ansehen"
+    },
     "app": {
       "loading": "Wird geladen…",
       "loadFailed": "Diese Seite konnte nicht geladen werden."

@@ -7,6 +7,7 @@ import {
   SITE_PAGE_MAX_CHARS,
   validateSite,
   type InstanceSite,
+  type SiteHomepage,
   type SiteFont,
   type SitePages,
   type Reach,
@@ -41,6 +42,8 @@ export interface Draft {
   siteHosting: SiteHosting
   nsiteGateway: string
   nsiteDomain: string
+  /** Absent for a config saved before the homepage existed, until the creator edits it. */
+  homepage?: SiteHomepage
 }
 
 const toLines = (text: string) =>
@@ -73,6 +76,7 @@ export function toDraft(c: AdminConfig): Draft {
     siteHosting: c.siteHosting,
     nsiteGateway: c.nsite.gateway,
     nsiteDomain: c.nsite.domain,
+    homepage: c.site.homepage && structuredClone(c.site.homepage),
   }
 }
 
@@ -179,6 +183,34 @@ function count(label: string, text: string, errors: string[]): number {
   return n
 }
 
+/** The server's homepage limits: characters of the texts, videos to select, named links. */
+export const HOMEPAGE_LIMITS = { intro: 2000, note: 500, selected: 12, links: 5 }
+
+/** The homepage as saved: texts trimmed, link rows and a main button left empty dropped. */
+function savedHomepage(h: SiteHomepage): SiteHomepage {
+  const [action, ...links] = [h.action, ...h.links].map(
+    l => l && { label: l.label.trim(), url: l.url.trim() }
+  )
+  return {
+    intro: h.intro.trim(),
+    featured: h.featured,
+    featuredText: h.featuredText.trim(),
+    selected: h.selected,
+    links: links.filter(l => l !== null && (l.label || l.url)) as SiteHomepage['links'],
+    action: action && (action.label || action.url) ? action : null,
+  }
+}
+
+/** The message (`studio.errors.homepage.*`) for a homepage field the core reports. */
+const HOMEPAGE_ERRORS: Record<keyof SiteHomepage, string> = {
+  intro: 'intro',
+  featuredText: 'featuredText',
+  featured: 'videos',
+  selected: 'videos',
+  links: 'link',
+  action: 'link',
+}
+
 export type DraftResult = { config: AdminConfig; errors: [] } | { config: null; errors: string[] }
 
 /** Checks the draft with the same rules as the server and builds what gets saved. */
@@ -190,6 +222,8 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
     if (!ref) errors.push(i18n.t('studio.errors.notVideoLink', { line }))
     return ref ? [ref] : []
   })
+  // A config saved before the homepage existed keeps none until the creator edits it.
+  const homepage = d.homepage && savedHomepage(d.homepage)
   const site = {
     tagline: d.tagline.trim(),
     theme: { accent: d.accent.toLowerCase(), font: d.font },
@@ -210,6 +244,7 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
         ),
       ])
     ) as SitePages,
+    ...(homepage && { homepage }),
   }
   // The core names the field that is wrong (`site.theme.accent`, `site.links.note`); the message
   // shown is ours. The form cannot produce its other errors (the hidden list is checked above).
@@ -230,6 +265,10 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
             max: SITE_PAGE_MAX_CHARS,
           })
         }
+        const home = /^site\.homepage\.(intro|featuredText|featured|selected|links|action)\b/.exec(
+          e
+        )?.[1] as keyof SiteHomepage | undefined
+        if (home) return i18n.t(`studio.errors.homepage.${HOMEPAGE_ERRORS[home]}`, HOMEPAGE_LIMITS)
         return e.startsWith('site.theme.accent') ? i18n.t('studio.errors.accent') : e
       })
   )

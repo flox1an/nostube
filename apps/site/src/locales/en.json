@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "Chapters",
+      "showTranscript": "Show transcript",
+      "hideTranscript": "Hide transcript",
+      "transcriptLoading": "Loading transcript…",
+      "transcriptFailed": "The transcript could not be loaded.",
+      "transcriptEmpty": "These subtitles contain no readable lines.",
+      "transcriptSearch": "Search the transcript",
+      "transcriptNoMatch": "No line matches “{{query}}”.",
+      "upNext": "Up next",
+      "replay": "Watch again",
+      "playbackFailed": "This video could not be played.",
+      "retry": "Try again"
+    },
+    "home": {
+      "about": "About the creator",
+      "featured": "Start here",
+      "selected": "Selected works",
+      "latest": "Latest videos",
+      "continue": "Continue watching",
+      "clearProgress": "Clear",
+      "clearProgressLabel": "Clear watch progress on this device",
+      "watch": "Watch video"
+    },
     "app": {
       "loading": "Loading…",
       "loadFailed": "This site could not be loaded."

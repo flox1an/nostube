@@ -2,7 +2,7 @@ import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
-import { nip19 } from 'nostr-tools'
+import { nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
 import { EMPTY, NEVER, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -25,15 +25,22 @@ vi.mock('@nostube/widgets/player', () => ({
     contentWarning?: string
     initialPlayPos?: number
     onTimeUpdate?: (time: number) => void
+    onEnded?: () => void
+    onAllSourcesFailed?: (urls: string[]) => void
     onVideoElementReady?: (element: HTMLMediaElement | null) => void
   }) => (
-    <video
-      ref={props.onVideoElementReady}
-      data-testid="player"
-      data-warning={props.contentWarning ?? ''}
-      data-start={props.initialPlayPos ?? 0}
-      onTimeUpdate={event => props.onTimeUpdate?.(event.currentTarget.currentTime)}
-    />
+    <>
+      <video
+        ref={props.onVideoElementReady}
+        data-testid="player"
+        data-warning={props.contentWarning ?? ''}
+        data-start={props.initialPlayPos ?? 0}
+        onTimeUpdate={event => props.onTimeUpdate?.(event.currentTarget.currentTime)}
+        onEnded={props.onEnded}
+      />
+      {/* Stands in for "every source failed": hidden from the accessibility tree. */}
+      <button hidden data-testid="player-fail" onClick={() => props.onAllSourcesFailed?.([])} />
+    </>
   ),
 }))
 
@@ -176,6 +183,122 @@ describe('SiteHome', () => {
     renderSite(client)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
+  })
+
+  it('resolves older editorial choices independently and keeps the creator’s selected order', async () => {
+    const film = (id: string, identifier: string, title: string, age: number) => ({
+      pubkey: creator,
+      content: 'A film',
+      sig: 'f'.repeat(128),
+      id: id.repeat(64),
+      kind: 34235,
+      created_at: video.created_at - age,
+      tags: [
+        ['d', identifier],
+        ['title', title],
+        ['imeta', 'url https://media.example/film.mp4', 'm video/mp4'],
+      ],
+    })
+    const debut = film('8', 'debut:cut', 'The debut film', 50)
+    const backstage = film('9', 'backstage', 'Behind the scenes', 100)
+    const curatedClient = {
+      ...client,
+      eventStore: makeStore(),
+      getTimelineLoader: (_key: string, filters: Filter) => () =>
+        of(...(filters['#d'] ? [debut, backstage] : [video])),
+    } as unknown as NostubeClient
+    renderSite(curatedClient, '/', {
+      ...config,
+      site: {
+        ...config.site,
+        homepage: {
+          intro: 'Independent films by Alice.',
+          featured: `34235:${creator}:debut:cut`,
+          featuredText: 'My first story.',
+          selected: [`34235:${creator}:backstage`, `34235:${creator}:debut:cut`],
+          links: [{ label: 'Concerts', url: 'https://alice.example/concerts' }],
+          action: { label: 'Book a screening', url: 'https://alice.example/contact' },
+        },
+      },
+    })
+    expect(await screen.findByRole('heading', { name: 'The debut film' })).toBeTruthy()
+    const selected = await screen.findByRole('region', { name: 'Selected works' })
+    const recommendations = within(selected).getAllByRole('link')
+    expect(recommendations[0].textContent).toContain('Behind the scenes')
+    expect(recommendations[1].textContent).toContain('The debut film')
+    expect(screen.getByRole('link', { name: 'Book a screening' }).getAttribute('href')).toBe(
+      'https://alice.example/contact'
+    )
+    expect(screen.getByText('Independent films by Alice.')).toBeTruthy()
+    expect(screen.getByText('My first story.')).toBeTruthy()
+    expect(screen.getByText('My first upload')).toBeTruthy()
+  })
+
+  it('omits hidden and foreign editorial choices and keeps warned artwork behind the age gate', async () => {
+    // EventStore attaches cached tag/identifier symbols; never spread an already indexed event.
+    const base = {
+      kind: 21,
+      pubkey: creator,
+      created_at: video.created_at,
+      content: 'A film',
+      sig: 'f'.repeat(128),
+    }
+    const hidden = {
+      ...base,
+      id: '8'.repeat(64),
+      tags: [['title', 'Hidden film'], ...video.tags.slice(1)],
+    }
+    const foreign = {
+      ...base,
+      id: '9'.repeat(64),
+      pubkey: 'd'.repeat(64),
+      tags: [['title', 'Foreign film'], ...video.tags.slice(1)],
+    }
+    const warned = {
+      ...base,
+      id: '7'.repeat(64),
+      tags: [
+        ['title', 'Warned film'],
+        ['content-warning', 'Sensitive'],
+        [
+          'imeta',
+          'url https://media.example/warned.mp4',
+          'm video/mp4',
+          'image https://media.example/sensitive.jpg',
+        ],
+      ],
+    }
+    renderSite(
+      {
+        ...client,
+        eventStore: makeStore(),
+        getTimelineLoader: () => () => of(hidden, foreign, warned),
+      } as unknown as NostubeClient,
+      '/',
+      {
+        ...config,
+        site: {
+          ...config.site,
+          videos: { hidden: [hidden.id] },
+          homepage: {
+            intro: '',
+            featured: warned.id,
+            featuredText: 'Sensitive editorial note',
+            selected: [hidden.id, foreign.id],
+            links: [],
+            action: null,
+          },
+        },
+      }
+    )
+    expect(await screen.findByRole('heading', { name: 'Warned film' })).toBeTruthy()
+    expect(screen.queryByText('Hidden film')).toBeNull()
+    expect(screen.queryByText('Foreign film')).toBeNull()
+    expect(screen.queryByText('Sensitive editorial note')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Selected works' })).toBeNull()
+    expect([...document.querySelectorAll('img')].map(image => image.src)).not.toContain(
+      'https://media.example/sensitive.jpg'
+    )
   })
 
   it('shows the configured title and tagline, not the profile name', async () => {
@@ -609,6 +732,182 @@ describe('SiteHome', () => {
     renderSite(client, `/v/${link}?t=abc`)
     await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
     expect(screen.getByTestId('player').getAttribute('data-start')).toBe('0')
+  })
+
+  describe('watching', () => {
+    const PROGRESS_KEY = 'nostube-site:watch-progress'
+    const saved = (time: number) =>
+      localStorage.setItem(
+        PROGRESS_KEY,
+        JSON.stringify([{ ref: video.id, time, duration: 61, updatedAt: Date.now() }])
+      )
+    const link = nip19.neventEncode({ id: video.id, author: creator })
+    // Events built fresh: the event store marks the objects it has indexed.
+    const plainVideo = (id: string, title: string, extra: string[][] = []): NostrEvent => ({
+      id: id.repeat(64),
+      kind: 21,
+      pubkey: creator,
+      created_at: 1_700_000_000,
+      content: '',
+      sig: 'f'.repeat(128),
+      tags: [
+        ['title', title],
+        ['imeta', 'url https://media.example/a.mp4', 'm video/mp4', 'duration 120'],
+        ...extra,
+      ],
+    })
+    const clientOf = (...events: NostrEvent[]) =>
+      ({
+        eventStore: makeStore(),
+        getTimelineLoader: () => () => of(...events),
+        relayPool: { request: () => of(profile), subscription: () => NEVER },
+      }) as unknown as NostubeClient
+    const tick = (player: HTMLElement, time: number) => {
+      Object.defineProperty(player, 'currentTime', {
+        value: time,
+        writable: true,
+        configurable: true,
+      })
+      fireEvent.timeUpdate(player)
+    }
+
+    it('resumes where this device stopped, but a time in the link always wins', async () => {
+      saved(40)
+      const first = renderSite(client, `/v/${link}`)
+      await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+      expect(screen.getByTestId('player').getAttribute('data-start')).toBe('40')
+      first.unmount()
+      for (const [query, start] of [
+        ['?t=12', '12'],
+        ['?t=0', '0'],
+        ['?t=abc', '40'],
+      ]) {
+        const view = renderSite(client, `/v/${link}${query}`)
+        await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+        expect(screen.getByTestId('player').getAttribute('data-start')).toBe(start)
+        view.unmount()
+      }
+    })
+
+    it('keeps the position while watching, shows it on the start page and clears it there', async () => {
+      const view = renderSite(client, `/v/${link}`)
+      await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+      tick(screen.getByTestId('player'), 30)
+      expect(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? '[]')).toMatchObject([
+        { ref: video.id, time: 30 },
+      ])
+      view.unmount()
+
+      renderSite(client, '/')
+      expect(await screen.findByRole('heading', { name: 'Continue watching' })).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'Clear watch progress on this device' }))
+      expect(screen.queryByRole('heading', { name: 'Continue watching' })).toBeNull()
+      expect(localStorage.getItem(PROGRESS_KEY)).toBeNull()
+    })
+
+    it('forgets a finished video and offers the next one', async () => {
+      const first = plainVideo('5', 'First upload')
+      const second = plainVideo('6', 'Second upload')
+      localStorage.setItem(
+        PROGRESS_KEY,
+        JSON.stringify([{ ref: first.id, time: 30, duration: 120, updatedAt: Date.now() }])
+      )
+      renderSite(
+        clientOf(first, second),
+        `/v/${nip19.neventEncode({ id: first.id, author: creator })}`
+      )
+      const player = await screen.findByTestId('player')
+      fireEvent.ended(player)
+      const next = await screen.findByRole('region', { name: 'Up next' })
+      expect(await within(next).findByText('Second upload')).toBeTruthy()
+      expect(localStorage.getItem(PROGRESS_KEY)).toBeNull()
+    })
+
+    it('offers a retry when no source plays and restarts at the last position', async () => {
+      renderSite(client, `/v/${link}`)
+      const player = await screen.findByTestId('player')
+      tick(player, 20)
+      fireEvent.click(screen.getByTestId('player-fail'))
+      expect(screen.getByRole('alert').textContent).toContain('This video could not be played.')
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+      expect(screen.getByTestId('player').getAttribute('data-start')).toBe('20')
+    })
+
+    it('lists chapters and the subtitles as seekable, searchable text', async () => {
+      const chaptered = plainVideo('7', 'Chaptered', [
+        ['text-track', 'https://subs.example/en.vtt', 'en'],
+      ])
+      const described = { ...chaptered, content: '0:00 Intro\n0:30 Verse' }
+      const subtitles = [
+        'WEBVTT',
+        '',
+        '00:00:01.000 --> 00:00:03.000',
+        'Hello and welcome',
+        '',
+        '00:00:45.000 --> 00:00:48.000',
+        'The second verse',
+        '',
+        '00:00:45.000 --> 00:00:47.000',
+        'Sung over the first line',
+      ].join('\n')
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(async input =>
+          String(input) === 'https://subs.example/en.vtt'
+            ? new Response(subtitles)
+            : Promise.reject(new Error('unexpected request'))
+        )
+      const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue()
+      try {
+        renderSite(
+          clientOf(described),
+          `/v/${nip19.neventEncode({ id: described.id, author: creator })}`
+        )
+        const player = await screen.findByTestId('player')
+        Object.defineProperty(player, 'currentTime', {
+          value: 0,
+          writable: true,
+          configurable: true,
+        })
+        fireEvent.click(screen.getByRole('button', { name: /0:30\s*Verse/ }))
+        expect((player as HTMLMediaElement).currentTime).toBe(30)
+        // The click marks the chapter at once, before the browser has finished seeking.
+        expect(
+          screen.getByRole('button', { name: /0:30\s*Verse/ }).getAttribute('aria-current')
+        ).toBe('true')
+        // A seek from elsewhere (scrubbing, a timestamp link) moves the marker as well.
+        Object.defineProperty(player, 'currentTime', {
+          value: 5,
+          writable: true,
+          configurable: true,
+        })
+        fireEvent.seeked(player)
+        expect(
+          screen.getByRole('button', { name: /0:00\s*Intro/ }).getAttribute('aria-current')
+        ).toBe('true')
+        expect(
+          screen.getByRole('button', { name: /0:30\s*Verse/ }).getAttribute('aria-current')
+        ).toBeNull()
+
+        // Nothing is fetched until the reader opens the transcript.
+        expect(fetchSpy).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByRole('button', { name: 'Show transcript' }))
+        expect(await screen.findByText('The second verse')).toBeTruthy()
+        // Two lines may start together (overlapping subtitles): both stay listed.
+        expect(screen.getByText('Sung over the first line')).toBeTruthy()
+        fireEvent.change(screen.getByRole('searchbox', { name: 'Search the transcript' }), {
+          target: { value: 'welcome' },
+        })
+        expect(screen.queryByText('The second verse')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: /0:01\s*Hello and welcome/ }))
+        expect((player as HTMLMediaElement).currentTime).toBe(1)
+        expect(play).toHaveBeenCalled()
+      } finally {
+        fetchSpy.mockRestore()
+        play.mockRestore()
+      }
+    })
   })
 
   it('reports a video link that is not valid', async () => {

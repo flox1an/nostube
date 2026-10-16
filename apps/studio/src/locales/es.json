@@ -132,6 +132,48 @@
       "previewTitle": "Tu título",
       "previewButton": "Botón principal"
     },
+    "homepage": {
+      "title": "Página de inicio",
+      "description": "Lo primero que ven los visitantes en tu sitio. Todo es opcional: si lo dejas vacío, la página de inicio muestra tus últimos vídeos.",
+      "intro": "Introducción",
+      "count": "{{used}} / {{max}} caracteres",
+      "featured": "Vídeo destacado",
+      "featuredNone": "Ningún vídeo destacado. Elige uno abajo.",
+      "featuredText": "Nota sobre el vídeo destacado",
+      "selected": "Vídeos seleccionados",
+      "selectedHint": "Se muestran en la página de inicio en este orden, hasta {{max}}.",
+      "selectedNone": "No hay vídeos seleccionados. Añádelos abajo.",
+      "moveUp": "Subir «{{title}}»",
+      "moveDown": "Bajar «{{title}}»",
+      "remove": "Quitar «{{title}}»",
+      "choose": "Elegir entre tus vídeos",
+      "feature": "Destacar",
+      "featureVideo": "Destacar «{{title}}»",
+      "isFeatured": "Destacado",
+      "add": "Añadir",
+      "addVideo": "Añadir «{{title}}»",
+      "isAdded": "Añadido",
+      "full": "Hay {{max}} vídeos seleccionados; quita uno para añadir otro.",
+      "unknownVideo": "Vídeo no cargado en la lista",
+      "hiddenChoice": "Oculto en tu sitio: los visitantes no lo ven aquí.",
+      "paste": "O pega un enlace de vídeo",
+      "pasteHint": "La dirección de una página de vídeo, o un naddr, nevent o note.",
+      "pasteInvalid": "Esto no es un enlace de vídeo.",
+      "pasteHidden": "Este vídeo está oculto en tu sitio y no puede mostrarse en la página de inicio.",
+      "pasteAdded": "Este vídeo ya está seleccionado.",
+      "links": "Enlaces",
+      "linksHint": "Hasta {{max}} enlaces con nombre, cada uno una dirección https://, p. ej. tu tienda o tu página de contacto.",
+      "linkLabel": "Nombre del enlace {{n}}",
+      "linkUrl": "Dirección del enlace {{n}}",
+      "labelPlaceholder": "Nombre",
+      "removeLink": "Quitar el enlace {{n}}",
+      "addLink": "Añadir enlace",
+      "action": "Botón principal",
+      "actionToggle": "Mostrar un botón principal",
+      "actionHint": "Un botón destacado con una dirección https://, p. ej. para apoyarte o contratarte.",
+      "actionLabel": "Nombre del botón principal",
+      "actionUrl": "Dirección del botón principal"
+    },
     "pages": {
       "intro": "Páginas opcionales a las que el sitio enlaza en su pie. Escribe cada una en los idiomas que quieras: los visitantes ven su propio idioma, si no el inglés, si no el primer idioma escrito. Una página sin texto no se muestra ni se enlaza.",
       "kinds": {
@@ -534,6 +576,12 @@
         "reserve": "Reserva de espacio libre",
         "mirrorRelays": "Relays de réplica",
         "mirrorBlossom": "Servidores Blossom de réplica"
+      },
+      "homepage": {
+        "intro": "Introducción de la página de inicio: como máximo {{intro}} caracteres.",
+        "featuredText": "Nota sobre el vídeo destacado: como máximo {{note}} caracteres.",
+        "videos": "Vídeos de la página de inicio: elige hasta {{selected}} vídeos distintos de tu lista o por su enlace.",
+        "link": "Enlaces y botón principal de la página de inicio: cada uno necesita un nombre de 80 caracteres como máximo y una dirección https://."
       }
     },
     "onboarding": {

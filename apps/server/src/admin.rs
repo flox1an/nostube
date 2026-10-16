@@ -658,6 +658,22 @@ struct SiteBody {
     pages: config::Pages,
     /// Required too: a PUT without it must not silently drop the lightning address.
     lightning: String,
+    /// Optional for studios from before it (no curation then); given, every field is required.
+    #[serde(default)]
+    homepage: HomepageBody,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct HomepageBody {
+    intro: String,
+    featured: String,
+    featured_text: String,
+    selected: Vec<String>,
+    links: Vec<config::HomepageLink>,
+    /// Required (may be null), not implied by omission.
+    #[serde(deserialize_with = "Option::deserialize")]
+    action: Option<config::HomepageLink>,
 }
 
 /// All three are required: an empty `links` object must not silently mean the defaults.
@@ -816,6 +832,14 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
             },
             pages: put.site.pages,
             lightning: put.site.lightning,
+            homepage: config::SiteHomepage {
+                intro: put.site.homepage.intro,
+                featured: put.site.homepage.featured,
+                featured_text: put.site.homepage.featured_text,
+                selected: put.site.homepage.selected,
+                links: put.site.homepage.links,
+                action: put.site.homepage.action,
+            },
         },
         mirror: put.mirror,
     };
@@ -1768,7 +1792,8 @@ mod tests {
             "profileRelays": [],
             "search": { "mode": "local" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
-            "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} } },
+            "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} },
+                "homepage": { "intro": "Welcome", "featured": format!("34235:{PK}:clip"), "featuredText": "Start here", "selected": [format!("34236:{PK}:short")], "links": [{ "label": "Shop", "url": "https://shop.example/" }], "action": { "label": "Support", "url": "https://support.example/" } } },
             "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
         })
     }
@@ -1842,6 +1867,20 @@ mod tests {
             (json, put_body("#112233").replace("wss://relay.example", "https://relay.example")),
             (json, put_body("#112233").replace("https://blossom.example", "ftp://blossom.example")),
             (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
+            (json, put_body("#112233").replace("https://shop.example/", "javascript:alert(1)")),
+            (json, put_body("#112233").replace("https://support.example/", "https://user:pw@support.example/")),
+            (json, put_body("#112233").replace(&format!("34236:{PK}:short"), "not-a-video")),
+            (json, put_body("#112233").replace("\"featuredText\"", "\"featured_text\"")),
+            (json, {
+                let mut v = put_value("#112233");
+                v["site"]["homepage"].as_object_mut().unwrap().remove("action");
+                v.to_string()
+            }),
+            (json, {
+                let mut v = put_value("#112233");
+                v["site"]["homepage"] = serde_json::Value::Null;
+                v.to_string()
+            }),
             (Some("text/plain"), put_body("#112233")),
             (None, put_body("#112233")),
         ] {
@@ -1871,6 +1910,11 @@ mod tests {
         assert_eq!(after.site.pages.about.get("de").map(String::as_str), Some("Über uns"));
         assert_eq!(after.site.pages.imprint.get("en").map(String::as_str), Some("Imprint"));
         assert!(after.site.pages.privacy.is_empty());
+        assert_eq!(after.site.homepage.featured, format!("34235:{PK}:clip"));
+        assert_eq!(after.site.homepage.selected, vec![format!("34236:{PK}:short")]);
+        assert_eq!(after.site.homepage.action.as_ref().map(|a| a.url.as_str()), Some("https://support.example/"));
+        let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
+        assert_eq!(read["config"]["site"]["homepage"], put_value("#112233")["site"]["homepage"], "the studio reads back what it saved");
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert!(after.profile_relays.is_empty());
@@ -1881,6 +1925,11 @@ mod tests {
         // Not editable: origin and TLS.
         assert_eq!(after.origin, before.origin);
         assert!(matches!(after.tls, config::Tls::LocalCa { .. }));
+        // A studio from before the homepage omits it: that saves as no curation.
+        let mut legacy = put_value("#112233");
+        legacy["site"].as_object_mut().unwrap().remove("homepage");
+        assert_eq!(call(&app, "PUT", Some(&cookie), Some("application/json"), &legacy.to_string()).await.0, StatusCode::OK);
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site.homepage, config::SiteHomepage::default());
         std::fs::remove_dir_all(&dir).ok();
     }
 

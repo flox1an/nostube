@@ -15,6 +15,7 @@ import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AuthArea } from './AuthArea'
 import { Breadcrumb } from './Breadcrumb'
 import { GridPage, SearchBox, SearchPage } from './GridPage'
+import { HomePage } from './HomePage'
 import { SiteFooter, SitePage } from './SitePage'
 import { SiteDonate } from './SiteDonate'
 import { VideoView } from './VideoView'
@@ -140,7 +141,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
         {!onVideoPage && <InstallBanner />}
       </div>
       <Routes>
-        <Route path="/" element={<GridPage config={config} gate={gate} />} />
+        <Route path="/" element={<HomePage config={config} gate={gate} />} />
         <Route path="/t/:tag" element={<GridPage config={config} gate={gate} />} />
         {search && <Route path="/search" element={<SearchPage config={config} gate={gate} />} />}
         <Route

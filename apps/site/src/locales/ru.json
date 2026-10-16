@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "Главы",
+      "showTranscript": "Показать расшифровку",
+      "hideTranscript": "Скрыть расшифровку",
+      "transcriptLoading": "Расшифровка загружается…",
+      "transcriptFailed": "Не удалось загрузить расшифровку.",
+      "transcriptEmpty": "В этих субтитрах нет читаемых строк.",
+      "transcriptSearch": "Поиск по расшифровке",
+      "transcriptNoMatch": "Ни одна строка не подходит к «{{query}}».",
+      "upNext": "Далее",
+      "replay": "Смотреть снова",
+      "playbackFailed": "Не удалось воспроизвести это видео.",
+      "retry": "Повторить"
+    },
+    "home": {
+      "about": "Об авторе",
+      "featured": "Начните здесь",
+      "selected": "Избранные работы",
+      "latest": "Новые видео",
+      "continue": "Продолжить просмотр",
+      "clearProgress": "Очистить",
+      "clearProgressLabel": "Очистить прогресс просмотра на этом устройстве",
+      "watch": "Смотреть видео"
+    },
     "app": {
       "loading": "Загрузка…",
       "loadFailed": "Не удалось загрузить сайт."

@@ -2,10 +2,13 @@ import {
   DEFAULT_PROFILE_RELAYS,
   DEFAULT_SITE_LINKS,
   SITE_PAGE_MAX_CHARS,
+  noSiteHomepage,
+  type SiteHomepage,
 } from '@nostube/core/instance-config'
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
+import i18n from './i18n'
 import {
   LINK_PRESETS,
   fromDraft,
@@ -202,6 +205,68 @@ describe('draft', () => {
     expect(needsRestart(config, edit({ reserve: '1' }))).toBe(true)
     expect(needsRestart(config, edit({ mirrorRelaysText: 'wss://mirror.example' }))).toBe(true)
     expect(needsRestart(config, edit({ mirrorBlossomText: 'https://b.example' }))).toBe(true)
+  })
+})
+
+describe('homepage', () => {
+  const homepage: SiteHomepage = {
+    intro: 'Hello',
+    featured: `34235:${PK}:intro:with:colons`,
+    featuredText: 'Start here',
+    selected: ['b'.repeat(64), `34236:${PK}:short`],
+    links: [{ label: 'Shop', url: 'https://shop.example/' }],
+    action: { label: 'Support me', url: 'https://support.example/' },
+  }
+  const curated: AdminConfig = { ...config, site: { ...config.site, homepage } }
+
+  it('keeps a config without a homepage without one, and starts its editor empty', () => {
+    expect(toDraft(config).homepage).toBeUndefined()
+    expect(fromDraft(toDraft(config)).config?.site).not.toHaveProperty('homepage')
+  })
+
+  it('saves a curated homepage unchanged, in its order', () => {
+    expect(fromDraft(toDraft(curated)).config?.site.homepage).toEqual(homepage)
+    const reordered = { ...homepage, selected: [...homepage.selected].reverse() }
+    expect(fromDraft({ ...toDraft(curated), homepage: reordered }).config?.site.homepage).toEqual(
+      reordered
+    )
+  })
+
+  it('trims the texts and drops link rows and a main button left empty', () => {
+    const result = fromDraft({
+      ...toDraft(curated),
+      homepage: {
+        ...homepage,
+        intro: '  Hello \n',
+        featuredText: ' Start here ',
+        links: [
+          { label: ' Shop ', url: ' https://shop.example/ ' },
+          { label: ' ', url: '' },
+        ],
+        action: { label: ' ', url: ' ' },
+      },
+    })
+    expect(result.config?.site.homepage).toEqual({ ...homepage, action: null })
+  })
+
+  it('saves a cleared homepage as empty, not as absent', () => {
+    expect(
+      fromDraft({ ...toDraft(curated), homepage: noSiteHomepage() }).config?.site.homepage
+    ).toEqual(noSiteHomepage())
+  })
+
+  it.each([
+    ['link over http', { links: [{ label: 'Shop', url: 'http://shop.example/' }] }, 'link'],
+    ['link without a name', { links: [{ label: '', url: 'https://shop.example/' }] }, 'link'],
+    ['main button with a relative address', { action: { label: 'Go', url: '/go' } }, 'link'],
+    ['intro over the limit', { intro: 'x'.repeat(2001) }, 'intro'],
+    ['video that is no reference', { selected: ['not a video'] }, 'videos'],
+  ])('reports a %s in words and builds nothing', (_name, patch, message) => {
+    const result = fromDraft({ ...toDraft(config), homepage: { ...noSiteHomepage(), ...patch } })
+    expect(result.config).toBeNull()
+    expect(result.errors).toContain(
+      i18n.t(`studio.errors.homepage.${message}`, { intro: 2000, note: 500, selected: 12 })
+    )
   })
 })
 

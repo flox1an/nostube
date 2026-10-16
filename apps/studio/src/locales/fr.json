@@ -132,6 +132,48 @@
       "previewTitle": "Votre titre",
       "previewButton": "Bouton principal"
     },
+    "homepage": {
+      "title": "Page d’accueil",
+      "description": "Ce que les visiteurs voient en premier sur votre site. Tout est facultatif : laissée vide, la page d’accueil affiche vos dernières vidéos.",
+      "intro": "Introduction",
+      "count": "{{used}} / {{max}} caractères",
+      "featured": "Vidéo à la une",
+      "featuredNone": "Aucune vidéo à la une. Choisissez-en une ci-dessous.",
+      "featuredText": "Note sur la vidéo à la une",
+      "selected": "Vidéos sélectionnées",
+      "selectedHint": "Affichées sur la page d’accueil dans cet ordre, jusqu’à {{max}}.",
+      "selectedNone": "Aucune vidéo sélectionnée. Ajoutez-en ci-dessous.",
+      "moveUp": "Monter « {{title}} »",
+      "moveDown": "Descendre « {{title}} »",
+      "remove": "Retirer « {{title}} »",
+      "choose": "Choisir parmi vos vidéos",
+      "feature": "Mettre à la une",
+      "featureVideo": "Mettre « {{title}} » à la une",
+      "isFeatured": "À la une",
+      "add": "Ajouter",
+      "addVideo": "Ajouter « {{title}} »",
+      "isAdded": "Ajoutée",
+      "full": "{{max}} vidéos sont sélectionnées ; retirez-en une pour en ajouter une autre.",
+      "unknownVideo": "Vidéo absente de la liste chargée",
+      "hiddenChoice": "Masquée sur votre site : les visiteurs ne la voient pas ici.",
+      "paste": "Ou collez un lien vidéo",
+      "pasteHint": "L’adresse d’une page vidéo, ou un naddr, nevent ou note.",
+      "pasteInvalid": "Ce n’est pas un lien vidéo.",
+      "pasteHidden": "Cette vidéo est masquée sur votre site et ne peut pas apparaître sur la page d’accueil.",
+      "pasteAdded": "Cette vidéo est déjà sélectionnée.",
+      "links": "Liens",
+      "linksHint": "Jusqu’à {{max}} liens nommés, chacun une adresse https://, par exemple votre boutique ou votre page de contact.",
+      "linkLabel": "Nom du lien {{n}}",
+      "linkUrl": "Adresse du lien {{n}}",
+      "labelPlaceholder": "Nom",
+      "removeLink": "Retirer le lien {{n}}",
+      "addLink": "Ajouter un lien",
+      "action": "Bouton principal",
+      "actionToggle": "Afficher un bouton principal",
+      "actionHint": "Un bouton bien visible avec une adresse https://, par exemple pour vous soutenir ou vous réserver.",
+      "actionLabel": "Nom du bouton principal",
+      "actionUrl": "Adresse du bouton principal"
+    },
     "pages": {
       "intro": "Pages facultatives vers lesquelles le site renvoie dans son pied de page. Rédige chacune dans les langues de ton choix : les visiteurs voient leur propre langue, sinon l'anglais, sinon la première langue rédigée. Une page sans texte n'est ni affichée ni liée.",
       "kinds": {
@@ -534,6 +576,12 @@
         "reserve": "Réserve d'espace libre",
         "mirrorRelays": "Relais miroirs",
         "mirrorBlossom": "Serveurs Blossom miroirs"
+      },
+      "homepage": {
+        "intro": "Introduction de la page d’accueil : {{intro}} caractères au maximum.",
+        "featuredText": "Note sur la vidéo à la une : {{note}} caractères au maximum.",
+        "videos": "Vidéos de la page d’accueil : choisissez jusqu’à {{selected}} vidéos différentes dans votre liste ou par leur lien.",
+        "link": "Liens et bouton principal de la page d’accueil : chacun a besoin d’un nom de 80 caractères au maximum et d’une adresse https://."
       }
     },
     "onboarding": {

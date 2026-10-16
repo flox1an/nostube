@@ -132,6 +132,48 @@
       "previewTitle": "タイトル",
       "previewButton": "メインボタン"
     },
+    "homepage": {
+      "title": "ホームページ",
+      "description": "訪問者がサイトで最初に目にする内容です。すべて任意です。空のままなら、ホームページには最新の動画が表示されます。",
+      "intro": "紹介文",
+      "count": "{{used}} / {{max}} 文字",
+      "featured": "注目の動画",
+      "featuredNone": "注目の動画はありません。下から選んでください。",
+      "featuredText": "注目の動画へのメモ",
+      "selected": "選んだ動画",
+      "selectedHint": "この順番でホームページに表示されます（最大 {{max}} 本）。",
+      "selectedNone": "動画が選ばれていません。下から追加してください。",
+      "moveUp": "「{{title}}」を上へ移動",
+      "moveDown": "「{{title}}」を下へ移動",
+      "remove": "「{{title}}」を外す",
+      "choose": "自分の動画から選ぶ",
+      "feature": "注目にする",
+      "featureVideo": "「{{title}}」を注目にする",
+      "isFeatured": "注目中",
+      "add": "追加",
+      "addVideo": "「{{title}}」を追加",
+      "isAdded": "追加済み",
+      "full": "{{max}} 本の動画が選ばれています。追加するには 1 本外してください。",
+      "unknownVideo": "読み込んだ一覧にない動画",
+      "hiddenChoice": "サイトで非表示：訪問者にはここに表示されません。",
+      "paste": "または動画リンクを貼り付け",
+      "pasteHint": "動画ページのアドレス、または naddr・nevent・note。",
+      "pasteInvalid": "これは動画リンクではありません。",
+      "pasteHidden": "この動画はサイトで非表示のため、ホームページには表示できません。",
+      "pasteAdded": "この動画はすでに選ばれています。",
+      "links": "リンク",
+      "linksHint": "名前付きリンクを最大 {{max}} 件。それぞれ https:// のアドレスで、ショップや連絡先ページなど。",
+      "linkLabel": "リンク {{n}} の名前",
+      "linkUrl": "リンク {{n}} のアドレス",
+      "labelPlaceholder": "名前",
+      "removeLink": "リンク {{n}} を削除",
+      "addLink": "リンクを追加",
+      "action": "メインボタン",
+      "actionToggle": "メインボタンを表示",
+      "actionHint": "https:// のアドレスを持つ目立つボタン 1 つ。支援や依頼の受付などに。",
+      "actionLabel": "メインボタンの名前",
+      "actionUrl": "メインボタンのアドレス"
+    },
     "pages": {
       "intro": "サイトのフッターからリンクされる任意のページです。必要な言語で書いてください。訪問者には本人の言語、なければ英語、なければ最初に書かれた言語で表示されます。テキストのないページは表示もリンクもされません。",
       "kinds": {
@@ -530,6 +572,12 @@
         "reserve": "空き容量の確保",
         "mirrorRelays": "ミラー用リレー",
         "mirrorBlossom": "ミラー用 Blossom サーバー"
+      },
+      "homepage": {
+        "intro": "ホームページの紹介文：最大 {{intro}} 文字です。",
+        "featuredText": "注目の動画へのメモ：最大 {{note}} 文字です。",
+        "videos": "ホームページの動画：一覧またはリンクから、異なる動画を最大 {{selected}} 本選んでください。",
+        "link": "ホームページのリンクとメインボタン：それぞれ 80 文字以内の名前と https:// のアドレスが必要です。"
       }
     },
     "onboarding": {

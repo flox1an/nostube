@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "Capítulos",
+      "showTranscript": "Mostrar transcripción",
+      "hideTranscript": "Ocultar transcripción",
+      "transcriptLoading": "Cargando la transcripción…",
+      "transcriptFailed": "No se pudo cargar la transcripción.",
+      "transcriptEmpty": "Estos subtítulos no contienen líneas legibles.",
+      "transcriptSearch": "Buscar en la transcripción",
+      "transcriptNoMatch": "Ninguna línea coincide con «{{query}}».",
+      "upNext": "A continuación",
+      "replay": "Ver otra vez",
+      "playbackFailed": "No se pudo reproducir este vídeo.",
+      "retry": "Reintentar"
+    },
+    "home": {
+      "about": "Sobre el creador",
+      "featured": "Empieza aquí",
+      "selected": "Obras seleccionadas",
+      "latest": "Vídeos recientes",
+      "continue": "Seguir viendo",
+      "clearProgress": "Borrar",
+      "clearProgressLabel": "Borrar el progreso de reproducción en este dispositivo",
+      "watch": "Ver vídeo"
+    },
     "app": {
       "loading": "Cargando…",
       "loadFailed": "No se pudo cargar este sitio."

@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "チャプター",
+      "showTranscript": "文字起こしを表示",
+      "hideTranscript": "文字起こしを隠す",
+      "transcriptLoading": "文字起こしを読み込み中…",
+      "transcriptFailed": "文字起こしを読み込めませんでした。",
+      "transcriptEmpty": "この字幕には読み取れる行がありません。",
+      "transcriptSearch": "文字起こしを検索",
+      "transcriptNoMatch": "「{{query}}」に一致する行はありません。",
+      "upNext": "次の動画",
+      "replay": "もう一度見る",
+      "playbackFailed": "この動画を再生できませんでした。",
+      "retry": "再試行"
+    },
+    "home": {
+      "about": "クリエイターについて",
+      "featured": "まずはこちら",
+      "selected": "おすすめの作品",
+      "latest": "最新の動画",
+      "continue": "続きから再生",
+      "clearProgress": "消去",
+      "clearProgressLabel": "この端末の再生履歴を消去",
+      "watch": "動画を見る"
+    },
     "app": {
       "loading": "読み込み中…",
       "loadFailed": "このサイトを読み込めませんでした。"

@@ -267,6 +267,82 @@ pub struct Site {
     /// Lightning address (`name@domain.tld`) for zaps to the managed channel identity; it goes
     /// into the derived profile as `lud16`. Empty: none.
     pub lightning: String,
+    /// The curated start page; empty: no curation.
+    pub homepage: SiteHomepage,
+}
+
+/// What the start page features (public JSON `site.homepage`, camelCase there). Videos are
+/// referenced like `hidden_videos`, restricted to kinds 34235/34236; empty `featured`: none.
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct SiteHomepage {
+    pub intro: String,
+    pub featured: String,
+    pub featured_text: String,
+    pub selected: Vec<String>,
+    pub links: Vec<HomepageLink>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<HomepageLink>,
+}
+
+/// A named HTTPS link; all fields required in TOML and JSON alike.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct HomepageLink {
+    pub label: String,
+    pub url: String,
+}
+
+fn check_homepage(h: &SiteHomepage) -> Result<(), BoxError> {
+    let is_ref = |r: &str| {
+        is_hex64(r)
+            || (r.chars().count() <= 1024
+                && matches!(r.splitn(3, ':').collect::<Vec<_>>().as_slice(),
+                    [kind, pubkey, d] if matches!(*kind, "34235" | "34236")
+                        && is_hex64(pubkey)
+                        && !d.is_empty()
+                        && !d.chars().any(char::is_control)))
+    };
+    if h.intro.chars().count() > 2000 {
+        return Err("site.homepage.intro must be at most 2000 characters".into());
+    }
+    if h.featured_text.chars().count() > 500 {
+        return Err("site.homepage.featuredText must be at most 500 characters".into());
+    }
+    if !h.featured.is_empty() && !is_ref(&h.featured) {
+        return Err(format!("site.homepage.featured must be an event id or 34235/34236:<pubkey>:<d>: {}", h.featured).into());
+    }
+    if h.selected.len() > 12 {
+        return Err("site.homepage.selected holds at most 12 videos".into());
+    }
+    for (i, r) in h.selected.iter().enumerate() {
+        if !is_ref(r) || h.selected[..i].contains(r) {
+            return Err(format!("site.homepage.selected entries must be distinct event ids or 34235/34236:<pubkey>:<d>: {r}").into());
+        }
+    }
+    if h.links.len() > 5 {
+        return Err("site.homepage.links holds at most 5 links".into());
+    }
+    for link in h.links.iter().chain(&h.action) {
+        let label = link.label.trim();
+        let url = &link.url;
+        if label.is_empty() || link.label.chars().count() > 80 {
+            return Err(format!("site.homepage link label must be 1 to 80 characters: {label}").into());
+        }
+        let ok = url.chars().count() <= 2048
+            && url.starts_with("https://")
+            && !url.chars().any(|c| c.is_whitespace() || c.is_control())
+            && nostr::prelude::Url::parse(url).is_ok_and(|u| {
+                u.scheme() == "https"
+                    && u.host_str().is_some_and(|host| !host.is_empty())
+                    && u.username().is_empty()
+                    && u.password().is_none()
+            });
+        if !ok {
+            return Err(format!("site.homepage link URL must be an https URL without credentials: {url}").into());
+        }
+    }
+    Ok(())
 }
 
 /// Longest text of one page in one language, in characters.
@@ -351,6 +427,7 @@ impl Default for Site {
             links: Links::default(),
             pages: Pages::default(),
             lightning: String::new(),
+            homepage: SiteHomepage::default(),
         }
     }
 }
@@ -375,6 +452,7 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
     check_link("video", &site.links.video)?;
     check_link("note", &site.links.note)?;
     check_pages(&site.pages)?;
+    check_homepage(&site.homepage)?;
     for v in &site.hidden_videos {
         let ok = is_hex64(v)
             || matches!(v.splitn(3, ':').collect::<Vec<_>>().as_slice(),
@@ -698,6 +776,14 @@ impl Config {
                     "imprint": self.site.pages.imprint,
                     "privacy": self.site.pages.privacy,
                 },
+                "homepage": {
+                    "intro": self.site.homepage.intro,
+                    "featured": self.site.homepage.featured,
+                    "featuredText": self.site.homepage.featured_text,
+                    "selected": self.site.homepage.selected,
+                    "links": self.site.homepage.links,
+                    "action": self.site.homepage.action,
+                },
             },
         })
     }
@@ -940,6 +1026,74 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.revision, cfg.revision + 1);
         let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
         assert!(cfg.with_edits(&bad).is_err());
+    }
+
+    #[test]
+    fn site_homepage_survives_save_and_reload_and_rejects_unsafe_values() {
+        let cfg = Config::parse(&sample("")).unwrap();
+        assert_eq!(cfg.site.homepage, SiteHomepage::default(), "an old file starts without curation");
+        assert_eq!(
+            cfg.public_json()["site"]["homepage"],
+            serde_json::json!({ "intro": "", "featured": "", "featuredText": "", "selected": [], "links": [], "action": null })
+        );
+        let edit = |homepage: SiteHomepage| Edited {
+            title: "Flox".into(),
+            reach: Reach::Private,
+            creators: vec![PK.into()],
+            allowed_writers: vec![PK.into()],
+            video_sources: vec!["wss://flox-mac.local".into()],
+            interaction_relays: vec![],
+            profile_relays: vec![],
+            search: Search::Off,
+            storage: Storage::default(),
+            site: Site { homepage, ..Site::default() },
+            mirror: Mirror::default(),
+            site_hosting: SiteHosting::Instance,
+            nsite: NsiteSettings::default(),
+        };
+        let link = |label: &str, url: &str| HomepageLink { label: label.into(), url: url.into() };
+        let valid = SiteHomepage {
+            intro: "Hallo — ".repeat(250),
+            featured: format!("34235:{PK}:a:b"),
+            featured_text: "Start here".into(),
+            selected: vec!["a".repeat(64), format!("34236:{PK}:short")],
+            links: vec![link("Shop", "https://shop.example/x?y=1")],
+            action: Some(link("Contact", "https://example.org/contact")),
+        };
+        let next = cfg.with_edits(&edit(valid.clone())).unwrap();
+        let reloaded = Config::parse(&next.to_toml().unwrap()).unwrap();
+        assert_eq!(reloaded.site.homepage, valid);
+        let json = reloaded.public_json();
+        assert_eq!(json["site"]["homepage"]["featuredText"], "Start here");
+        assert_eq!(json["site"]["homepage"]["featured"], format!("34235:{PK}:a:b"), "colons in d stay");
+        assert_eq!(json["site"]["homepage"]["action"], serde_json::json!({ "label": "Contact", "url": "https://example.org/contact" }));
+
+        let bad: Vec<SiteHomepage> = vec![
+            SiteHomepage { intro: "x".repeat(2001), ..valid.clone() },
+            SiteHomepage { featured_text: "x".repeat(501), ..valid.clone() },
+            SiteHomepage { featured: format!("1:{PK}:d"), ..valid.clone() },
+            SiteHomepage { featured: format!("34235:{PK}:"), ..valid.clone() },
+            SiteHomepage { featured: format!("34235:{PK}:a\nb"), ..valid.clone() },
+            SiteHomepage { featured: format!("34235:{PK}:{}", "d".repeat(1024)), ..valid.clone() },
+            SiteHomepage { featured: "A".repeat(64), ..valid.clone() },
+            SiteHomepage { selected: vec!["a".repeat(64), "a".repeat(64)], ..valid.clone() },
+            SiteHomepage { selected: (0..13).map(|i| format!("34235:{PK}:{i}")).collect(), ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "https://a.example"); 6], ..valid.clone() },
+            SiteHomepage { links: vec![link("  ", "https://a.example")], ..valid.clone() },
+            SiteHomepage { links: vec![link(&"x".repeat(81), "https://a.example")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "javascript:alert(1)")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "http://a.example")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "/relative")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "https://user:pw@a.example")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", "https://a.example/a b")], ..valid.clone() },
+            SiteHomepage { links: vec![link("x", &format!("https://a.example/{}", "p".repeat(2048)))], ..valid.clone() },
+            SiteHomepage { action: Some(link("x", "mailto:me@a.example")), ..valid.clone() },
+        ];
+        for homepage in bad {
+            assert!(cfg.with_edits(&edit(homepage.clone())).is_err(), "{homepage:?}");
+        }
+        assert!(Config::parse(&sample("[site.homepage]\nfeatured = \"nope\"\n")).is_err());
+        assert!(Config::parse(&sample("[site.homepage]\nunknown = 1\n")).is_err());
     }
 
     #[test]

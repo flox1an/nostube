@@ -132,6 +132,48 @@
       "previewTitle": "你的标题",
       "previewButton": "主按钮"
     },
+    "homepage": {
+      "title": "主页",
+      "description": "访客在你的站点上首先看到的内容。这里全部可选：留空时，主页显示你的最新视频。",
+      "intro": "简介",
+      "count": "{{used}} / {{max}} 个字符",
+      "featured": "精选视频",
+      "featuredNone": "没有精选视频。请在下方选择一个。",
+      "featuredText": "精选视频的说明",
+      "selected": "选定的视频",
+      "selectedHint": "按此顺序显示在主页上，最多 {{max}} 个。",
+      "selectedNone": "尚未选定视频。请在下方添加。",
+      "moveUp": "将“{{title}}”上移",
+      "moveDown": "将“{{title}}”下移",
+      "remove": "移除“{{title}}”",
+      "choose": "从你的视频中选择",
+      "feature": "设为精选",
+      "featureVideo": "将“{{title}}”设为精选",
+      "isFeatured": "已精选",
+      "add": "添加",
+      "addVideo": "添加“{{title}}”",
+      "isAdded": "已添加",
+      "full": "已选定 {{max}} 个视频；移除一个后才能再添加。",
+      "unknownVideo": "视频不在已加载的列表中",
+      "hiddenChoice": "已在你的站点上隐藏：访客在这里看不到它。",
+      "paste": "或粘贴视频链接",
+      "pasteHint": "视频页面的地址，或 naddr、nevent、note。",
+      "pasteInvalid": "这不是视频链接。",
+      "pasteHidden": "此视频已在你的站点上隐藏，不能显示在主页上。",
+      "pasteAdded": "此视频已选定。",
+      "links": "链接",
+      "linksHint": "最多 {{max}} 个带名称的链接，每个都是 https:// 地址，例如你的商店或联系页面。",
+      "linkLabel": "链接 {{n}} 的名称",
+      "linkUrl": "链接 {{n}} 的地址",
+      "labelPlaceholder": "名称",
+      "removeLink": "移除链接 {{n}}",
+      "addLink": "添加链接",
+      "action": "主按钮",
+      "actionToggle": "显示主按钮",
+      "actionHint": "一个醒目的按钮，带 https:// 地址，例如用于支持你或预约你。",
+      "actionLabel": "主按钮的名称",
+      "actionUrl": "主按钮的地址"
+    },
     "pages": {
       "intro": "站点页脚会链接的可选页面。可按需用多种语言撰写：访客看到自己的语言，否则显示英文，否则显示第一个已撰写的语言。没有任何文本的页面不会显示，也没有链接。",
       "kinds": {
@@ -530,6 +572,12 @@
         "reserve": "预留可用空间",
         "mirrorRelays": "镜像中继",
         "mirrorBlossom": "镜像 Blossom 服务器"
+      },
+      "homepage": {
+        "intro": "主页简介：最多 {{intro}} 个字符。",
+        "featuredText": "精选视频的说明：最多 {{note}} 个字符。",
+        "videos": "主页视频：从列表中或通过链接选择最多 {{selected}} 个不同的视频。",
+        "link": "主页链接和主按钮：每个都需要不超过 80 个字符的名称和一个 https:// 地址。"
       }
     },
     "onboarding": {

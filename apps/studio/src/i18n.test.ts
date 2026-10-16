@@ -112,4 +112,22 @@ describe('studio translations', () => {
       }
     }
   })
+  it('provides every homepage editor text in every Studio locale', () => {
+    const en = i18n.getResource('en', 'translation', 'studio') as {
+      homepage: Record<string, string>
+      errors: { homepage: Record<string, string> }
+    }
+    const keys = [
+      ...Object.keys(en.homepage).map(key => `studio.homepage.${key}`),
+      ...Object.keys(en.errors.homepage).map(key => `studio.errors.homepage.${key}`),
+    ]
+    expect(keys).toContain('studio.homepage.moveUp')
+    for (const language of ['de', 'fr', 'es', 'ru', 'zh', 'ja']) {
+      for (const key of keys) {
+        expect(i18n.getResource(language, 'translation', key), `${language}: ${key}`).toBeTypeOf(
+          'string'
+        )
+      }
+    }
+  })
 })

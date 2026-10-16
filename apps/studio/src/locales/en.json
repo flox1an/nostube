@@ -132,6 +132,48 @@
       "previewTitle": "Your title",
       "previewButton": "Primary button"
     },
+    "homepage": {
+      "title": "Homepage",
+      "description": "What visitors see first on your site. Everything here is optional: left empty, the homepage shows your latest videos.",
+      "intro": "Introduction",
+      "count": "{{used}} / {{max}} characters",
+      "featured": "Featured video",
+      "featuredNone": "No featured video. Choose one below.",
+      "featuredText": "Note on the featured video",
+      "selected": "Selected videos",
+      "selectedHint": "Shown on the homepage in this order, up to {{max}}.",
+      "selectedNone": "No videos selected. Add them below.",
+      "moveUp": "Move “{{title}}” up",
+      "moveDown": "Move “{{title}}” down",
+      "remove": "Remove “{{title}}”",
+      "choose": "Choose from your videos",
+      "feature": "Feature",
+      "featureVideo": "Feature “{{title}}”",
+      "isFeatured": "Featured",
+      "add": "Add",
+      "addVideo": "Add “{{title}}”",
+      "isAdded": "Added",
+      "full": "{{max}} videos are selected; remove one to add another.",
+      "unknownVideo": "Video not loaded in the list",
+      "hiddenChoice": "Hidden on your site: visitors do not see it here.",
+      "paste": "Or paste a video link",
+      "pasteHint": "The address of a video page, or an naddr, nevent or note.",
+      "pasteInvalid": "This is not a video link.",
+      "pasteHidden": "This video is hidden on your site and cannot be shown on the homepage.",
+      "pasteAdded": "This video is already selected.",
+      "links": "Links",
+      "linksHint": "Up to {{max}} named links, each an https:// address, e.g. your shop or contact page.",
+      "linkLabel": "Name of link {{n}}",
+      "linkUrl": "Address of link {{n}}",
+      "labelPlaceholder": "Name",
+      "removeLink": "Remove link {{n}}",
+      "addLink": "Add link",
+      "action": "Main button",
+      "actionToggle": "Show a main button",
+      "actionHint": "One prominent button with an https:// address, e.g. to support you or book you.",
+      "actionLabel": "Name of the main button",
+      "actionUrl": "Address of the main button"
+    },
     "pages": {
       "intro": "Optional pages the site links in its footer. Write each in the languages you want: visitors see their own language, otherwise English, otherwise the first language written. A page without any text is not shown and not linked.",
       "kinds": {
@@ -532,6 +574,12 @@
         "reserve": "Free-space reserve",
         "mirrorRelays": "Mirror relays",
         "mirrorBlossom": "Mirror Blossom servers"
+      },
+      "homepage": {
+        "intro": "Homepage introduction: at most {{intro}} characters.",
+        "featuredText": "Note on the featured video: at most {{note}} characters.",
+        "videos": "Homepage videos: choose up to {{selected}} different videos from your list or by their link.",
+        "link": "Homepage links and main button: each needs a name of at most 80 characters and an https:// address."
       }
     },
     "onboarding": {

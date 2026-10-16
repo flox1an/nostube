@@ -132,6 +132,48 @@
       "previewTitle": "Dein Titel",
       "previewButton": "Hauptschaltfläche"
     },
+    "homepage": {
+      "title": "Startseite",
+      "description": "Was Besucher auf deiner Seite zuerst sehen. Alles hier ist optional: Leer zeigt die Startseite deine neuesten Videos.",
+      "intro": "Einleitung",
+      "count": "{{used}} / {{max}} Zeichen",
+      "featured": "Hervorgehobenes Video",
+      "featuredNone": "Kein hervorgehobenes Video. Wähle unten eins aus.",
+      "featuredText": "Notiz zum hervorgehobenen Video",
+      "selected": "Ausgewählte Videos",
+      "selectedHint": "Auf der Startseite in dieser Reihenfolge, bis zu {{max}}.",
+      "selectedNone": "Keine Videos ausgewählt. Füge sie unten hinzu.",
+      "moveUp": "„{{title}}“ nach oben",
+      "moveDown": "„{{title}}“ nach unten",
+      "remove": "„{{title}}“ entfernen",
+      "choose": "Aus deinen Videos wählen",
+      "feature": "Hervorheben",
+      "featureVideo": "„{{title}}“ hervorheben",
+      "isFeatured": "Hervorgehoben",
+      "add": "Hinzufügen",
+      "addVideo": "„{{title}}“ hinzufügen",
+      "isAdded": "Hinzugefügt",
+      "full": "{{max}} Videos sind ausgewählt; entferne eins, um ein weiteres hinzuzufügen.",
+      "unknownVideo": "Video nicht in der geladenen Liste",
+      "hiddenChoice": "Auf deiner Seite ausgeblendet: Besucher sehen es hier nicht.",
+      "paste": "Oder einen Videolink einfügen",
+      "pasteHint": "Die Adresse einer Videoseite oder ein naddr, nevent oder note.",
+      "pasteInvalid": "Das ist kein Videolink.",
+      "pasteHidden": "Dieses Video ist auf deiner Seite ausgeblendet und kann nicht auf der Startseite erscheinen.",
+      "pasteAdded": "Dieses Video ist bereits ausgewählt.",
+      "links": "Links",
+      "linksHint": "Bis zu {{max}} benannte Links, jeweils eine https://-Adresse, z. B. dein Shop oder deine Kontaktseite.",
+      "linkLabel": "Name von Link {{n}}",
+      "linkUrl": "Adresse von Link {{n}}",
+      "labelPlaceholder": "Name",
+      "removeLink": "Link {{n}} entfernen",
+      "addLink": "Link hinzufügen",
+      "action": "Hauptschaltfläche",
+      "actionToggle": "Eine Hauptschaltfläche zeigen",
+      "actionHint": "Eine auffällige Schaltfläche mit einer https://-Adresse, z. B. um dich zu unterstützen oder zu buchen.",
+      "actionLabel": "Name der Hauptschaltfläche",
+      "actionUrl": "Adresse der Hauptschaltfläche"
+    },
     "pages": {
       "intro": "Optionale Seiten, die die Website im Fußbereich verlinkt. Schreibe jede in den Sprachen, die du möchtest: Besucher sehen ihre eigene Sprache, sonst Englisch, sonst die erste geschriebene Sprache. Eine Seite ohne Text wird weder angezeigt noch verlinkt.",
       "kinds": {
@@ -532,6 +574,12 @@
         "reserve": "Freier Speicher als Reserve",
         "mirrorRelays": "Spiegel-Relays",
         "mirrorBlossom": "Spiegel-Blossom-Server"
+      },
+      "homepage": {
+        "intro": "Einleitung der Startseite: höchstens {{intro}} Zeichen.",
+        "featuredText": "Notiz zum hervorgehobenen Video: höchstens {{note}} Zeichen.",
+        "videos": "Videos der Startseite: wähle bis zu {{selected}} verschiedene Videos aus deiner Liste oder per Link.",
+        "link": "Links und Hauptschaltfläche der Startseite: Jeder braucht einen Namen mit höchstens 80 Zeichen und eine https://-Adresse."
       }
     },
     "onboarding": {

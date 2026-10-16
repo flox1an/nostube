@@ -5,6 +5,30 @@
     }
   },
   "site": {
+    "watch": {
+      "chapters": "Chapitres",
+      "showTranscript": "Afficher la transcription",
+      "hideTranscript": "Masquer la transcription",
+      "transcriptLoading": "Chargement de la transcription…",
+      "transcriptFailed": "La transcription n’a pas pu être chargée.",
+      "transcriptEmpty": "Ces sous-titres ne contiennent aucune ligne lisible.",
+      "transcriptSearch": "Rechercher dans la transcription",
+      "transcriptNoMatch": "Aucune ligne ne correspond à « {{query}} ».",
+      "upNext": "À suivre",
+      "replay": "Revoir",
+      "playbackFailed": "Cette vidéo n’a pas pu être lue.",
+      "retry": "Réessayer"
+    },
+    "home": {
+      "about": "À propos du créateur",
+      "featured": "Commencez ici",
+      "selected": "Sélection",
+      "latest": "Dernières vidéos",
+      "continue": "Reprendre la lecture",
+      "clearProgress": "Effacer",
+      "clearProgressLabel": "Effacer la progression de lecture sur cet appareil",
+      "watch": "Regarder la vidéo"
+    },
     "app": {
       "loading": "Chargement…",
       "loadFailed": "Ce site n’a pas pu être chargé."

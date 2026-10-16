@@ -148,6 +148,28 @@ function withIdleTimeout<T>(source: Observable<T>, message: string, debug: boole
  */
 export type PageLoader = (() => Observable<NostrEvent>) & { exhausted?: () => boolean }
 
+/**
+ * ws:// off loopback from an https page makes Chrome show the page as "Not Secure": it allows
+ * ws:// through to `.local`/private hosts under Local Network Access and then treats the
+ * connection as mixed content. Loopback stays allowed; non-https pages (instance builds served
+ * over http, the Tauri shell) are unaffected.
+ */
+export function isRelaySecureForPage(url: string): boolean {
+  if (typeof location === 'undefined' || location.protocol !== 'https:') return true
+  try {
+    const { protocol, hostname } = new URL(url)
+    if (protocol !== 'ws:') return true
+    return (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === '127.0.0.1' ||
+      hostname === '[::1]'
+    )
+  } catch {
+    return false
+  }
+}
+
 export interface NostubeClientConfig {
   /** Relays for lookups and for timeline loaders that name no relays. */
   defaultRelays: string[]
@@ -296,21 +318,25 @@ export function createNostubeClient(config: NostubeClientConfig) {
     )
   }) as typeof relayPool.request
 
-  if (instance) {
-    // Instance build (nostube-server ADR 0005), enforced here once for every union site:
-    // 1. the pool only connects to videoSources ∪ interactionRelays (hints, outbox, NIP-65,
-    //    presets and the hardcoded relay constants are dropped);
-    const group = relayPool.group.bind(relayPool)
-    relayPool.group = ((relays, ignoreOffline) =>
-      group(
-        Array.isArray(relays)
-          ? relays.filter(isRelayAllowed)
-          : relays.pipe(map(urls => urls.filter(isRelayAllowed))),
-        ignoreOffline
-      )) as typeof relayPool.group
+  // Every pool connection goes through group(). Two gates live here:
+  // - an https page drops ws:// relays off loopback. Chrome lets ws:// through to `.local` and
+  //   private hosts (Local Network Access) and then shows the page as "Not Secure";
+  // - the instance build (nostube-server ADR 0005) only connects to videoSources ∪
+  //   interactionRelays (hints, outbox, NIP-65, presets and the hardcoded relay constants are
+  //   dropped).
+  const group = relayPool.group.bind(relayPool)
+  const allowed = (url: string) => isRelayAllowed(url) && isRelaySecureForPage(url)
+  relayPool.group = ((relays, ignoreOffline) =>
+    group(
+      Array.isArray(relays)
+        ? relays.filter(allowed)
+        : relays.pipe(map(urls => urls.filter(allowed))),
+      ignoreOffline
+    )) as typeof relayPool.group
 
-    // 2. video-kind requests only go to videoSources and only for creators; a request with
-    //    nothing left in scope is not sent at all;
+  if (instance) {
+    // Video-kind requests only go to videoSources and only for creators; a request with
+    // nothing left in scope is not sent at all;
     for (const method of ['request', 'subscription', 'req'] as const) {
       const original = relayPool[method].bind(relayPool) as (
         ...args: unknown[]
@@ -330,7 +356,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
       }) as never
     }
 
-    // 3. video events of non-creators never enter the store (cache, by-id lookups, any path).
+    // Video events of non-creators never enter the store (cache, by-id lookups, any path).
     const verify = eventStore.verifyEvent
     eventStore.verifyEvent = event =>
       (!isVideoKind(event.kind) || instance.creators.includes(event.pubkey)) &&

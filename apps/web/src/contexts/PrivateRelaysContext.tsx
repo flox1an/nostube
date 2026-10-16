@@ -24,6 +24,7 @@ import {
 } from '@/nostr/private-relays'
 import { useUserRelaysContext } from './UserRelaysContext'
 import { isRelayAllowed } from '@nostube/core/instance-config'
+import { isRelaySecureForPage } from '@nostube/core/client'
 
 interface PrivateRelaysContextValue {
   relays: string[]
@@ -118,10 +119,10 @@ export function PrivateRelaysProvider({ children }: { children: ReactNode }) {
     setStatuses(Object.fromEntries(relays.map(url => [url, 'disconnected' as const])))
     if (!signer || !user?.pubkey) return
 
-    // pool.relay() bypasses the instance build's relay allowlist (src/nostr/core.ts).
+    // pool.relay() bypasses the pool gates in src/nostr/core.ts (allowlist, ws:// on https).
     return monitorPrivateRelayAuthentication(
       pool,
-      relays.filter(isRelayAllowed),
+      relays.filter(url => isRelayAllowed(url) && isRelaySecureForPage(url)),
       signer,
       user.pubkey,
       (url, status, authenticationError) => {

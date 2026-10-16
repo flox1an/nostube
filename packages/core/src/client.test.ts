@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { delay, from, lastValueFrom, throwError, toArray } from 'rxjs'
 import { RelayGroup } from 'applesauce-relay'
 import { finalizeEvent, verifyEvent, type Filter, type NostrEvent } from 'nostr-tools'
-import { createNostubeClient, type PageLoader } from './client'
+import { createNostubeClient, isRelaySecureForPage, type PageLoader } from './client'
 import { setInstanceConfig, type InstanceConfig } from './instance-config'
 
 const { eventStore, getTimelineLoader, relayPool } = createNostubeClient({
@@ -263,5 +263,54 @@ describe('instance scoping', () => {
     const event = { ...makeEvent('stranger-video', 10), pubkey: stranger }
 
     expect(client.eventStore.verifyEvent?.(event)).toBe(false)
+  })
+})
+
+describe('isRelaySecureForPage', () => {
+  const withPage = (url: string | undefined, run: () => void) => {
+    vi.stubGlobal('location', url ? new URL(url) : undefined)
+    try {
+      run()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  }
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('drops ws:// off loopback on an https page', () => {
+    withPage('https://nostu.be/', () => {
+      expect(isRelaySecureForPage('ws://umbrel.local:4848')).toBe(false)
+      expect(
+        isRelaySecureForPage('ws://aoixkasea4lchitjklwve4tkgejdrgslahdtapbzdi37uljd76c3plqd.onion/')
+      ).toBe(false)
+      expect(isRelaySecureForPage('ws://192.168.1.10:8080')).toBe(false)
+    })
+  })
+
+  it('keeps loopback ws:// and every wss:// relay on an https page', () => {
+    withPage('https://nostu.be/', () => {
+      expect(isRelaySecureForPage('ws://localhost:4848')).toBe(true)
+      expect(isRelaySecureForPage('ws://127.0.0.1:24242')).toBe(true)
+      expect(isRelaySecureForPage('ws://[::1]:7777')).toBe(true)
+      expect(isRelaySecureForPage('wss://relay.damus.io')).toBe(true)
+    })
+  })
+
+  it('only gates https pages', () => {
+    withPage('http://umbrel.local:8080/', () => {
+      expect(isRelaySecureForPage('ws://umbrel.local:4848')).toBe(true)
+    })
+    withPage(undefined, () => {
+      expect(isRelaySecureForPage('ws://umbrel.local:4848')).toBe(true)
+    })
+  })
+
+  it('the pool drops insecure relays before connecting', () => {
+    withPage('https://nostu.be/', () => {
+      expect(
+        relayPool.group(['ws://umbrel.local:4848', 'wss://relay.damus.io']).relays.map(r => r.url)
+      ).toEqual(['wss://relay.damus.io/'])
+    })
   })
 })

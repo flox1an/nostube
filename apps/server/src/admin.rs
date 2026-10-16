@@ -16,7 +16,7 @@ use argon2::{
     Argon2, PasswordHash, PasswordVerifier,
 };
 use axum::{
-    extract::{Form, State},
+    extract::{Form, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -372,6 +372,7 @@ pub fn router(state: AdminState) -> Router {
         .route("/admin/logout", post(logout))
         .route("/api/admin/config", get(config_get).put(config_put))
         .route("/api/admin/stats", get(stats_get))
+        .route("/api/admin/plays", get(plays_get))
         .route("/api/admin/signer", get(signer_get).post(signer_create))
         .route("/api/admin/signer/sign", post(signer_sign))
         .route("/api/admin/signer/export", post(signer_export))
@@ -658,6 +659,9 @@ struct SiteBody {
     pages: config::Pages,
     /// Required too: a PUT without it must not silently drop the lightning address.
     lightning: String,
+    /// Optional for studios from before the play counter: absent keeps counting off.
+    #[serde(default, rename = "countPlays")]
+    count_plays: bool,
     /// Optional for studios from before it (no curation then); given, every field is required.
     #[serde(default)]
     homepage: HomepageBody,
@@ -776,6 +780,31 @@ async fn stats_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> 
     .into_response()
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PlaysQuery {
+    days: Option<u16>,
+}
+
+/// Plays per video event (`GET /api/admin/plays?days=N`): the counter the operator switched on
+/// (`site.countPlays`), as `{ "<event id>": plays }` over the last `days` UTC days (1..=365,
+/// default 365). The counter holds no visitor data — no IP address, no user agent, no cookie —
+/// so this says how often files were requested, never who.
+async fn plays_get(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    Query(query): Query<PlaysQuery>,
+) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    let days = query.days.filter(|days| (1..=365).contains(days)).unwrap_or(365);
+    match state.stores.relay.plays(days).await {
+        Ok(plays) => Json(plays).into_response(),
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("play counts: {e}")),
+    }
+}
+
 /// Space available to unprivileged writers on the filesystem holding `path`: the figure Almond
 /// checks the free-space reserve against (`fs4::available_space`, also statvfs).
 fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
@@ -832,6 +861,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
             },
             pages: put.site.pages,
             lightning: put.site.lightning,
+            count_plays: put.site.count_plays,
             homepage: config::SiteHomepage {
                 intro: put.site.homepage.intro,
                 featured: put.site.homepage.featured,
@@ -1310,6 +1340,7 @@ fn apply(state: &AdminState, current: &Config, next: &Config) -> Result<bool, St
     if !current.needs_restart(next) {
         state.stores.branding.set_base(next.public_json());
         state.stores.relay.set_title(&next.title);
+        state.stores.relay.set_count_plays(next.site.count_plays);
         tracing::info!("admin: config revision {} applied while running", next.revision);
         return Ok(false);
     }
@@ -2040,6 +2071,33 @@ mod tests {
             assert_eq!(status, StatusCode::UNAUTHORIZED, "{c:?}");
             assert_eq!(body, serde_json::json!({ "error": "not logged in" }));
         }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    async fn get_plays(app: &Router, cookie: Option<&str>, query: &str) -> (StatusCode, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().uri(format!("/api/admin/plays{query}"));
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        let res = app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    }
+
+    #[tokio::test]
+    async fn plays_need_a_session_and_answer_an_object_with_days_clamped() {
+        let (app, dir, cookie) = studio_fixture().await;
+        for (query, c) in [("", None), ("?days=30", Some("admin_session=forged"))] {
+            let (status, body) = get_plays(&app, c, query).await;
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{query} {c:?}");
+            assert_eq!(body, serde_json::json!({ "error": "not logged in" }));
+        }
+        let (status, body) = get_plays(&app, Some(&cookie), "?days=0").await;
+        assert_eq!((status, &body), (StatusCode::OK, &serde_json::json!({})), "0 clamps to the default");
+        let (status, body) = get_plays(&app, Some(&cookie), "").await;
+        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({})));
         std::fs::remove_dir_all(&dir).ok();
     }
 

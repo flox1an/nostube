@@ -192,7 +192,14 @@
       "useStandard": "Standardtext einfügen",
       "useStandardAll": "Standardtext für alle leeren Sprachen",
       "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er richtet sich nach der Reichweite (Seite Instanz) und den Profil-Relays (Seite Erweitert) zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
-      "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?"
+      "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?",
+      "plays": {
+        "title": "Abrufzähler",
+        "description": "Der Server kann zählen, wie oft Ihre Videos abgerufen werden. Er speichert nur eine Summe pro Datei und Tag, nichts über Besucher, und löscht die Zählungen nach einem Jahr.",
+        "toggle": "Abrufe zählen",
+        "hint": "Zählt, wie oft ein Video von diesem Server zu laden beginnt. Abrufe über andere Server oder aus dem Browser-Cache fehlen.",
+        "privacy": "Ihre Datenschutzerklärung muss die Abrufzählung nennen. Der Standardtext unten enthält sie: Fügen Sie ihn in jeder genutzten Sprache erneut ein."
+      }
     },
     "branding": {
       "title": "Logo, Favicon, Banner und App-Symbol",
@@ -278,6 +285,16 @@
           "released": "Veröffentlicht {{date}}",
           "failed": "Nicht veröffentlicht"
         }
+      },
+      "plays": {
+        "count_one": "{{count, number}} Abruf",
+        "count_other": "{{count, number}} Abrufe",
+        "period": "Zeitraum",
+        "lastDays_one": "Letzter Tag",
+        "lastDays_other": "Letzte {{count}} Tage",
+        "sort": "Reihenfolge",
+        "newest": "Neueste",
+        "most": "Meiste Abrufe"
       }
     },
     "instance": {

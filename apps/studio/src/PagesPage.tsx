@@ -127,7 +127,8 @@ function PageCard({
   )
 }
 
-/** The optional about, imprint and privacy pages of the site, one text per language. */
+/** The optional about, imprint and privacy pages of the site, one text per language, and the
+ * play counter the privacy page has to mention. */
 export function PagesPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
   // The standard text names mandatory public defaults plus the Advanced page's profile relays.
@@ -138,12 +139,34 @@ export function PagesPage({ draft, update }: PageProps) {
   return (
     <div className="max-w-3xl space-y-6">
       <p className="text-sm text-muted-foreground">{t('studio.pages.intro')}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.pages.plays.title')}</CardTitle>
+          <CardDescription>{t('studio.pages.plays.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.countPlays}
+              onChange={e => update({ countPlays: e.target.checked })}
+            />
+            {t('studio.pages.plays.toggle')}
+          </label>
+          <p className="text-xs text-muted-foreground">{t('studio.pages.plays.hint')}</p>
+          {draft.countPlays && <p className="text-sm">{t('studio.pages.plays.privacy')}</p>}
+        </CardContent>
+      </Card>
       {SITE_PAGES.map(kind => (
         <PageCard
           key={kind}
           kind={kind}
           texts={draft.pages[kind]}
-          standard={kind === 'privacy' ? lng => privacyPolicy(lng, profileRelays) : undefined}
+          standard={
+            kind === 'privacy'
+              ? lng => privacyPolicy(lng, profileRelays, draft.countPlays)
+              : undefined
+          }
           onChange={texts => update({ pages: { ...draft.pages, [kind]: texts } })}
         />
       ))}

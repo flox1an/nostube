@@ -23,8 +23,9 @@ export interface AdminConfig {
   mirror: { relays: string[]; blossom: string[] }
   search: SearchConfig
   storage: { quotaGib: number; freeSpaceReserveGib: number }
-  /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public). */
-  site: InstanceSite & { lightning?: string }
+  /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public).
+   * `countPlays`: the server counts plays per video file and day (absent from older servers: off). */
+  site: InstanceSite & { lightning?: string; countPlays?: boolean }
   /** `private`: publishes nothing, only mirror targets get copies; `public`: published into Nostr (ADR 0012). */
   reach: Reach
   /** `nsite` only with the managed key and in `public`; the server forces `instance` in `private`. */
@@ -322,6 +323,13 @@ export async function loadStats(): Promise<AdminStats> {
   const res = await fetch('/api/admin/stats', { credentials: 'same-origin' })
   if (!res.ok) throw new Error(await errorMessage(res))
   return (await res.json()) as AdminStats
+}
+
+/** Plays per video event id in the last `days` (1–365), only videos played at least once. */
+export async function loadPlays(days: number): Promise<Record<string, number>> {
+  const res = await fetch(`/api/admin/plays?days=${days}`, { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as Record<string, number>
 }
 
 /** What the outbox holds per target and kind (`GET /api/admin/outbox`). */

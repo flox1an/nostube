@@ -5,7 +5,8 @@ import { DEFAULT_PROFILE_RELAYS } from '@nostube/core/instance-config'
  * languages of the site. It describes this software only (no cookies, no tracking, what a sign-in,
  * a like, a comment or a zap sends where) and names the operator through the imprint. Every
  * sentence is a fact of the code (apps/site, packages/widgets, apps/server), so a change there
- * means a change here. It names the mandatory public defaults and additional profile lookup relays.
+ * means a change here. It names the mandatory public defaults and additional profile lookup relays,
+ * and the server's anonymous play counter when the operator switched it on.
  */
 
 /** Heading first, then the paragraphs of one section. */
@@ -15,6 +16,10 @@ interface Policy {
   sections: Section[]
   /** After a sign-in, with mandatory and additional public lookup relays (`{relays}`). */
   profileOpen: string
+  /** With the play counter on: the short version's "no analytics" words, and what replaces them. */
+  playsShort: [from: string, to: string]
+  /** With the play counter on: placed before what the server keeps. */
+  plays: Section
 }
 
 const en: Policy = {
@@ -33,7 +38,7 @@ const en: Policy = {
     ],
     [
       'What is stored in your browser',
-      'The website sets no cookies. It uses your browser\'s local storage and cache for: your language choice, your confirmation that you are 18 or older, the volume and loop setting of the player, the playback position of videos you started but did not finish (shown as "Continue watching" and removable there), a copy of the latest site settings, a cache of received Nostr events and a short-lived cache of zap totals. If you sign in, your public key and the sign-in method are stored too. This data stays in your browser and is not sent to the operator. You can delete it in your browser\'s settings (site data).',
+      'The website sets no cookies. It uses your browser\'s local storage and cache for: your language choice, your confirmation that you are 18 or older, the volume and loop setting of the player, the playback position of videos you started but did not finish (shown as "Continue watching" and removable there), the time of your last visit (to show what is new since then), a copy of the latest site settings, a cache of received Nostr events and a short-lived cache of zap totals. If you sign in, your public key and the sign-in method are stored too. This data stays in your browser and is not sent to the operator. You can delete it in your browser\'s settings (site data).',
     ],
     [
       'Signing in (optional)',
@@ -66,6 +71,14 @@ const en: Policy = {
   ],
   profileOpen:
     "For this it asks this server's relay, the public relays {relays} and the relays you list in your own profile. Those relays see your IP address and your public key.",
+  playsShort: [
+    'uses no advertising, analytics or tracking.',
+    'uses no advertising, tracking or third-party analytics; the server only counts video plays, anonymously (see "Play counts").',
+  ],
+  plays: [
+    'Play counts',
+    'The server counts, per day, how often each video file starts loading from this server. It stores only the file and the count: no IP address, no browser data, no cookie, nothing that identifies a visitor. Counts older than one year are deleted. The operator sees the totals per video.',
+  ],
 }
 
 const de: Policy = {
@@ -84,7 +97,7 @@ const de: Policy = {
     ],
     [
       'Was in Ihrem Browser gespeichert wird',
-      'Die Website setzt keine Cookies. Sie nutzt den lokalen Speicher und den Cache Ihres Browsers für: Ihre Sprachwahl, Ihre Bestätigung, dass Sie mindestens 18 Jahre alt sind, Lautstärke und Wiederholungs-Einstellung des Players, die Abspielposition begonnener, aber nicht beendeter Videos (als „Weiterschauen“ angezeigt und dort löschbar), eine Kopie der zuletzt geladenen Website-Einstellungen, einen Zwischenspeicher empfangener Nostr-Ereignisse und einen kurzlebigen Zwischenspeicher für Zap-Summen. Wenn Sie sich anmelden, werden außerdem Ihr öffentlicher Schlüssel und die Anmeldeart gespeichert. Diese Daten bleiben in Ihrem Browser und werden nicht an den Betreiber gesendet. Sie können sie in den Einstellungen Ihres Browsers löschen (Websitedaten).',
+      'Die Website setzt keine Cookies. Sie nutzt den lokalen Speicher und den Cache Ihres Browsers für: Ihre Sprachwahl, Ihre Bestätigung, dass Sie mindestens 18 Jahre alt sind, Lautstärke und Wiederholungs-Einstellung des Players, die Abspielposition begonnener, aber nicht beendeter Videos (als „Weiterschauen“ angezeigt und dort löschbar), den Zeitpunkt Ihres letzten Besuchs (um zu zeigen, was seitdem neu ist), eine Kopie der zuletzt geladenen Website-Einstellungen, einen Zwischenspeicher empfangener Nostr-Ereignisse und einen kurzlebigen Zwischenspeicher für Zap-Summen. Wenn Sie sich anmelden, werden außerdem Ihr öffentlicher Schlüssel und die Anmeldeart gespeichert. Diese Daten bleiben in Ihrem Browser und werden nicht an den Betreiber gesendet. Sie können sie in den Einstellungen Ihres Browsers löschen (Websitedaten).',
     ],
     [
       'Anmeldung (optional)',
@@ -117,6 +130,14 @@ const de: Policy = {
   ],
   profileOpen:
     'Dafür fragt sie das Relay dieses Servers, die öffentlichen Relays {relays} und die Relays, die Sie in Ihrem eigenen Profil angeben. Diese Relays sehen Ihre IP-Adresse und Ihren öffentlichen Schlüssel.',
+  playsShort: [
+    'verwendet weder Werbung noch Analyse- oder Tracking-Werkzeuge.',
+    'verwendet weder Werbung noch Tracking oder Analyse-Werkzeuge Dritter; der Server zählt nur anonym, wie oft Videos abgerufen werden (siehe „Abrufzählung“).',
+  ],
+  plays: [
+    'Abrufzählung',
+    'Der Server zählt pro Tag, wie oft jede Videodatei von diesem Server zu laden beginnt. Er speichert dabei nur die Datei und die Anzahl: keine IP-Adresse, keine Browserdaten, kein Cookie, nichts, was einen Besucher erkennbar macht. Zählungen, die älter als ein Jahr sind, werden gelöscht. Der Betreiber sieht die Summen pro Video.',
+  ],
 }
 
 const fr: Policy = {
@@ -135,7 +156,7 @@ const fr: Policy = {
     ],
     [
       'Ce qui est enregistré dans votre navigateur',
-      "Le site ne dépose aucun cookie. Il utilise le stockage local et le cache de votre navigateur pour : votre choix de langue, votre confirmation d'avoir 18 ans ou plus, le volume et le réglage de lecture en boucle du lecteur, la position de lecture des vidéos commencées mais non terminées (affichée sous « Reprendre la lecture » et effaçable à cet endroit), une copie des derniers paramètres du site, un cache des événements Nostr reçus et un cache de courte durée des totaux de zaps. Si vous vous connectez, votre clé publique et la méthode de connexion sont aussi enregistrées. Ces données restent dans votre navigateur et ne sont pas envoyées à l'exploitant. Vous pouvez les supprimer dans les réglages de votre navigateur (données de sites).",
+      "Le site ne dépose aucun cookie. Il utilise le stockage local et le cache de votre navigateur pour : votre choix de langue, votre confirmation d'avoir 18 ans ou plus, le volume et le réglage de lecture en boucle du lecteur, la position de lecture des vidéos commencées mais non terminées (affichée sous « Reprendre la lecture » et effaçable à cet endroit), l'heure de votre dernière visite (pour montrer ce qui est nouveau depuis), une copie des derniers paramètres du site, un cache des événements Nostr reçus et un cache de courte durée des totaux de zaps. Si vous vous connectez, votre clé publique et la méthode de connexion sont aussi enregistrées. Ces données restent dans votre navigateur et ne sont pas envoyées à l'exploitant. Vous pouvez les supprimer dans les réglages de votre navigateur (données de sites).",
     ],
     [
       'Connexion (facultative)',
@@ -168,6 +189,14 @@ const fr: Policy = {
   ],
   profileOpen:
     'Pour cela, il interroge le relais de ce serveur, les relais publics {relays} et les relais que vous indiquez dans votre propre profil. Ces relais voient votre adresse IP et votre clé publique.',
+  playsShort: [
+    "n'utilise ni publicité, ni outil d'analyse ou de suivi.",
+    "n'utilise ni publicité, ni suivi, ni outil d'analyse de tiers ; le serveur compte seulement, de façon anonyme, les lectures de vidéos (voir « Comptage des lectures »).",
+  ],
+  plays: [
+    'Comptage des lectures',
+    "Le serveur compte, par jour, combien de fois chaque fichier vidéo commence à être chargé depuis ce serveur. Il ne conserve que le fichier et le nombre : aucune adresse IP, aucune donnée du navigateur, aucun cookie, rien qui permette d'identifier un visiteur. Les comptages de plus d'un an sont supprimés. L'exploitant voit les totaux par vidéo.",
+  ],
 }
 
 const es: Policy = {
@@ -186,7 +215,7 @@ const es: Policy = {
     ],
     [
       'Qué se guarda en su navegador',
-      'El sitio no instala cookies. Usa el almacenamiento local y la caché de su navegador para: su elección de idioma, su confirmación de que tiene 18 años o más, el volumen y el ajuste de repetición del reproductor, la posición de reproducción de los vídeos que empezó pero no terminó (se muestra como «Seguir viendo» y se puede borrar ahí), una copia de la última configuración del sitio, una caché de eventos Nostr recibidos y una caché de corta duración de los totales de zaps. Si inicia sesión, también se guardan su clave pública y el método de inicio de sesión. Estos datos permanecen en su navegador y no se envían al operador. Puede borrarlos en los ajustes de su navegador (datos de sitios).',
+      'El sitio no instala cookies. Usa el almacenamiento local y la caché de su navegador para: su elección de idioma, su confirmación de que tiene 18 años o más, el volumen y el ajuste de repetición del reproductor, la posición de reproducción de los vídeos que empezó pero no terminó (se muestra como «Seguir viendo» y se puede borrar ahí), la hora de su última visita (para mostrar lo nuevo desde entonces), una copia de la última configuración del sitio, una caché de eventos Nostr recibidos y una caché de corta duración de los totales de zaps. Si inicia sesión, también se guardan su clave pública y el método de inicio de sesión. Estos datos permanecen en su navegador y no se envían al operador. Puede borrarlos en los ajustes de su navegador (datos de sitios).',
     ],
     [
       'Inicio de sesión (opcional)',
@@ -219,6 +248,14 @@ const es: Policy = {
   ],
   profileOpen:
     'Para ello consulta el relé de este servidor, los relés públicos {relays} y los relés que usted indique en su propio perfil. Esos relés ven su dirección IP y su clave pública.',
+  playsShort: [
+    'no usa publicidad, analítica ni rastreo.',
+    'no usa publicidad, rastreo ni analítica de terceros; el servidor solo cuenta, de forma anónima, las reproducciones de vídeos (véase «Recuento de reproducciones»).',
+  ],
+  plays: [
+    'Recuento de reproducciones',
+    'El servidor cuenta, por día, cuántas veces empieza a cargarse cada archivo de vídeo desde este servidor. Solo guarda el archivo y el número: ninguna dirección IP, ningún dato del navegador, ninguna cookie, nada que identifique a un visitante. Los recuentos de más de un año se eliminan. El operador ve los totales por vídeo.',
+  ],
 }
 
 const ru: Policy = {
@@ -237,7 +274,7 @@ const ru: Policy = {
     ],
     [
       'Что хранится в вашем браузере',
-      'Сайт не устанавливает cookie. Он использует локальное хранилище и кэш вашего браузера для: выбранного вами языка, вашего подтверждения, что вам 18 лет или больше, громкости и настройки повтора плеера, позиции воспроизведения начатых, но не досмотренных видео (показывается как «Продолжить просмотр» и удаляется там же), копии последних настроек сайта, кэша полученных событий Nostr и кратковременного кэша сумм зэпов. Если вы входите в систему, также сохраняются ваш публичный ключ и способ входа. Эти данные остаются в вашем браузере и не отправляются оператору. Вы можете удалить их в настройках браузера (данные сайтов).',
+      'Сайт не устанавливает cookie. Он использует локальное хранилище и кэш вашего браузера для: выбранного вами языка, вашего подтверждения, что вам 18 лет или больше, громкости и настройки повтора плеера, позиции воспроизведения начатых, но не досмотренных видео (показывается как «Продолжить просмотр» и удаляется там же), времени вашего последнего визита (чтобы показать, что появилось с тех пор), копии последних настроек сайта, кэша полученных событий Nostr и кратковременного кэша сумм зэпов. Если вы входите в систему, также сохраняются ваш публичный ключ и способ входа. Эти данные остаются в вашем браузере и не отправляются оператору. Вы можете удалить их в настройках браузера (данные сайтов).',
     ],
     [
       'Вход (необязательно)',
@@ -270,6 +307,14 @@ const ru: Policy = {
   ],
   profileOpen:
     'Для этого запрашиваются релей этого сервера, публичные релеи {relays} и релеи, которые вы указали в собственном профиле. Эти релеи видят ваш IP-адрес и ваш публичный ключ.',
+  playsShort: [
+    'не использует рекламу, аналитику и отслеживание.',
+    'не использует рекламу, отслеживание и стороннюю аналитику; сервер лишь анонимно считает воспроизведения видео (см. «Подсчёт воспроизведений»).',
+  ],
+  plays: [
+    'Подсчёт воспроизведений',
+    'Сервер считает по дням, сколько раз каждый видеофайл начинает загружаться с этого сервера. Он хранит только файл и число: ни IP-адреса, ни данных браузера, ни cookie, ничего, что позволяет узнать посетителя. Данные подсчёта старше одного года удаляются. Оператор видит итоги по каждому видео.',
+  ],
 }
 
 const zh: Policy = {
@@ -288,7 +333,7 @@ const zh: Policy = {
     ],
     [
       '浏览器中保存的内容',
-      '本网站不设置 Cookie。它使用浏览器的本地存储和缓存来保存：您选择的语言、您已年满 18 岁的确认、播放器的音量和循环设置、已开始但未看完的视频的播放位置（显示为“继续观看”，可在那里清除）、最近一次站点设置的副本、已接收 Nostr 事件的缓存，以及短期的 Zap 总额缓存。如果您登录，还会保存您的公钥和登录方式。这些数据只保留在您的浏览器中，不会发送给运营者。您可以在浏览器设置中删除它们（网站数据）。',
+      '本网站不设置 Cookie。它使用浏览器的本地存储和缓存来保存：您选择的语言、您已年满 18 岁的确认、播放器的音量和循环设置、已开始但未看完的视频的播放位置（显示为“继续观看”，可在那里清除）、您上次访问的时间（用于显示此后的新内容）、最近一次站点设置的副本、已接收 Nostr 事件的缓存，以及短期的 Zap 总额缓存。如果您登录，还会保存您的公钥和登录方式。这些数据只保留在您的浏览器中，不会发送给运营者。您可以在浏览器设置中删除它们（网站数据）。',
     ],
     [
       '登录（可选）',
@@ -321,6 +366,14 @@ const zh: Policy = {
   ],
   profileOpen:
     '为此会查询本服务器的中继、公共中继 {relays}，以及您在自己的个人资料中列出的中继。这些中继会看到您的 IP 地址和公钥。',
+  playsShort: [
+    '也不使用广告、统计分析或跟踪工具，不加载第三方的字体、脚本或嵌入式播放器。',
+    '也不使用广告、跟踪或第三方统计分析工具，不加载第三方的字体、脚本或嵌入式播放器。服务器仅以匿名方式统计视频的播放次数（见“播放次数统计”）。',
+  ],
+  plays: [
+    '播放次数统计',
+    '服务器按天统计每个视频文件从本服务器开始加载的次数。它只保存文件和次数：不保存 IP 地址、浏览器数据或 Cookie，也不保存任何可识别访客的信息。超过一年的统计数据会被删除。运营者可以看到每个视频的总数。',
+  ],
 }
 
 const ja: Policy = {
@@ -339,7 +392,7 @@ const ja: Policy = {
     ],
     [
       'ブラウザに保存されるもの',
-      'このウェブサイトは Cookie を設定しません。ブラウザのローカルストレージとキャッシュを、次の目的で使用します：言語の選択、18 歳以上であることの確認、プレーヤーの音量とループ設定、再生を始めたが最後まで見ていない動画の再生位置（「続きから再生」に表示され、そこで消去できます）、最新のサイト設定のコピー、受信した Nostr イベントのキャッシュ、短期間の Zap 合計のキャッシュ。ログインした場合は、公開鍵とログイン方法も保存されます。これらのデータはブラウザ内にとどまり、運営者には送信されません。ブラウザの設定（サイトデータ）から削除できます。',
+      'このウェブサイトは Cookie を設定しません。ブラウザのローカルストレージとキャッシュを、次の目的で使用します：言語の選択、18 歳以上であることの確認、プレーヤーの音量とループ設定、再生を始めたが最後まで見ていない動画の再生位置（「続きから再生」に表示され、そこで消去できます）、前回の訪問日時（それ以降の新着を表示するため）、最新のサイト設定のコピー、受信した Nostr イベントのキャッシュ、短期間の Zap 合計のキャッシュ。ログインした場合は、公開鍵とログイン方法も保存されます。これらのデータはブラウザ内にとどまり、運営者には送信されません。ブラウザの設定（サイトデータ）から削除できます。',
     ],
     [
       'ログイン（任意）',
@@ -372,6 +425,14 @@ const ja: Policy = {
   ],
   profileOpen:
     'そのために、このサーバーのリレー、公開リレー {relays}、およびお客様ご自身のプロフィールに記載したリレーに問い合わせます。これらのリレーには、お客様の IP アドレスと公開鍵が見えます。',
+  playsShort: [
+    '広告、アクセス解析、トラッキングを使用しません。',
+    '広告、トラッキング、第三者のアクセス解析を使用しません。サーバーは動画の再生回数を匿名で数えるだけです（「再生回数の集計」を参照）。',
+  ],
+  plays: [
+    '再生回数の集計',
+    'サーバーは、各動画ファイルがこのサーバーから読み込みを開始した回数を日ごとに数えます。保存するのはファイルと回数だけで、IP アドレス、ブラウザーのデータ、Cookie など、訪問者を特定できる情報は一切保存しません。1 年より古い集計は削除されます。運営者には動画ごとの合計が表示されます。',
+  ],
 }
 
 const POLICIES: Record<string, Policy> = { en, de, fr, es, ru, zh, ja }
@@ -381,16 +442,32 @@ export const DEFAULT_PAGE_LANGUAGES = Object.keys(POLICIES)
 
 /**
  * The standard privacy policy in one language. `profileRelays` are additional public relays for
- * a signed-in visitor's profile; mandatory public defaults are always included.
+ * a signed-in visitor's profile; mandatory public defaults are always included. `countPlays`
+ * adds the play counter (the operator's `site.countPlays`).
  */
-export function privacyPolicy(language: string, profileRelays: string[]): string | undefined {
+export function privacyPolicy(
+  language: string,
+  profileRelays: string[],
+  countPlays: boolean
+): string | undefined {
   const policy = POLICIES[language]
   if (!policy) return undefined
   const profile = policy.profileOpen.replace(
     '{relays}',
     [...new Set([...DEFAULT_PROFILE_RELAYS, ...profileRelays])].join(', ')
   )
-  return policy.sections
+  // The short version is second, what the server keeps second to last.
+  const [responsible, [short, summary], ...rest] = policy.sections
+  const sections: Section[] = countPlays
+    ? [
+        responsible,
+        [short, summary.replace(...policy.playsShort)],
+        ...rest.slice(0, -2),
+        policy.plays,
+        ...rest.slice(-2),
+      ]
+    : policy.sections
+  return sections
     .map(([heading, ...paragraphs]) =>
       [heading, ...paragraphs].join('\n').replace('{profile}', profile)
     )

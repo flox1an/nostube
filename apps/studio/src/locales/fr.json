@@ -192,7 +192,14 @@
       "useStandard": "Insérer le texte standard",
       "useStandardAll": "Texte standard pour toutes les langues vides",
       "standardHint": "Le texte standard décrit ce que le site et le serveur Nostube font des données des visiteurs et renvoie aux mentions légales pour l'exploitant. Il suit la portée (page Instance) et les relais de profils (page Avancé) au moment de l'insertion ; insérez-le à nouveau après les avoir modifiés. Vérifiez qu'il correspond à votre exploitation. Il ne constitue pas un conseil juridique.",
-      "replaceConfirm": "Remplacer le texte actuel de cette langue par le texte standard ?"
+      "replaceConfirm": "Remplacer le texte actuel de cette langue par le texte standard ?",
+      "plays": {
+        "title": "Compteur de lectures",
+        "description": "Le serveur peut compter combien de fois vos vidéos sont lues. Il ne garde qu'un total par fichier et par jour, rien sur les visiteurs, et supprime les comptages au bout d'un an.",
+        "toggle": "Compter les lectures",
+        "hint": "Compte combien de fois une vidéo commence à se charger depuis ce serveur. Les lectures via d'autres serveurs ou depuis le cache du navigateur manquent.",
+        "privacy": "Votre politique de confidentialité doit mentionner le compteur de lectures. Le texte standard ci-dessous l'inclut : insérez-le à nouveau dans chaque langue utilisée."
+      }
     },
     "branding": {
       "title": "Logo, favicon, bannière et icône d'application",
@@ -278,6 +285,18 @@
           "released": "Publiée le {{date}}",
           "failed": "Non publiée"
         }
+      },
+      "plays": {
+        "count_one": "{{count, number}} lecture",
+        "count_many": "{{count, number}} lectures",
+        "count_other": "{{count, number}} lectures",
+        "period": "Période",
+        "lastDays_one": "Dernier jour",
+        "lastDays_many": "{{count}} derniers jours",
+        "lastDays_other": "{{count}} derniers jours",
+        "sort": "Ordre",
+        "newest": "Plus récentes",
+        "most": "Plus lues"
       }
     },
     "instance": {

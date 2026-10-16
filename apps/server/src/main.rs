@@ -314,6 +314,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             mirror_relays: cfg.mirror.relays.clone(),
         },
     )?;
+    relay.set_count_plays(cfg.site.count_plays);
     // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
     let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
     outbox.attach_storage(state.clone());
@@ -469,6 +470,11 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         let upload = matches!((req.method(), path.as_str()),
             (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"));
         let mirrored = outbox::is_mirror_delivery(req.headers());
+        // A GET that would start a file counts as a play when the answer comes from media a
+        // stored video event names (`count_view` skips everything else) and play counting is
+        // on. Decided here, on the request and the response, so Almond stays untouched; a
+        // mirror fetching for storage is not a visitor and counts nothing.
+        let count = (!mirrored && is_play_start(&req)).then(|| path.trim_start_matches('/').to_owned());
         // Almond already validates/consumes this auth in its handler. Retain the verified
         // identity only when the resulting descriptor confirms storage succeeded.
         let auth = req.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok())
@@ -476,6 +482,10 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
             .filter(|event| event.verify().is_ok());
         let _media_guard = if upload { Some(outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
         let res = app.blossom.oneshot(req).await.into_response();
+        if let Some(hash) = count.and_then(|name| blob_hash(&name)).filter(|_| is_served_video(&res)) {
+            let relay = app.relay.clone();
+            tokio::spawn(async move { relay.count_view(hash).await });
+        }
         if !upload || !res.status().is_success() { return res; }
         let (parts, body) = res.into_parts();
         let bytes = match axum::body::to_bytes(body, 1 << 20).await {
@@ -604,6 +614,39 @@ fn is_blossom(method: &Method, path: &str) -> bool {
 fn is_blob_name(seg: &str) -> bool {
     let hash = seg.split_once('.').map_or(seg, |(h, _)| h);
     hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// The blob's hash in lowercase, `None` when the name is not a blob.
+fn blob_hash(seg: &str) -> Option<String> {
+    is_blob_name(seg).then(|| seg.split_once('.').map_or(seg, |(h, _)| h).to_ascii_lowercase())
+}
+
+/// Would this request start playing a file? A `GET` without `Range` (the usual full starts:
+/// browsers, hls.js, ExoPlayer) or one starting at 0 — but not Safari's `bytes=0-1` probe,
+/// which a real start follows. Seeks and later chunks start elsewhere. False positives stay
+/// out of the counter anyway: `count_view` only counts files a stored video event names.
+fn is_play_start(req: &Request<Body>) -> bool {
+    if req.method() != Method::GET {
+        return false;
+    }
+    match req.headers().get(header::RANGE).and_then(|value| value.to_str().ok()) {
+        None => true,
+        Some(range) => matches!(range, "bytes=0-"),
+    }
+}
+
+/// Did the answer actually come from a file: `200`/`206` with a video or HLS playlist content
+/// type. A `304`, a payment error or a redirect counts nothing; media segments and variant
+/// playlists pass here but no video event names them, so `count_view` skips them.
+fn is_served_video(res: &Response) -> bool {
+    matches!(res.status(), StatusCode::OK | StatusCode::PARTIAL_CONTENT)
+        && res
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|mime| {
+                mime.starts_with("video/") || almond::services::hls::is_hls_playlist(mime)
+            })
 }
 
 #[cfg(test)]
@@ -788,5 +831,156 @@ mod tests {
         assert_eq!(response.headers()[header::CONTENT_TYPE], "application/nostr+json");
         let req = Request::builder().uri("/embed.html").body(Body::empty()).unwrap();
         assert_eq!(dispatch(State(mirror_app), req).await.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn a_play_starts_only_with_a_get_from_the_beginning() {
+        let req = |method: Method, range: Option<&str>| {
+            let mut builder = Request::builder().method(method).uri("/x");
+            if let Some(range) = range {
+                builder = builder.header(header::RANGE, range);
+            }
+            is_play_start(&builder.body(Body::empty()).unwrap())
+        };
+        assert!(req(Method::GET, None));
+        assert!(req(Method::GET, Some("bytes=0-")));
+        assert!(!req(Method::GET, Some("bytes=0-1")), "Safari's probe, a real start follows");
+        assert!(!req(Method::GET, Some("bytes=512-")), "a seek or a later chunk");
+        assert!(!req(Method::GET, Some("bytes=-256")), "a tail request");
+        assert!(!req(Method::HEAD, None));
+    }
+
+    #[test]
+    fn a_play_counts_only_a_served_video_or_playlist() {
+        let res = |status: StatusCode, mime: &str| {
+            Response::builder()
+                .status(status)
+                .header(header::CONTENT_TYPE, mime)
+                .body(Body::empty())
+                .unwrap()
+        };
+        assert!(is_served_video(&res(StatusCode::OK, "video/mp4")));
+        assert!(is_served_video(&res(StatusCode::PARTIAL_CONTENT, "video/webm; codecs=vp9")));
+        assert!(is_served_video(&res(StatusCode::OK, "application/vnd.apple.mpegurl")));
+        assert!(is_served_video(&res(StatusCode::OK, "application/x-mpegurl")));
+        assert!(!is_served_video(&res(StatusCode::NOT_MODIFIED, "video/mp4")));
+        assert!(!is_served_video(&res(StatusCode::NOT_FOUND, "video/mp4")));
+        assert!(!is_served_video(&res(StatusCode::OK, "image/jpeg")), "thumbnails stay out");
+        assert!(!is_served_video(&res(StatusCode::OK, "text/vtt")), "text tracks stay out");
+    }
+
+    #[test]
+    fn a_blob_hash_lowercases_and_rejects_other_names() {
+        let hash = "ab".repeat(32);
+        assert_eq!(blob_hash(&hash), Some(hash.clone()));
+        assert_eq!(blob_hash(&format!("{hash}.mp4")), Some(hash.clone()));
+        let upper = "AB".repeat(32);
+        assert_eq!(blob_hash(&upper), Some("ab".repeat(32)));
+        assert_eq!(blob_hash("feed.xml"), None);
+        assert_eq!(blob_hash("nothex64.mp4"), None);
+        assert_eq!(blob_hash(""), None);
+    }
+
+    /// Serves `bytes` via `PUT /upload` with the key's Blossom auth; returns the sha256.
+    fn upload_request(key: &nostr::prelude::Keys, bytes: &'static [u8]) -> (Request<Body>, String) {
+        use base64::Engine;
+        use nostr::prelude::FinalizeEvent;
+        use sha2::Digest;
+        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let expiration = (nostr::prelude::Timestamp::now().as_secs() + 600).to_string();
+        let auth = nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(24242), hash.clone())
+            .tags([
+                nostr::prelude::Tag::parse(["t", "upload"]).unwrap(),
+                nostr::prelude::Tag::parse(["x", &hash]).unwrap(),
+                nostr::prelude::Tag::parse(["expiration", &expiration]).unwrap(),
+            ])
+            .finalize(key)
+            .unwrap();
+        let req = Request::builder().method(Method::PUT).uri("/upload")
+            .header(header::AUTHORIZATION, format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(auth.as_json())))
+            .header(header::CONTENT_TYPE, "video/mp4").header("x-sha-256", &hash)
+            .body(Body::from(bytes)).unwrap();
+        (req, hash)
+    }
+
+    #[tokio::test]
+    async fn a_start_of_a_named_video_counts_one_play_and_seeks_and_probes_count_none() {
+        use nostr::prelude::{EventBuilder, FinalizeEvent, Keys, Kind, Tag};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static N: AtomicUsize = AtomicUsize::new(0);
+        let dir = std::env::temp_dir().join(format!("nostube-play-count-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let key = Keys::generate();
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://instance.example".into());
+        cfg.allowed_npubs = vec![key.public_key()];
+        cfg.storage_min_free = 0;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
+            writers: vec![key.public_key()], name: "test".into(), description: "test".into(), mirror_relays: vec![],
+        }).unwrap();
+        relay.set_count_plays(true);
+        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        outbox.attach_storage(state.clone());
+        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let app = App {
+            blossom: almond::create_app(state.clone()), relay: relay.clone(),
+            branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "test".into(), admin: None, outbox, signer: Default::default(),
+        };
+        let (req, video_hash) = upload_request(&key, b"a playable video");
+        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        let (req, stray_hash) = upload_request(&key, b"an unnamed file");
+        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        let video = EventBuilder::new(Kind::Custom(34235), "clip")
+            .tags([
+                Tag::parse(["d", "clip"]).unwrap(),
+                Tag::parse(["imeta", &format!("url https://instance.example/{video_hash}.mp4"), "m video/mp4"]).unwrap(),
+            ])
+            .finalize(&key)
+            .unwrap();
+        relay.ingest(video.clone()).await;
+        assert!(
+            !relay.stored(nostr::prelude::Filter::new().id(video.id)).await.unwrap().is_empty(),
+            "the creator is a writer"
+        );
+        let get = |hash: &str, range: Option<&str>| {
+            let mut builder = Request::builder().method(Method::GET).uri(format!("/{hash}.mp4"));
+            if let Some(range) = range {
+                builder = builder.header(header::RANGE, range);
+            }
+            builder.body(Body::empty()).unwrap()
+        };
+        let plays = |id: &str| {
+            let relay = relay.clone();
+            let id = id.to_owned();
+            async move {
+                // The counter writes in the background; wait until it has, then read once.
+                for _ in 0..200 {
+                    if let Some(plays) = relay.plays(365).await.unwrap().get(&id) {
+                        return *plays;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                }
+                panic!("no play recorded for {id}");
+            }
+        };
+        let id = video.id.to_hex();
+        // Safari's probe is not a start.
+        let response = dispatch(State(app.clone()), get(&video_hash, Some("bytes=0-1"))).await;
+        assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        // The full start counts one.
+        let response = dispatch(State(app.clone()), get(&video_hash, None)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(plays(&id).await, 1);
+        // A seek and an unnamed file stay out; absence is stable, so no waiting here.
+        let response = dispatch(State(app.clone()), get(&video_hash, Some("bytes=4-"))).await;
+        assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        let response = dispatch(State(app.clone()), get(&stray_hash, None)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert_eq!(relay.plays(365).await.unwrap().get(&id).copied(), Some(1), "seeks count nothing");
+        assert_eq!(relay.plays(365).await.unwrap().len(), 1, "unnamed files count nothing");
     }
 }

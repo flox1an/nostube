@@ -75,6 +75,10 @@ _Avoid_: discovery relays, lookup relays
 What the instance announces and where the site reads: `private` keeps catalog and interactions on the instance, with outgoing copies only to the owner's mirrors; `public` announces the channel and uses public relay sources. Public reach needs either a public instance origin or public mirror relays and Blossom servers; returning to private cannot revoke foreign copies.
 _Avoid_: visibility, mode, privacy setting
 
+**Play counting** (Abrufzählung):
+The opt-in (`site.countPlays`) anonymous counter of how often a video's media file starts loading from this instance, per file and day, kept for one year and shown per video in Studio. It counts files, never people: no IP address, no user agent, no cookie. Starts served from mirrors, caches or other Blossom servers stay uncounted. The standard privacy text names it while it is on.
+_Avoid_: views, viewers, analytics, tracking
+
 **Admin**:
 The instance operator. Admin rights come only from the admin credential (password, optionally a bound Nostr key), never from being a displayed creator or allowed writer.
 _Avoid_: creator login, owner key

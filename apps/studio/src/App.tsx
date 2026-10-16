@@ -249,7 +249,11 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       )}
       {page === 'videos' && <NextSteps config={config} branding={branding} />}
       {page === 'videos' && (
-        <VideosPage hiddenText={draft.hiddenText} onHiddenChange={saveHidden} />
+        <VideosPage
+          hiddenText={draft.hiddenText}
+          onHiddenChange={saveHidden}
+          countPlays={saved.countPlays}
+        />
       )}
       {page === 'upload' && (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>

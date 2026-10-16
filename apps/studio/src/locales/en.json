@@ -192,7 +192,14 @@
       "useStandard": "Insert the standard text",
       "useStandardAll": "Standard text for all empty languages",
       "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It follows the reach (Instance page) and the profile relays (Advanced page) at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
-      "replaceConfirm": "Replace the current text of this language with the standard text?"
+      "replaceConfirm": "Replace the current text of this language with the standard text?",
+      "plays": {
+        "title": "Play counter",
+        "description": "The server can count how often your videos are played. It keeps only one total per file and day, nothing about visitors, and deletes the counts after one year.",
+        "toggle": "Count plays",
+        "hint": "Counts how often a video starts loading from this server. Plays from other servers or from the browser cache are missing.",
+        "privacy": "Your privacy policy must mention the play counter. The standard privacy text below includes it: insert it again in each language you use."
+      }
     },
     "branding": {
       "title": "Logo, favicon, banner and app icon",
@@ -278,6 +285,16 @@
           "released": "Published {{date}}",
           "failed": "Not published"
         }
+      },
+      "plays": {
+        "count_one": "{{count, number}} play",
+        "count_other": "{{count, number}} plays",
+        "period": "Period",
+        "lastDays_one": "Last day",
+        "lastDays_other": "Last {{count}} days",
+        "sort": "Order",
+        "newest": "Newest",
+        "most": "Most plays"
       }
     },
     "instance": {

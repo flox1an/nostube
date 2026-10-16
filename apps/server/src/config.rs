@@ -269,6 +269,10 @@ pub struct Site {
     pub lightning: String,
     /// The curated start page; empty: no curation.
     pub homepage: SiteHomepage,
+    /// Opt-in play counting: anonymous per-day counters of how often the instance's Blossom
+    /// starts serving a video file; no visitor data, one year retention (roadmap phase 6).
+    /// Public JSON `site.countPlays`; the standard privacy texts mention it when on.
+    pub count_plays: bool,
 }
 
 /// What the start page features (public JSON `site.homepage`, camelCase there). Videos are
@@ -428,6 +432,7 @@ impl Default for Site {
             pages: Pages::default(),
             lightning: String::new(),
             homepage: SiteHomepage::default(),
+            count_plays: false,
         }
     }
 }
@@ -764,6 +769,7 @@ impl Config {
                 "tagline": self.site.tagline,
                 // Public anyway: the derived channel profile carries it as `lud16`.
                 "lightning": self.site.lightning,
+                "countPlays": self.site.count_plays,
                 "theme": { "accent": self.site.accent, "font": self.site.font },
                 "videos": { "hidden": self.site.hidden_videos },
                 "links": {
@@ -918,6 +924,12 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(again.creators, cfg.creators);
         assert_eq!(again.search, cfg.search);
         assert_eq!(again.storage.quota_gib, 0);
+        // Off by default, and visible as `countPlays` in the public config when on.
+        assert!(!again.site.count_plays);
+        assert_eq!(cfg.public_json()["site"]["countPlays"], serde_json::json!(false));
+        let counted = Config::parse(&sample("[site]\ncount_plays = true\n")).unwrap();
+        assert!(counted.site.count_plays);
+        assert_eq!(counted.public_json()["site"]["countPlays"], serde_json::json!(true));
         let next = cfg
             .with_edits(&Edited {
                 title: "Renamed".into(),

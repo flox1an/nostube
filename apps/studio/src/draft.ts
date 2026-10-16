@@ -23,6 +23,8 @@ export interface Draft {
   font: SiteFont
   /** Lightning address (`name@domain.tld`) for zaps to the managed channel identity; empty = none. */
   lightning: string
+  /** The server counts plays per video file and day. */
+  countPlays: boolean
   hiddenText: string
   links: InstanceSite['links']
   pages: SitePages
@@ -59,6 +61,7 @@ export function toDraft(c: AdminConfig): Draft {
     accent: c.site.theme.accent,
     font: c.site.theme.font,
     lightning: c.site.lightning ?? '',
+    countPlays: c.site.countPlays ?? false,
     hiddenText: c.site.videos.hidden.join('\n'),
     links: { ...c.site.links },
     pages: structuredClone(c.site.pages),
@@ -308,7 +311,7 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
       mirror: { relays: mirrorRelays, blossom: mirrorBlossom },
       search,
       storage: { quotaGib, freeSpaceReserveGib },
-      site: { ...site, lightning },
+      site: { ...site, lightning, countPlays: d.countPlays },
       reach: d.reach,
       siteHosting: d.reach === 'private' ? 'instance' : d.siteHosting,
       nsite: { gateway, domain },

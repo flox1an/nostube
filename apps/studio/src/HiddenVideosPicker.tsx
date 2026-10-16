@@ -9,8 +9,10 @@ import { Badge } from '@nostube/widgets/components/badge'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import { ToggleGroup, ToggleGroupItem } from '@nostube/widgets/components/toggle-group'
 import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
+import { loadPlays } from './api'
 import { isRefHidden, setRefHidden } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { VideoActions } from './VideoActions'
@@ -19,10 +21,15 @@ import { hashFor } from './route'
 /** Fewer videos than this fit on a screen; more get a search box. */
 const SEARCH_FROM = 6
 
+/** The periods the play counts cover, in days. */
+const PLAY_PERIODS = [7, 30, 365]
+
 interface PickerProps {
   hiddenText: string
   /** Saves the hidden list at once (the server applies it without a restart). */
   onChange: (hiddenText: string) => Promise<void>
+  /** The server counts plays (saved config): videos without plays show 0. */
+  countPlays: boolean
 }
 
 /** The creator's videos, each with its actions; hiding one applies to the public site at once. */
@@ -55,12 +62,27 @@ function VideoList({
   instance,
   hiddenText,
   onChange,
+  countPlays,
 }: PickerProps & { config: InstanceClient['config']; instance: InstanceClient }) {
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
   const [hideBusy, setHideBusy] = useState(false)
   const [hideError, setHideError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [days, setDays] = useState(30)
+  const [sort, setSort] = useState<'newest' | 'plays'>('newest')
+  // Plays per video event id; the previous period's stay while the next loads. Null: none known.
+  const [plays, setPlays] = useState<Record<string, number> | null>(null)
+  useEffect(() => {
+    let live = true
+    loadPlays(days).then(
+      p => live && setPlays(p),
+      () => live && setPlays(null)
+    )
+    return () => {
+      live = false
+    }
+  }, [days])
   const setHidden = async (refs: string[], on: boolean) => {
     setHideBusy(true)
     setHideError(null)
@@ -94,7 +116,13 @@ function VideoList({
     )
   }
   const needle = query.trim().toLowerCase()
-  const shown = needle ? videos.filter(v => v.title.toLowerCase().includes(needle)) : videos
+  const found = needle ? videos.filter(v => v.title.toLowerCase().includes(needle)) : videos
+  // ponytail: sorts the videos loaded so far; "Load more" may bring more-played ones.
+  const shown =
+    sort === 'plays' && plays
+      ? [...found].sort((a, b) => (plays[b.id] ?? 0) - (plays[a.id] ?? 0))
+      : found
+  const showPlays = countPlays || (plays !== null && Object.keys(plays).length > 0)
 
   return (
     <div className="space-y-3">
@@ -112,6 +140,35 @@ function VideoList({
           aria-label={t('studio.videos.search')}
         />
       )}
+      {showPlays && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ToggleGroup
+            type="single"
+            size="sm"
+            variant="outline"
+            aria-label={t('studio.videos.plays.period')}
+            value={String(days)}
+            onValueChange={v => v && setDays(Number(v))}
+          >
+            {PLAY_PERIODS.map(n => (
+              <ToggleGroupItem key={n} value={String(n)}>
+                {t('studio.videos.plays.lastDays', { count: n })}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            variant="outline"
+            aria-label={t('studio.videos.plays.sort')}
+            value={sort}
+            onValueChange={v => v && setSort(v as typeof sort)}
+          >
+            <ToggleGroupItem value="newest">{t('studio.videos.plays.newest')}</ToggleGroupItem>
+            <ToggleGroupItem value="plays">{t('studio.videos.plays.most')}</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      )}
       {shown.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('studio.videos.noMatch')}</p>
       ) : (
@@ -121,6 +178,7 @@ function VideoList({
               key={videoRef(video)}
               video={video}
               instance={instance}
+              plays={plays?.[video.id] ?? (countPlays && plays ? 0 : undefined)}
               hidden={isRefHidden(hiddenText, videoRef(video)) || isRefHidden(hiddenText, video.id)}
               hideBusy={hideBusy}
               onHiddenChange={on => void setHidden([videoRef(video), video.id], on)}
@@ -140,12 +198,15 @@ function VideoList({
 function Row({
   video,
   instance,
+  plays,
   hidden,
   hideBusy,
   onHiddenChange,
 }: {
   video: VideoEvent
   instance: InstanceClient
+  /** Plays in the chosen period; undefined shows none. */
+  plays: number | undefined
   hidden: boolean
   hideBusy: boolean
   onHiddenChange: (hidden: boolean) => void
@@ -170,6 +231,7 @@ function Row({
         <div className="text-xs text-muted-foreground">
           {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
           {video.duration > 0 ? ` · ${formatDuration(video.duration)}` : ''}
+          {plays !== undefined ? ` · ${t('studio.videos.plays.count', { count: plays })}` : ''}
           {video.contentWarning ? ` · ${t('studio.videos.contentWarning')}` : ''}
           {hidden && (
             <Badge variant="secondary" className="ml-1">

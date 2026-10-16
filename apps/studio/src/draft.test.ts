@@ -44,6 +44,7 @@ const config: AdminConfig = {
     links: DEFAULT_SITE_LINKS,
     pages: { about: { en: 'About', de: 'Über uns' }, imprint: {}, privacy: {} },
     lightning: 'flox@getalby.com',
+    countPlays: false,
   },
 }
 

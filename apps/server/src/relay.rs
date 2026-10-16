@@ -15,10 +15,13 @@
 //! and rusqlite.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fmt::Write as _,
     path::{Path, PathBuf},
-    sync::{Arc, Weak},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        {Arc, Weak},
+    },
     time::Duration,
 };
 
@@ -55,6 +58,8 @@ const MAX_SUBID_LEN: usize = 256;
 pub(crate) const MAX_FUTURE_SECS: u64 = 1800;
 /// NIP-40 purge interval (upstream `repo/sqlite.rs` runs `cleanup_expired` every 600 s).
 const EXPIRY_PURGE_EVERY: Duration = Duration::from_secs(600);
+/// UTC days a play count is kept; the retention the privacy text promises (one year).
+const PLAY_RETENTION_DAYS: i64 = 365;
 /// Idle read connections kept for reuse.
 const IDLE_READERS: usize = 8;
 
@@ -121,6 +126,15 @@ CREATE TABLE IF NOT EXISTS media_ref (
   PRIMARY KEY (event_hash, hash)
 );
 CREATE INDEX IF NOT EXISTS media_ref_hash ON media_ref(hash);
+-- Plays (opt-in `site.countPlays`): how often a video's media file started loading from this
+-- server, per UTC day. Anonymous: the file hash and the count, nothing else of the request.
+-- Rows older than the retention window go out with the expired events.
+CREATE TABLE IF NOT EXISTS blob_view (
+  hash TEXT NOT NULL,
+  day INTEGER NOT NULL,
+  plays INTEGER NOT NULL,
+  PRIMARY KEY (hash, day)
+);
 ";
 
 /// Per-connection pragmas (upstream `STARTUP_SQL`).
@@ -153,6 +167,8 @@ struct Inner {
     /// Its name follows the instance title, which the studio changes while running.
     nip11: parking_lot::RwLock<String>,
     live: broadcast::Sender<Arc<Event>>,
+    /// Whether a served video file counts as a play (`site.countPlays`), toggled while running.
+    count_plays: AtomicBool,
 }
 
 impl Inner {
@@ -230,6 +246,7 @@ impl Relay {
             mirror_relays: cfg.mirror_relays,
             nip11: parking_lot::RwLock::new(nip11_doc(cfg.name, cfg.description)),
             live: broadcast::channel(1024).0,
+            count_plays: AtomicBool::new(false),
         }));
         tokio::spawn(purge_expired(Arc::downgrade(&relay.0)));
         Ok(relay)
@@ -348,6 +365,80 @@ impl Relay {
                 Err(e) => return Err(e.into()),
             };
             Ok(RelayStats { by_kind: by_kind?, database_bytes: std::fs::metadata(&inner.path)?.len() + wal })
+        })
+        .await?
+    }
+
+    /// Switches the anonymous play counting (`site.countPlays`) while running.
+    pub fn set_count_plays(&self, on: bool) {
+        self.0.count_plays.store(on, Ordering::Relaxed);
+    }
+
+    /// Records one play: a video's media file started loading from this server. Writes the
+    /// per-day counter for the file and keeps nothing else of the request (no IP address, no
+    /// user agent, no cookie). A no-op while counting is off, or when no stored video event
+    /// (kinds 21/22/34235/34236) names the hash — that keeps unrelated files out; that a named
+    /// file is playable media rather than a thumbnail is the caller's content-type decision.
+    /// Awaited nowhere on the request path: callers run it in the background.
+    pub async fn count_view(&self, hash: String) {
+        if !self.0.count_plays.load(Ordering::Relaxed) {
+            return;
+        }
+        let inner = self.0.clone();
+        let counted = tokio::task::spawn_blocking(move || -> rusqlite::Result<()> {
+            let conn = inner.writer.lock();
+            // One indexed lookup per played file; a file no stored video event names (an HLS
+            // segment, a variant playlist, an image) is skipped, so a start counts once.
+            let named = conn
+                .query_row(
+                    "SELECT 1 FROM media_ref m JOIN event e ON e.event_hash = m.event_hash \
+                     WHERE m.hash = ? AND e.kind IN (21, 22, 34235, 34236) LIMIT 1",
+                    [&hash],
+                    |row| row.get::<_, i64>(0),
+                )
+                .is_ok();
+            if !named {
+                return Ok(());
+            }
+            let day = Timestamp::now().as_secs() as i64 / 86_400;
+            conn.execute(
+                "INSERT INTO blob_view (hash, day, plays) VALUES (?, ?, 1) \
+                 ON CONFLICT (hash, day) DO UPDATE SET plays = plays + 1",
+                params![hash, day],
+            )?;
+            Ok(())
+        })
+        .await;
+        if let Err(e) = counted {
+            tracing::warn!("relay: counting a play: {e}");
+        }
+    }
+
+    /// Plays per video event id (lowercase hex) over the last `days` UTC days, for the studio.
+    pub async fn plays(&self, days: u16) -> Result<BTreeMap<String, u64>, BoxError> {
+        let inner = self.0.clone();
+        tokio::task::spawn_blocking(move || -> Result<BTreeMap<String, u64>, BoxError> {
+            let since = Timestamp::now().as_secs() as i64 / 86_400 - i64::from(days);
+            let conn = inner.reader()?;
+            let mut out = BTreeMap::new();
+            {
+                let mut stmt = conn.prepare(
+                    "SELECT m.event_hash, SUM(v.plays) FROM blob_view v \
+                     JOIN media_ref m ON m.hash = v.hash \
+                     JOIN event e ON e.event_hash = m.event_hash \
+                     WHERE v.day >= ? AND e.kind IN (21, 22, 34235, 34236) GROUP BY m.event_hash",
+                )?;
+                let rows = stmt.query_map([since], |row| {
+                    Ok((row.get::<_, Vec<u8>>(0)?, row.get::<_, i64>(1)?))
+                })?;
+                for row in rows {
+                    let (bytes, plays) = row?;
+                    let Ok(id) = EventId::from_slice(&bytes) else { continue };
+                    out.insert(id.to_hex(), plays.max(0) as u64);
+                }
+            }
+            inner.release(conn);
+            Ok(out)
         })
         .await?
     }
@@ -1351,11 +1442,12 @@ async fn purge_expired(relay: Weak<Inner>) {
     loop {
         tokio::time::sleep(EXPIRY_PURGE_EVERY).await;
         let Some(inner) = relay.upgrade() else { return };
-        let purged = tokio::task::spawn_blocking(move || {
-            inner
-                .writer
-                .lock()
-                .execute("DELETE FROM event WHERE expires_at < ?", [Timestamp::now().as_secs() as i64])
+        let purged = tokio::task::spawn_blocking(move || -> rusqlite::Result<()> {
+            let conn = inner.writer.lock();
+            let now = Timestamp::now().as_secs() as i64;
+            conn.execute("DELETE FROM event WHERE expires_at < ?", [now])?;
+            conn.execute("DELETE FROM blob_view WHERE day < ?", [now / 86_400 - PLAY_RETENTION_DAYS])?;
+            Ok(())
         })
         .await;
         if let Ok(Err(e)) = purged {
@@ -1983,6 +2075,41 @@ mod tests {
         assert!(!queried(&relay).await.iter().any(|e| e.id == old.id));
         assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &new.id.to_hex()]])).await).0);
         assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "-", &[&["a", &address], &["e", &old_id]])).await).0);
+    }
+
+    #[tokio::test]
+    async fn plays_count_stored_video_starts_only_and_follow_the_switch() {
+        let writer = Keys::generate();
+        let relay = open(vec![writer.public_key()]);
+        let video_hash = "a".repeat(64);
+        let image_hash = "b".repeat(64);
+        let now = Timestamp::now().as_secs();
+        let video = ev(
+            &writer,
+            34235,
+            now,
+            "clip",
+            &[
+                &["d", "clip"],
+                &["imeta", &format!("url https://cdn.example/{video_hash}.mp4"), &format!("image https://cdn.example/{image_hash}.jpg")],
+            ],
+        );
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        relay.count_view(video_hash.clone()).await;
+        assert!(relay.plays(365).await.unwrap().is_empty(), "counting is off by default");
+        relay.set_count_plays(true);
+        relay.count_view(video_hash.clone()).await;
+        relay.count_view(video_hash.clone()).await;
+        // The event's thumbnail is named by the same event, so it counts here too; that images
+        // never reach the counter is the content-type filter of the caller (is_served_video).
+        relay.count_view(image_hash.clone()).await;
+        relay.count_view("c".repeat(64)).await; // a file no stored video names
+        let plays = relay.plays(365).await.unwrap();
+        assert_eq!(plays.get(&video.id.to_hex()).copied(), Some(3));
+        assert_eq!(plays.len(), 1);
+        relay.set_count_plays(false);
+        relay.count_view(video_hash.clone()).await;
+        assert_eq!(relay.plays(365).await.unwrap().get(&video.id.to_hex()).copied(), Some(3));
     }
 
     #[tokio::test]

@@ -192,7 +192,14 @@
       "useStandard": "Insertar el texto estándar",
       "useStandardAll": "Texto estándar para todos los idiomas vacíos",
       "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Sigue el alcance (página Instancia) y los relays de perfiles (página Avanzado) en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
-      "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?"
+      "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?",
+      "plays": {
+        "title": "Contador de reproducciones",
+        "description": "El servidor puede contar cuántas veces se reproducen sus vídeos. Solo guarda un total por archivo y día, nada sobre los visitantes, y borra los recuentos al cabo de un año.",
+        "toggle": "Contar reproducciones",
+        "hint": "Cuenta cuántas veces un vídeo empieza a cargarse desde este servidor. Faltan las reproducciones desde otros servidores o desde la caché del navegador.",
+        "privacy": "Su política de privacidad debe mencionar el contador de reproducciones. El texto estándar de abajo lo incluye: insértelo de nuevo en cada idioma que use."
+      }
     },
     "branding": {
       "title": "Logotipo, favicon, banner e icono de la app",
@@ -278,6 +285,18 @@
           "released": "Publicado el {{date}}",
           "failed": "No publicado"
         }
+      },
+      "plays": {
+        "count_one": "{{count, number}} reproducción",
+        "count_many": "{{count, number}} reproducciones",
+        "count_other": "{{count, number}} reproducciones",
+        "period": "Periodo",
+        "lastDays_one": "Último día",
+        "lastDays_many": "Últimos {{count}} días",
+        "lastDays_other": "Últimos {{count}} días",
+        "sort": "Orden",
+        "newest": "Más recientes",
+        "most": "Más reproducidos"
       }
     },
     "instance": {

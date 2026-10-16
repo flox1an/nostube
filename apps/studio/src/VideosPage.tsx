@@ -19,9 +19,12 @@ const HiddenVideosPicker = lazy(() => import('./HiddenVideosPicker'))
 export function VideosPage({
   hiddenText,
   onHiddenChange,
+  countPlays,
 }: {
   hiddenText: string
   onHiddenChange: (hiddenText: string) => Promise<void>
+  /** The saved config counts plays. */
+  countPlays: boolean
 }) {
   const { t } = useTranslation()
   return (
@@ -42,7 +45,11 @@ export function VideosPage({
         <CardContent className="space-y-6">
           <ScheduledVideos />
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-            <HiddenVideosPicker hiddenText={hiddenText} onChange={onHiddenChange} />
+            <HiddenVideosPicker
+              hiddenText={hiddenText}
+              onChange={onHiddenChange}
+              countPlays={countPlays}
+            />
           </Suspense>
         </CardContent>
       </Card>

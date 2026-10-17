@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Globe, LockKeyhole } from 'lucide-react'
 import type { Reach } from '@nostube/core/instance-config'
 import { Tile } from './fields'
 
@@ -26,6 +27,7 @@ export function ReachChoice({
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile
           title={t('studio.reach.privateTitle')}
+          icon={LockKeyhole}
           selected={reach === 'private'}
           onSelect={() => onChange('private')}
         >
@@ -36,6 +38,7 @@ export function ReachChoice({
         </Tile>
         <Tile
           title={t('studio.reach.publicTitle')}
+          icon={Globe}
           selected={reach === 'public'}
           disabled={!canBePublic}
           onSelect={choosePublic}

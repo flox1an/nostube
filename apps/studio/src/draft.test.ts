@@ -36,7 +36,7 @@ const config: AdminConfig = {
   nsite: { gateway: 'nsite.lol', domain: '' },
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
-  storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
+  storage: { quotaGib: 0, freeSpaceReserveGib: 5, s3: null },
   site: {
     tagline: 'Hi',
     theme: { accent: '#6d28d9', font: 'sans' },
@@ -206,6 +206,69 @@ describe('draft', () => {
     expect(needsRestart(config, edit({ reserve: '1' }))).toBe(true)
     expect(needsRestart(config, edit({ mirrorRelaysText: 'wss://mirror.example' }))).toBe(true)
     expect(needsRestart(config, edit({ mirrorBlossomText: 'https://b.example' }))).toBe(true)
+  })
+})
+
+describe('S3 storage draft', () => {
+  const s3 = {
+    endpoint: 'https://acc.r2.cloudflarestorage.com',
+    bucket: 'videos',
+    region: 'auto',
+    forcePathStyle: false,
+    accessKeyId: 'AKID',
+    secretSet: true,
+  }
+  const withS3: AdminConfig = { ...config, storage: { ...config.storage, s3 } }
+  const fresh: Partial<Draft> = {
+    storageKind: 's3',
+    s3Endpoint: ' http://minio.lan:9000 ',
+    s3Bucket: 'b',
+    s3AccessKey: 'k',
+    s3Secret: 'shh',
+    s3PathStyle: true,
+  }
+
+  it('round-trips the saved settings without a secret and keeps the stored one', () => {
+    const draft = toDraft(withS3)
+    expect(draft.s3Secret).toBe('')
+    expect(draft.s3SecretSet).toBe(true)
+    expect(fromDraft(draft).config).toEqual(withS3)
+    expect(fromDraft(draft).config!.storage.s3).not.toHaveProperty('secretAccessKey')
+  })
+
+  it('sends a typed secret, saves an empty region as auto', () => {
+    expect(fromDraft({ ...toDraft(config), ...fresh }).config!.storage.s3).toEqual({
+      endpoint: 'http://minio.lan:9000',
+      bucket: 'b',
+      region: 'auto',
+      forcePathStyle: true,
+      accessKeyId: 'k',
+      secretSet: false,
+      secretAccessKey: 'shh',
+    })
+  })
+
+  it.each([
+    ['endpoint without scheme', { s3Endpoint: 'minio.lan' }, /endpoint/],
+    ['endpoint with another scheme', { s3Endpoint: 'ftp://minio.lan' }, /endpoint/],
+    ['malformed endpoint', { s3Endpoint: 'https://:' }, /endpoint/],
+    ['empty bucket', { s3Bucket: ' ' }, /bucket name/],
+    ['empty access key', { s3AccessKey: '' }, /access key ID/],
+    ['no secret when enabling fresh', { s3Secret: '' }, /secret access key/],
+  ])('rejects %s', async (_name, patch, message) => {
+    await i18n.changeLanguage('en')
+    const result = fromDraft({ ...toDraft(config), ...fresh, ...patch })
+    expect(result.config).toBeNull()
+    expect(result.errors.join('\n')).toMatch(message)
+  })
+
+  it('restarts for any S3 change, a new secret alone included', () => {
+    const edit = (patch: Partial<Draft>) => fromDraft({ ...toDraft(withS3), ...patch }).config!
+    expect(needsRestart(withS3, edit({}))).toBe(false)
+    expect(needsRestart(config, edit({}))).toBe(true)
+    expect(needsRestart(withS3, edit({ s3Bucket: 'other' }))).toBe(true)
+    expect(needsRestart(withS3, edit({ s3PathStyle: true }))).toBe(true)
+    expect(needsRestart(withS3, edit({ s3Secret: 'new' }))).toBe(true)
   })
 })
 

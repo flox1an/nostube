@@ -9,6 +9,23 @@ export type SearchConfig = { mode: 'off' } | { mode: 'local' }
 /** Where the creator site is served: by this instance, or as a NIP-5A nsite (server ADR 0013). */
 export type SiteHosting = 'instance' | 'nsite'
 
+/**
+ * S3-compatible storage (`config.storage.s3`). The secret is write-only: GET answers `secretSet`
+ * instead; `secretAccessKey` is sent only to replace it (omitted keeps the stored one).
+ */
+export interface S3Config {
+  endpoint: string
+  bucket: string
+  /** `auto` unless the provider (AWS) needs the bucket's region. */
+  region: string
+  /** Path-style addressing (MinIO, Garage) instead of bucket subdomains. */
+  forcePathStyle: boolean
+  accessKeyId: string
+  /** Read-only: a secret is stored on the server. */
+  secretSet: boolean
+  secretAccessKey?: string
+}
+
 /** What the server lets the studio edit (`GET/PUT /api/admin/config`). */
 export interface AdminConfig {
   title: string
@@ -22,7 +39,8 @@ export interface AdminConfig {
   /** Where the outbox copies this instance's own events and blobs; both empty = off. */
   mirror: { relays: string[]; blossom: string[] }
   search: SearchConfig
-  storage: { quotaGib: number; freeSpaceReserveGib: number }
+  /** `s3`: null keeps every upload on this machine; once set the server refuses to turn it off. */
+  storage: { quotaGib: number; freeSpaceReserveGib: number; s3: S3Config | null }
   /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public).
    * `countPlays`: the server counts plays per video file and day (absent from older servers: off). */
   site: InstanceSite & { lightning?: string; countPlays?: boolean }
@@ -186,6 +204,41 @@ export async function publishNsite(): Promise<void> {
     body: '{}',
   })
   if (!res.ok) throw new Error(await errorMessage(res))
+}
+
+/** The connection test: Almond's probe (put, get, list, delete) or the step that failed. */
+export type StorageTestResult = { ok: true } | { ok: false; step: string; error: string }
+
+/** Probes the bucket with the form's values; an omitted secret means the stored one. */
+export const testStorageConnection = (s3: S3Config) =>
+  postJson<StorageTestResult>('/api/admin/storage/test', s3)
+
+/** `GET /api/admin/storage`: whether the bucket answers, and the move of local files into it. */
+export interface StorageStatus {
+  /** Null while S3 is off. `lastAttempt`: unix seconds. */
+  s3: null | { available: boolean; lastError: string | null; lastAttempt: number | null }
+  move: {
+    state: 'idle' | 'running' | 'completed' | 'failed'
+    filesDone: number
+    filesTotal: number
+    bytesDone: number
+    bytesTotal: number
+    error: string | null
+    /** Upload blobs still on this machine (the cache stays local and is not counted). */
+    localFiles: number
+    localBytes: number
+  }
+}
+
+export async function loadStorageStatus(): Promise<StorageStatus> {
+  const res = await fetch('/api/admin/storage', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as StorageStatus
+}
+
+/** Starts (or resumes) moving local uploads into the bucket in the background. */
+export async function startStorageMove(): Promise<void> {
+  await postJson<unknown>('/api/admin/storage/move', {})
 }
 
 /**

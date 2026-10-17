@@ -12,7 +12,7 @@ import {
   type SitePages,
   type Reach,
 } from '@nostube/core/instance-config'
-import type { AdminConfig, SearchConfig, SiteHosting } from './api'
+import type { AdminConfig, S3Config, SearchConfig, SiteHosting } from './api'
 import i18n from './i18n'
 
 /** The form's own shape: lists as one entry per line, numbers as typed. */
@@ -40,6 +40,17 @@ export interface Draft {
   searchMode: SearchConfig['mode']
   quota: string
   reserve: string
+  /** `s3`: new uploads go to an S3-compatible bucket; existing local files stay (hybrid per blob). */
+  storageKind: 'local' | 's3'
+  s3Endpoint: string
+  s3Bucket: string
+  /** Empty saves `auto`. */
+  s3Region: string
+  s3PathStyle: boolean
+  s3AccessKey: string
+  /** Write-only: starts empty; empty keeps the stored secret (`s3SecretSet`). */
+  s3Secret: string
+  s3SecretSet: boolean
   reach: Reach
   siteHosting: SiteHosting
   nsiteGateway: string
@@ -75,6 +86,14 @@ export function toDraft(c: AdminConfig): Draft {
     searchMode: c.search.mode,
     quota: String(c.storage.quotaGib),
     reserve: String(c.storage.freeSpaceReserveGib),
+    storageKind: c.storage.s3 ? 's3' : 'local',
+    s3Endpoint: c.storage.s3?.endpoint ?? '',
+    s3Bucket: c.storage.s3?.bucket ?? '',
+    s3Region: c.storage.s3?.region ?? '',
+    s3PathStyle: c.storage.s3?.forcePathStyle ?? false,
+    s3AccessKey: c.storage.s3?.accessKeyId ?? '',
+    s3Secret: '',
+    s3SecretSet: c.storage.s3?.secretSet ?? false,
     reach: c.reach,
     siteHosting: c.siteHosting,
     nsiteGateway: c.nsite.gateway,
@@ -170,13 +189,53 @@ export const isLightningAddress = (value: string) =>
 /** True when saving `next` restarts the server: the fields of `Config::needs_restart` (server `config.rs`). */
 export function needsRestart(saved: AdminConfig, next: AdminConfig): boolean {
   const same = (a: string[], b: string[]) => a.join('\n') === b.join('\n')
+  // Field by field: the server's key order is not ours. A typed secret alone restarts too.
+  const s3 = (s: S3Config | null) =>
+    JSON.stringify(
+      s && [s.endpoint, s.bucket, s.region, s.forcePathStyle, s.accessKeyId, s.secretAccessKey]
+    )
   return (
     !same(saved.allowedWriters, next.allowedWriters) ||
     saved.storage.quotaGib !== next.storage.quotaGib ||
     saved.storage.freeSpaceReserveGib !== next.storage.freeSpaceReserveGib ||
+    s3(saved.storage.s3) !== s3(next.storage.s3) ||
     !same(saved.mirror.relays, next.mirror.relays) ||
     !same(saved.mirror.blossom, next.mirror.blossom)
   )
+}
+
+/**
+ * The S3 settings as the server takes them (null: this machine), with what is wrong. Saving and
+ * "Test connection" both send this.
+ */
+export function s3FromDraft(d: Draft): { s3: S3Config | null; errors: string[] } {
+  if (d.storageKind === 'local') return { s3: null, errors: [] }
+  const errors: string[] = []
+  const t = (key: string) => i18n.t(`studio.storageS3.errors.${key}`)
+  const endpoint = d.s3Endpoint.trim()
+  try {
+    const url = new URL(endpoint)
+    if (!/^https?:$/.test(url.protocol) || !url.hostname) errors.push(t('endpoint'))
+  } catch {
+    errors.push(t('endpoint'))
+  }
+  const bucket = d.s3Bucket.trim()
+  if (!bucket) errors.push(t('bucket'))
+  const accessKeyId = d.s3AccessKey.trim()
+  if (!accessKeyId) errors.push(t('accessKey'))
+  if (!d.s3Secret && !d.s3SecretSet) errors.push(t('secret'))
+  return {
+    s3: {
+      endpoint,
+      bucket,
+      region: d.s3Region.trim() || 'auto',
+      forcePathStyle: d.s3PathStyle,
+      accessKeyId,
+      secretSet: d.s3SecretSet,
+      ...(d.s3Secret ? { secretAccessKey: d.s3Secret } : {}),
+    },
+    errors,
+  }
 }
 
 function count(label: string, text: string, errors: string[]): number {
@@ -298,7 +357,8 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
     errors.push(i18n.t('studio.nsite.invalidHost'))
   const quotaGib = count(label('quota'), d.quota, errors)
   const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
-  const search: AdminConfig['search'] = { mode: d.searchMode }
+  const { s3, errors: s3Errors } = s3FromDraft(d)
+  errors.push(...s3Errors)
   if (errors.length) return { config: null, errors }
   return {
     config: {
@@ -309,8 +369,8 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
       interactionRelays,
       profileRelays,
       mirror: { relays: mirrorRelays, blossom: mirrorBlossom },
-      search,
-      storage: { quotaGib, freeSpaceReserveGib },
+      search: { mode: d.searchMode },
+      storage: { quotaGib, freeSpaceReserveGib, s3 },
       site: { ...site, lightning, countPlays: d.countPlays },
       reach: d.reach,
       siteHosting: d.reach === 'private' ? 'instance' : d.siteHosting,

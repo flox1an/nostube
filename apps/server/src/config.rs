@@ -206,18 +206,77 @@ fn http_port() -> u16 {
     80
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(deny_unknown_fields, default)]
 pub struct Storage {
-    /// Storage quota in GiB; 0 = unlimited (#14 default).
+    /// Storage quota in GiB over local and S3 blobs together; 0 = unlimited (#14 default).
     pub quota_gib: u64,
-    /// Free-space reserve in GiB (#14 default 5).
+    /// Free-space reserve in GiB of the local disk, which stages every upload (#14 default 5).
     pub free_space_reserve_gib: u64,
+    /// S3-compatible storage for new uploads (#170); absent = this machine only. Its secret
+    /// access key lives in `secrets.toml`, never here.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub s3: Option<S3Config>,
 }
 
 impl Default for Storage {
     fn default() -> Self {
-        Storage { quota_gib: 0, free_space_reserve_gib: 5 }
+        Storage { quota_gib: 0, free_space_reserve_gib: 5, s3: None }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct S3Config {
+    pub endpoint: String,
+    pub bucket: String,
+    /// SigV4 region; `auto` suits Cloudflare R2.
+    #[serde(default = "s3_region")]
+    pub region: String,
+    /// `<endpoint>/<bucket>` addressing (MinIO, Garage) instead of `<bucket>.<endpoint>`.
+    #[serde(default)]
+    pub force_path_style: bool,
+    pub access_key_id: String,
+}
+
+pub fn s3_region() -> String {
+    "auto".into()
+}
+
+fn check_storage(storage: &Storage) -> Result<(), BoxError> {
+    storage.s3.as_ref().map_or(Ok(()), S3Config::check)
+}
+
+impl S3Config {
+    /// The shape only; whether the bucket answers is the job of Almond's probe.
+    pub fn check(&self) -> Result<(), BoxError> {
+        let url = nostr::prelude::Url::parse(&self.endpoint).ok();
+        if !url.is_some_and(|u| matches!(u.scheme(), "http" | "https") && u.host().is_some()) {
+            return Err(format!("storage.s3.endpoint must be an http(s) URL: {}", self.endpoint).into());
+        }
+        if self.bucket.trim().is_empty() {
+            return Err("storage.s3.bucket must not be empty".into());
+        }
+        if self.access_key_id.trim().is_empty() {
+            return Err("storage.s3.access_key_id must not be empty".into());
+        }
+        // Almond's rule for its region option.
+        if self.region.is_empty() || !self.region.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
+            return Err(format!("storage.s3.region must be a region name such as auto or us-east-1: {}", self.region).into());
+        }
+        Ok(())
+    }
+
+    /// Almond's settings; the secret comes from the secrets store.
+    pub fn settings(&self, secret_access_key: String) -> almond::services::native_storage::S3Settings {
+        almond::services::native_storage::S3Settings {
+            endpoint: self.endpoint.clone(),
+            bucket: self.bucket.clone(),
+            access_key_id: self.access_key_id.clone(),
+            secret_access_key,
+            region: self.region.clone(),
+            force_path_style: self.force_path_style,
+        }
     }
 }
 
@@ -552,6 +611,7 @@ impl Config {
         check_site(&raw.site)?;
         check_mirror(&raw.mirror)?;
         check_nsite(&raw.nsite)?;
+        check_storage(&raw.storage)?;
         let cfg = Config {
             revision: raw.revision,
             origin: raw.origin,
@@ -585,6 +645,11 @@ impl Config {
         check_site(&e.site)?;
         check_mirror(&e.mirror)?;
         check_nsite(&e.nsite)?;
+        check_storage(&e.storage)?;
+        // Blobs already in the bucket would become unreachable (#170, out of scope).
+        if self.storage.s3.is_some() && e.storage.s3.is_none() {
+            return Err("S3 storage cannot be turned off once enabled".into());
+        }
         let cfg = Config {
             revision: self.revision + 1,
             origin: self.origin.clone(),
@@ -795,7 +860,7 @@ impl Config {
     }
 
     /// True when `next` changes what the process wired up at start: the writers (relay and
-    /// Blossom), the storage limits (Blossom) or the mirror targets (relay and outbox). Everything
+    /// Blossom), the storage limits and S3 settings (Blossom) or the mirror targets (relay and outbox). Everything
     /// else the studio edits is the public config and the relay's name, which apply while running.
     pub fn needs_restart(&self, next: &Config) -> bool {
         self.allowed_writers != next.allowed_writers || self.storage != next.storage || self.mirror != next.mirror
@@ -940,7 +1005,7 @@ tls = {{ mode = "local-ca" }}
                 interaction_relays: vec![],
                 profile_relays: vec![],
                 search: Search::Local,
-                storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
+                storage: Storage { quota_gib: 100, free_space_reserve_gib: 5, s3: None },
                 site: Site::default(),
                 mirror: Mirror { relays: vec!["wss://m.example".into()], blossom: vec!["https://b.example".into()] },
                 site_hosting: SiteHosting::Instance,
@@ -1038,6 +1103,61 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.revision, cfg.revision + 1);
         let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
         assert!(cfg.with_edits(&bad).is_err());
+    }
+
+    #[test]
+    fn s3_settings_round_trip_restart_and_cannot_be_turned_off() {
+        let cfg = Config::parse(&sample("[storage]\nquota_gib = 7\n")).unwrap();
+        assert_eq!(cfg.storage.s3, None, "an old file starts without S3");
+        let edit = |s3: Option<S3Config>| Edited {
+            title: "Flox".into(),
+            reach: Reach::Private,
+            creators: vec![PK.into()],
+            allowed_writers: vec![PK.into()],
+            video_sources: vec!["wss://flox-mac.local".into()],
+            interaction_relays: vec![],
+            profile_relays: vec![],
+            search: Search::Off,
+            storage: Storage { quota_gib: 7, free_space_reserve_gib: 5, s3 },
+            site: Site::default(),
+            mirror: Mirror::default(),
+            site_hosting: SiteHosting::Instance,
+            nsite: NsiteSettings::default(),
+        };
+        let s3 = S3Config {
+            endpoint: "https://s3.example".into(),
+            bucket: "videos".into(),
+            region: "auto".into(),
+            force_path_style: true,
+            access_key_id: "AKID".into(),
+        };
+        let next = cfg.with_edits(&edit(Some(s3.clone()))).unwrap();
+        assert!(cfg.needs_restart(&next));
+        let text = next.to_toml().unwrap();
+        assert!(text.contains("[storage.s3]"), "{text}");
+        assert_eq!(Config::parse(&text).unwrap().storage.s3, Some(s3.clone()));
+        // Region defaults to auto, path style to off.
+        let minimal = Config::parse(&sample(
+            "[storage.s3]\nendpoint = \"https://r2.example\"\nbucket = \"b\"\naccess_key_id = \"k\"\n",
+        ))
+        .unwrap();
+        let minimal = minimal.storage.s3.unwrap();
+        assert_eq!((minimal.region.as_str(), minimal.force_path_style), ("auto", false));
+        // The secret has no place in the file; bad values are refused.
+        assert!(Config::parse(&text.replace("[storage.s3]\n", "[storage.s3]\nsecret_access_key = \"x\"\n")).is_err());
+        for bad in [
+            S3Config { endpoint: "s3.example".into(), ..s3.clone() },
+            S3Config { bucket: " ".into(), ..s3.clone() },
+            S3Config { access_key_id: String::new(), ..s3.clone() },
+            S3Config { region: "us east".into(), ..s3.clone() },
+        ] {
+            assert!(cfg.with_edits(&edit(Some(bad.clone()))).is_err(), "{bad:?}");
+        }
+        // A changed bucket restarts; turning S3 off is refused.
+        let moved = next.with_edits(&edit(Some(S3Config { bucket: "other".into(), ..s3 }))).unwrap();
+        assert!(next.needs_restart(&moved));
+        let off = next.with_edits(&edit(None)).err().unwrap().to_string();
+        assert!(off.contains("cannot be turned off"), "{off}");
     }
 
     #[test]

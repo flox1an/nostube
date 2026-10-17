@@ -28,7 +28,7 @@ const state: AdminState = {
     nsite: { gateway: 'nsite.lol', domain: '' },
     mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
-    storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
+    storage: { quotaGib: 0, freeSpaceReserveGib: 5, s3: null },
     site: {
       tagline: '',
       theme: { accent: '#8b5cf6', font: 'sans' },
@@ -70,6 +70,50 @@ describe('Studio save bar', () => {
 
     location.hash = '#/instance'
     fireEvent.change(await screen.findByLabelText('Quota (GiB)'), { target: { value: '10' } })
+    expect(screen.getByText('Saving restarts the server for a few seconds.')).toBeTruthy()
+  })
+
+  it.each([
+    ['enabling S3', false],
+    ['a new S3 secret alone', true],
+  ])('warns of a restart for %s', async (_name, enabled) => {
+    const s3 = enabled
+      ? {
+          endpoint: 'https://acc.r2.cloudflarestorage.com',
+          bucket: 'videos',
+          region: 'auto',
+          forcePathStyle: false,
+          accessKeyId: 'AKID',
+          secretSet: true,
+        }
+      : null
+    const saved = {
+      ...state,
+      config: { ...state.config, storage: { ...state.config.storage, s3 } },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url === '/api/admin/config'
+          ? new Response(JSON.stringify(saved))
+          : url === '/api/admin/signer'
+            ? new Response(JSON.stringify({ mode: 'managed', pubkey: PK }))
+            : new Response(null, { status: 404 })
+      )
+    )
+    location.hash = '#/instance'
+    render(<App />)
+    await screen.findByLabelText('Quota (GiB)')
+    const type = (label: string, value: string) =>
+      fireEvent.change(screen.getByLabelText(label), { target: { value } })
+    if (!enabled) {
+      fireEvent.click(screen.getByRole('button', { name: /^S3-compatible storage/ }))
+      type('Endpoint', 'https://s3.example')
+      type('Bucket', 'videos')
+      type('Access key ID', 'AKID')
+    }
+    expect(screen.queryByText(/restarts the server/)).toBeNull()
+    type('Secret access key', 'shh')
     expect(screen.getByText('Saving restarts the server for a few seconds.')).toBeTruthy()
   })
 

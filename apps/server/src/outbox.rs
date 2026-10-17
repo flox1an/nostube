@@ -100,12 +100,12 @@ pub const MAX_ATTEMPTS: u32 = 24;
 /// A relay must answer `OK` within this.
 const RELAY_TIMEOUT: Duration = Duration::from_secs(30);
 /// The target downloads the whole blob before it answers, so this is generous.
-const MIRROR_TIMEOUT: Duration = Duration::from_secs(600);
+pub(crate) const MIRROR_TIMEOUT: Duration = Duration::from_secs(600);
 /// The `HEAD` that tells whether a target has a blob already.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
 /// A push upload (S2) gets `MIRROR_TIMEOUT` plus its size at this rate (≈2 Mbit/s) in bytes/s.
 // ponytail: a whole-request deadline; an idle-stall timeout if slow uplinks hit it.
-const MIN_UPLOAD_RATE: u64 = 256 * 1024;
+pub(crate) const MIN_UPLOAD_RATE: u64 = 256 * 1024;
 /// `last_error` of a blob job that cleanup or a deletion closed: `done`, but no confirmed copy.
 const CANCELED: &str = "canceled";
 /// The reason a blob job fails without the managed key (ADR 0007): nothing else may sign.
@@ -265,6 +265,7 @@ struct Inner {
     /// `profile::sync`, so it follows the config while running. Empty in private reach.
     indexers: parking_lot::RwLock<Vec<String>>,
     storage: parking_lot::RwLock<Option<almond::models::AppState>>,
+    migration: parking_lot::RwLock<Option<Arc<crate::storage_move::Migration>>>,
     origin_public: AtomicBool,
 }
 
@@ -275,11 +276,20 @@ impl Outbox {
         Ok(Outbox(Arc::new(Inner {
             conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
             origin_public: AtomicBool::new(true),
+            migration: Default::default(),
         })))
     }
 
     pub fn attach_storage(&self, state: almond::models::AppState) {
         *self.0.storage.write() = Some(state);
+    }
+
+    pub fn attach_migration(&self, migration: Arc<crate::storage_move::Migration>) {
+        *self.0.migration.write() = Some(migration);
+    }
+
+    pub(crate) fn moving_blob(&self, hash: Option<&str>) -> bool {
+        self.0.migration.read().as_ref().is_some_and(|migration| migration.moving(hash))
     }
 
     pub fn set_origin_public(&self, public: bool) {
@@ -793,12 +803,14 @@ async fn media_tree(state: &almond::models::AppState, roots: HashSet<String>) ->
     while let Some(hash) = pending.pop() {
         if !seen.insert(hash.clone()) { continue; }
         if seen.len() > 1024 { return Err("local HLS graph exceeds 1024 blobs".into()); }
+        let location_read = crate::storage_move::local_read(state, &hash).await;
         let Some(metadata) = file_storage::get_file_metadata(state, &hash).await else { continue };
         if metadata.extension.as_deref() != Some("m3u8")
             && !metadata.mime_type.as_deref().is_some_and(hls::is_hls_playlist) { continue; }
         if metadata.size > 1 << 20 { return Err(format!("local playlist {hash} exceeds 1 MiB")); }
         let text = file_storage::read_text(state, &metadata).await
             .map_err(|e| format!("cannot read local playlist {hash}: {e}"))?;
+        drop(location_read);
         pending.extend(hls::parse_playlist_references(&text).into_iter().map(|r| r.sha256.to_ascii_lowercase()));
         // Initialization segments and encryption keys use URI attributes on comment lines.
         for part in text.split("URI=\"").skip(1) {
@@ -835,6 +847,9 @@ async fn retained_hashes(outbox: &Outbox) -> Result<HashSet<String>, String> {
 async fn cleanup(outbox: &Outbox, job: &Job) -> Result<(), Outcome> {
     use almond::services::file_storage::{self, Removal};
     file_storage::validate_sha256_format(&job.ref_id).map_err(|e| Outcome::Fail(e.to_string()))?;
+    if outbox.moving_blob(Some(&job.ref_id)) {
+        return Err(Outcome::Retry("blob is being moved to S3".into()));
+    }
     let retained = retained_hashes(outbox).await.map_err(Outcome::Retry)?;
     if retained.contains(&job.ref_id) { return Ok(()); }
     let hash = job.ref_id.clone();
@@ -964,6 +979,7 @@ async fn mirror(outbox: &Outbox, http: &reqwest::Client, keys: &Keys, target: &s
     let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
     let request = if push {
         let state = storage(outbox)?;
+        let location_read = crate::storage_move::local_read(&state, sha256).await;
         let metadata = almond::services::file_storage::get_file_metadata(&state, sha256).await
             .ok_or_else(|| format!("local blob {sha256} is unavailable"))?;
         if metadata.size != size {
@@ -982,6 +998,7 @@ async fn mirror(outbox: &Outbox, http: &reqwest::Client, keys: &Keys, target: &s
                 }))
             }
         };
+        drop(location_read);
         http.put(format!("{base}/upload"))
             .header("x-sha-256", sha256)
             .header(header::CONTENT_LENGTH, size)

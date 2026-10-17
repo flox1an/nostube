@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { KeyRound, Server } from 'lucide-react'
 import type { IAccount } from 'applesauce-accounts'
 import { nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { SimplePool } from 'nostr-tools/pool'
@@ -172,6 +173,7 @@ export function Onboarding({
               {choices.includes('own') && (
                 <Tile
                   title={t('studio.onboarding.identity.ownTitle')}
+                  icon={KeyRound}
                   selected={identity === 'own'}
                   onSelect={() => void chooseOwn()}
                 >
@@ -185,6 +187,7 @@ export function Onboarding({
               )}
               <Tile
                 title={t('studio.onboarding.identity.channelTitle')}
+                icon={Server}
                 selected={identity === 'channel'}
                 onSelect={() => setIdentity('channel')}
               >

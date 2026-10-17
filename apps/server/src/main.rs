@@ -6,6 +6,8 @@ mod admin;
 mod branding;
 mod config;
 mod data_lock;
+#[cfg(test)]
+mod fake_s3;
 mod login_guard;
 mod nsite;
 mod outbox;
@@ -14,9 +16,10 @@ mod relay;
 mod schedule;
 mod seo;
 mod signer;
+mod storage_move;
 mod tls;
 
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::{Path, PathBuf}, sync::Arc};
 
 use axum::{
     body::Body,
@@ -289,22 +292,19 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         ),
     };
 
-    let mut blossom = almond::Config::defaults();
-    blossom.storage_path = data.join("blossom");
-    blossom.public_url = Some(cfg.origin.clone());
-    blossom.allowed_npubs = cfg.allowed_writers.clone();
-    // An empty instance allowlist means nobody, not Almond's public default.
-    if cfg.allowed_writers.is_empty() {
-        blossom.upload_access = almond::models::FeatureMode::Off;
-        blossom.mirror_access = almond::models::FeatureMode::Off;
-    }
-    blossom.homepage_enabled = false;
-    blossom.blob_max_size = PER_FILE_MAX;
-    blossom.storage_max_size = cfg.storage.quota_gib * GIB;
-    blossom.storage_min_free = cfg.storage.free_space_reserve_gib * GIB;
-    let blossom = blossom.validate()?;
+    // Almond refuses an S3 config without its secret; a bucket it cannot reach only degrades it.
+    let s3_secret = if cfg.storage.s3.is_some() {
+        Some(admin::s3_secret(&data)?.ok_or(
+            "storage.s3 is set but secrets.toml holds no S3 secret access key; restore s3_secret_access_key in secrets.toml before starting",
+        )?)
+    } else {
+        None
+    };
+    let blossom = blossom_config(&cfg, &data, s3_secret).validate()?;
     let state = almond::build_state(&blossom).await?;
     let _tasks = almond::spawn_background_tasks(&state, &blossom);
+    // Resumes an interrupted move to S3 (#174).
+    let migration = storage_move::open(&data, state.clone())?;
     let relay = relay::Relay::open(
         &data.join("relay.sqlite"),
         relay::RelayConfig {
@@ -318,6 +318,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
     let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
     outbox.attach_storage(state.clone());
+    outbox.attach_migration(migration.clone());
     outbox.set_origin_public(cfg.origin_is_public());
     let nsite = nsite::Nsite::open(&data)?;
 
@@ -330,7 +331,14 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         &setup_origin,
         boot_id.clone(),
         handle.clone(),
-        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone(), outbox: outbox.clone(), nsite: nsite.clone() },
+        admin::Stores {
+            relay: relay.clone(),
+            blossom: state.clone(),
+            branding: branding.clone(),
+            outbox: outbox.clone(),
+            nsite: nsite.clone(),
+            migration,
+        },
     ) {
         Ok(a) => Some(a),
         Err(e) => {
@@ -417,6 +425,34 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     Ok(())
 }
 
+/// Almond's settings for this instance; `s3_secret` comes from the secrets store (#171).
+fn blossom_config(cfg: &Config, data: &Path, s3_secret: Option<String>) -> almond::Config {
+    let mut blossom = almond::Config::defaults();
+    blossom.storage_path = data.join("blossom");
+    blossom.public_url = Some(cfg.origin.clone());
+    blossom.allowed_npubs = cfg.allowed_writers.clone();
+    // An empty instance allowlist means nobody, not Almond's public default.
+    if cfg.allowed_writers.is_empty() {
+        blossom.upload_access = almond::models::FeatureMode::Off;
+        blossom.mirror_access = almond::models::FeatureMode::Off;
+    }
+    blossom.homepage_enabled = false;
+    blossom.blob_max_size = PER_FILE_MAX;
+    // The quota counts every indexed blob, local and S3; the reserve guards the local disk,
+    // which stages every upload.
+    blossom.storage_max_size = cfg.storage.quota_gib * GIB;
+    blossom.storage_min_free = cfg.storage.free_space_reserve_gib * GIB;
+    if let Some(s3) = &cfg.storage.s3 {
+        blossom.s3_endpoint = Some(s3.endpoint.clone());
+        blossom.s3_bucket = Some(s3.bucket.clone());
+        blossom.s3_access_key_id = Some(s3.access_key_id.clone());
+        blossom.s3_secret_access_key = s3_secret;
+        blossom.s3_region = s3.region.clone();
+        blossom.s3_force_path_style = s3.force_path_style;
+    }
+    blossom
+}
+
 /// The commit this build was made from (the container image sets `NOSTUBE_REVISION`), so a
 /// deploy can be checked against what it was meant to roll out. `None` when it is not set.
 fn revision(value: Option<String>) -> Option<String> {
@@ -481,7 +517,23 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
             .and_then(|h| almond::services::auth::parse_auth_header(h).ok())
             .filter(|event| event.verify().is_ok());
         let _media_guard = if upload { Some(outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
+        // BUD-04 carries its hash in signed authorization, not in X-SHA-256.
+        let mirror_hash = (path == "/mirror").then(|| auth.as_ref()
+            .and_then(almond::services::auth::extract_sha256_from_event)).flatten();
+        let upload_hash = mirror_hash.as_deref()
+            .or_else(|| req.headers().get("x-sha-256").and_then(|h| h.to_str().ok()));
+        if upload && upload_hash.is_some_and(|hash| app.outbox.moving_blob(Some(hash))) {
+            return (StatusCode::SERVICE_UNAVAILABLE, [(header::RETRY_AFTER, "5")],
+                "this blob is being moved to S3; retry the upload").into_response();
+        }
+        let local_read = if matches!(*req.method(), Method::GET | Method::HEAD) {
+            match (outbox::storage(&app.outbox), blob_hash(path.trim_start_matches('/'))) {
+                (Ok(state), Some(hash)) => storage_move::local_read(&state, &hash).await,
+                _ => None,
+            }
+        } else { None };
         let res = app.blossom.oneshot(req).await.into_response();
+        drop(local_read);
         if let Some(hash) = count.and_then(|name| blob_hash(&name)).filter(|_| is_served_video(&res)) {
             let relay = app.relay.clone();
             tokio::spawn(async move { relay.count_view(hash).await });
@@ -982,5 +1034,100 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         assert_eq!(relay.plays(365).await.unwrap().get(&id).copied(), Some(1), "seeks count nothing");
         assert_eq!(relay.plays(365).await.unwrap().len(), 1, "unnamed files count nothing");
+    }
+
+    /// #171: after a restart with `storage.s3`, uploads land in the bucket and both they and the
+    /// local blobs from before are served, ranges included.
+    #[tokio::test]
+    async fn after_enabling_s3_uploads_go_to_the_bucket_and_local_blobs_keep_playing() {
+        use fake_s3::{FakeS3, ACCESS_KEY, BUCKET, SECRET_KEY};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tower::ServiceExt;
+        static N: AtomicUsize = AtomicUsize::new(0);
+        let dir = std::env::temp_dir().join(format!("nostube-s3-restart-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake = FakeS3::start().await;
+        let key = nostr::prelude::Keys::generate();
+        let mut cfg = Config::default_for_proxy("https://instance.example", 8080).unwrap();
+        cfg.allowed_writers = vec![key.public_key()];
+        cfg.storage.free_space_reserve_gib = 0;
+        let get = |state: &almond::AppState, name: String, range: Option<&str>| {
+            let mut req = Request::builder().uri(format!("/{name}"));
+            if let Some(range) = range {
+                req = req.header(header::RANGE, range);
+            }
+            let app = almond::create_app(state.clone());
+            async move {
+                let res = app.oneshot(req.body(Body::empty()).unwrap()).await.unwrap();
+                let status = res.status();
+                (status, axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap().to_vec())
+            }
+        };
+        // Before: an upload on this machine.
+        let local = almond::build_state(&blossom_config(&cfg, &dir, None).validate().unwrap()).await.unwrap();
+        assert!(local.native_s3.is_none());
+        let (req, local_hash) = upload_request(&key, b"uploaded before S3");
+        assert!(almond::create_app(local.clone()).oneshot(req).await.unwrap().status().is_success());
+        drop(local);
+        // The studio saved S3: the settings in the config, the secret in secrets.toml.
+        cfg.storage.s3 = Some(config::S3Config {
+            endpoint: fake.url(),
+            bucket: BUCKET.into(),
+            region: "auto".into(),
+            force_path_style: true,
+            access_key_id: ACCESS_KEY.into(),
+        });
+        assert!(blossom_config(&cfg, &dir, None).validate().is_err(), "S3 without its secret does not start");
+        std::fs::write(dir.join("secrets.toml"), format!("session_secret = \"x\"\ns3_secret_access_key = \"{SECRET_KEY}\"\n")).unwrap();
+        let secret = admin::s3_secret(&dir).unwrap();
+        let state = almond::build_state(&blossom_config(&cfg, &dir, secret).validate().unwrap()).await.unwrap();
+        assert!(state.native_s3.is_some());
+        let (req, s3_hash) = upload_request(&key, b"uploaded into the bucket");
+        let res = almond::create_app(state.clone()).oneshot(req).await.unwrap();
+        assert!(res.status().is_success(), "{}", res.status());
+        let stored = fake.keys();
+        let object = stored.iter().find(|k| k.contains(&s3_hash)).unwrap_or_else(|| panic!("not in the bucket: {stored:?}"));
+        assert_eq!(fake.object(object).unwrap(), b"uploaded into the bucket");
+        assert!(stored.iter().all(|k| !k.contains(&local_hash)), "local blobs stay local");
+        for (hash, bytes) in [(&local_hash, &b"uploaded before S3"[..]), (&s3_hash, &b"uploaded into the bucket"[..])] {
+            assert_eq!(get(&state, format!("{hash}.mp4"), None).await, (StatusCode::OK, bytes.to_vec()));
+            assert_eq!(get(&state, format!("{hash}.mp4"), Some("bytes=3-8")).await, (StatusCode::PARTIAL_CONTENT, bytes[3..=8].to_vec()));
+        }
+        // A duplicate upload must retry promptly, not hold the global media lock behind a move.
+        fake.wait_for_upload().await;
+        let migration = storage_move::open(&dir, state.clone()).unwrap();
+        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        outbox.attach_storage(state.clone());
+        outbox.attach_migration(migration.clone());
+        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
+            writers: cfg.allowed_writers.clone(), name: "test".into(), description: "test".into(), mirror_relays: vec![],
+        }).unwrap();
+        let app = App {
+            blossom: almond::create_app(state.clone()), relay,
+            branding: Arc::new(branding::Branding::open(&dir, cfg.public_json())),
+            boot_id: "test".into(), admin: None, outbox, signer: Default::default(),
+        };
+        let gate = fake.pause_uploads().await;
+        migration.start().await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
+        let (request, _) = upload_request(&key, b"uploaded before S3");
+        let busy = tokio::time::timeout(std::time::Duration::from_secs(1), dispatch(State(app.clone()), request)).await.unwrap();
+        assert_eq!(busy.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(busy.headers()[header::RETRY_AFTER], "5");
+        // An unrelated BUD-04 request keeps its normal validation error, without X-SHA-256.
+        let (request, _) = upload_request(&key, b"uploaded into the bucket");
+        let (mut parts, _) = request.into_parts();
+        parts.uri = "/mirror".parse().unwrap();
+        parts.headers.remove("x-sha-256");
+        let mirror = Request::from_parts(parts, Body::from("{}"));
+        let response = tokio::time::timeout(std::time::Duration::from_secs(1), dispatch(State(app), mirror)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        drop(gate);
+        for _ in 0..500 {
+            if migration.status().await["state"] != "running" { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        assert_eq!(migration.status().await["state"], "completed");
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

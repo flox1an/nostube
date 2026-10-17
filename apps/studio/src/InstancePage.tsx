@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { Network, Server } from 'lucide-react'
 import { nip19 } from 'nostr-tools'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -18,6 +19,7 @@ import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { KeyList } from './KeyList'
 import { ReachChoice } from './ReachChoice'
 import { useSigner } from './signer-context'
+import { StorageCard, StorageWarning, useStorageStatus } from './StorageCard'
 import type { PageProps } from './AppearancePage'
 
 /** Key lists show the keys' profiles through the instance client; without it the keys show bare. */
@@ -44,9 +46,11 @@ export function InstancePage({
 }: PageProps & { state: AdminState; dirty?: boolean }) {
   const { t } = useTranslation()
   const { mode } = useSigner()
+  const storage = useStorageStatus()
 
   return (
     <div className="space-y-6">
+      <StorageWarning status={storage.status} />
       <Card>
         <CardHeader>
           <CardTitle>{t('studio.reach.title')}</CardTitle>
@@ -106,35 +110,14 @@ export function InstancePage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.instance.storage')}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="quota"
-            label={t('studio.instance.quota')}
-            hint={t('studio.instance.quotaHint')}
-          >
-            <Input
-              id="quota"
-              type="number"
-              min={0}
-              value={draft.quota}
-              onChange={e => update({ quota: e.target.value })}
-            />
-          </Field>
-          <Field id="reserve" label={t('studio.instance.reserve')}>
-            <Input
-              id="reserve"
-              type="number"
-              min={0}
-              value={draft.reserve}
-              onChange={e => update({ reserve: e.target.value })}
-            />
-          </Field>
-        </CardContent>
-      </Card>
+      <StorageCard
+        draft={draft}
+        update={update}
+        state={state}
+        status={storage.status}
+        statusError={storage.error}
+        onMoveStarted={storage.refresh}
+      />
 
       <p className="text-sm text-muted-foreground">
         <Trans
@@ -212,6 +195,7 @@ function NsiteCard({
         <div className="grid gap-3 sm:grid-cols-2">
           <Tile
             title={t('studio.nsite.instance')}
+            icon={Server}
             selected={draft.siteHosting === 'instance'}
             onSelect={() => update({ siteHosting: 'instance' })}
           >
@@ -220,6 +204,7 @@ function NsiteCard({
           </Tile>
           <Tile
             title={t('studio.nsite.nsite')}
+            icon={Network}
             selected={draft.siteHosting === 'nsite'}
             disabled={!available}
             onSelect={() => update({ siteHosting: 'nsite' })}

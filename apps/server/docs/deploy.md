@@ -65,6 +65,48 @@ and bytes served are process-local counters and reset on restart. The quota bar 
 when storage is unlimited. `GET /api/admin/stats` requires the admin session; it does not
 enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
 
+## S3-compatible storage
+
+Under **Server → Instance → Storage**, select **S3-compatible storage (advanced)** to send
+new uploads to a bucket instead of this machine. The default local option remains the simple,
+offline-capable setup. The option tiles throughout settings and onboarding include icons;
+their text labels and keyboard selection remain available.
+
+Enter the S3 API endpoint, bucket and access key ID. Leave the region empty for `auto`
+(Cloudflare R2); for AWS use the bucket's region, such as `eu-central-1`. MinIO and Garage
+usually need **Path-style addressing**. Use HTTPS except for a trusted local endpoint.
+The credentials need object put/get/delete permissions and bucket listing permission, including
+the `.almond-probe/` keys used by **Test connection**. The test reports the failing operation
+and provider error and removes its test object on success; failed probes attempt cleanup.
+
+The secret access key is write-only: it lives in the private `<data>/secrets.toml`, not in
+`config.toml` or a config GET response. **Set** means a secret is stored; leaving the input
+empty keeps it. Back up the secrets store with the instance configuration. Changing S3
+settings or the secret runs the connection test before saving and restarts the instance.
+An unchanged S3 configuration does not need a successful probe to edit unrelated settings.
+
+Storage is hybrid per file: existing local uploads keep playing; new uploads, generated
+branding and site blobs go to S3. Downloads and Range requests still pass through the
+instance, and mirrors and deletions use the indexed location. The quota counts local and
+S3 blobs together. The free-space reserve protects the local disk, which still stages uploads.
+
+Once S3 is enabled, **Move existing files to S3** moves local uploads in the background and
+shows file and byte progress. It copies and uploads one file at a time, then replaces its
+index entry and removes the local copy only after the upload succeeds. Leave room for one
+extra file above the local free-space reserve. A running job resumes after a restart; a
+failed job shows its error and can be started again. Upstream cache files stay local.
+Do not change the bucket while a move is running. Switching S3 off or moving files back to
+local storage is not supported.
+Re-uploading the file currently being moved answers **503** with `Retry-After: 5`;
+other uploads and mirrors are unaffected. Pending cleanup of that file retries after the move
+rather than holding up other media work. Connection tests have a 30-second deadline.
+
+If S3 cannot be listed at startup, the instance and Studio still start and local files remain
+available. Studio shows the error and a link to correct the settings. Potential S3 blobs and
+new uploads answer **503**, rather than pretending that files are missing. The server retries
+the listing automatically and restores S3 access when it succeeds; no restart is needed for
+that recovery. Missing or incomplete configuration is still a startup error.
+
 ## Publishing the site as an nsite
 
 With a managed channel identity, configure any required mirrors under **Server → Advanced**,

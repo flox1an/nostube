@@ -19,7 +19,7 @@ const config = (site: Partial<AdminConfig['site']> = {}): AdminConfig => ({
   nsite: { gateway: 'nsite.lol', domain: '' },
   mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
-  storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
+  storage: { quotaGib: 0, freeSpaceReserveGib: 5, s3: null },
   site: {
     tagline: '',
     theme: { accent: '#8b5cf6', font: 'sans' },

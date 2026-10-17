@@ -8,7 +8,7 @@ publish = false
 # ported relay, local-ca TLS, /api/config and the embedded Nostube site (apps/site) and embed player.
 
 [dependencies]
-almond = { git = "https://github.com/flox1an/almond.git", rev = "682b77d6d84d9a6babce3f8ecfb3ffd7f79ee359", default-features = false }
+almond = { git = "https://github.com/flox1an/almond.git", rev = "3f75d3c8f7f66828e19b82a3f8e24f68c23dfcca", default-features = false }
 axum = { version = "0.8.9", features = ["ws"] }
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }

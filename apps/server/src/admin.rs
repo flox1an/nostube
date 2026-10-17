@@ -56,6 +56,9 @@ struct Secrets {
     /// `signer.key`. An admin reset keeps it: the identity outlives a forgotten password.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     managed_key: Option<String>,
+    /// The S3 secret access key of `storage.s3` (#171); write-only from the studio.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    s3_secret_access_key: Option<String>,
 }
 
 impl Secrets {
@@ -81,12 +84,24 @@ impl Secrets {
     }
 
     fn save(&self, data: &Path) -> Result<(), BoxError> {
-        write_private(&Self::path(data), &toml::to_string_pretty(self)?)
+        let path = Self::path(data);
+        let temp = path.with_extension("toml.tmp");
+        write_private(&temp, &toml::to_string_pretty(self)?)?;
+        std::fs::rename(temp, path)?;
+        Ok(())
     }
 
     fn registered(&self) -> bool {
         self.password_hash.is_some()
     }
+}
+
+/// The stored S3 secret access key for `main`'s Almond settings; `None` without a secrets file.
+pub fn s3_secret(data: &Path) -> Result<Option<String>, BoxError> {
+    if !Secrets::path(data).exists() {
+        return Ok(None);
+    }
+    Ok(Secrets::load(data)?.s3_secret_access_key)
 }
 
 /// The running relay and Blossom, read (never changed) by the stats endpoint, and the branding
@@ -100,12 +115,16 @@ pub struct Stores {
     /// Mirror status and retries (ADR 0009).
     pub outbox: crate::outbox::Outbox,
     pub nsite: crate::nsite::Nsite,
+    /// Moves local uploads into the bucket (#174).
+    pub migration: Arc<crate::storage_move::Migration>,
 }
 
 /// Admin state shared with the axum router.
 pub struct AdminState {
     data: PathBuf,
     secrets: Arc<Mutex<Secrets>>,
+    /// Serialize probe + apply: a concurrent save must not pair another edit with this secret.
+    config_edit: tokio::sync::Mutex<()>,
     origin_host: String,
     /// Every host the TLS leaf covers; admin NIP-98 events may target any of them.
     covered_hosts: Vec<String>,
@@ -159,6 +178,7 @@ impl AdminState {
         Ok(AdminState {
             data: data.to_owned(),
             secrets: Arc::new(Mutex::new(secrets)),
+            config_edit: tokio::sync::Mutex::new(()),
             origin_host: origin_host.to_owned(),
             covered_hosts,
             boot_id,
@@ -384,6 +404,9 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/media/mirrors", post(media_mirrors))
         .route("/api/admin/schedule", get(schedule_get).post(schedule_post))
         .route("/api/admin/schedule/cancel", post(schedule_cancel))
+        .route("/api/admin/storage", get(storage_get))
+        .route("/api/admin/storage/test", post(storage_test))
+        .route("/api/admin/storage/move", post(storage_move))
         .with_state(state)
         .layer(axum::middleware::map_response(no_store))
 }
@@ -602,9 +625,20 @@ fn refuse_write_as(state: &AdminState, headers: &HeaderMap, content_type: &str) 
     (!accepted).then(|| json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &format!("content-type must be {content_type}")))
 }
 
-/// Everything the studio edits, in the camelCase shape of the public contract.
-fn editable_json(cfg: &Config) -> serde_json::Value {
+/// Everything the studio edits, in the camelCase shape of the public contract. The S3 secret
+/// never leaves the server: `secretSet` says whether one is stored.
+fn editable_json(cfg: &Config, secret_set: bool) -> serde_json::Value {
     let keys = |v: &[nostr::prelude::PublicKey]| v.iter().map(|k| k.to_hex()).collect::<Vec<_>>();
+    let s3 = cfg.storage.s3.as_ref().map(|s3| {
+        serde_json::json!({
+            "endpoint": s3.endpoint,
+            "bucket": s3.bucket,
+            "region": s3.region,
+            "forcePathStyle": s3.force_path_style,
+            "accessKeyId": s3.access_key_id,
+            "secretSet": secret_set,
+        })
+    });
     serde_json::json!({
         "title": cfg.title,
         "reach": cfg.reach,
@@ -614,7 +648,11 @@ fn editable_json(cfg: &Config) -> serde_json::Value {
         "interactionRelays": cfg.interaction_relays,
         "profileRelays": cfg.profile_relays,
         "search": cfg.search,
-        "storage": { "quotaGib": cfg.storage.quota_gib, "freeSpaceReserveGib": cfg.storage.free_space_reserve_gib },
+        "storage": {
+            "quotaGib": cfg.storage.quota_gib,
+            "freeSpaceReserveGib": cfg.storage.free_space_reserve_gib,
+            "s3": s3,
+        },
         "site": cfg.public_json()["site"],
         "mirror": cfg.mirror,
         "siteHosting": cfg.site_hosting,
@@ -646,6 +684,50 @@ struct ConfigPut {
 struct StorageBody {
     quota_gib: u64,
     free_space_reserve_gib: u64,
+    /// Absent or null: this machine only (studios from before S3 send neither).
+    #[serde(default)]
+    s3: Option<S3Body>,
+}
+
+/// `storage.s3` of a config save, and the body of the connection test.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct S3Body {
+    endpoint: String,
+    bucket: String,
+    #[serde(default = "config::s3_region")]
+    region: String,
+    #[serde(default)]
+    force_path_style: bool,
+    access_key_id: String,
+    /// Write-only; absent keeps the stored secret, empty is refused.
+    #[serde(default)]
+    secret_access_key: Option<String>,
+    /// Read-only (what GET answers); a studio may send its draft back unchanged.
+    #[serde(default, rename = "secretSet")]
+    _secret_set: Option<serde::de::IgnoredAny>,
+}
+
+impl S3Body {
+    fn config(&self) -> config::S3Config {
+        config::S3Config {
+            endpoint: self.endpoint.clone(),
+            bucket: self.bucket.clone(),
+            region: self.region.clone(),
+            force_path_style: self.force_path_style,
+            access_key_id: self.access_key_id.clone(),
+        }
+    }
+
+    /// The given secret, else the stored one. `Err` is the refusal (empty, or none at all).
+    fn secret(&self, state: &AdminState) -> Result<String, String> {
+        match self.secret_access_key.as_deref() {
+            Some("") => Err("secretAccessKey must not be empty".into()),
+            Some(secret) => Ok(secret.to_owned()),
+            None => state.secrets.lock().unwrap().s3_secret_access_key.clone()
+                .ok_or_else(|| "secretAccessKey is required: none is stored yet".into()),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -723,7 +805,10 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         config::Tls::LocalCa { .. } => "local-ca",
         config::Tls::Proxy { .. } => "proxy",
     };
-    let nostr = state.secrets.lock().unwrap().nostr_pubkey.clone();
+    let (nostr, secret_set) = {
+        let secrets = state.secrets.lock().unwrap();
+        (secrets.nostr_pubkey.clone(), secrets.s3_secret_access_key.is_some())
+    };
     Json(serde_json::json!({
         "revision": cfg.revision,
         "origin": cfg.origin,
@@ -733,7 +818,7 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         "tlsMode": tls_mode,
         "bootId": state.boot_id,
         "nostrPubkey": nostr,
-        "config": editable_json(&cfg),
+        "config": editable_json(&cfg, secret_set),
         "branding": state.stores.branding.urls(),
     }))
     .into_response()
@@ -807,7 +892,7 @@ async fn plays_get(
 
 /// Space available to unprivileged writers on the filesystem holding `path`: the figure Almond
 /// checks the free-space reserve against (`fs4::available_space`, also statvfs).
-fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
+pub(crate) fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
     use std::os::unix::ffi::OsStrExt;
     let path = std::ffi::CString::new(path.as_os_str().as_bytes())?;
     // SAFETY: statvfs only writes into the zeroed struct we own; `path` is a valid C string.
@@ -830,6 +915,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Ok(p) => p,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
     };
+    let _edit = state.config_edit.lock().await;
     let current = match Config::load(&state.data.join("config.toml")) {
         Ok(c) => c,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
@@ -848,6 +934,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         storage: Storage {
             quota_gib: put.storage.quota_gib,
             free_space_reserve_gib: put.storage.free_space_reserve_gib,
+            s3: put.storage.s3.as_ref().map(S3Body::config),
         },
         site: config::Site {
             tagline: put.site.tagline,
@@ -889,7 +976,26 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
     if disabling && put.delete_nsite.is_none() {
         return json_error(StatusCode::BAD_REQUEST, "choose deleteNsite explicitly: true deletes the nsite, false keeps public copies");
     }
-    let restart = match apply(&state, &current, &next) {
+    // S3 preflight (#171): new or changed settings, or a new secret, must pass Almond's probe
+    // before anything is written. Unchanged settings save without one, so the rest of the config
+    // stays editable while the bucket is unavailable (#173).
+    let s3_secret = match (&next.storage.s3, &put.storage.s3) {
+        (Some(s3), Some(body)) => {
+            let secret = match body.secret(&state) {
+                Ok(secret) => secret,
+                Err(e) => return json_error(StatusCode::BAD_REQUEST, &e),
+            };
+            if current.storage.s3.as_ref() != Some(s3) || body.secret_access_key.is_some() {
+                if let Err((step, error)) = probe_s3(s3.settings(secret.clone())).await {
+                    let message = format!("preflight failed: S3 connection test failed at {step}: {error}");
+                    return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": message, "step": step }))).into_response();
+                }
+            }
+            body.secret_access_key.is_some().then_some(secret)
+        }
+        _ => None,
+    };
+    let restart = match apply(&state, &current, &next, s3_secret.as_deref()) {
         Ok(restart) => restart,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
@@ -995,9 +1101,77 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
     Json(serde_json::json!({ "ready": ready, "urls": urls, "error": problem })).into_response()
 }
 
+// ── Storage (#170) ──────────────────────────────────────────────────────────
+
+/// Almond's credential probe (put, get, list, delete of one `.almond-probe/` object), as the
+/// failing step and the provider's error.
+async fn probe_s3(settings: almond::services::native_storage::S3Settings) -> Result<(), (&'static str, String)> {
+    use almond::services::native_storage::{probe, ProbeStep};
+    tokio::time::timeout(Duration::from_secs(30), probe(&settings)).await
+        .map_err(|_| ("probe", "S3 connection test timed out after 30 seconds".to_owned()))?
+        .map_err(|failure| {
+        let step = match failure.step {
+            ProbeStep::Put => "put",
+            ProbeStep::Get => "get",
+            ProbeStep::List => "list",
+            ProbeStep::Delete => "delete",
+        };
+        let error = match failure.code {
+            Some(code) => format!("{code}: {}", failure.message),
+            None => failure.message,
+        };
+        (step, error)
+    })
+}
+
+/// Tests S3 settings without saving them: `{ok: true}` or `{ok: false, step, error}`. An
+/// omitted secret means the stored one.
+async fn storage_test(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+    let body: S3Body = match serde_json::from_slice(&body) {
+        Ok(body) => body,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
+    };
+    let s3 = body.config();
+    if let Err(e) = s3.check() { return json_error(StatusCode::BAD_REQUEST, &e.to_string()); }
+    let secret = match body.secret(&state) {
+        Ok(secret) => secret,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &e),
+    };
+    match probe_s3(s3.settings(secret)).await {
+        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Err((step, error)) => Json(serde_json::json!({ "ok": false, "step": step, "error": error })).into_response(),
+    }
+}
+
+/// What Almond reports about the bucket (`s3: null` without S3) and the move job's progress.
+/// `lastAttempt` is in Unix seconds.
+async fn storage_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    use almond::services::native_storage::S3Status;
+    if !is_authed(&state, &headers) { return json_error(StatusCode::UNAUTHORIZED, "not logged in"); }
+    let s3 = state.stores.blossom.s3_status().map(|status| match status {
+        S3Status::Available => serde_json::json!({ "available": true, "lastError": null, "lastAttempt": null }),
+        S3Status::Unavailable { error, last_attempt } => {
+            serde_json::json!({ "available": false, "lastError": error, "lastAttempt": last_attempt })
+        }
+    });
+    Json(serde_json::json!({ "s3": s3, "move": state.stores.migration.status().await })).into_response()
+}
+
+/// Starts (or resumes) moving local uploads into the bucket (#174). Body `{}`.
+async fn storage_move(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) { return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")); }
+    match state.stores.migration.start().await {
+        Ok(status) => Json(status).into_response(),
+        Err(error) => json_error(StatusCode::BAD_REQUEST, &error),
+    }
+}
+
 // ── Branding ────────────────────────────────────────────────────────────────
 
-/// Replaces a branding image with a raw image (favicon) or `{ "sha256": "<local Blossom hash>" }`.
+/// Replaces a branding image with a raw image (favicon) or `{ "sha256": "<Blossom hash>" }`
+/// stored locally or in S3 (#172).
 /// Takes effect at once: the public config is rebuilt, nothing restarts.
 async fn branding_put(
     State(state): State<Arc<AdminState>>,
@@ -1015,7 +1189,7 @@ async fn branding_put(
     };
     let max = slot.max_bytes();
     let too_big = || json_error(StatusCode::PAYLOAD_TOO_LARGE, &format!("the {} may be at most {} KiB", slot.name(), max / 1024));
-    // Order activation against video cleanup; only indexed local blobs can become branding.
+    // Order activation against video cleanup; only indexed blobs (local or S3) can become branding.
     let _media_guard = if from_blossom { Some(crate::outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
     let bytes = if from_blossom {
         use almond::services::file_storage;
@@ -1032,22 +1206,42 @@ async fn branding_put(
         if file_storage::validate_sha256_format(&sha256).is_err() {
             return json_error(StatusCode::BAD_REQUEST, "invalid Blossom sha256");
         }
+        let _location_read = crate::storage_move::local_read(&state.stores.blossom, &sha256).await;
         let Some(metadata) = file_storage::get_file_metadata(&state.stores.blossom, &sha256).await else {
             return json_error(StatusCode::NOT_FOUND, "branding blob is not on this instance");
         };
         if metadata.size > max as u64 { return too_big(); }
-        let Some(path) = file_storage::local_path(&metadata) else {
-            return json_error(StatusCode::BAD_REQUEST, "branding requires a local Blossom image");
+        let bytes = match &metadata.location {
+            almond::models::FileLocation::Local(path) => {
+                let mut bytes = Vec::with_capacity(metadata.size as usize);
+                let Ok(file) = tokio::fs::File::open(path).await else {
+                    return json_error(StatusCode::NOT_FOUND, "branding blob is missing");
+                };
+                if file.take((max + 1) as u64).read_to_end(&mut bytes).await.is_err() {
+                    return json_error(StatusCode::INTERNAL_SERVER_ERROR, "cannot read branding blob");
+                }
+                axum::body::Bytes::from(bytes)
+            }
+            // Bound the actual stream too: bucket contents may have changed since indexing.
+            almond::models::FileLocation::S3 { key } => {
+                let Some(s3) = state.stores.blossom.native_s3.as_ref() else {
+                    return json_error(StatusCode::SERVICE_UNAVAILABLE, "S3 storage is not configured");
+                };
+                let read = async {
+                    let output = s3.get(key, None).await?;
+                    let mut bytes = Vec::with_capacity(metadata.size as usize);
+                    output.body.into_async_read().take((max + 1) as u64).read_to_end(&mut bytes).await
+                        .map_err(|e| almond::error::AppError::ServiceUnavailable(format!("S3 body read failed: {e}")))?;
+                    Ok::<_, almond::error::AppError>(axum::body::Bytes::from(bytes))
+                };
+                match read.await {
+                    Ok(bytes) => bytes,
+                    Err(e) => return json_error(StatusCode::SERVICE_UNAVAILABLE, &format!("cannot read branding blob: {e}")),
+                }
+            }
         };
-        let mut bytes = Vec::with_capacity(metadata.size as usize);
-        let Ok(file) = tokio::fs::File::open(path).await else {
-            return json_error(StatusCode::NOT_FOUND, "branding blob is missing");
-        };
-        if file.take((max + 1) as u64).read_to_end(&mut bytes).await.is_err() {
-            return json_error(StatusCode::INTERNAL_SERVER_ERROR, "cannot read branding blob");
-        }
         if bytes.len() > max { return too_big(); }
-        axum::body::Bytes::from(bytes)
+        bytes
     } else {
         let declared = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
         if declared.is_some_and(|n| n > max) { return too_big(); }
@@ -1324,20 +1518,41 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
 /// Writes the validated config (keeping `config.prev`) and applies it: while running when only
 /// the public config and the title change, else by stopping the listener so the supervisor
 /// restarts the process on it. Answers whether it restarts. Used by the studio endpoint.
-fn apply(state: &AdminState, current: &Config, next: &Config) -> Result<bool, String> {
+/// `s3_secret` is a secret the studio sent: it goes to the secrets store (never the config) and,
+/// when it differs from the stored one, restarts the instance like any storage change.
+fn apply(state: &AdminState, current: &Config, next: &Config, s3_secret: Option<&str>) -> Result<bool, String> {
     if let Some(e) = preflight(state, &next.tls) {
         return Err(format!("preflight failed: {e}"));
     }
     let path = state.data.join("config.toml");
-    std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
+    let temp = path.with_extension("toml.tmp");
     let text = next.to_toml().map_err(|e| e.to_string())?;
-    std::fs::write(&path, text).map_err(|e| format!("cannot write config: {e}"))?;
+    std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
+    write_private(&temp, &text).map_err(|e| format!("cannot stage config: {e}"))?;
+    let mut secrets = state.secrets.lock().unwrap();
+    let previous = secrets.s3_secret_access_key.clone();
+    let secret_changed = s3_secret.is_some_and(|s| Some(s) != previous.as_deref());
+    if secret_changed {
+        secrets.s3_secret_access_key = s3_secret.map(str::to_owned);
+        if let Err(e) = secrets.save(&state.data) {
+            secrets.s3_secret_access_key = previous;
+            return Err(format!("cannot store the S3 secret: {e}"));
+        }
+    }
+    if let Err(error) = std::fs::rename(&temp, &path) {
+        if secret_changed {
+            secrets.s3_secret_access_key = previous;
+            secrets.save(&state.data).map_err(|e| format!("cannot apply config ({error}) or restore the S3 secret ({e})"))?;
+        }
+        return Err(format!("cannot apply config: {error}"));
+    }
+    drop(secrets);
     state.stores.outbox.set_origin_public(next.origin_is_public());
     // Hosting/private transitions stop redirects immediately; other restart-only edits stay staged.
     if current.site_hosting != next.site_hosting || current.reach != next.reach {
         state.stores.branding.set_base(next.public_json());
     }
-    if !current.needs_restart(next) {
+    if !current.needs_restart(next) && !secret_changed {
         state.stores.branding.set_base(next.public_json());
         state.stores.relay.set_title(&next.title);
         state.stores.relay.set_count_plays(next.site.count_plays);
@@ -1622,13 +1837,30 @@ mod tests {
 
     /// Relay, Blossom and branding in `dir`, opened like `main` does (quota 7 GiB, reserve 2 GiB).
     async fn stores(dir: &Path) -> Stores {
+        stores_with(dir, None).await
+    }
+
+    /// Almond's settings of `stores`; with `s3`, new uploads go to that bucket.
+    fn almond_config(dir: &Path, s3: Option<almond::services::native_storage::S3Settings>) -> almond::Config {
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = dir.join("blossom");
         cfg.public_url = Some("https://flox-mac.local".into());
         cfg.homepage_enabled = false;
         cfg.storage_max_size = 7 * config::GIB;
         cfg.storage_min_free = 2 * config::GIB;
-        let blossom = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        if let Some(s3) = s3 {
+            cfg.s3_endpoint = Some(s3.endpoint);
+            cfg.s3_bucket = Some(s3.bucket);
+            cfg.s3_access_key_id = Some(s3.access_key_id);
+            cfg.s3_secret_access_key = Some(s3.secret_access_key);
+            cfg.s3_region = s3.region;
+            cfg.s3_force_path_style = s3.force_path_style;
+        }
+        cfg.validate().unwrap()
+    }
+
+    async fn stores_with(dir: &Path, s3: Option<almond::services::native_storage::S3Settings>) -> Stores {
+        let blossom = almond::build_state(&almond_config(dir, s3)).await.unwrap();
         let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into(), mirror_relays: vec![] };
         let public = Config::load(&dir.join("config.toml")).map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
         let branding = Arc::new(crate::branding::Branding::open(dir, public));
@@ -1636,7 +1868,9 @@ mod tests {
         let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
         outbox.attach_storage(blossom.clone());
         let nsite = crate::nsite::Nsite::open(dir).unwrap();
-        Stores { relay, blossom, branding, outbox, nsite }
+        let migration = crate::storage_move::open(dir, blossom.clone()).unwrap();
+        outbox.attach_migration(migration.clone());
+        Stores { relay, blossom, branding, outbox, nsite, migration }
     }
 
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
@@ -1743,7 +1977,7 @@ mod tests {
         cfg.reach = config::Reach::Public;
         cfg.site_hosting = config::SiteHosting::Nsite;
         std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
-        edit = editable_json(&cfg);
+        edit = editable_json(&cfg, false);
         edit["reach"] = "private".into();
         let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
@@ -1831,6 +2065,261 @@ mod tests {
 
     fn put_body(accent: &str) -> String {
         put_value(accent).to_string()
+    }
+
+    // ── S3 storage (#171-#173) ──
+
+    use crate::fake_s3::{FakeS3, ACCESS_KEY, BUCKET, SECRET_KEY};
+
+    /// The studio's `storage.s3` for the fake bucket, with its secret.
+    fn s3_json(fake: &FakeS3) -> serde_json::Value {
+        serde_json::json!({
+            "endpoint": fake.url(), "bucket": BUCKET, "region": "auto", "forcePathStyle": true,
+            "accessKeyId": ACCESS_KEY, "secretAccessKey": SECRET_KEY,
+        })
+    }
+
+    /// A second router on `dir` whose Blossom was started with `s3` (an instance after restart).
+    async fn router_with_s3(dir: &Path, s3: almond::services::native_storage::S3Settings) -> (Router, almond::AppState, Arc<crate::branding::Branding>) {
+        let stores = stores_with(dir, Some(s3)).await;
+        let (blossom, branding) = (stores.blossom.clone(), stores.branding.clone());
+        let state = AdminState::open(dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
+            "boot".into(), Arc::new(axum_server::Handle::new()), stores).unwrap();
+        (router(state), blossom, branding)
+    }
+
+    /// `GET /<name>` from Blossom: status and body.
+    async fn blob(blossom: &almond::AppState, name: &str, range: Option<&str>) -> (StatusCode, Vec<u8>) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().uri(format!("/{name}"));
+        if let Some(range) = range { req = req.header(header::RANGE, range); }
+        let res = almond::create_app(blossom.clone()).oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        let status = res.status();
+        (status, axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap().to_vec())
+    }
+
+    /// The fan-out key Almond gives an uploaded blob.
+    fn s3_key(hash: &str, ext: &str) -> String {
+        format!("{}/{}/{hash}.{ext}", &hash[..1], &hash[1..2])
+    }
+
+    #[tokio::test]
+    async fn s3_settings_round_trip_with_a_write_only_secret() {
+        let fake = FakeS3::start().await;
+        let (app, dir, cookie) = studio_fixture().await;
+        let (c, json) = (Some(cookie.as_str()), Some("application/json"));
+        let (_, read) = call(&app, "GET", c, None, "").await;
+        assert!(read["config"]["storage"]["s3"].is_null(), "{read}");
+        let mut edit = put_value("#112233");
+        edit["storage"]["s3"] = s3_json(&fake);
+        let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
+        assert!(fake.keys().is_empty(), "the preflight probe leaves no object: {:?}", fake.keys());
+        // The secret goes to the secrets store, never the config file or a GET.
+        let file = std::fs::read_to_string(dir.join("config.toml")).unwrap();
+        assert!(file.contains("[storage.s3]") && !file.contains(SECRET_KEY), "{file}");
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        let (_, read) = call(&app, "GET", c, None, "").await;
+        assert!(!read.to_string().contains(SECRET_KEY));
+        assert_eq!(read["config"]["storage"]["s3"], serde_json::json!({
+            "endpoint": fake.url(), "bucket": BUCKET, "region": "auto", "forcePathStyle": true,
+            "accessKeyId": ACCESS_KEY, "secretSet": true,
+        }));
+        // Saved back as read (secretSet, no secret): the stored secret stays and a title edit
+        // neither probes nor restarts.
+        let mut again = read["config"].clone();
+        again["title"] = "Again".into();
+        let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &false.into()), "{body}");
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        // An empty secret is refused, and so is turning S3 off.
+        let before = std::fs::read(dir.join("config.toml")).unwrap();
+        again["storage"]["s3"]["secretAccessKey"] = "".into();
+        let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        again["storage"]["s3"] = serde_json::Value::Null;
+        let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(body["error"].as_str().unwrap().contains("cannot be turned off"), "{body}");
+        assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
+        // A new secret alone restarts the instance.
+        again["storage"]["s3"] = read["config"]["storage"]["s3"].clone();
+        again["storage"]["s3"]["secretAccessKey"] = "rotated".into();
+        let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some("rotated"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_failed_save_keeps_the_old_secret_and_a_retry_still_restarts() {
+        let fake = FakeS3::start().await;
+        let (app, dir, cookie) = studio_fixture().await;
+        let mut edit = put_value("#112233");
+        edit["storage"]["s3"] = s3_json(&fake);
+        let c = Some(cookie.as_str());
+        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::OK);
+        let before = std::fs::read(dir.join("config.toml")).unwrap();
+        std::fs::create_dir(dir.join("config.toml.tmp")).unwrap();
+        edit["storage"]["s3"]["secretAccessKey"] = "rotated".into();
+        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        std::fs::remove_dir(dir.join("config.toml.tmp")).unwrap();
+        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some("rotated"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn the_connection_test_names_the_failing_step_and_leaves_no_object() {
+        let fake = FakeS3::start().await;
+        let (app, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        const TEST: &str = "/api/admin/storage/test";
+        assert_eq!(api_call(&app, "POST", TEST, None, s3_json(&fake)).await.0, StatusCode::UNAUTHORIZED);
+        let (status, body) = api_call(&app, "POST", TEST, c, s3_json(&fake)).await;
+        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "ok": true })));
+        assert!(fake.keys().is_empty(), "{:?}", fake.keys());
+        let gone = {
+            let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", l.local_addr().unwrap())
+        };
+        for (field, value, code) in [
+            ("bucket", "missing-bucket".to_owned(), Some("NoSuchBucket")),
+            ("accessKeyId", "wrong-key".to_owned(), Some("InvalidAccessKeyId")),
+            ("endpoint", gone, None),
+        ] {
+            let mut body = s3_json(&fake);
+            body[field] = value.into();
+            let (status, answer) = api_call(&app, "POST", TEST, c, body).await;
+            assert_eq!((status, &answer["ok"], &answer["step"]), (StatusCode::OK, &false.into(), &"put".into()), "{field}: {answer}");
+            let error = answer["error"].as_str().unwrap();
+            assert!(!error.is_empty() && code.is_none_or(|code| error.contains(code)), "{field}: {error}");
+        }
+        // Invalid input is a 400; without a stored secret one is required, and never empty.
+        let mut body = s3_json(&fake);
+        body["endpoint"] = "s3.example".into();
+        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        let mut body = s3_json(&fake);
+        body.as_object_mut().unwrap().remove("secretAccessKey");
+        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        let mut body = s3_json(&fake);
+        body["secretAccessKey"] = "".into();
+        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        // With a stored secret, an omitted one means that one.
+        let mut s = Secrets::load(&dir).unwrap();
+        s.s3_secret_access_key = Some(SECRET_KEY.into());
+        s.save(&dir).unwrap();
+        let app = router(AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
+            "boot".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap());
+        let mut body = s3_json(&fake);
+        body.as_object_mut().unwrap().remove("secretAccessKey");
+        body["secretSet"] = true.into();
+        let (status, answer) = api_call(&app, "POST", "/api/admin/storage/test", c, body).await;
+        assert_eq!((status, answer), (StatusCode::OK, serde_json::json!({ "ok": true })));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn saving_settings_that_fail_the_probe_writes_nothing() {
+        let fake = FakeS3::start().await;
+        let (app, dir, cookie) = studio_fixture().await;
+        let before = std::fs::read(dir.join("config.toml")).unwrap();
+        let mut edit = put_value("#112233");
+        edit["storage"]["s3"] = s3_json(&fake);
+        edit["storage"]["s3"]["bucket"] = "missing-bucket".into();
+        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
+        assert_eq!((status, &body["step"]), (StatusCode::BAD_REQUEST, &"put".into()), "{body}");
+        assert!(body["error"].as_str().unwrap().contains("NoSuchBucket"), "{body}");
+        assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
+        assert!(!dir.join("config.prev").exists());
+        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key, None);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn branding_reads_blobs_stored_in_s3_with_the_same_limits() {
+        use sha2::{Digest, Sha256};
+        let fake = FakeS3::start().await;
+        let (_, dir, cookie) = studio_fixture().await;
+        let mut big = PNG.to_vec();
+        big.resize(512 * 1024 + 1, 0);
+        let html = b"<!doctype html>".to_vec();
+        let hashes: Vec<String> = [PNG.to_vec(), big, html].into_iter().map(|bytes| {
+            let hash = format!("{:x}", Sha256::digest(&bytes));
+            fake.insert(&s3_key(&hash, "png"), &bytes);
+            hash
+        }).collect();
+        // Started with S3: Almond indexes the bucket's blobs.
+        let (app, blossom, branding) = router_with_s3(&dir, fake.settings()).await;
+        let indexed = blossom.file_index.get(&hashes[0]).await.unwrap();
+        assert!(matches!(indexed.location, almond::models::FileLocation::S3 { .. }), "{:?}", indexed.location);
+        let (c, json) = (Some(cookie.as_str()), Some("application/json"));
+        let reference = |hash: &str| serde_json::json!({ "sha256": hash }).to_string().into_bytes();
+        let (status, body) = branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0])).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(public_site(&branding)["logo"], body["url"]);
+        assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
+        assert_eq!(branding_call(&app, "PUT", "banner", c, json, reference(&hashes[2])).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(branding_call(&app, "PUT", "logo", c, json, reference(&hashes[1])).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        // A bucket object can grow after listing; the streamed read must still enforce the limit.
+        fake.insert(&s3_key(&hashes[0], "png"), &vec![0; 512 * 1024 + 1]);
+        assert_eq!(branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0])).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn an_unreachable_bucket_degrades_the_instance_until_it_answers_again() {
+        use sha2::{Digest, Sha256};
+        let fake = FakeS3::start().await;
+        let (_, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        let in_s3 = b"a video stored in the bucket".to_vec();
+        let s3_hash = format!("{:x}", Sha256::digest(&in_s3));
+        fake.insert(&s3_key(&s3_hash, "mp4"), &in_s3);
+        fake.stop().await;
+        // The instance starts with the bucket down.
+        let (app, blossom, _) = router_with_s3(&dir, fake.settings()).await;
+        let _tasks = almond::spawn_background_tasks(&blossom, &almond_config(&dir, Some(fake.settings())));
+        assert_eq!(send(&app, "/api/admin/storage", None, None).await.0, StatusCode::UNAUTHORIZED);
+        let (status, _, body) = send(&app, "/api/admin/storage", c, None).await;
+        assert_eq!((status, &body["s3"]["available"]), (StatusCode::OK, &false.into()), "{body}");
+        assert!(body["s3"]["lastError"].as_str().is_some_and(|e| !e.is_empty()), "{body}");
+        assert!(body["s3"]["lastAttempt"].as_u64().is_some(), "{body}");
+        assert!(body["move"]["state"].is_string(), "{body}");
+        // Local blobs keep playing; a blob that may be in S3 answers 503, not 404.
+        let local = b"a video stored on this machine".to_vec();
+        let local_hash = format!("{:x}", Sha256::digest(&local));
+        let path = blossom.storage.uploads.join(format!("{local_hash}.mp4"));
+        tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
+        tokio::fs::write(&path, &local).await.unwrap();
+        blossom.file_index.insert(local_hash.clone(), almond::models::FileMetadata {
+            location: almond::models::FileLocation::Local(path), extension: Some("mp4".into()),
+            mime_type: Some("video/mp4".into()), size: local.len() as u64, created_at: 1, pubkey: None,
+            expiration: None, origin: Default::default(),
+        }).await;
+        assert_eq!(blob(&blossom, &format!("{local_hash}.mp4"), None).await, (StatusCode::OK, local.clone()));
+        assert_eq!(blob(&blossom, &format!("{local_hash}.mp4"), Some("bytes=2-5")).await, (StatusCode::PARTIAL_CONTENT, local[2..=5].to_vec()));
+        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), None).await.0, StatusCode::SERVICE_UNAVAILABLE);
+        // Back up: Almond's retry finds the bucket, the status flips and the S3 blob plays.
+        fake.resume().await;
+        let mut available = false;
+        for _ in 0..120 {
+            let (_, _, body) = send(&app, "/api/admin/storage", c, None).await;
+            if body["s3"]["available"] == true {
+                assert!(body["s3"]["lastError"].is_null(), "{body}");
+                available = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(250)).await;
+        }
+        assert!(available, "S3 never became available again");
+        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), None).await, (StatusCode::OK, in_s3.clone()));
+        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), Some("bytes=2-5")).await, (StatusCode::PARTIAL_CONTENT, in_s3[2..=5].to_vec()));
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]

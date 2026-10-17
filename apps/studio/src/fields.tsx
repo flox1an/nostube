@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { Label } from '@nostube/widgets/components/label'
 
 /** A labelled form field with an optional hint line. */
@@ -25,12 +26,14 @@ export function Field({
 /** A choice that fills its column; `selected` marks the one taken. */
 export function Tile({
   title,
+  icon: Icon,
   selected,
   onSelect,
   disabled,
   children,
 }: {
   title: string
+  icon: LucideIcon
   selected: boolean
   onSelect: () => void
   disabled?: boolean
@@ -46,7 +49,13 @@ export function Tile({
         selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:bg-muted'
       }`}
     >
-      <span className="block text-base font-medium">{title}</span>
+      <span className="flex items-start gap-3 text-base font-medium">
+        <Icon
+          aria-hidden="true"
+          className={`mt-0.5 size-5 shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground'}`}
+        />
+        <span>{title}</span>
+      </span>
       {children}
     </button>
   )

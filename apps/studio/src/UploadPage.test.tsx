@@ -72,7 +72,7 @@ const stateFor = (
     nsite: { gateway: 'nsite.lol', domain: '' },
     mirror: { relays: mirrorRelays, blossom: [] },
     search: { mode: 'off' },
-    storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
+    storage: { quotaGib: 0, freeSpaceReserveGib: 5, s3: null },
     site: {
       tagline: '',
       theme: { accent: '#6d28d9', font: 'sans' },

@@ -218,7 +218,7 @@ interface TrustScoreDialogProps {
 
 export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialogProps) {
   const { t } = useTranslation()
-  const { result, isLoading } = useTrustScoreDetail(pubkey)
+  const { result, isLoading } = useTrustScoreDetail(open ? pubkey : undefined)
   const stopEventPropagation = (event: SyntheticEvent) => {
     event.stopPropagation()
   }

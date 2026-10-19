@@ -28,7 +28,6 @@ import {
   type TrustScoreResult,
 } from '@/nostr/contextvm'
 import {
-  getCachedResult,
   getCachedResults,
   setCachedResults,
   clearAllCached,
@@ -78,6 +77,8 @@ const REQUEST_DELAY = 10000 // ms — send at most one trust score request every
 const MAX_FETCH_ATTEMPTS = 3
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
+const refreshPubkeys = new Set<string>()
+const inFlightPubkeys = new Set<string>()
 // Pubkeys that have been checked against IDB and confirmed missing/stale
 const confirmedMissing = new Set<string>()
 const fetchAttempts = new Map<string, number>()
@@ -115,18 +116,21 @@ function retryPubkeys(pubkeys: string[]) {
 
 /**
  * Request trust score for a pubkey.
- * Checks mem cache → schedules IDB check → batches for network request.
+ * Keeps cached scores visible; explicit refreshes bypass the cache freshness checks.
  */
-function requestTrustScore(pubkey: string) {
+function requestTrustScore(pubkey: string, refresh = false) {
   if (!pubkey || pubkey.trim() === '') return
   // Instance build: no trust provider (ContextVM is a hosted service); never ask, no score.
   if (getInstanceConfig()) {
     confirmedMissing.add(pubkey)
     return
   }
-  // Already in memory? Skip
-  if (getMemCached(pubkey)) return
-  // Already pending? Skip
+  if (inFlightPubkeys.has(pubkey)) return
+  if (refresh) {
+    refreshPubkeys.add(pubkey)
+    fetchAttempts.delete(pubkey)
+    confirmedMissing.delete(pubkey)
+  } else if (getMemCached(pubkey)) return
   if (pendingPubkeys.has(pubkey)) return
 
   pendingPubkeys.add(pubkey)
@@ -159,7 +163,7 @@ async function checkCacheAndFetch() {
 
     for (const [pk, result] of cached) {
       if (result) {
-        memCache.set(pk, result)
+        if (!getMemCached(pk)) memCache.set(pk, result)
       } else {
         missing.push(pk)
       }
@@ -170,8 +174,11 @@ async function checkCacheAndFetch() {
       notifyListeners()
     }
 
-    // Queue missing + stale pubkeys for network fetch
-    const toFetch = [...missing, ...stale]
+    // Explicit visits revalidate even fresh entries; all other callers retain the cache TTL.
+    const toFetch = pubkeys.filter(
+      pk =>
+        !inFlightPubkeys.has(pk) && (refreshPubkeys.delete(pk) || !cached.get(pk) || stale.has(pk))
+    )
     if (toFetch.length > 0) {
       for (const pk of toFetch) pendingPubkeys.add(pk)
       void processBatches()
@@ -202,6 +209,7 @@ async function processBatches() {
     while (pendingPubkeys.size > 0 && currentPrivateKeyHex) {
       const allPubkeys = Array.from(pendingPubkeys)
       pendingPubkeys.clear()
+      for (const pubkey of allPubkeys) inFlightPubkeys.add(pubkey)
 
       if (import.meta.env.DEV) {
         console.log('[TrustScore] Fetching', allPubkeys.length, 'pubkeys from relatr')
@@ -242,6 +250,7 @@ async function processBatches() {
           for (const r of validResults) {
             confirmedMissing.delete(r.targetPubkey)
             fetchAttempts.delete(r.targetPubkey)
+            refreshPubkeys.delete(r.targetPubkey)
           }
 
           // Persist to IndexedDB
@@ -256,12 +265,15 @@ async function processBatches() {
         } catch (error) {
           console.error('[TrustScore] Chunk fetch error:', error)
           retryPubkeys(chunk)
+        } finally {
+          for (const pubkey of chunk) inFlightPubkeys.delete(pubkey)
         }
       }
     }
   } catch (error) {
     console.error('[TrustScore] Connection error:', error)
   } finally {
+    inFlightPubkeys.clear()
     isProcessingBatches = false
   }
 }
@@ -306,6 +318,8 @@ export function useTrustScoreProvider() {
     if (prevPubkey && userPubkey && prevPubkey !== userPubkey) {
       memCache.clear()
       pendingPubkeys.clear()
+      refreshPubkeys.clear()
+      inFlightPubkeys.clear()
       confirmedMissing.clear()
       fetchAttempts.clear()
       void clearAllCached()
@@ -385,7 +399,7 @@ export function useTrustScore(pubkey: string | undefined): {
 
 /**
  * Get the full trust score result for a pubkey (includes component breakdown).
- * Loads from IndexedDB if not in memory, fetches from relatr if not cached.
+ * Revalidates on activation, keeping the in-memory or IndexedDB result as a fallback.
  */
 export function useTrustScoreDetail(pubkey: string | undefined): {
   result: TrustScoreResult | null
@@ -398,24 +412,13 @@ export function useTrustScoreDetail(pubkey: string | undefined): {
   }, [])
 
   useEffect(() => {
-    if (!pubkey) return
-
-    // If in memory, done
-    if (getMemCached(pubkey)) return
-
-    // Try loading from IDB, then fetch if needed
-    void getCachedResult(pubkey).then(result => {
-      if (result) {
-        memCache.set(pubkey, result)
-        notifyListeners()
-      } else {
-        requestTrustScore(pubkey)
-      }
-    })
+    if (pubkey) requestTrustScore(pubkey, true)
   }, [pubkey])
 
   const result = pubkey ? getMemCached(pubkey) : null
-  const isLoading = pubkey ? !result && !!currentPrivateKeyHex : false
+  const isLoading = pubkey
+    ? !result && !!currentPrivateKeyHex && !confirmedMissing.has(pubkey)
+    : false
 
   return { result, isLoading }
 }

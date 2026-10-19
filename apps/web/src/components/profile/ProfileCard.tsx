@@ -36,7 +36,8 @@ import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-se
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { Avatar, AvatarImage, AvatarFallback } from '@nostube/widgets/components/avatar'
 import { useTranslation } from 'react-i18next'
-import { TrustBadge } from '@/components/TrustBadge'
+import { TrustBadgeDisplay } from '@/components/TrustBadge'
+import { useTrustScoreDetail } from '@/hooks/useTrustScore'
 import { avatarFallbackUrl, TAP_TARGET } from '@/components/author/shared'
 
 type EditableProfile = Record<string, unknown> & {
@@ -118,6 +119,7 @@ export function ProfileCard({
   const { user } = useCurrentUser()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const metadata = useProfile({ pubkey })
+  const { result: trustScore } = useTrustScoreDetail(pubkey)
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
   const profilePicture = useImageCascade({ src: picture, variant: 'avatar', authorPubkey: pubkey })
@@ -196,7 +198,7 @@ export function ProfileCard({
             >
               {displayName}
             </h1>
-            <TrustBadge pubkey={pubkey} />
+            <TrustBadgeDisplay pubkey={pubkey} score={trustScore?.score} />
             {verifiedLabel && (
               <Tooltip>
                 <TooltipTrigger asChild>

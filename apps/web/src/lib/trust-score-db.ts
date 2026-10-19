@@ -52,29 +52,6 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise
 }
 
-/** Get a single cached trust score result. Returns the result and whether it's stale. */
-export async function getCachedResult(pubkey: string): Promise<TrustScoreResult | null> {
-  try {
-    const db = await openDB()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly')
-      const store = tx.objectStore(STORE_NAME)
-      const request = store.get(pubkey)
-      request.onsuccess = () => {
-        const entry = request.result as StoredEntry | undefined
-        if (entry) {
-          resolve(entry.result)
-        } else {
-          resolve(null)
-        }
-      }
-      request.onerror = () => reject(request.error)
-    })
-  } catch {
-    return null
-  }
-}
-
 /**
  * Get multiple cached trust score results (stale-while-revalidate).
  * Always returns a cached result if one exists, even if expired.

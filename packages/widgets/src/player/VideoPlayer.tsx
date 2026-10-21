@@ -31,6 +31,10 @@ import type { VideoChapter } from '@nostube/core/video-chapters'
 interface VideoPlayerProps {
   urls: string[]
   loop?: boolean
+  autoPlay?: boolean
+  muted?: boolean
+  controls?: boolean
+  preferredQuality?: string
   textTracks: TextTrack[]
   mime: string
   mediaType?: 'video' | 'audio'
@@ -72,6 +76,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   posterPreset = 'feed-preview-v1',
   textTracks,
   loop: loopProp = false,
+  autoPlay = true,
+  muted = false,
+  controls = true,
+  preferredQuality,
   onTimeUpdate,
   className,
   style,
@@ -142,19 +150,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       urls,
       sha256,
     })
-
-  // Cleanup: pause video and clear source on unmount to stop downloads
-  useEffect(() => {
-    const el = videoRef.current
-    return () => {
-      if (el) {
-        el.pause()
-        // Clear the source to abort any ongoing downloads
-        el.removeAttribute('src')
-        el.load() // This aborts any pending network requests
-      }
-    }
-  }, [])
 
   // Pause old video when URLs change (playlist mode: component doesn't remount)
   const prevUrlsRef = useRef<string[]>([])
@@ -276,9 +271,37 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     handleVariantChange,
     authorPubkey,
     eventId,
-    autoPlay: !contentWarning,
+    autoPlay: autoPlay && !contentWarning,
     onError: handleDashError,
   })
+
+  const { qualityOptions, selectQuality } = engine
+  const appliedQualityRef = useRef<string | null>(null)
+  const qualitySourceKey = `${urls.join('\0')}\0${preferredQuality ?? ''}`
+  useEffect(() => {
+    if (!preferredQuality || preferredQuality === 'auto') {
+      appliedQualityRef.current = null
+      return
+    }
+    if (appliedQualityRef.current === qualitySourceKey) return
+    const option = qualityOptions.find(option => option.label === preferredQuality)
+    if (!option) return
+    appliedQualityRef.current = qualitySourceKey
+    selectQuality(option.id)
+  }, [qualityOptions, selectQuality, preferredQuality, qualitySourceKey])
+
+  // Own native sources in one effect: StrictMode replays cleanup before setup.
+  // Managed sources are attached and released by their HLS/DASH adapters.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el || engine.managedSource) return
+    if (engine.elementSrc) el.setAttribute('src', engine.elementSrc)
+    return () => {
+      el.pause()
+      el.removeAttribute('src')
+      el.load()
+    }
+  }, [engine.elementSrc, engine.managedSource, isAudioOnly])
 
   const isHls = engine.mode === 'hls'
   const isDash = engine.mode === 'dash'
@@ -387,7 +410,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Explicit autoplay - browsers may block the autoPlay attribute, so we call play() explicitly
   useEffect(() => {
     const el = videoRef.current
-    if (!el || contentWarning || !videoUrl) return
+    if (!el || !autoPlay || contentWarning || !videoUrl) return
 
     let hasPlayed = false
 
@@ -418,7 +441,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         el.removeEventListener('loadeddata', attemptAutoplay)
       }
     }
-  }, [videoUrl, contentWarning])
+  }, [videoUrl, contentWarning, autoPlay])
 
   // Notify parent when video element is ready
   useEffect(() => {
@@ -1152,9 +1175,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           )}
           <audio
             ref={setMediaElementRef}
-            src={engine.managedSource ? undefined : engine.elementSrc}
             loop={loopEnabled}
-            autoPlay={!contentWarning}
+            autoPlay={autoPlay && !contentWarning}
+            muted={muted}
             playsInline
             className="absolute h-px w-px opacity-0 pointer-events-none"
             onError={handleVideoError}
@@ -1172,10 +1195,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       ) : (
         <video
           ref={setMediaElementRef}
-          src={engine.managedSource ? undefined : engine.elementSrc}
           poster={posterUrl ?? undefined}
           loop={loopEnabled}
-          autoPlay={!contentWarning}
+          autoPlay={autoPlay && !contentWarning}
+          muted={muted}
           playsInline
           className={`w-full object-contain ${effectiveCinemaMode && !isFullscreen ? 'max-h-[80dvh]' : 'h-full'}`}
           onError={handleVideoError}
@@ -1219,47 +1242,49 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       )}
 
       {/* Control bar */}
-      <ControlBar
-        isVisible={controlsVisibleForRender}
-        isPlaying={playerState.isPlaying}
-        currentTime={playerState.currentTime}
-        duration={playerState.duration}
-        bufferedPercentage={playerState.bufferedPercentage}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onSeek={playerState.seek}
-        onSeekingChange={handleSeekingChange}
-        volume={playerState.volume}
-        isMuted={playerState.isMuted}
-        onVolumeChange={playerState.setVolume}
-        onToggleMute={playerState.toggleMute}
-        playbackRate={playerState.playbackRate}
-        onPlaybackRateChange={playerState.setPlaybackRate}
-        qualityOptions={engine.qualityOptions}
-        selectedQuality={engine.selectedQuality}
-        activeQualityLabel={engine.activeQualityLabel}
-        onSelectQuality={engine.selectQuality}
-        hasCaptions={hasCaptions}
-        captionsEnabled={captionsEnabled}
-        onToggleCaptions={toggleCaptions}
-        textTracks={validatedTracks}
-        selectedSubtitleLang={selectedSubtitleLang}
-        onSubtitleChange={handleSubtitleChange}
-        isPipSupported={showPipButton}
-        onTogglePip={togglePip}
-        cinemaMode={desktopPlayerControls ? false : effectiveCinemaMode}
-        onToggleCinemaMode={desktopPlayerControls || isAudioOnly ? undefined : onToggleCinemaMode}
-        isSidebarOpen={desktopPlayerControls?.isInspectorOpen}
-        onToggleSidebar={desktopPlayerControls?.toggleInspector}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
-        eventId={eventId}
-        authorPubkey={authorPubkey}
-        chapters={chapters}
-        showTimelineMarkers={showTimelineMarkers}
-        loopEnabled={loopEnabled}
-        onToggleLoop={toggleLoop}
-      />
+      {controls && (
+        <ControlBar
+          isVisible={controlsVisibleForRender}
+          isPlaying={playerState.isPlaying}
+          currentTime={playerState.currentTime}
+          duration={playerState.duration}
+          bufferedPercentage={playerState.bufferedPercentage}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onSeek={playerState.seek}
+          onSeekingChange={handleSeekingChange}
+          volume={playerState.volume}
+          isMuted={playerState.isMuted}
+          onVolumeChange={playerState.setVolume}
+          onToggleMute={playerState.toggleMute}
+          playbackRate={playerState.playbackRate}
+          onPlaybackRateChange={playerState.setPlaybackRate}
+          qualityOptions={engine.qualityOptions}
+          selectedQuality={engine.selectedQuality}
+          activeQualityLabel={engine.activeQualityLabel}
+          onSelectQuality={engine.selectQuality}
+          hasCaptions={hasCaptions}
+          captionsEnabled={captionsEnabled}
+          onToggleCaptions={toggleCaptions}
+          textTracks={validatedTracks}
+          selectedSubtitleLang={selectedSubtitleLang}
+          onSubtitleChange={handleSubtitleChange}
+          isPipSupported={showPipButton}
+          onTogglePip={togglePip}
+          cinemaMode={desktopPlayerControls ? false : effectiveCinemaMode}
+          onToggleCinemaMode={desktopPlayerControls || isAudioOnly ? undefined : onToggleCinemaMode}
+          isSidebarOpen={desktopPlayerControls?.isInspectorOpen}
+          onToggleSidebar={desktopPlayerControls?.toggleInspector}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          eventId={eventId}
+          authorPubkey={authorPubkey}
+          chapters={chapters}
+          showTimelineMarkers={showTimelineMarkers}
+          loopEnabled={loopEnabled}
+          onToggleLoop={toggleLoop}
+        />
+      )}
 
       {showContentWarning && (
         <button

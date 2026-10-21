@@ -151,7 +151,12 @@ export class PlaybackUrlLadder {
 
   private sourceUrls(options: PlaybackUrlLadderOptions): string[] {
     if (!options.variants) return options.urls
-    return filterCompatibleVariants(options.variants).map(variant => variant.url)
+    const compatible = filterCompatibleVariants(options.variants).flatMap(variant => [
+      variant.url,
+      ...variant.fallbackUrls,
+    ])
+    const allowed = new Set(compatible)
+    return [...new Set([...options.urls.filter(url => allowed.has(url)), ...compatible])]
   }
 
   private generate(urls: string[], sha256?: string): GeneratedUrls {

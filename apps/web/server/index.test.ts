@@ -69,6 +69,22 @@ describe('video oEmbed HTTP contract', () => {
     })
   })
 
+  it('uses the HTTPS proxy scheme for the embedded player', async () => {
+    const response = await createApp().request(requestUrl(videoUrl).replace('https:', 'http:'), {
+      headers: { 'X-Forwarded-Proto': 'https' },
+    })
+    const body = await response.json()
+    expect(body.html).toContain(`src="${origin}/embed.html?v=${identifier}"`)
+    expect(body.provider_url).toBe(origin)
+  })
+
+  it('ignores an invalid forwarded scheme', async () => {
+    const response = await createApp().request(requestUrl(videoUrl), {
+      headers: { 'X-Forwarded-Proto': 'javascript' },
+    })
+    expect((await response.json()).html).toContain(`src="${origin}/embed.html`)
+  })
+
   it('returns 404 for an unknown video URL', async () => {
     vi.mocked(fetchEvent).mockResolvedValue(null)
     const nevent = neventEncode({ id: 'a'.repeat(64), relays: [] })
@@ -129,6 +145,17 @@ describe('video page oEmbed discovery', () => {
     expect(html).toContain(
       `href="${origin}/oembed?url=${encodeURIComponent(`${origin}/v/${nevent}`)}&amp;format=json"`
     )
+  })
+
+  it('uses HTTPS for canonical, player and discovery URLs behind a TLS proxy', async () => {
+    const response = await createApp().request(`http://videos.example/v/${identifier}`, {
+      headers: { 'X-Forwarded-Proto': 'https' },
+    })
+    const html = await response.text()
+    expect(html).toContain(`content="${origin}/v/${identifier}"`)
+    expect(html).toContain(`content="${origin}/embed.html?v=${identifier}"`)
+    expect(html).toContain(`href="${origin}/oembed?`)
+    expect(html).not.toContain('http://videos.example')
   })
 
   it('does not advertise oEmbed on playlist pages, which the endpoint rejects', async () => {

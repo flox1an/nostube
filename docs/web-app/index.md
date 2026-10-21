@@ -82,11 +82,9 @@ PORT=8080 node server-dist/standalone.js
 
 ### Behind a reverse proxy
 
-Put the server behind a proxy that terminates TLS and forwards the original `Host` header. The server builds the absolute URLs in link previews and oEmbed responses (`og:url`, `twitter:player`, the iframe `src`) from that header and from the scheme of the connection it receives.
+Put the server behind a proxy that terminates TLS and forwards the original `Host` header. Set `X-Forwarded-Proto: https` on that proxy so link previews and oEmbed responses (`og:url`, `twitter:player`, the iframe `src`) use HTTPS. Without this header the server uses the scheme of its incoming connection. Only `http` and `https` are accepted.
 
-::: warning
-The server does not read `X-Forwarded-Proto`. Behind a TLS-terminating proxy these URLs start with `http://`, which browsers refuse to load in an iframe on an HTTPS page.
-:::
+The proxy must **overwrite** `X-Forwarded-Proto`, not pass a client-supplied value through. Keep the backend port private to the proxy network.
 
 ## Configuration
 

@@ -10,41 +10,52 @@ import { defineConfig, type Plugin } from 'vite'
  */
 const embedSingleFilePlugin = (): Plugin => ({
   name: 'embed-single-file',
-  enforce: 'post',
-  generateBundle(_options, bundle) {
-    const html = bundle['embed.html']
-    if (!html || html.type !== 'asset' || typeof html.source !== 'string') {
-      throw new Error('Expected embed.html in the generated bundle')
-    }
+  // 'post' order: Vite rewrites its `__VITE_PRELOAD__` markers in generateBundle too; inlining
+  // the chunk before that leaves a bare `__VITE_PRELOAD__` reference that throws at runtime.
+  generateBundle: {
+    order: 'post',
+    handler(_options, bundle) {
+      const html = bundle['embed.html']
+      if (!html || html.type !== 'asset' || typeof html.source !== 'string') {
+        throw new Error('Expected embed.html in the generated bundle')
+      }
 
-    let source = html.source
-    for (const file of Object.values(bundle)) {
-      const name = file.fileName.replaceAll('.', '\\.')
-      if (file.type === 'chunk' && file.isEntry) {
-        const code = file.code.replace(/<(\/script|!--)/gi, '\\x3C$1').trim()
-        source = source.replace(
-          new RegExp(`<script([^>]*?) src="[^"]*?${name}"([^>]*)></script>`),
-          (_, before, after) => `<script${before}${after}>${code}</script>`
-        )
-      } else if (file.type === 'asset' && file.fileName.endsWith('.css')) {
-        const css = String(file.source).replace('@charset "UTF-8";', '').trim()
-        source = source.replace(
-          new RegExp(`<link([^>]*?) href="[^"]*?${name}"([^>]*)>`),
-          (_, before, after) => `<style${before}${after}>${css}</style>`
-        )
-      } else continue
-      delete bundle[file.fileName]
-    }
+      let source = html.source
+      for (const file of Object.values(bundle)) {
+        const name = file.fileName.replaceAll('.', '\\.')
+        if (file.type === 'chunk' && file.isEntry) {
+          const code = file.code.replace(/<(\/script|!--)/gi, '\\x3C$1').trim()
+          source = source.replace(
+            new RegExp(`<script([^>]*?) src="[^"]*?${name}"([^>]*)></script>`),
+            (_, before, after) => `<script${before}${after}>${code}</script>`
+          )
+        } else if (file.type === 'asset' && file.fileName.endsWith('.css')) {
+          const css = String(file.source).replace('@charset "UTF-8";', '').trim()
+          source = source.replace(
+            new RegExp(`<link([^>]*?) href="[^"]*?${name}"([^>]*)>`),
+            (_, before, after) => `<style${before}${after}>${css}</style>`
+          )
+        } else continue
+        delete bundle[file.fileName]
+      }
 
-    const scriptHashes = Array.from(
-      source.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),
-      match => `'sha256-${createHash('sha256').update(match[1]).digest('base64')}'`
-    )
-    if (scriptHashes.length === 0) {
-      throw new Error('Expected at least one inline script in embed.html')
-    }
+      const scriptHashes = Array.from(
+        source.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),
+        match => `'sha256-${createHash('sha256').update(match[1]).digest('base64')}'`
+      )
+      if (scriptHashes.length === 0) {
+        throw new Error('Expected at least one inline script in embed.html')
+      }
 
-    html.source = source.replace("script-src 'self'", `script-src 'self' ${scriptHashes.join(' ')}`)
+      if (source.includes('__VITE_PRELOAD__')) {
+        throw new Error('embed.html still contains __VITE_PRELOAD__ markers')
+      }
+
+      html.source = source.replace(
+        "script-src 'self'",
+        `script-src 'self' ${scriptHashes.join(' ')}`
+      )
+    },
   },
 })
 

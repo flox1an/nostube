@@ -27,6 +27,7 @@ import {
   PRESET_EVENT_KIND,
   type NostubePreset,
 } from '@nostube/core'
+import '@/i18n/config'
 import './embed.css'
 
 interface EmbedState {

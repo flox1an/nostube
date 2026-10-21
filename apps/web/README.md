@@ -77,7 +77,7 @@ nostube includes a standalone embeddable video player that can be embedded on an
 
 ```html
 <iframe
-  src="https://nostu.be/embed?v=nevent1qqs..."
+  src="https://nostu.be/embed.html?v=nevent1qqs..."
   width="640"
   height="360"
   frameborder="0"

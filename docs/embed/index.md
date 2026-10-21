@@ -31,6 +31,11 @@ Older documentation used `https://nostu.be/embed?v=…`. That path loads the ful
 | --- | --- | --- | --- |
 | `v` | `nevent1…`, `naddr1…` or `note1…` | required | The video to play. |
 | `t` | whole seconds | `0` | Start position, e.g. `t=90` starts at 1:30. |
+| `autoplay` | `1` | off | Try to start playback automatically. Browsers may require `muted=1`. |
+| `muted` | `1` | off | Start with sound muted; the viewer can unmute. |
+| `controls` | `0` | on | Hide the control bar. Click/tap and keyboard playback controls still work. |
+| `branding` | `0` | on | Hide the link to watch the video on the site. Does not hide safety notices. |
+| `quality` | `auto`, `1080p`, `720p`, `480p`, `360p`, etc. | `auto` | Select a matching video variant or HLS quality initially; unavailable qualities keep the player's default. DASH stays adaptive. Viewers can still change quality. |
 | `loop` | `1` | off | Loop the video. Without it, the viewer's own loop setting in the player applies. |
 | `title` | `0` | on | `0` hides the title and author overlay. |
 | `zaps` | `0` | on | `0` hides the zap markers on the progress bar. |
@@ -50,11 +55,9 @@ Example: start at 30 seconds, loop, no overlay, red buttons:
 ></iframe>
 ```
 
-`autoplay`, `muted`, `controls`, `branding` and `quality` from older documentation are ignored. The player always shows its controls, starts unmuted and picks the quality itself; viewers can change quality in the player's settings menu.
-
 ## Playback
 
-**Autoplay.** The player always tries to start playing once the video can play. Browsers block autoplay with sound in many cases, especially when the viewer has not interacted with your site yet; the viewer then presses play. Keep `allow="autoplay"` on the iframe, otherwise the browser blocks it every time.
+**Autoplay.** Playback starts on click by default. Add `autoplay=1` to request automatic playback and `muted=1` for the best chance of the browser allowing it. Browsers often block autoplay with sound, especially before the viewer interacts with your site. Keep `allow="autoplay"` on the iframe; it grants permission but does not enable autoplay by itself.
 
 **Title overlay.** The title links to the video's page and the author's name to their profile, both in a new tab. The overlay is shown on load and fades out 2 seconds after the mouse stops moving over the player.
 
@@ -180,6 +183,6 @@ next to Open Graph tags and, for events with a video URL, a Twitter player card 
 | **Video unavailable - all sources failed** | No URL in the event and no server in the author's Blossom list returned the file. |
 | **Sensitive content** / **Couldn't verify this video** | See [Content warnings and NSFW](#content-warnings-and-nsfw). |
 | The Nostube app loads instead of the player | The URL uses `/embed?v=`; use `/embed.html?v=`. |
-| The video does not start by itself | The browser blocked autoplay with sound, or the iframe lacks `allow="autoplay"`. |
+| The video does not start by itself | Add `autoplay=1&muted=1` and `allow="autoplay"` on the iframe. The browser may still block autoplay. |
 | The iframe stays blank | Your page's Content Security Policy blocks the frame; add the embed origin to `frame-src`. |
 | A link preview shows no player | The site is statically hosted; link previews need the [Docker image](/web-app/#docker). |

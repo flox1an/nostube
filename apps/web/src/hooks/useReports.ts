@@ -1,40 +1,21 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
-import type { Filter } from 'nostr-tools'
 import type { ProcessedReportEvent } from '@nostube/core/reports'
 
 export type { ProcessedReportEvent }
 
-interface UseReportsParams {
-  p?: string // pubkey
-  e?: string // eventId
-  x?: string // blob hash
-}
-
-export const useReports = ({ p, e, x }: UseReportsParams = {}) => {
+/**
+ * Reports (kind 1984) by one author, read from the local event store. Only the
+ * author's own reports may act on what the app shows: a stranger's report must
+ * never hide or block anything. Without an author there are no reports.
+ */
+export const useReports = (author: string | undefined) => {
   const eventStore = useEventStore()
 
-  // Build filter for reports (kind 1984)
-  const filter = useMemo(() => {
-    const baseFilter: Filter = {
-      kinds: [1984],
-    }
-
-    if (p) {
-      baseFilter['#p'] = [p]
-    }
-    if (e) {
-      baseFilter['#e'] = [e]
-    }
-    if (x) {
-      baseFilter['#x'] = [x]
-    }
-
-    return baseFilter
-  }, [p, e, x])
-
-  // Use EventStore timeline to get reports
-  const rawReportEvents = use$(() => eventStore.timeline([filter]), [eventStore, filter])
+  const rawReportEvents = use$(
+    () => (author ? eventStore.timeline([{ kinds: [1984], authors: [author] }]) : undefined),
+    [eventStore, author]
+  )
   const reportEvents = useMemo(() => rawReportEvents ?? [], [rawReportEvents])
 
   const processedReports = useMemo(() => {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { useReports } from './useReports'
+import { useCurrentUser } from './useCurrentUser'
 import type { ProcessedReportEvent, ReportedPubkeys } from '@nostube/core/reports'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useMutedPubkeys } from './useMutedPubkeys'
@@ -9,12 +10,13 @@ export type { ReportedPubkeys }
 
 /**
  * Accounts the app blocks outright: blocked by the active preset, or reported
- * as illegal. Their profile and video pages are gated entirely, so this must
+ * as illegal by the signed-in user. Their profile and video pages are gated entirely, so this must
  * NOT include the user's own mutes — muting hides content from feeds, it does
  * not lock the user out of a page they deliberately navigated to.
  */
 export const useBlockedPubkeys = (): ReportedPubkeys => {
-  const { data: reports } = useReports({})
+  const { user } = useCurrentUser()
+  const { data: reports } = useReports(user?.pubkey)
   const { presetContent } = useSelectedPreset()
 
   return useMemo(() => {

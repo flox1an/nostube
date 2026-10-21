@@ -137,6 +137,10 @@ export function EmbedApp({ params, video, playback, profile, error, isLoading }:
         posterHash={posterHash}
         posterPreset="embed-card-v1"
         loop={params.loop}
+        autoPlay={params.autoplay}
+        muted={params.muted}
+        controls={params.controls}
+        preferredQuality={params.preferredQuality}
         initialPlayPos={params.startTime}
         contentWarning={undefined} // Already handled above
         authorPubkey={video.pubkey}
@@ -148,6 +152,17 @@ export function EmbedApp({ params, video, playback, profile, error, isLoading }:
         chapters={chapters}
         showTimelineMarkers={params.showZaps}
       />
+
+      {params.showBranding && (
+        <a
+          href={links.watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute right-3 bottom-16 rounded bg-black/60 px-3 py-1 text-sm text-white hover:bg-black/80"
+        >
+          {links.watchLabel}
+        </a>
+      )}
 
       {/* Title overlay */}
       {params.showTitle && (

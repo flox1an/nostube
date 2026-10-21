@@ -9,6 +9,26 @@ describe('PlaybackUrlLadder', () => {
       blossomServers: [],
       mediaType: 'video',
     })
+  it('starts with the selected quality and its mirrors before trying other compatible variants', () => {
+    const high = { url: 'https://media.example/high.mp4', fallbackUrls: [], quality: '1080p' }
+    const low = {
+      url: 'https://media.example/low.mp4',
+      fallbackUrls: ['https://mirror.example/low.mp4'],
+      quality: '480p',
+    }
+    const ladder = new PlaybackUrlLadder({
+      urls: [low.url, ...low.fallbackUrls],
+      variants: [high, low],
+      blossomServers: [],
+      mediaType: 'video',
+    })
+    expect(ladder.currentUrl).toBe(low.url)
+    ladder.tryNext()
+    expect(ladder.currentUrl).toBe(low.fallbackUrls[0])
+    ladder.tryNext()
+    expect(ladder.currentUrl).toBe(high.url)
+  })
+
   it('advances after an active URL fails and does not retry it after refresh', () => {
     const ladder = createLadder()
 

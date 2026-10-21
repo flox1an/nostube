@@ -24,6 +24,7 @@
       "featured": "Empieza aquí",
       "selected": "Obras seleccionadas",
       "latest": "Vídeos recientes",
+      "new": "Novedades desde tu última visita",
       "continue": "Seguir viendo",
       "clearProgress": "Borrar",
       "clearProgressLabel": "Borrar el progreso de reproducción en este dispositivo",
@@ -65,6 +66,9 @@
     "tag": {
       "title": "Vídeos con #{{tag}}",
       "back": "Todos los vídeos"
+    },
+    "feed": {
+      "label": "Feed RSS"
     },
     "search": {
       "label": "Buscar vídeos",

@@ -77,7 +77,7 @@ nostube includes a standalone embeddable video player that can be embedded on an
 
 ```html
 <iframe
-  src="https://nostu.be/embed?v=nevent1qqs..."
+  src="https://nostu.be/embed.html?v=nevent1qqs..."
   width="640"
   height="360"
   frameborder="0"
@@ -86,29 +86,7 @@ nostube includes a standalone embeddable video player that can be embedded on an
 </iframe>
 ```
 
-**Features:**
-
-- ✅ iframe-based embedding
-- ✅ Native HTML5 video controls
-- ✅ Content warning overlays
-- ✅ Title and author overlays
-- ✅ Custom accent colors
-- ✅ ~35KB gzipped bundle
-
-**Documentation:**
-
-- [Embed Documentation](./public/embed-README.md) - Complete embedding guide
-- [Interactive Examples](https://nostu.be/embed-examples.html) - Live demos
-
-**Development:**
-
-```bash
-# Build embed player
-npm run build:embed
-
-# Watch mode
-npm run build:embed:watch
-```
+Parameters, oEmbed and self-hosting: [Embed player docs](https://flox1an.github.io/nostube/embed/).
 
 ## Development
 
@@ -117,22 +95,9 @@ npm install
 npm run dev
 ```
 
-## Docker Deployment
+## Self-hosting
 
-nostube can be deployed using Docker with runtime environment configuration. See [DOCKER.md](./DOCKER.md) for detailed instructions.
-
-Quick start:
-
-```bash
-# Using Docker Compose
-docker-compose up -d
-
-# Using Docker CLI
-docker build -t nostube:latest .
-docker run -d -p 8080:80 nostube:latest
-```
-
-The application will be available at `http://localhost:8080`
+Static hosting, the Docker image and the oEmbed server: [Self-hosting the web app](https://flox1an.github.io/nostube/web-app/).
 
 ## License
 

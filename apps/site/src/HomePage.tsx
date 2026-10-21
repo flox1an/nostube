@@ -3,21 +3,33 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Play } from 'lucide-react'
 import type { InstanceConfig } from '@nostube/core/instance-config'
-import type { VideoEvent } from '@nostube/core/video-event'
+import { getPublishDate, type VideoEvent } from '@nostube/core/video-event'
 import { Button } from '@nostube/widgets/components/button'
 import { GridPage, VideoLinks } from './GridPage'
+import { previousVisit } from './last-visit'
 import type { AgeGate } from './use-age-gate'
+import { useCreatorVideos } from './use-creator-videos'
 import { useVideosByRef } from './use-videos-by-ref'
 import { useWatchProgressList } from './use-watch-progress'
 import { videoPath } from './video-path'
 
 /** Videos shown in the "continue watching" row: a short row, not a history. */
 const CONTINUE_LIMIT = 4
+/** Videos shown as new since the last visit: a hint, the grid below has them all. */
+const NEW_LIMIT = 4
 
 export function HomePage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
   const { t } = useTranslation()
   const home = config.site.homepage
   const { list: progress, clear } = useWatchProgressList()
+  const [since] = useState(previousVisit)
+  // Same filter as the grid below, so the same timeline loader: no second request.
+  const { videos } = useCreatorVideos(config)
+  const fresh = useMemo(
+    () =>
+      since === undefined ? [] : videos.filter(v => getPublishDate(v) > since).slice(0, NEW_LIMIT),
+    [videos, since]
+  )
   const found = useVideosByRef(config, [
     home?.featured ?? '',
     ...(home?.selected ?? []),
@@ -82,6 +94,14 @@ export function HomePage({ config, gate }: { config: InstanceConfig; gate: AgeGa
               ))}
             </div>
           )}
+        </section>
+      )}
+      {fresh.length > 0 && (
+        <section className="space-y-4" aria-labelledby="new-videos">
+          <h2 id="new-videos" className="text-xl font-semibold sm:text-2xl">
+            {t('site.home.new')}
+          </h2>
+          <VideoLinks videos={fresh} gate={gate} />
         </section>
       )}
       {continuing.length > 0 && (

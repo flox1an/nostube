@@ -31,9 +31,14 @@ export function createApp() {
     return indexHtml
   }
 
-  function getBaseUrl(c: { req: { url: string } }): string {
+  function getBaseUrl(c: {
+    req: { url: string; header: (name: string) => string | undefined }
+  }): string {
     const url = new URL(c.req.url)
-    return `${url.protocol}//${url.host}`
+    // The TLS-terminating proxy must overwrite this header, not pass client input through.
+    const proto = c.req.header('X-Forwarded-Proto')?.trim().toLowerCase()
+    if (proto === 'https' || proto === 'http') url.protocol = `${proto}:`
+    return url.origin
   }
 
   async function handlePage(

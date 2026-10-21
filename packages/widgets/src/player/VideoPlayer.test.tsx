@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoPlayer } from './VideoPlayer'
@@ -57,9 +58,9 @@ vi.mock('./SeekIndicator', () => ({
 }))
 
 vi.mock('./engines', () => ({
-  usePlaybackEngine: () => ({
+  usePlaybackEngine: ({ videoUrl }: { videoUrl: string | null }) => ({
     mode: 'native',
-    elementSrc: undefined,
+    elementSrc: videoUrl ?? undefined,
     managedSource: false,
     loading: false,
     error: null,
@@ -175,6 +176,41 @@ describe('VideoPlayer source failures', () => {
     vi.restoreAllMocks()
   })
 
+  it('keeps the native source through StrictMode replay, replaces it, and releases it on unmount', () => {
+    const props = { textTracks: [], mime: 'video/mp4' }
+    const { container, rerender, unmount } = render(
+      <StrictMode>
+        <VideoPlayer {...props} urls={['https://example.com/first.mp4']} />
+      </StrictMode>
+    )
+    const video = container.querySelector('video')!
+    expect(video).toHaveAttribute('src', 'https://example.com/first.mp4')
+
+    rerender(
+      <StrictMode>
+        <VideoPlayer {...props} urls={['https://example.com/second.mp4']} />
+      </StrictMode>
+    )
+    expect(video).toHaveAttribute('src', 'https://example.com/second.mp4')
+
+    unmount()
+    expect(video).not.toHaveAttribute('src')
+    expect(video.pause).toHaveBeenCalled()
+  })
+
+  it('does not start playback when autoplay is disabled, but starts when enabled', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue()
+    const props = { urls: ['https://example.com/video.mp4'], textTracks: [], mime: 'video/mp4' }
+    const { container, rerender } = render(<VideoPlayer {...props} autoPlay={false} />)
+    const video = container.querySelector('video')!
+    fireEvent.loadedData(video)
+    fireEvent.canPlay(video)
+    expect(play).not.toHaveBeenCalled()
+
+    rerender(<VideoPlayer {...props} autoPlay />)
+    fireEvent.canPlay(video)
+    expect(play).toHaveBeenCalledTimes(1)
+  })
   it('does not require CORS for native video playback', () => {
     const { container } = render(
       <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />

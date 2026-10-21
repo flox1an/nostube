@@ -13,7 +13,6 @@ export default tseslint.config(
       'dist',
       'dist-instance',
       'public/embed-*test*.html',
-      'docs/prototypes/*.html',
       '.worktrees',
       '.claude',
       'src-tauri',

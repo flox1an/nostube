@@ -15,7 +15,7 @@ export interface OEmbedResponse {
   cache_age: number
 }
 
-/** Video oEmbed response per docs/plans/2025-11-27-oembed-service-design.md (fixed 640x360 player). */
+/** Video oEmbed response (fixed 640x360 player), documented in docs/embed/index.md. */
 export function buildOEmbed(meta: VideoMeta, embedUrl: string, pageUrl: string): OEmbedResponse {
   const providerUrl = new URL(pageUrl).origin
   return {

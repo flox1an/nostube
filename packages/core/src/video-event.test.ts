@@ -50,7 +50,7 @@ vi.mock('./media-url-generator', () => ({
   generateMediaUrls: vi.fn(({ urls }) => ({ urls })),
 }))
 
-// Real event data from docs/example-events.md
+// Real event data (a zap.stream live event)
 const zapStreamEvent = {
   content: '',
   created_at: 1763167655,

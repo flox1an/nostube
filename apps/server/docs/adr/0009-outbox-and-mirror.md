@@ -25,5 +25,5 @@ The spec ("Externe Synchronisierung", "Follow versus lokale Redundanz") asks for
 - **Enqueue by scanning the relay for events newer than a cursor**: rejected. It cannot tell a replayed event from a new one, and it needs a cursor per target.
 - **Sign mirror requests in the browser (the studio's signer)**: rejected. Jobs run without the owner; only a server-held key can sign then. An owner with their own key can mirror events (no signing needed) but not blobs.
 - **Always push bytes instead of `PUT /mirror`**: rejected; public origins retain the cheaper pull request. ADR 0013 implements streamed push only where targets cannot reach the instance.
-- **kind 1063 mirror announcements for the copies** (docs/plans/2026-02-04-mirror-1063-publishing-design.md): a separate follow-up. Clients find a copy only if the event lists it; this change makes the copies, not the announcements.
+- **kind 1063 mirror announcements for the copies**: a separate follow-up. Clients find a copy only if the event lists it; this change makes the copies, not the announcements.
 - **Pull mirroring of other creators' content ("follow")**: out of scope; the spec keeps displayed creators and locally mirrored assets apart.

@@ -1,6 +1,6 @@
 # Nostube
 
-Monorepo for Nostube.
+Monorepo for Nostube. Documentation: <https://flox1an.github.io/nostube/> (source in `docs/`).
 
 | Path | What it is |
 |---|---|
@@ -11,6 +11,6 @@ Monorepo for Nostube.
 | `packages/core` | Shared logic without React: Nostr client, media URL ladder, HLS loader, instance config (`@nostube/core`, internal, not published) |
 | `packages/widgets` | Shared React components for the apps (`@nostube/widgets`, internal) |
 
-More apps (`studio`) follow; see `docs/adr/`.
+Architecture decisions are in `docs/adr/` and `apps/server/docs/adr/`.
 
 Dependencies are installed once at the repository root (npm workspaces): `npm ci`, then `cd apps/web && npm run build`.

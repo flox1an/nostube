@@ -6,7 +6,7 @@
 #   docker build -f apps/server/Dockerfile -t nostube-server .
 #
 # The image serves plain HTTP on 8080: put a TLS-terminating reverse proxy in front of it
-# (docs/deploy.md). Everything the instance stores lives in the volume at /data.
+# (docs/server/tls.md). Everything the instance stores lives in the volume at /data.
 
 # 1. The web assets: site, studio and embed player (scripts/build-server-web.sh).
 FROM node:24-bookworm-slim AS web

@@ -17,7 +17,7 @@ export interface SignedEvent extends UnsignedEvent {
 /**
  * Whoever signs for the creator: the server (managed key) or the Nostr account logged in in this
  * browser (own key: extension, nsec, bunker or Nostr Connect). The studio only talks to this
- * interface (docs/studio-spec.md).
+ * interface (docs/specs/studio.md).
  */
 export interface Signer {
   getPublicKey(): Promise<string>

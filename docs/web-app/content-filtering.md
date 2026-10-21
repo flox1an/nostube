@@ -42,7 +42,7 @@ A preset is a moderation list that someone publishes as a Nostr event (kind `300
 
 The preset is a safety net for creators who don't label their content: one entry covers the whole account, including videos published later.
 
-Accounts reported as illegal ([NIP-56](https://github.com/nostr-protocol/nips/blob/master/56.md) report events the app has loaded) are blocked like preset-blocked accounts.
+Accounts you reported as illegal are blocked like preset-blocked accounts (see [Your own filters](#your-own-filters)). Reports by other people never block anything.
 
 ## Trust filter
 
@@ -53,14 +53,14 @@ Trust scores come from Relatr, a trust service that the app queries over Nostr (
 
 An author passes the filter when the personal score is at least **40 %** and the global score at least **20 %**. You and the authors you follow (your media follow list, kind `10020`) always pass. Authors without scores yet are hidden; that is why new accounts may not show up at first.
 
-The filter is on by default on the home page, Shorts, category and tag pages; the shield button next to the feed switches it. Turning it off shows a warning the first time. It also applies to relay-based suggestions next to a video. Search, Subscriptions, profile pages and direct links are not filtered by trust.
+The filter is on by default on the home page, Shorts, category and tag pages; the shield button next to the feed switches it. Turning it off shows a warning the first time. Suggestions next to a video are always filtered, whether they come from the search service or from relays. Search, Subscriptions, profile pages and direct links are not filtered by trust.
 
 The shield next to an author's name shows their trust level; click it for the scores.
 
 ## Your own filters
 
 - **Mutes** hide an account's videos and comments from feeds, suggestions and comment threads. A profile you open on purpose still shows.
-- **Reports** (the report button on videos and comments) publish a NIP-56 report. Reports of illegal content block the account in your app.
+- **Reports** (the report button on videos and comments) publish a [NIP-56](https://github.com/nostr-protocol/nips/blob/master/56.md) report. If you report an account as illegal, it is blocked in your app. Reports by other accounts have no effect.
 
 ## Nostube Server instances
 

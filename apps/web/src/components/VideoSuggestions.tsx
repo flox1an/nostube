@@ -20,7 +20,7 @@ import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
-import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
+import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { passesTrustFilter } from '@/hooks/useTrustFilter'
 import { cn, combineRelays } from '@/lib/utils'
@@ -533,34 +533,46 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const { followedPubkeys } = useFollowSet()
   const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])
 
-  const suggestionPubkeys = useMemo(
-    () => [...new Set(suggestions.map(v => v.pubkey))],
-    [suggestions]
+  // Score the authors of whichever list is shown: service results when available,
+  // otherwise the relay suggestions.
+  const trustPubkeys = useMemo(
+    () => [...new Set((filteredServiceVideos ?? suggestions).map(v => v.pubkey))],
+    [filteredServiceVideos, suggestions]
   )
-
-  // Don't request trust scores for relay suggestions when service results are shown —
-  // they won't be rendered, so the ContextVM calls would be wasted.
-  const trustPubkeys = filteredServiceVideos !== null ? [] : suggestionPubkeys
   const personalScores = useTrustScores(trustPubkeys)
   const globalScores = useGlobalScores(trustPubkeys)
 
   // Track if scores arrived after initial render (deferred filtering)
   const [scoresReady, setScoresReady] = useState(false)
   const hadScoresOnMount = useMemo(() => {
-    if (suggestionPubkeys.length === 0) return true
+    if (trustPubkeys.length === 0) return true
     // If any score is already available on first check, scores were cached
-    return suggestionPubkeys.some(pk => personalScores.get(pk) !== null)
+    return trustPubkeys.some(pk => personalScores.get(pk) !== null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    if (!scoresReady && suggestionPubkeys.some(pk => personalScores.get(pk) !== null)) {
+    if (!scoresReady && trustPubkeys.some(pk => personalScores.get(pk) !== null)) {
       setScoresReady(true)
     }
-  }, [personalScores, suggestionPubkeys, scoresReady])
+  }, [personalScores, trustPubkeys, scoresReady])
 
   // Fade in only when scores arrived after a delay (not cached from the start)
   const shouldFadeIn = !hadScoresOnMount && scoresReady
+
+  const trustedServiceVideos = useMemo(
+    () =>
+      filteredServiceVideos?.filter(v =>
+        passesTrustFilter({
+          authorPubkey: v.pubkey,
+          currentUserPubkey: user?.pubkey,
+          followedPubkeys: followedSet,
+          personalScore: personalScores.get(v.pubkey),
+          globalScore: globalScores.get(v.pubkey),
+        })
+      ) ?? null,
+    [filteredServiceVideos, personalScores, globalScores, followedSet, user]
+  )
 
   const filteredSuggestions = useMemo(() => {
     return suggestions.filter(v =>
@@ -576,13 +588,15 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   const showLoadingSkeletons =
     (isLoadingService && filteredServiceVideos === null && !servicePresetUnavailable) ||
-    (!filteredServiceVideos && isLoadingSuggestions && suggestions.length === 0)
+    (!filteredServiceVideos && isLoadingSuggestions && suggestions.length === 0) ||
+    // Service results arrived but none passes yet: wait for their trust scores.
+    (trustedServiceVideos?.length === 0 && hasPendingTrustScores(trustPubkeys))
 
   // Use service results when available, fall back to relay-based suggestions
   const useServiceResults = filteredServiceVideos !== null
 
   const { sameCreator: sameCreatorService, general: generalService } = partitionByAuthor(
-    filteredServiceVideos ?? [],
+    trustedServiceVideos ?? [],
     authorPubkey
   )
   const { sameCreator: sameCreatorRelay, general: generalRelay } = partitionByAuthor(
@@ -603,7 +617,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       {showLoadingSkeletons ? (
         Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
       ) : useServiceResults ? (
-        filteredServiceVideos!.length > 0 ? (
+        trustedServiceVideos!.length > 0 ? (
           <>
             {sameCreatorService.length > 0 && (
               <SuggestionsHeading>

@@ -54,13 +54,11 @@ const VIDEO_INDICATORS = new Set([
 ])
 
 /**
- * Calculate a global (non-personalized) score from the available video indicators,
- * multiplied by the report_penalty if relatr returns one.
+ * Calculate a global (non-personalized) score from the available video indicators.
  *
  * globalScore = avg(video_creator_activity, video_viewer_engagement, video_creator_comments)
- *             × report_penalty?
  *
- * report_penalty defaults to 1.0 when it is not present.
+ * A report_penalty from relatr is not applied here; the trust dialog shows it separately.
  */
 export function getGlobalScore(result: TrustScoreResult): number | null {
   const validators = result.components?.validators

@@ -50,7 +50,13 @@ export default defineConfig({
           { text: 'Operations', link: '/server/operations' },
         ],
       },
-      { text: 'Web app', items: [{ text: 'Self-hosting the web app', link: '/web-app/' }] },
+      {
+        text: 'Web app',
+        items: [
+          { text: 'Self-hosting the web app', link: '/web-app/' },
+          { text: 'Content filtering', link: '/web-app/content-filtering' },
+        ],
+      },
       {
         text: 'Embedded player',
         items: [{ text: 'Nostube Embedded Player', link: '/embed/' }],

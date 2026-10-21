@@ -658,7 +658,6 @@
         "description": "敏感内容可能包含裸露、色情或暴力内容。继续即表示您确认已年满 18 岁，并且在您所在地区观看此类内容是合法的。",
         "confirm": "我已年满 18 岁"
       },
-      "nsfwLockedInfo": "NSFW 内容已被隐藏，因为您的 NosTube 信任分数低于 20% 或尚未可用。通过使用平台来建立您的分数。",
       "language": "语言",
       "selectLanguage": "选择语言",
       "languageDescription": "选择用户界面的语言。",

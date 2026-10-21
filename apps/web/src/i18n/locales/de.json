@@ -658,7 +658,6 @@
         "description": "Sensible Inhalte können Nacktheit, sexuelle oder gewalttätige Darstellungen enthalten. Mit dem Fortfahren bestätigst du, dass du mindestens 18 Jahre alt bist und das Ansehen solcher Inhalte an deinem Aufenthaltsort erlaubt ist.",
         "confirm": "Ich bin 18 oder älter"
       },
-      "nsfwLockedInfo": "NSFW-Inhalte werden ausgeblendet, da dein NosTube-Vertrauensscore unter 20% liegt oder noch nicht verfügbar ist. Erhöhe deinen Score durch Interaktion mit der Plattform.",
       "language": "Sprache",
       "selectLanguage": "Sprache auswählen",
       "languageDescription": "Wähle die Sprache für die Benutzeroberfläche.",

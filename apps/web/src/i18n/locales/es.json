@@ -658,7 +658,6 @@
         "description": "El contenido sensible puede incluir desnudez, material sexual o violento. Al continuar confirmas que tienes al menos 18 años y que ver este contenido es legal donde te encuentras.",
         "confirm": "Tengo 18 años o más"
       },
-      "nsfwLockedInfo": "El contenido NSFW está oculto porque tu puntuación de confianza de NosTube está por debajo del 20% o aún no está disponible. Aumenta tu puntuación interactuando con la plataforma.",
       "language": "Idioma",
       "selectLanguage": "Seleccionar idioma",
       "languageDescription": "Elija el idioma para la interfaz de usuario.",

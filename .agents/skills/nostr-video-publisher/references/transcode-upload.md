@@ -73,12 +73,28 @@ ffmpeg -i input.mov \
 
 ## Thumbnail
 
-Generate a WebP thumbnail:
+Never take the first frame or a fixed early timestamp blindly, and do not trust a platform-provided poster (X/YouTube posters are often the black first frame): intros, fades and title cards are frequently black. Pick the frame like this:
+
+1. Extract candidates spread over the video (e.g. 10 positions from ~5% to ~90% of the duration). The `thumbnail` filter picks the most representative frame of a window, which avoids transition and motion-blur frames:
 
 ```bash
-ffmpeg -ss 00:00:03 -i output_1080p.mp4 \
-  -frames:v 1 -vf "scale=1280:-2" \
-  -quality 80 thumbnail.webp
+for t in 10 25 40 55 70 85 100 115 130 145; do  # seconds, spread over the duration
+  ffmpeg -v error -y -ss $t -i video.mp4 -vf "thumbnail=90,scale=480:-2" -frames:v 1 cand_$t.jpg
+done
+```
+
+2. Measure the mean luma of each candidate (and of any existing poster) and reject dark or washed-out frames (YAVG below ~25 or above ~230 of 255):
+
+```bash
+ffprobe -v error -f lavfi -i "movie=cand_10.jpg,signalstats" \
+  -show_entries frame_tags=lavfi.signalstats.YAVG -of csv=p=0
+```
+
+3. If you can view images, build a contact sheet (`ffmpeg -pattern_type glob -i 'cand_*.jpg' -vf tile=4x3 sheet.jpg`) and pick the clearest, most on-topic frame: a recognizable subject, no text-only slide, no blur. Otherwise take the remaining candidate with the highest luma variance.
+4. Re-extract the chosen timestamp at full resolution:
+
+```bash
+ffmpeg -ss <chosen> -i video.mp4 -vf thumbnail=90 -frames:v 1 -q:v 2 thumbnail.jpg
 ```
 
 Upload it to Blossom and include all returned thumbnail/mirror URLs as `image` values in each `imeta` tag.
@@ -127,11 +143,11 @@ Authorization: Nostr <base64url-auth-event>
 <file bytes>
 ```
 
-The auth event should be created for upload and scoped to the target server according to BUD-11. If using a library, prefer `blossom-client-sdk` `createUploadAuth`.
+The auth event is a kind `24242` event with `["t", "upload"]`, `["x", "<sha256>"]` and `["expiration", "<unix>"]`, optionally scoped with `["server", "<domain>"]` (BUD-11, see [Nostr and Blossom Basics](nostr-blossom-basics.md#blossom-in-one-page)). In this repo, `buildUploadAuth` and `blossomAuthorization` in `packages/core/src/blossom-auth.ts` build it; outside, `blossom-client-sdk` `createUploadAuth` does.
 
-## BUD-10 PATCH Chunked Upload
+## Chunked PATCH Upload
 
-Use PATCH mainly for large files or resumability. NosTube only attempts chunked upload for files larger than about 100 MB and falls back to PUT if chunking fails.
+Not an official BUD: NosTube code names it "BUD-10" after an earlier draft, but the current BUD-10 is the `blossom:` URI schema. Use PATCH mainly for large files or resumability. NosTube only attempts chunked upload for files larger than about 100 MB and falls back to PUT if chunking fails.
 
 Capability negotiation:
 
@@ -203,4 +219,4 @@ When shell tag flags become awkward, write JSON:
 }
 ```
 
-Then sign and publish with the available Nostr tool, for example `nak sign` followed by `nak req -w`.
+Then sign and publish it: `nak event --sec "$NSEC" "$RELAY" < event.json`, or through a NosTube instance's managed key (see [NosTube Server Instances](nostr-blossom-basics.md#nostube-server-instances)).

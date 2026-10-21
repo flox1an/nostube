@@ -36,15 +36,17 @@ export function SitePage({ config, page }: { config: InstanceConfig; page: SiteP
   )
 }
 
-/** Links to the pages that exist and an "Install app" entry; nothing at all when neither applies. */
+/** Links to the pages that exist, the RSS feed and an "Install app" entry. */
 export function SiteFooter({ config }: { config: InstanceConfig }) {
   const { t } = useTranslation()
   const pages = usePages(config)
   const installMode = getInstallMode(useInstallState())
   const [iosOpen, setIosOpen] = useState(false)
-  if (pages.length === 0 && !installMode) return null
   return (
     <footer className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-4 text-sm text-muted-foreground">
+      <a href="/feed.xml" className="hover:text-foreground hover:underline">
+        {t('site.feed.label')}
+      </a>
       {pages.length > 0 && (
         <nav aria-label={t('site.pages.label')} className="flex flex-wrap gap-x-4 gap-y-1">
           {pages.map(({ page }) => (

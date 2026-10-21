@@ -128,15 +128,17 @@ function renderSite(client: NostubeClient, path = '/', siteConfig: InstanceConfi
 }
 
 describe('SiteHome', () => {
-  // Node's experimental global localStorage shadows jsdom's; use a plain in-memory store.
+  // Node's experimental global storage shadows jsdom's; use plain in-memory stores.
   beforeEach(() => {
-    const store = new Map<string, string>()
-    vi.stubGlobal('localStorage', {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => void store.set(key, value),
-      removeItem: (key: string) => void store.delete(key),
-      clear: () => store.clear(),
-    })
+    for (const name of ['localStorage', 'sessionStorage']) {
+      const store = new Map<string, string>()
+      vi.stubGlobal(name, {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+        removeItem: (key: string) => void store.delete(key),
+        clear: () => store.clear(),
+      })
+    }
   })
   afterEach(() => vi.unstubAllGlobals())
   const video = {
@@ -803,6 +805,26 @@ describe('SiteHome', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Clear watch progress on this device' }))
       expect(screen.queryByRole('heading', { name: 'Continue watching' })).toBeNull()
       expect(localStorage.getItem(PROGRESS_KEY)).toBeNull()
+    })
+
+    it('shows what was published since the last visit, also after a reload, never on a first visit', async () => {
+      const old = plainVideo('5', 'Old upload')
+      const fresh = plainVideo('6', 'Fresh upload', [['published_at', '1700000100']])
+      const first = renderSite(clientOf(old, fresh), '/')
+      await waitFor(() => expect(screen.getByText('Fresh upload')).toBeTruthy())
+      expect(screen.queryByRole('heading', { name: 'New since your last visit' })).toBeNull()
+      first.unmount()
+
+      // A later session: the last visit fell between the two uploads.
+      localStorage.setItem('nostube-site:last-visit', '1700000050')
+      sessionStorage.clear()
+      for (let load = 0; load < 2; load++) {
+        const view = renderSite(clientOf(old, fresh), '/')
+        const fresher = await screen.findByRole('region', { name: 'New since your last visit' })
+        expect(within(fresher).getByText('Fresh upload')).toBeTruthy()
+        expect(within(fresher).queryByText('Old upload')).toBeNull()
+        view.unmount()
+      }
     })
 
     it('forgets a finished video and offers the next one', async () => {

@@ -24,6 +24,7 @@
       "featured": "Start here",
       "selected": "Selected works",
       "latest": "Latest videos",
+      "new": "New since your last visit",
       "continue": "Continue watching",
       "clearProgress": "Clear",
       "clearProgressLabel": "Clear watch progress on this device",
@@ -65,6 +66,9 @@
     "tag": {
       "title": "Videos tagged #{{tag}}",
       "back": "All videos"
+    },
+    "feed": {
+      "label": "RSS feed"
     },
     "search": {
       "label": "Search videos",

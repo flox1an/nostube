@@ -24,6 +24,7 @@
       "featured": "从这里开始",
       "selected": "精选作品",
       "latest": "最新视频",
+      "new": "自你上次访问以来的新视频",
       "continue": "继续观看",
       "clearProgress": "清除",
       "clearProgressLabel": "清除此设备上的观看进度",
@@ -65,6 +66,9 @@
     "tag": {
       "title": "带有 #{{tag}} 标签的视频",
       "back": "全部视频"
+    },
+    "feed": {
+      "label": "RSS 订阅"
     },
     "search": {
       "label": "搜索视频",

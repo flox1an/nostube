@@ -1,4 +1,4 @@
-# Embed player and oEmbed
+# Nostube Embedded Player
 
 The embed player plays a Nostr video inside an `<iframe>` on any website. It is a single HTML file, `embed.html`, that loads the video event from Nostr relays and the media from the author's Blossom servers. It needs no account or API key.
 
@@ -115,47 +115,9 @@ The embed looks up the video on, in this order:
 
 It asks all of them, takes the newest version of the event and checks for a deletion by the author. If a video only lives on a relay that is not on this list, add it with `relays=`.
 
-## oEmbed
+## Link previews with oEmbed
 
-The Docker image of the web app (see [Self-hosting the web app](/web-app/#docker)) serves an oEmbed endpoint, so sites and apps that consume oEmbed can turn a pasted video link into the player.
-
-```text
-GET https://nostu.be/oembed?url=https://nostu.be/v/nevent1...
-```
-
-| Parameter | Value |
-| --- | --- |
-| `url` | A video or short page: `…/v/<id>` or `…/short/<id>`. Only the path is read. |
-| `format` | Optional; the response is always JSON. |
-
-```json
-{
-  "version": "1.0",
-  "type": "video",
-  "title": "…",
-  "author_name": "npub1…",
-  "author_url": "https://nostu.be/p/npub1…",
-  "provider_name": "Nostube",
-  "provider_url": "https://nostu.be",
-  "thumbnail_url": "https://…",
-  "html": "<iframe src=\"https://nostu.be/embed.html?v=nevent1…\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
-  "width": 640,
-  "height": 360,
-  "cache_age": 600
-}
-```
-
-- The player is always 640 × 360. `thumbnail_url` is left out when the event has no thumbnail.
-- Successful responses carry `Cache-Control: public, max-age=600`.
-- A missing `url` returns 400. A playlist, any other page, an invalid identifier, or an event that no relay returns returns 404.
-
-**Discovery.** When the server finds the event, the HTML of `/v/<id>` and `/short/<id>` pages carries
-
-```html
-<link rel="alternate" type="application/json+oembed" href="https://nostu.be/oembed?url=…&format=json" />
-```
-
-next to Open Graph tags and, for events with a video URL, a Twitter player card that points at `embed.html`. Static hosting has neither the endpoint nor these tags.
+To turn a pasted video link into a player automatically, use the [oEmbed endpoint](/embed/oembed).
 
 ## Self-hosted embed
 

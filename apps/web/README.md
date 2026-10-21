@@ -21,8 +21,11 @@ on your macOS version.
 Install the NosTube-compatible Nostr video publishing skill:
 
 ```bash
-npx skills add https://github.com/flox1an/nostube/tree/main/.agents/skills/nostr-video-publisher
+npx skills add flox1an/nostube --skill nostr-video-publisher
 ```
+
+See [Agent Skills](../../skills/README.md) for global installation, supported agents,
+manual installation, and requirements.
 
 ## nostube-server instance build
 

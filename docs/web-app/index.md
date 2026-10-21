@@ -62,7 +62,7 @@ The server answers:
 | Route | Response |
 | --- | --- |
 | `GET /v/<id>`, `/short/<id>`, `/playlist/<id>` | The app, with the event's title, description and thumbnail as Open Graph and Twitter card tags in the `<head>`; videos also get a Twitter player card and an oEmbed discovery link |
-| `GET /oembed?url=<page-url>` | oEmbed JSON, see [oEmbed](/embed/#oembed) |
+| `GET /oembed?url=<page-url>` | oEmbed JSON, see [oEmbed](/embed/oembed) |
 | `GET /health` | `healthy` |
 | `GET /assets/*` | Build files, `Cache-Control: public, max-age=31536000, immutable`; a missing file is a 404, never the app |
 | Any other path | The file from `dist/` if it exists, else `index.html` |

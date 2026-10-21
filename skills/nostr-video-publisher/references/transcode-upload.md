@@ -22,7 +22,7 @@ Publish fields derived from this:
 
 ## When To Transcode
 
-Transcode when:
+These are compatibility/size choices, not NIP-71 requirements. Transcode when:
 
 - container is not MP4/HLS
 - video codec is not H.264/AVC or HEVC
@@ -31,7 +31,7 @@ Transcode when:
 - bitrate is above roughly 8 Mbps
 - you want a smaller fallback variant
 
-NosTube's browser flow targets 1080p primary, optional 480p fallback, 30 fps, 96 kbps audio, and balanced 1080p video around 6.75 Mbps.
+The recipes below cap the short side at 1080 or 480 pixels, use 30 fps and 96 kbps audio, and avoid upscaling. Choose settings for the target clients and file size; HEVC support varies.
 
 ## MP4 Recipes
 
@@ -97,7 +97,7 @@ ffprobe -v error -f lavfi -i "movie=cand_10.jpg,signalstats" \
 ffmpeg -ss <chosen> -i video.mp4 -vf thumbnail=90 -frames:v 1 -q:v 2 thumbnail.jpg
 ```
 
-Upload it to Blossom and include all returned thumbnail/mirror URLs as `image` values in each `imeta` tag.
+Upload the chosen preview if it is not already hosted. NIP-71 describes previews at the video's resolution; create one for each video variant when following that guidance. Include copies of that preview as `image` values, once per distinct server + blob hash (extensionless and extension URLs on the same Blossom server are one location), not every repeated upload/mirror result.
 
 ## Subtitles
 
@@ -107,17 +107,17 @@ Convert SRT to WebVTT when possible:
 ffmpeg -i captions.srt captions.vtt
 ```
 
-Upload subtitle files to Blossom and add `["text-track", "<url>", "<lang>"]`.
+Host the WebVTT file and select the target client's tag format. NIP-71 describes `["text-track", "<url>", "subtitles", "<lang>"]`; NosTube currently uses legacy `["text-track", "<url>", "<lang>"]`. See [Subtitles](event-reference.md#subtitles) for the compatibility distinction.
 
 ## Blossom Upload Flow
 
-For each file:
+Resolve signer and upload destinations through the skill's preflight first. Normalize and deduplicate server URLs before scheduling uploads/mirrors. For each file that needs hosting:
 
 1. Calculate SHA-256 of the exact bytes.
-2. Check existence with `HEAD <server>/<sha256>`.
-3. Create a Blossom upload auth event with the file hash and server-scoped `server` tag.
-4. Upload to `/upload`.
-5. Store the returned blob descriptor.
+2. Check existence with `HEAD <server>/<sha256>`. A matching existing blob can be reused; distinguish not-found from authentication or network failure.
+3. Create a signed Blossom upload auth event with the file hash, a short future expiration, and server-scoped `server` tag (lowercase hostname only).
+4. Upload to `/upload`; BUD-06 `HEAD /upload` can pre-check acceptance, but final upload success still needs checking.
+5. Require a successful response, verify returned `sha256` equals the local hash and `size` matches the file, and retain the descriptor. Verify the hosted URL; do not publish a failed or unverified upload as a mirror.
 
 Blob descriptor fields needed for events:
 
@@ -143,11 +143,11 @@ Authorization: Nostr <base64url-auth-event>
 <file bytes>
 ```
 
-The auth event is a kind `24242` event with `["t", "upload"]`, `["x", "<sha256>"]` and `["expiration", "<unix>"]`, optionally scoped with `["server", "<domain>"]` (BUD-11, see [Nostr and Blossom Basics](nostr-blossom-basics.md#blossom-in-one-page)). In this repo, `buildUploadAuth` and `blossomAuthorization` in `packages/core/src/blossom-auth.ts` build it; outside, `blossom-client-sdk` `createUploadAuth` does.
+The BUD-11 auth event is kind `24242` with human-readable `content`, `created_at` in the past, `["t", "upload"]`, `["x", "<lowercase-sha256>"]`, and a future `["expiration", "<unix>"]`. Scope it with `["server", "<lowercase-hostname>"]` to avoid authorizing unrelated servers. Encode the **signed JSON event** as Base64url without padding for the `Authorization: Nostr` header. Use a maintained client or inspect available helpers against [BUD-11](https://github.com/hzrd149/blossom/blob/master/buds/11.md); version-specific implementations may use a different encoding. Do not log the token.
 
 ## Chunked PATCH Upload
 
-Not an official BUD: NosTube code names it "BUD-10" after an earlier draft, but the current BUD-10 is the `blossom:` URI schema. Use PATCH mainly for large files or resumability. NosTube only attempts chunked upload for files larger than about 100 MB and falls back to PUT if chunking fails.
+Not an official BUD: NosTube code names it "BUD-10" after an earlier draft, but the current BUD-10 is the `blossom:` URI schema. The headers below describe NosTube's extension, not a universal resumable-upload protocol. Use PATCH only when the target server documents this exact flow; otherwise use PUT. NosTube's web uploader attempts it for files above about 100 MB and falls back to PUT; other clients/instances may use different policies.
 
 Capability negotiation:
 
@@ -155,7 +155,7 @@ Capability negotiation:
 OPTIONS /upload
 ```
 
-Treat the server as PATCH-capable if response headers indicate `Accept-Patch`, `Allow: PATCH`, or Blossom upload modes containing `chunked` or `patch`.
+Check the target server's documented protocol in addition to `Accept-Patch`, `Allow: PATCH`, or advertised upload modes. Method support alone does not establish compatible chunk headers, ordering, or completion semantics.
 
 Chunk upload:
 
@@ -172,7 +172,7 @@ Authorization: Nostr <base64url-auth-event>
 <chunk bytes>
 ```
 
-Use `Blob.slice`/streaming chunks. Upload the final chunk last; expect the final response to return the blob descriptor.
+For servers implementing this extension, use bounded-memory slices/streams, upload the final chunk last, and validate the final descriptor. Respect that server's offset/concurrency rules. Do not assume PATCH support implies resumability or parallel out-of-order chunks.
 
 ## Mirror Flow
 
@@ -186,7 +186,7 @@ Authorization: Nostr <base64url-upload-auth-scoped-to-mirror-server>
 {"url":"https://origin.example/<sha256>.mp4"}
 ```
 
-Add mirror results as `fallback` entries on the matching `imeta` tag. Optionally publish kind `1063` file metadata announcements after the video event is published.
+Mirror each blob only once per distinct target server, reusing an existing matching blob where possible. Verify mirror descriptors against the source hash and add locations as `fallback` entries on the matching `imeta`. Different encodings belong in separate `imeta` tags, not fallbacks. Optionally publish kind `1063` metadata after the video event.
 
 ## Standalone JSON Signing Pattern
 
@@ -210,13 +210,13 @@ When shell tag flags become awkward, write JSON:
       "x <sha256>",
       "m video/mp4",
       "size 123",
+      "duration 281",
       "image https://server/thumb.webp"
     ],
     ["L", "ISO-639-1"],
-    ["l", "en", "ISO-639-1"],
-    ["client", "nostube"]
+    ["l", "en", "ISO-639-1"]
   ]
 }
 ```
 
-Then sign and publish it: `nak event --sec "$NSEC" "$RELAY" < event.json`, or through a NosTube instance's managed key (see [NosTube Server Instances](nostr-blossom-basics.md#nostube-server-instances)).
+Configure `NOSTR_SECRET_KEY` and `RELAY` explicitly through protected environment settings, then use `nak event "$RELAY" < event.json` (see the main skill's guarded example), or a NosTube instance's managed signer. These example URLs/hashes are illustrative: replace them with verified media metadata. Check relay `OK` responses and read back the exact signed event id before reporting publication.

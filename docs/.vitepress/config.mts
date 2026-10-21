@@ -49,7 +49,14 @@ export default defineConfig({
         ],
       },
       { text: 'Web app', items: [{ text: 'Self-hosting the web app', link: '/web-app/' }] },
-      { text: 'Embed', items: [{ text: 'Embed player and oEmbed', link: '/embed/' }] },
+      {
+        text: 'Embedded player',
+        items: [{ text: 'Nostube Embedded Player', link: '/embed/' }],
+      },
+      {
+        text: 'oEmbed',
+        items: [{ text: 'oEmbed endpoint', link: '/embed/oembed' }],
+      },
       {
         text: 'Media',
         items: [

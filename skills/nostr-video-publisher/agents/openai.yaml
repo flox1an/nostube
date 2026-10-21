@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Nostr Video Publisher'
+  short_description: 'Prepare and publish Nostr videos with Blossom hosting'
+  default_prompt: 'Use $nostr-video-publisher to prepare and publish a Nostr video.'

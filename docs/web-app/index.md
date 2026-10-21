@@ -120,6 +120,8 @@ New visitors start with these defaults. Visitors change the bold ones under **Se
 
 The **Reset** buttons in **Settings → Network** take their values from the moderation preset selected under **Settings → Presets**: its default relays and its default Blossom proxy. Signed-in users who published a Blossom server list (kind 10063) get that list when they reset **Video Hosting**.
 
+The search service and the image proxy are not part of this repository. To run them yourself, see [Supporting projects](/guide/supporting-projects).
+
 To ship different defaults on your own deployment, edit the files in the table and rebuild. Read more about storage servers in [Blossom storage](/media/blossom).
 
 ![The web app on a phone](/screenshots/web-mobile-home.webp)

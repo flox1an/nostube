@@ -10,6 +10,8 @@ Everything in Nostube can be self-hosted. Pick by what you want to run:
 | Videos on an existing website | Embed player | iframe player, oEmbed link previews | [Embed](/embed/) |
 | Only media storage | A Blossom server such as Almond | Blob storage for uploads and mirrors | [Blossom storage](/media/blossom) |
 
+[Almond](https://flox1an.github.io/almond/), [Nostube Search](https://flox1an.github.io/nostube-search/) and the [Image Proxy](https://flox1an.github.io/nostube-imgproxy/) are separate projects with their own documentation. Which of them a setup needs is described under [Supporting projects](/guide/supporting-projects).
+
 ## Nostube Server or the web app?
 
 Most creators want **Nostube Server**. It is one container that serves your

@@ -14,4 +14,16 @@ Monorepo for Nostube. Documentation: <https://flox1an.github.io/nostube/> (sourc
 
 Architecture decisions are in `docs/adr/` and `apps/server/docs/adr/`.
 
+## Supporting projects
+
+Related projects with their own repositories and documentation:
+
+| Project                                                            | Role                                                                                                            |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| [Almond](https://github.com/flox1an/almond)                        | Blossom media storage ([docs](https://flox1an.github.io/almond/))                                               |
+| [Nostube Search](https://github.com/flox1an/nostube-search)        | MeiliSearch video search and recommendations ([docs](https://flox1an.github.io/nostube-search/))                |
+| [Nostube Image Proxy](https://github.com/flox1an/nostube-imgproxy) | Image resizing, video thumbnails, Blossom media discovery ([docs](https://flox1an.github.io/nostube-imgproxy/)) |
+
+Which of them a setup needs: [Supporting projects](https://flox1an.github.io/nostube/guide/supporting-projects).
+
 Dependencies are installed once at the repository root (npm workspaces): `npm ci`, then `cd apps/web && npm run build`.

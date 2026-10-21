@@ -35,6 +35,8 @@ export default defineConfig({
           { text: 'What is Nostube?', link: '/guide/' },
           { text: 'Tour', link: '/guide/tour' },
           { text: 'Self-hosting options', link: '/guide/self-hosting' },
+          { text: 'Supporting projects', link: '/guide/supporting-projects' },
+          { text: 'Publishing with an AI agent', link: '/guide/agent-publishing' },
         ],
       },
       {

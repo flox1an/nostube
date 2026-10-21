@@ -1,6 +1,7 @@
 import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { normalizeVideoVariantPlacement, type VideoVariant } from '@/lib/video-processing'
 import { buildAdvancedMimeType } from '@nostube/core/common-utils'
+import { extractBlossomHash } from '@nostube/core/blossom-url'
 import { generateQualityLabel } from '@/lib/video-processing'
 
 /**
@@ -138,9 +139,22 @@ export function buildImetaTag(params: BuildImetaTagParams): string[] {
     tag.push(`size ${sizeBytes}`)
   }
 
-  // Add thumbnail URLs
+  // Add thumbnail URLs, one entry per distinct server and file: a server listed
+  // twice (case, default port, `/hash` vs `/hash.ext`, exact repeats) must not
+  // duplicate `image` fields. First occurrence wins, order is preserved.
   if (thumbnailUrls) {
-    thumbnailUrls.forEach(url => tag.push(`image ${url}`))
+    const seenImages = new Map<string, string>()
+    for (const url of thumbnailUrls) {
+      let key: string
+      try {
+        const { origin, pathname } = new URL(url)
+        key = `${origin}/${extractBlossomHash(url).sha256 ?? pathname}`
+      } catch {
+        key = url
+      }
+      if (!seenImages.has(key)) seenImages.set(key, url)
+    }
+    for (const url of seenImages.values()) tag.push(`image ${url}`)
   }
 
   // Add blurhash

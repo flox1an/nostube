@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Uploads no longer publish duplicate `image` entries in the video's `imeta` tag when a Blossom server appears multiple times in the upload/mirror lists: each distinct server and hash is listed once (case, default port and `/hash` vs `/hash.ext` variants of the same blob collapse to the first URL), while different servers and different images keep their entries.
 - A new version no longer reloads the page during an upload or browser transcode (#139): the stale-chunk and instance-config reloads are deferred and a notice offers "Reload now"; without running work the silent reload is unchanged.
 - "Clear cache" deletes only the Nostr event cache, trust scores and playlist validation verdicts (#141); play positions, unsent view events and the service-worker precache survive, so the app still loads offline. The duplicate cache settings section is gone.
 - Pending view events are sent as soon as the browser comes back online (#142), not only on login or when the tab becomes visible.

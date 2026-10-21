@@ -27,6 +27,38 @@ function makeVideo(placement: VideoVariant['placement']): VideoVariant {
   }
 }
 
+describe('Thumbnail locations', () => {
+  it('publishes each Blossom server and hash once, preserving the first URL and distinct images', () => {
+    const hash = 'f'.repeat(64)
+    const primary = `https://blossom.primal.net/${hash}.webp`
+    const mirror = `https://nostr.download/${hash}.webp`
+    const otherImage = `https://nostr.download/${'b'.repeat(64)}.webp`
+    const external = 'https://images.example/thumbnail.webp'
+    const tag = buildImetaTag({
+      variant: makeVideo(createBlobPlacement({ primaryBlob })),
+      thumbnailUrls: [
+        primary,
+        mirror,
+        `https://nostr.download/${hash}`,
+        `https://NOSTR.DOWNLOAD:443/${hash}`,
+        primary,
+        otherImage,
+        external,
+        external,
+        'https://images.example/other.webp',
+      ],
+    })
+
+    expect(tag.filter(field => field.startsWith('image '))).toEqual([
+      `image ${primary}`,
+      `image ${mirror}`,
+      `image ${otherImage}`,
+      `image ${external}`,
+      'image https://images.example/other.webp',
+    ])
+  })
+})
+
 describe('Blob Placement', () => {
   it('publishes verified Blob locations before a direct URL fallback', () => {
     const mirrorBlob = { ...primaryBlob, url: 'https://mirror.example/video.mp4' }

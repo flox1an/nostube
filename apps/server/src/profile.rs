@@ -8,7 +8,7 @@
 use nostr::prelude::*;
 use serde_json::{Map, Value};
 
-use crate::{branding::Branding, config::{is_public_url, public_urls}, outbox::Outbox, relay::Relay};
+use crate::{branding::Branding, config::{is_public_url, public_urls}, nsite, outbox::Outbox, relay::Relay};
 
 /// One sync at a time, so the newest settings always end in the newest profile.
 static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -29,8 +29,9 @@ fn blossom_servers(public: &Value) -> Vec<String> {
 
 /// The profile from the public config: `name` is the title, `about` the tagline, `picture` and
 /// `banner` the branding images as absolute URLs, `lud16` the lightning address, `nip05` the
-/// instance's NIP-05 name `_@<origin host>`. An empty or missing value leaves the field out.
-fn derive(public: &Value) -> Value {
+/// instance's NIP-05 name `_@<origin host>`, `website` the public site address in public reach.
+/// An empty or missing value leaves the field out.
+fn derive(public: &Value, key: PublicKey) -> Value {
     let origin = public["origin"].as_str().unwrap_or_default();
     let site = &public["site"];
     let image = |slot: &str| site[slot].as_str().and_then(|url| {
@@ -38,6 +39,13 @@ fn derive(public: &Value) -> Value {
         (is_public_url(&url) && (public_origin(public) || !url.starts_with(origin))).then_some(url)
     });
     let host = public_origin(public).then(|| Url::parse(origin).ok().and_then(|url| url.host_str().map(str::to_owned))).flatten();
+    let website = if !is_public(public) {
+        None
+    } else if public["siteHosting"] == "nsite" {
+        nsite::url(public, key).ok().filter(|url| is_public_url(url))
+    } else {
+        public_origin(public).then(|| origin.to_owned())
+    };
     [
         ("name", public["title"].as_str().map(str::to_owned)),
         ("about", site["tagline"].as_str().map(str::to_owned)),
@@ -45,6 +53,7 @@ fn derive(public: &Value) -> Value {
         ("banner", image("banner")),
         ("lud16", site["lightning"].as_str().map(str::to_owned)),
         ("nip05", host.map(|host| format!("_@{host}"))),
+        ("website", website),
     ]
     .into_iter()
     .filter_map(|(field, value)| Some((field.to_owned(), Value::from(value.filter(|v| !v.is_empty())?))))
@@ -104,7 +113,7 @@ pub async fn sync(relay: &Relay, branding: &Branding, outbox: &Outbox, keys: &cr
             return; // A newer config/branding sync must win after asynchronous storage work.
         }
         match ready {
-            Ok(Some(ready)) => ids.extend(replace(relay, &keys, Kind::Metadata, derive(&ready).to_string(), vec![]).await),
+            Ok(Some(ready)) => ids.extend(replace(relay, &keys, Kind::Metadata, derive(&ready, keys.public_key()).to_string(), vec![]).await),
             Ok(None) => {}
             Err(e) => tracing::warn!("profile: preparing branding mirrors: {e}"),
         }
@@ -277,12 +286,13 @@ mod tests {
 
     #[test]
     fn the_profile_comes_from_title_tagline_logo_and_banner() {
+        let key = Keys::generate().public_key();
         let mut p = public("Channel", "Videos");
         p["site"]["logo"] = "/branding/logo?v=1".into();
         p["site"]["banner"] = "/branding/banner?v=2".into();
         p["site"]["favicon"] = "/branding/favicon?v=3".into();
         p["site"]["lightning"] = "channel@wallet.example".into();
-        assert_eq!(derive(&p), serde_json::json!({
+        assert_eq!(derive(&p, key), serde_json::json!({
             "name": "Channel",
             "about": "Videos",
             "picture": "https://tube.example/branding/logo?v=1",
@@ -293,7 +303,7 @@ mod tests {
         let mut empty = public("Channel", "");
         empty["site"]["lightning"] = "".into();
         empty["origin"] = "https://tube.example:8443".into();
-        assert_eq!(derive(&empty), serde_json::json!({ "name": "Channel", "nip05": "_@tube.example" }));
+        assert_eq!(derive(&empty, key), serde_json::json!({ "name": "Channel", "nip05": "_@tube.example" }));
     }
 
     #[test]
@@ -434,6 +444,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_profile_website_follows_public_site_hosting_without_advertising_private_addresses() {
+        let keys = Keys::parse("0000000000000000000000000000000000000000000000000000000000000001").unwrap();
+        let shared = managed(&keys);
+        let f = Fixture::new(keys.public_key());
+        let mut p = public_reach("Channel");
+        p["siteHosting"] = "instance".into();
+        f.branding.set_base(p.clone());
+        f.sync(&shared).await;
+        assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"], "https://tube.example");
+
+        p["origin"] = "https://tube.local".into();
+        p["originIsPublic"] = false.into();
+        p["siteHosting"] = "nsite".into();
+        p["nsite"] = serde_json::json!({ "domain": "videos.example", "gateway": "nsite.lol" });
+        f.branding.set_base(p.clone());
+        f.sync(&shared).await;
+        assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"], "https://videos.example");
+
+        p["nsite"]["domain"] = "".into();
+        f.branding.set_base(p.clone());
+        f.sync(&shared).await;
+        assert_eq!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"],
+            "https://npub10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqpkge6d.nsite.lol"
+        );
+
+        p["nsite"]["gateway"] = "gateway.local".into();
+        f.branding.set_base(p.clone());
+        f.sync(&shared).await;
+        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+
+        p["nsite"]["gateway"] = "nsite.lol".into();
+        p["reach"] = "private".into();
+        f.branding.set_base(p.clone());
+        f.sync(&shared).await;
+        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+
+        p["reach"] = "public".into();
+        p["siteHosting"] = "instance".into();
+        f.branding.set_base(p);
+        f.sync(&shared).await;
+        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+    }
+
+    #[tokio::test]
     async fn own_identity_never_signs_a_profile() {
         let owner = Keys::generate();
         let f = Fixture::new(owner.public_key());
@@ -455,13 +510,13 @@ mod tests {
         });
         p["site"]["logo"] = "/branding/logo?v=1".into();
         p["site"]["banner"] = "https://blobs.example/hash.png".into();
-        let profile = derive(&p);
+        let key = Keys::generate().public_key();
+        let profile = derive(&p, key);
         assert!(profile.get("picture").is_none());
         assert!(profile.get("nip05").is_none());
         assert_eq!(profile["banner"], "https://blobs.example/hash.png");
         assert_eq!(relays(&p, &[]), [MIRROR]);
         assert_eq!(blossom_servers(&p), ["https://blobs.example"]);
-        let key = Keys::generate().public_key();
         assert_eq!(nostr_json(&p, Some(key), &[], None)["relays"][key.to_hex()], serde_json::json!([MIRROR]));
         p["origin"] = "https://tube.example".into();
         p["originIsPublic"] = true.into();

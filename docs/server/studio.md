@@ -45,9 +45,14 @@ Account → Identity** shows the current choice.
 | --- | --- | --- |
 | Signing key | Your own Nostr key, signed in the browser | The **managed key**, generated and kept encrypted by the server |
 | Login | The key becomes a bound login key; the password keeps working | Password; a Nostr login key is optional |
-| Channel profile | Your existing profile, copied unchanged to the instance relay | Derived from the site settings (title, tagline, logo, banner, Lightning address) |
+| Channel profile | Your existing profile, copied unchanged to the instance relay | Derived from the site settings (title, tagline, logo, banner, Lightning address and public website) |
 | Mirroring media to Blossom servers | No | Yes |
 | nsite hosting | No | Yes (public reach) |
+
+In Public reach, the managed profile's `website` links to the public instance origin with instance
+hosting, or to the nsite URL with nsite hosting (custom domain first, otherwise the channel's
+`https://<npub>.<gateway>` address). Saving hosting changes updates the link automatically.
+Private reach and LAN-only instance hosting advertise no website; own-identity profiles stay unchanged.
 
 The managed key grants no admin rights and writes only where the config allows it. Whoever takes over
 the server gets the key too. Export it as `nsec` under **Server → Account → Export nsec**; this asks

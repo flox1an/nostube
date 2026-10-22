@@ -319,7 +319,7 @@
       "interactionRelays": "インタラクション用リレー",
       "interactionRelaysHint": "1 行に 1 つの ws:// または wss:// リレー。プロフィールに使われ、今後はコメントや zap にも使われます。",
       "profileRelaysTitle": "プロフィール用リレー",
-      "profileRelaysDescription": "訪問者がサインインすると、名前、画像、リレーリストがインタラクション用リレー、これらのリレー、公開デフォルトリレー wss://purplepag.es と wss://index.hzrd149.com、訪問者の NIP-65 outbox リレーで検索されます。チャンネル ID で公開に設定している場合、サーバーはここに自身のプロフィールとリレーリストも公開します。",
+      "profileRelaysDescription": "訪問者がサインインすると、名前、画像、リレーリストがインタラクション用リレー、これらのリレー、公開デフォルトリレー wss://purplepag.es、wss://nos.lol、wss://relay.damus.io、訪問者の NIP-65 outbox リレーで検索されます。チャンネル ID で公開に設定している場合、サーバーはここに自身のプロフィールとリレーリストも公開します。",
       "profileRelays": "プロフィール用リレー",
       "profileRelaysHint": "1 行に 1 つの ws:// または wss:// リレー。",
       "mirrorTitle": "他のサーバーへミラーする",

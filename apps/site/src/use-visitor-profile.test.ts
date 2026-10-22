@@ -4,6 +4,7 @@ import { visitorProfileRelays } from './use-visitor-profile'
 
 const INSTANCE = 'wss://videos.example/'
 const OUTBOX = 'wss://personal.example/'
+const PUBLIC_DISCOVERY = ['wss://purplepag.es/', 'wss://nos.lol/', 'wss://relay.damus.io/']
 const served = (extra: object) => {
   const parsed = parseInstanceConfig({
     version: 1,
@@ -28,9 +29,9 @@ const served = (extra: object) => {
 }
 
 describe('visitorProfileRelays', () => {
-  it('keeps both public discovery relays when the server does not send profileRelays', () => {
+  it('keeps every public discovery relay when the server does not send profileRelays', () => {
     const relays = visitorProfileRelays([INSTANCE], served({}).profileRelays, [OUTBOX])
-    expect(relays).toEqual([OUTBOX, INSTANCE, 'wss://purplepag.es/', 'wss://index.hzrd149.com/'])
+    expect(relays).toEqual([OUTBOX, INSTANCE, ...PUBLIC_DISCOVERY])
   })
 
   it('keeps public discovery and visitor outboxes even when the instance config has no profile relays', () => {
@@ -38,8 +39,7 @@ describe('visitorProfileRelays', () => {
     expect(visitorProfileRelays([INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
       OUTBOX,
       INSTANCE,
-      'wss://purplepag.es/',
-      'wss://index.hzrd149.com/',
+      ...PUBLIC_DISCOVERY,
     ])
   })
 
@@ -47,8 +47,7 @@ describe('visitorProfileRelays', () => {
     expect(visitorProfileRelays([INSTANCE], ['wss://custom.example'], [])).toEqual([
       INSTANCE,
       'wss://custom.example/',
-      'wss://purplepag.es/',
-      'wss://index.hzrd149.com/',
+      ...PUBLIC_DISCOVERY,
     ])
   })
 })

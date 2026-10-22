@@ -321,7 +321,7 @@
       "interactionRelays": "Interaktions-Relays",
       "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile und später für Kommentare und Zaps verwendet.",
       "profileRelaysTitle": "Profil-Relays",
-      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es und wss://index.hzrd149.com sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität und bei Öffentlich veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
+      "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es, wss://nos.lol und wss://relay.damus.io sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität und bei Öffentlich veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
       "profileRelays": "Profil-Relays",
       "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "mirrorTitle": "Auf andere Server spiegeln",

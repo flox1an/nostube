@@ -2,11 +2,11 @@
 
 > **Status:** this decision supersedes this ADR's earlier “empty means local only” visitor-profile policy. The embed's instance-relay isolation remains unchanged. ADR 0012 (reach) keeps this lookup in both reaches; the **Check** runs a private-reach instance.
 
-The signed-in visitor must see their own published name and picture even when the instance has no copy. Visitor identity therefore always uses the public discovery defaults (`wss://purplepag.es`, `wss://index.hzrd149.com`), instance relays, configured additional profile relays and the visitor's NIP-65 write relays. An empty configured list does not disable this lookup. A signed-in site is no longer promised to make zero requests outside the instance.
+The signed-in visitor must see their own published name and picture even when the instance has no copy. Visitor identity therefore always uses the public discovery defaults (`wss://purplepag.es`, `wss://nos.lol`, `wss://relay.damus.io`; `wss://index.hzrd149.com` until it went offline in October 2026), instance relays, configured additional profile relays and the visitor's NIP-65 write relays. An empty configured list does not disable this lookup. A signed-in site is no longer promised to make zero requests outside the instance.
 
 **`profileRelays` (still contract version 1).** This optional public-config field is named `profile_relays` in `config.toml`. The server validates it like the other relay lists and writes it into `/api/config` and Studio's config. Studio edits additional visitor-profile discovery relays on the Instance page; there is no “Local only” visitor setting.
 
-- **Absent preserves the existing server defaults** (`wss://purplepag.es`, `wss://index.hzrd149.com`) for old configs and readers. No backend/config migration is needed.
+- **Absent preserves the existing server defaults** (`wss://purplepag.es`, `wss://nos.lol`, `wss://relay.damus.io`) for old configs and readers. No backend/config migration is needed.
 - **Empty means no additional discovery relays.** `[]` remains valid and stored as an empty list. The mandatory public defaults and NIP-65 write relays are still used.
 - **A present but invalid value rejects the config** like any other invalid relay list.
 

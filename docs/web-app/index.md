@@ -110,7 +110,7 @@ New visitors start with these defaults. Visitors change the bold ones under **Se
 | --- | --- | --- |
 | **Relays** (read) | `wss://relay.nostu.be`, `wss://relay.divine.video`, `wss://relay.primal.net`, `wss://nos.lol`, `wss://offchain.pub`, `wss://nostr.wine` | `apps/web/src/constants/relays.ts` |
 | Profile metadata relays | `wss://purplepag.es` | same |
-| Indexer relays | `wss://index.hzrd149.com`, `wss://relay.noswhere.com`, `wss://relay.snort.social` | same |
+| Indexer relays | `wss://relay.noswhere.com`, `wss://relay.snort.social` | same |
 | Zap receipt relays | `wss://relay.primal.net`, `wss://nos.lol` | same |
 | **View-sharing relays** | `wss://relay.divine.video` | same |
 | **Video Hosting** (Blossom upload servers) | `https://blossom.primal.net`, `https://nostr.download`, `https://almond.slidestr.net` | `packages/core/src/instance-config.ts` (`DEFAULT_BLOSSOM_SERVERS`) |

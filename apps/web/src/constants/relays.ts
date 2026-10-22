@@ -46,7 +46,6 @@ export const METADATA_RELAYS: string[] = instance
 export const INDEXER_RELAYS: string[] = instance
   ? instance.interactionRelays
   : [
-      'wss://index.hzrd149.com', // Relay indexer
       'wss://relay.noswhere.com', // Popular relay with good coverage
       'wss://relay.snort.social', // Snort relay
     ]

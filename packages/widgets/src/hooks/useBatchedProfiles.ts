@@ -38,7 +38,7 @@ export function useBatchedProfileLoader() {
       // Load all profiles in a single request
       const loader = createTimelineLoader(
         pool,
-        [...readRelays, ...hostRelays.metadata, 'wss://index.hzrd149.com'],
+        [...readRelays, ...hostRelays.metadata],
         {
           kinds: [kinds.Metadata],
           authors: pubkeysToLoad,

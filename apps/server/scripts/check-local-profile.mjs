@@ -218,7 +218,7 @@ await new Promise(resolve => cdp.once('open', resolve))
 let nextId = 0
 const pending = new Map()
 const sessions = new Map()
-const publicRelays = new Set(['wss://purplepag.es', 'wss://index.hzrd149.com'])
+const publicRelays = new Set(['wss://purplepag.es', 'wss://nos.lol', 'wss://relay.damus.io'])
 const send = (method, params = {}, sessionId) =>
   new Promise((resolve, reject) => {
     const id = ++nextId

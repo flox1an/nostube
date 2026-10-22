@@ -160,7 +160,7 @@ Removing a writer deletes none of their events. Changing this list restarts the 
 and the lists keep their values for Public.
 
 **Profile relays**: where a signed-in visitor's profile is looked up, in addition to the interaction
-relays, the public defaults `wss://purplepag.es` and `wss://index.hzrd149.com` and the visitor's NIP-65
+relays, the public defaults `wss://purplepag.es`, `wss://nos.lol` and `wss://relay.damus.io` and the visitor's NIP-65
 relays. With the channel identity and Public reach the channel's profile and relay list are published
 here too. Details: [What the instance contacts](/server/tls#what-the-instance-contacts-on-the-internet).
 

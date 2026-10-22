@@ -62,7 +62,7 @@ Studio's Appearance page selects videos from the paged creator catalog or accept
 **Signed-in visitor identity (Site).** In both reaches (ADR 0012), the visitor's own profile is an explicit exception to
 interaction-relay isolation: `apps/site` always discovers that key's NIP-65 list (kind 10002)
 and profile (kind 0) through the instance relays, mandatory public defaults
-(`wss://purplepag.es`, `wss://index.hzrd149.com`) and configured additional `profileRelays`,
+(`wss://purplepag.es`, `wss://nos.lol`, `wss://relay.damus.io`) and configured additional `profileRelays`,
 then follows the visitor's listed write relays. Read-only NIP-65 relays are not used for the
 visitor's published profile. `profileRelays: []` means no additional relays, not a public
 opt-out; there is no “Local only” visitor setting (ADR 0008's updated decision).

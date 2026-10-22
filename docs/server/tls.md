@@ -149,7 +149,7 @@ stay on the instance relay. In **public** reach they use the configured public r
 
 One exception applies in both reaches: when a visitor signs in on the site, their own name and avatar
 (kinds 0 and 10002 of that visitor only) are looked up on the mandatory public indexers
-`wss://purplepag.es` and `wss://index.hzrd149.com`, on the visitor's NIP-65 write relays, on the instance
+`wss://purplepag.es`, `wss://nos.lol` and `wss://relay.damus.io`, on the visitor's NIP-65 write relays, on the instance
 relays and on any extra profile relays configured in Studio ([ADR 0008](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0008-local-profile.md)).
 `profile_relays = []` means no extra relays, not an opt-out of the public lookup. Those relays learn
 the visitor's IP address and public key, and a public avatar URL can contact its host. An instance with
@@ -165,9 +165,9 @@ profile, thumbnail and media on its own relay and Blossom only, and opens the si
 page and the embed in separate headless Brave targets (`--browser` selects another Chromium).
 
 The check fails (exit 1) on unexpected hosts, external HTTP, public video queries or any external embed
-traffic. On the site and video page only `wss://purplepag.es` and `wss://index.hzrd149.com` may be
+traffic. On the site and video page only `wss://purplepag.es`, `wss://nos.lol` and `wss://relay.damus.io` may be
 external sockets, and every public `REQ` must filter only kinds 0/10002 for exactly the seeded visitor's
-key. It also requires both public sockets and the visitor lookups to be observed, so it needs
+key. It also requires every public socket and the visitor lookups to be observed, so it needs
 public-relay connectivity and may need a longer `--wait` on a slow connection. It does not cover public
 reach through mirrors or nsite hosting.
 

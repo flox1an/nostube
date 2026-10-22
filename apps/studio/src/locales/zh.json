@@ -319,7 +319,7 @@
       "interactionRelays": "互动中继",
       "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料，以后也用于评论和打闪（zap）。",
       "profileRelaysTitle": "个人资料中继",
-      "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es 和 wss://index.hzrd149.com 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份并处于公开模式时，服务器还会在这里发布自己的个人资料和中继列表。",
+      "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es、wss://nos.lol 和 wss://relay.damus.io 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份并处于公开模式时，服务器还会在这里发布自己的个人资料和中继列表。",
       "profileRelays": "个人资料中继",
       "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。",
       "mirrorTitle": "镜像到其他服务器",

@@ -133,7 +133,11 @@ export const fillLinkTemplate = (template: string, nip19: string) =>
  * Public discovery relays always used for the signed-in visitor's own profile on the site.
  * The server also uses these as the default configured lookup relays.
  */
-export const DEFAULT_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://index.hzrd149.com']
+export const DEFAULT_PROFILE_RELAYS = [
+  'wss://purplepag.es',
+  'wss://nos.lol',
+  'wss://relay.damus.io',
+]
 
 /** Where the outbox mirrors an instance set up "into the Nostr network" (server ADR 0009). */
 export const NETWORK_MIRROR_RELAYS = [

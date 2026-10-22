@@ -554,7 +554,7 @@ pub struct Edited {
 /// reaches, and where the channel's kinds 0 and 10002 go in public reach (ADR 0008, 0012); the
 /// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
 fn default_profile_relays() -> Vec<String> {
-    vec!["wss://purplepag.es".into(), "wss://index.hzrd149.com".into()]
+    ["wss://purplepag.es", "wss://nos.lol", "wss://relay.damus.io"].map(String::from).to_vec()
 }
 
 fn check_relays(lists: &[&[String]]) -> Result<(), BoxError> {

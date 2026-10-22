@@ -25,7 +25,7 @@ Depending on the task, the agent needs [nak](https://github.com/fiatjaf/nak) for
 Before an upload or publication, choose:
 
 - **Identity and signer:** the Nostr identity to publish as and an authorized signing method. Never paste private keys or session credentials into chat; use a protected environment/file or signer connection.
-- **Write relays:** at least one relay that accepts your events. The agent looks up the identity's NIP-65 relay list on the indexer relays `purplepag.es` and `index.hzrd149.com`; read-only entries are not publishing destinations. Without a list, it offers `relay.nostu.be`, `relay.primal.net` and `nos.lol` and publishes only to the ones you pick.
+- **Write relays:** at least one relay that accepts your events. The agent looks up the identity's NIP-65 relay list on the indexer relays `purplepag.es`, `nos.lol` and `relay.damus.io`; read-only entries are not publishing destinations. Without a list, it offers `relay.nostu.be`, `relay.primal.net` and `nos.lol` and publishes only to the ones you pick.
 - **Blossom hosting:** a server that accepts uploads under your identity, for any new media, thumbnails or subtitles. Existing hosted media can be referenced without uploading it again.
 
 Offline preparation needs no publishing endpoints. Approve public uploads and publication deliberately. The skill requires verified upload results, relay acknowledgements and event read-back before reporting success; discovering a server does not prove permission to use it.

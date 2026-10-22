@@ -323,7 +323,7 @@
       "interactionRelays": "Relais d'interaction",
       "interactionRelaysHint": "Un relais ws:// ou wss:// par ligne. Utilisé pour les profils et, plus tard, les commentaires et les zaps.",
       "profileRelaysTitle": "Relais de profils",
-      "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es et wss://index.hzrd149.com et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne et en mode Public, le serveur y publie aussi son profil et sa liste de relais.",
+      "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es, wss://nos.lol et wss://relay.damus.io et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne et en mode Public, le serveur y publie aussi son profil et sa liste de relais.",
       "profileRelays": "Relais de profils",
       "profileRelaysHint": "Un relais ws:// ou wss:// par ligne.",
       "mirrorTitle": "Répliquer vers d'autres serveurs",

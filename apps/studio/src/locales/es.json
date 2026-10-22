@@ -323,7 +323,7 @@
       "interactionRelays": "Relays de interacción",
       "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles y, más adelante, comentarios y zaps.",
       "profileRelaysTitle": "Relays de perfiles",
-      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es y wss://index.hzrd149.com y en los relays outbox NIP-65 del visitante. Con la identidad de canal y en Público, el servidor también publica aquí su perfil y su lista de relays.",
+      "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es, wss://nos.lol y wss://relay.damus.io y en los relays outbox NIP-65 del visitante. Con la identidad de canal y en Público, el servidor también publica aquí su perfil y su lista de relays.",
       "profileRelays": "Relays de perfiles",
       "profileRelaysHint": "Un relay ws:// o wss:// por línea.",
       "mirrorTitle": "Replicar en otros servidores",

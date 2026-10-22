@@ -321,7 +321,7 @@
       "interactionRelays": "Interaction relays",
       "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps.",
       "profileRelaysTitle": "Profile relays",
-      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es and wss://index.hzrd149.com and on the visitor's NIP-65 outbox relays. With the channel identity and Public reach the server also publishes its profile and relay list here.",
+      "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es, wss://nos.lol and wss://relay.damus.io and on the visitor's NIP-65 outbox relays. With the channel identity and Public reach the server also publishes its profile and relay list here.",
       "profileRelays": "Profile relays",
       "profileRelaysHint": "One ws:// or wss:// relay per line.",
       "mirrorTitle": "Mirror to other servers",

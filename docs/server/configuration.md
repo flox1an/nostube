@@ -92,7 +92,8 @@ video_sources = ["wss://videos.example.org"]
 interaction_relays = ["wss://videos.example.org"]
 profile_relays = [
     "wss://purplepag.es",
-    "wss://index.hzrd149.com",
+    "wss://nos.lol",
+    "wss://relay.damus.io",
 ]
 
 [search]
@@ -146,7 +147,7 @@ domain = ""
 | `allowed_writers` | `[]` | yes | **Allowed writers**: keys that may write to the relay and upload to Blossom. Empty means nobody can upload |
 | `video_sources` | `["wss://<origin host>"]` | | **Video sources**: relays for the video catalog (public reach only) |
 | `interaction_relays` | `["wss://<origin host>"]` | | Relays for profiles, comments and other interactions (public reach only) |
-| `profile_relays` | `purplepag.es`, `index.hzrd149.com` | | **Profile relays**: extra relays for signed-in visitors' profiles; in public reach also where the channel profile is published. `[]` adds none |
+| `profile_relays` | `purplepag.es`, `nos.lol`, `relay.damus.io` | | **Profile relays**: extra relays for signed-in visitors' profiles; in public reach also where the channel profile is published. `[]` adds none |
 
 All relay lists take `ws://` or `wss://` URLs. In private reach the site uses only the instance relay
 for videos and interactions; the stored lists are kept for public reach.

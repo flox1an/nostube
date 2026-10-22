@@ -1,5 +1,5 @@
 # Build: dist/ (web + embed) and compiled server
-FROM node:24-alpine AS build
+FROM node:24.22.1-alpine AS build
 WORKDIR /app
 # Build context is the repository root (npm workspaces).
 # NSFW safety (18+ confirmation, embed gate); only `off` disables it. Self-hosters only.
@@ -22,7 +22,9 @@ RUN npx vite build \
       --target es2022 --skipLibCheck
 
 # Runtime: prod deps + dist + compiled server only
-FROM node:24-alpine
+FROM node:24.22.1-alpine
+RUN apk upgrade --no-cache \
+ && apk add --no-cache 'ca-certificates>=20261020-r0'
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 COPY package.json package-lock.json ./

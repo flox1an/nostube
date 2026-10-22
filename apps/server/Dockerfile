@@ -3,7 +3,7 @@
 # Nostube Server: one image with everything built inside it (site, studio, embed player, and
 # the Rust binary that embeds them). The build context is the repository root:
 #
-#   docker build -f apps/server/Dockerfile -t nostube-server .
+#   docker build --pull -f apps/server/Dockerfile -t nostube-server .
 #
 # The image serves plain HTTP on 8080: put a TLS-terminating reverse proxy in front of it
 # (docs/server/tls.md). Everything the instance stores lives in the volume at /data.
@@ -42,6 +42,8 @@ RUN cargo build --release --locked
 FROM debian:bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl \
+ && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' ca-certificates)" ge '20250419~deb12u2' \
+ && ! grep -q 'emSign ECC Root CA - G3\|AAA Certificate Services' /etc/ssl/certs/ca-certificates.crt \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --uid 10001 --user-group --no-create-home --shell /usr/sbin/nologin nostube \
  && mkdir /data && chown nostube:nostube /data

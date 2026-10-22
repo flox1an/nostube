@@ -25,6 +25,19 @@ To get this code, open the video on nostu.be, click the share button and switch 
 Older documentation used `https://nostu.be/embed?v=…`. That path loads the full Nostube app, not the player. Change such embeds to `/embed.html?v=…`.
 :::
 
+## Live demo
+
+This is the real player, served from nostu.be. Autoplay is off, so playback starts on click:
+
+<iframe
+  src="https://nostu.be/embed.html?v=naddr1qvzqqqy9hvpzpd7x76g4e756vtlldg0syczdazxz83kxcmgm3a3v0nqswj0nql5pqy28wumn8ghj7un9d3shjtnwdaehgafwvfjsz9nhwden5te0wfjkccte9ec8y6tdv9kzumn9wsqs6amnwvaz7tmwdaejumr0dsqzgce4v56ngep5vcknvd33vykngdpex5knsefcxvknwer9xqmrxwpev3nxvegxc80jp"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"
+></iframe>
+
 ## URL parameters
 
 | Parameter | Value | Default | Effect |

@@ -359,6 +359,15 @@ describe('SiteHome', () => {
       expect(screen.queryByRole('heading', { name: 'Privacy policy' })).toBeNull()
     })
 
+    it('links the server docs as "powered by nostube-server" in the footer', async () => {
+      const { unmount } = renderSite(client)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      const poweredBy = screen.getByRole('link', { name: 'powered by nostube-server' })
+      expect(poweredBy.getAttribute('href')).toBe('https://flox1an.github.io/nostube/server/')
+      expect(poweredBy.getAttribute('target')).toBe('_blank')
+      unmount()
+    })
+
     it('offers installing the app in the footer once the browser can', async () => {
       startInstallPromptCapture()
       const { unmount } = renderSite(client)

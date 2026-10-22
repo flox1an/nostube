@@ -36,7 +36,7 @@ export function SitePage({ config, page }: { config: InstanceConfig; page: SiteP
   )
 }
 
-/** Links to the pages that exist, the RSS feed and an "Install app" entry. */
+/** Links to the pages that exist, the RSS feed, an "Install app" entry and the server docs. */
 export function SiteFooter({ config }: { config: InstanceConfig }) {
   const { t } = useTranslation()
   const pages = usePages(config)
@@ -68,6 +68,14 @@ export function SiteFooter({ config }: { config: InstanceConfig }) {
           <IosInstallDialog open={iosOpen} onOpenChange={setIosOpen} />
         </>
       )}
+      <a
+        href="https://flox1an.github.io/nostube/server/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-auto hover:text-foreground hover:underline"
+      >
+        powered by nostube-server
+      </a>
     </footer>
   )
 }

@@ -147,6 +147,16 @@ export function Shell({
         </div>
       </header>
       {children}
+      <footer className="border-t pt-4 text-sm text-muted-foreground">
+        <a
+          href="https://flox1an.github.io/nostube/server/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-foreground hover:underline"
+        >
+          powered by nostube-server
+        </a>
+      </footer>
     </div>
   )
 }

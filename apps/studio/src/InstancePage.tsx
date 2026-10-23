@@ -12,7 +12,13 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
-import { loadNsite, publishNsite, type AdminState, type NsiteStatus } from './api'
+import {
+  loadNsite,
+  publishNsite,
+  type AdminState,
+  type NsiteDelivery,
+  type NsiteStatus,
+} from './api'
 import { draftCanBePublic } from './draft'
 import { Field, Tile } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
@@ -299,11 +305,26 @@ function NsiteCard({
               </dl>
             )}
             {status.retained && <p>{t('studio.nsite.retained')}</p>}
-            {status.error && (
-              <p role="alert" className="text-destructive">
-                {status.error}
-              </p>
-            )}
+            <Deliveries
+              title={t('studio.nsite.relays', {
+                done: status.relays.filter(r => r.status === 'done').length,
+                total: status.relays.length,
+              })}
+              rows={status.relays}
+            />
+            <Deliveries
+              title={t('studio.nsite.servers', {
+                done: status.servers.filter(s => s.status === 'done').length,
+                total: status.servers.length,
+              })}
+              rows={status.servers}
+            />
+            {status.error &&
+              ![...status.relays, ...status.servers].some(r => r.error === status.error) && (
+                <p role="alert" className="text-destructive">
+                  {status.error}
+                </p>
+              )}
           </div>
         )}
         {error && (
@@ -313,5 +334,43 @@ function NsiteCard({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+const deliveryClass = {
+  done: '',
+  pending: 'text-muted-foreground',
+  failed: 'text-destructive',
+}
+
+/** Which relays or Blossom servers have the shown version, with each one's last error. */
+function Deliveries({
+  title,
+  rows,
+}: {
+  title: string
+  rows: (NsiteDelivery & { done?: number; total?: number })[]
+}) {
+  const { t } = useTranslation()
+  if (rows.length === 0) return null
+  return (
+    <div>
+      <p className="font-medium">{title}</p>
+      <ul className="space-y-1">
+        {rows.map(row => (
+          <li key={row.target}>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <code className="break-all text-xs">{row.target}</code>
+              <span className={deliveryClass[row.status]}>
+                {t(`studio.nsite.delivery.${row.status}`)}
+                {row.total !== undefined &&
+                  ` · ${t('studio.nsite.files', { done: row.done, total: row.total })}`}
+              </span>
+            </div>
+            {row.error && <p className="break-all text-xs text-destructive">{row.error}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

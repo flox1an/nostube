@@ -412,6 +412,14 @@
       "version": "Zuletzt veröffentlichte Version (Aggregat-Hash)",
       "publishedAt": "Veröffentlicht am",
       "retained": "Das letzte Manifest und seine Dateien bleiben öffentlich. Automatische Veröffentlichung und Weiterleitung der Instanz sind aus.",
+      "relays": "Relays: {{done}} von {{total}} haben das Manifest",
+      "servers": "Blossom-Server: {{done}} von {{total}} haben alle Dateien",
+      "files": "{{done}} von {{total}} Dateien",
+      "delivery": {
+        "done": "erhalten",
+        "pending": "ausstehend",
+        "failed": "fehlgeschlagen"
+      },
       "invalidHost": "Gateway und eigene Domain müssen öffentliche DNS-Hostnamen sein, ohne Protokoll, Port oder Pfad.",
       "deleteTitle": "Das nsite jetzt löschen?",
       "deleteHint": "Beide Optionen schalten nsite-Hosting und Weiterleitung aus. Löschanfragen entfernen das Manifest und ungenutzte Dateien, aber Gateways, Relays und Blossom-Server können Kopien behalten. Löschen ist nicht garantiert.",

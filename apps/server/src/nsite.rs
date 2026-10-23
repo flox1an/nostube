@@ -169,6 +169,48 @@ fn manifest_tags(paths: &[(String, String)], public: &Value, aggregate: &str) ->
 }
 fn newer(last: u64, now: u64) -> u64 { last.saturating_add(1).max(now) }
 
+/// One outbox job as Studio shows it: `done`, `pending` (with the last retry error) or `failed`.
+fn job_state(row: Option<(String, Option<String>)>) -> (&'static str, Option<String>) {
+    match row {
+        Some((status, None)) if status == "done" => ("done", None),
+        Some((status, error)) if status == "failed" => ("failed", error),
+        Some((_, error)) => ("pending", error),
+        None => ("pending", None),
+    }
+}
+
+/// Per-target delivery of the shown version: the manifest (or deletion) per relay and its files
+/// per manifest `server`. The instance's own Blossom holds every file locally.
+async fn deliveries(outbox: &Outbox, event: Option<EventId>, relays: Vec<String>, servers: Vec<String>, hashes: Vec<String>, own: Option<String>) -> Result<(Value, Value), String> {
+    outbox.db(move |conn| {
+        use rusqlite::OptionalExtension;
+        let mut relay_rows = Vec::new();
+        for target in relays {
+            let row = match event {
+                Some(id) => conn.query_row("SELECT status,last_error FROM outbox WHERE kind='event' AND ref_id=? AND target=?", [id.to_hex(), target.clone()], |r| Ok((r.get(0)?, r.get(1)?))).optional()?,
+                None => None,
+            };
+            let (status, error) = job_state(row);
+            relay_rows.push(serde_json::json!({ "target": target, "status": status, "error": error }));
+        }
+        let mut blob = conn.prepare("SELECT status,last_error FROM outbox WHERE kind='blob' AND ref_id=? AND target=?")?;
+        let mut server_rows = Vec::new();
+        for target in servers {
+            let local = own.as_deref().is_some_and(|own| own.trim_end_matches('/') == target.trim_end_matches('/'));
+            let (mut done, mut failed, mut error) = (0, false, None);
+            for hash in &hashes {
+                let (status, e) = if local { ("done", None) } else { job_state(blob.query_row([hash, &target], |r| Ok((r.get(0)?, r.get(1)?))).optional()?) };
+                if status == "done" { done += 1; }
+                failed |= status == "failed";
+                if error.is_none() { error = e; }
+            }
+            let status = if failed { "failed" } else if done < hashes.len() { "pending" } else { "done" };
+            server_rows.push(serde_json::json!({ "target": target, "status": status, "done": done, "total": hashes.len(), "error": error }));
+        }
+        Ok((Value::Array(relay_rows), Value::Array(server_rows)))
+    }).await
+}
+
 impl Nsite {
     pub fn open(data: &Path) -> Result<Self, String> {
         let path = data.join("relay.sqlite");
@@ -221,20 +263,45 @@ impl Nsite {
             }
         }
         let event = state.pending.as_ref().and_then(|v| v.event.as_ref()).or(state.deletion.as_ref()).map(|e| e.id.to_hex());
+        // A job the outbox still retries (e.g. a relay's transient 503) is pending, not failed;
+        // its last error stays visible. Only exhausted jobs (`failed`) fail the publication.
+        let mut retrying = None;
         if let Some(event) = event {
-            let failure: Option<String> = outbox.db(move |conn| {
+            let failure: Option<(String, String)> = outbox.db(move |conn| {
                 use rusqlite::OptionalExtension;
-                conn.query_row("SELECT last_error FROM outbox WHERE kind='event' AND ref_id=? AND status!='done' AND last_error IS NOT NULL ORDER BY updated_at DESC LIMIT 1", [event], |r| r.get(0)).optional()
+                conn.query_row("SELECT status,last_error FROM outbox WHERE kind='event' AND ref_id=? AND status!='done' AND last_error IS NOT NULL ORDER BY status='failed' DESC, updated_at DESC LIMIT 1", [event], |r| Ok((r.get(0)?, r.get(1)?))).optional()
             }).await?;
-            if failure.is_some() { error = failure; }
+            match failure {
+                Some((status, failure)) if status == "failed" => error = Some(failure),
+                Some((_, failure)) => retrying = Some(failure),
+                None => {}
+            }
         }
         let status = if !active { "disabled" } else if error.is_some() { "failed" }
-            else if state.dirty.is_some() || state.pending.is_some() || state.current.is_none() { "pending" } else { "published" };
+            else if retrying.is_some() || state.dirty.is_some() || state.pending.is_some() || state.current.is_none() { "pending" } else { "published" };
+        let error = error.or(retrying);
+        let shown = if let Some(deletion) = state.deletion.as_ref() {
+            Some((Some(deletion.id), state.relays.iter().cloned().collect(), vec![], vec![]))
+        } else if active {
+            state.pending.as_ref().or(state.current.as_ref()).map(|v| (
+                v.event.as_ref().map(|e| e.id), v.relays.clone(),
+                v.tags.iter().filter(|t| t.first().is_some_and(|k| k == "server")).filter_map(|t| t.get(1).cloned()).collect(),
+                v.hashes.clone(),
+            ))
+        } else { None };
+        let (relays, servers) = match shown {
+            Some((event, relays, servers, hashes)) => {
+                let own = (public["originIsPublic"] == true).then(|| public["origin"].as_str().unwrap_or_default().to_owned());
+                deliveries(outbox, event, relays, servers, hashes, own).await?
+            }
+            None => (Value::Array(vec![]), Value::Array(vec![])),
+        };
         Ok(serde_json::json!({
             "url": key.and_then(|key| url(&public, key.public_key()).ok()),
             "aggregate": state.current.as_ref().map(|v| &v.aggregate),
             "publishedAt": state.current.as_ref().and_then(|v| v.event.as_ref()).map(|e| e.created_at.as_secs()),
             "status": status, "error": error, "retained": state.retained,
+            "relays": relays, "servers": servers,
         }))
     }
     async fn cleanup(&self, state: &mut State, keep: Vec<String>, owner: &str, outbox: &Outbox) -> Result<(), String> {
@@ -667,9 +734,25 @@ mod tests {
         outbox.db(move |conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND ref_id=?", [first]).map(|_| ())).await.unwrap();
         nsite.reconcile(&relay, &branding, &outbox, &signer).await.unwrap();
         assert!(relay.stored(Filter::new().kind(Kind::Custom(15128))).await.unwrap().is_empty());
+        // Per-server file count and per-relay state before the manifest is signed.
+        let status = nsite.status(&branding.public_config(), &signer, &outbox).await.unwrap();
+        assert_eq!(status["servers"], serde_json::json!([{ "target": "https://blossom.example", "status": "pending", "done": 1, "total": 2, "error": null }]));
+        assert!(status["relays"].as_array().unwrap().iter().all(|r| r["status"] == "pending"));
+        assert!(status["relays"].as_array().unwrap().iter().any(|r| r["target"] == "wss://mirror.example"));
         outbox.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob'", []).map(|_| ())).await.unwrap();
         nsite.reconcile(&relay, &branding, &outbox, &signer).await.unwrap();
         assert_eq!(relay.stored(Filter::new().kind(Kind::Custom(15128))).await.unwrap().len(), 1);
+        // A relay's transient refusal is still retried: pending, with the error visible.
+        outbox.db(|conn| conn.execute("UPDATE outbox SET last_error='cannot connect: HTTP error: 503 Service Unavailable' WHERE kind='event' AND target='wss://mirror.example'", []).map(|_| ())).await.unwrap();
+        outbox.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='event' AND target!='wss://mirror.example'", []).map(|_| ())).await.unwrap();
+        let status = nsite.status(&branding.public_config(), &signer, &outbox).await.unwrap();
+        assert_eq!((status["status"].as_str(), status["error"].as_str()), (Some("pending"), Some("cannot connect: HTTP error: 503 Service Unavailable")));
+        assert_eq!(status["servers"][0]["status"], "done");
+        for relay in status["relays"].as_array().unwrap() {
+            let mirror = relay["target"] == "wss://mirror.example";
+            assert_eq!(relay["status"], if mirror { "pending" } else { "done" }, "{relay}");
+            assert_eq!(relay["error"].is_null(), !mirror, "{relay}");
+        }
         outbox.db(|conn| conn.execute("UPDATE outbox SET status='failed',last_error='relay refused manifest' WHERE kind='event'", []).map(|_| ())).await.unwrap();
         let status = nsite.status(&branding.public_config(), &signer, &outbox).await.unwrap();
         assert_eq!(status["status"], "failed");

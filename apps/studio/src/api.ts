@@ -187,6 +187,17 @@ export interface NsiteStatus {
   error: string | null
   /** Turned off with "Keep copies": the last manifest and its files stay public. */
   retained: boolean
+  /** The shown version's manifest (or deletion) per relay. */
+  relays: NsiteDelivery[]
+  /** The shown version's files per manifest Blossom server. */
+  servers: (NsiteDelivery & { done: number; total: number })[]
+}
+
+/** `pending` includes jobs the outbox still retries; `error` is then the last attempt's. */
+export interface NsiteDelivery {
+  target: string
+  status: 'done' | 'pending' | 'failed'
+  error: string | null
 }
 
 export async function loadNsite(): Promise<NsiteStatus> {

@@ -414,6 +414,14 @@
       "version": "Dernière version publiée (empreinte agrégée)",
       "publishedAt": "Date de publication",
       "retained": "Le dernier manifeste et ses fichiers restent publics. La publication automatique et la redirection de l'instance sont désactivées.",
+      "relays": "Relais : {{done}} sur {{total}} ont le manifeste",
+      "servers": "Serveurs Blossom : {{done}} sur {{total}} ont tous les fichiers",
+      "files": "{{done}} fichiers sur {{total}}",
+      "delivery": {
+        "done": "reçu",
+        "pending": "en attente",
+        "failed": "échec"
+      },
       "invalidHost": "La passerelle et le domaine doivent être des noms d'hôtes DNS publics, sans protocole, port ni chemin.",
       "deleteTitle": "Supprimer le nsite maintenant ?",
       "deleteHint": "Les deux choix désactivent l'hébergement nsite et la redirection. Les demandes suppriment le manifeste et les fichiers inutilisés, mais les passerelles, relais et serveurs Blossom peuvent garder des copies. La suppression n'est pas garantie.",

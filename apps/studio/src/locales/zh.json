@@ -410,6 +410,14 @@
       "version": "上次发布的版本（聚合哈希）",
       "publishedAt": "发布时间",
       "retained": "上次的清单和文件仍然公开。自动发布和实例重定向已关闭。",
+      "relays": "中继：{{total}} 个中有 {{done}} 个已收到清单",
+      "servers": "Blossom 服务器：{{total}} 个中有 {{done}} 个拥有全部文件",
+      "files": "{{done}}/{{total}} 个文件",
+      "delivery": {
+        "done": "已收到",
+        "pending": "等待中",
+        "failed": "失败"
+      },
       "invalidHost": "网关和自定义域名必须是公共 DNS 主机名，不含协议、端口或路径。",
       "deleteTitle": "现在删除 nsite 吗？",
       "deleteHint": "两种选择都会关闭 nsite 托管和重定向。删除请求会移除清单和未使用的文件，但网关、中继和 Blossom 服务器可能保留副本。无法保证彻底删除。",

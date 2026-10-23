@@ -215,6 +215,8 @@ describe('Site hosting', () => {
     status: 'published',
     error: null,
     retained: false,
+    relays: [],
+    servers: [],
   }
 
   const serve = (mode = 'managed', status: NsiteStatus = published) => {
@@ -297,6 +299,31 @@ describe('Site hosting', () => {
     expect(await screen.findByText('mirror unreachable')).toBeTruthy()
     expect(screen.getByText(/manifest and files remain public/)).toBeTruthy()
     expect(screen.getByText('Publication failed')).toBeTruthy()
+  })
+
+  it('lists which relays and Blossom servers have the version, with a retry error once', async () => {
+    const error = 'cannot connect: HTTP error: 503 Service Unavailable'
+    serve('managed', {
+      ...published,
+      status: 'pending',
+      error,
+      relays: [
+        { target: 'wss://nos.lol', status: 'done', error: null },
+        { target: 'wss://relay.damus.io', status: 'pending', error },
+      ],
+      servers: [
+        { target: 'https://blossom.example', status: 'failed', error: 'full', done: 3, total: 5 },
+      ],
+    })
+    const s = state(true)
+    s.config.reach = 'public'
+    s.config.siteHosting = 'nsite'
+    renderInstance(s)
+    expect(await screen.findByText('Relays: 1 of 2 have the manifest')).toBeTruthy()
+    expect(screen.getByText('wss://relay.damus.io')).toBeTruthy()
+    expect(screen.getAllByText(error)).toHaveLength(1)
+    expect(screen.getByText('Blossom servers: 0 of 1 have all files')).toBeTruthy()
+    expect(screen.getByText(/failed · 3 of 5 files/)).toBeTruthy()
   })
 
   it('polls a pending publication and exposes its later failure without enabling premature publish', async () => {
@@ -387,7 +414,18 @@ describe('S3 storage', () => {
                   ? probe()
                   : url === '/api/admin/signer'
                     ? { mode: 'none', pubkey: null }
-                    : {}
+                    : url === '/api/admin/nsite'
+                      ? {
+                          url: null,
+                          aggregate: null,
+                          publishedAt: null,
+                          status: 'disabled',
+                          error: null,
+                          retained: false,
+                          relays: [],
+                          servers: [],
+                        }
+                      : {}
             )
           )
       )

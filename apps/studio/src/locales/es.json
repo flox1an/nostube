@@ -414,6 +414,14 @@
       "version": "Última versión publicada (hash agregado)",
       "publishedAt": "Fecha de publicación",
       "retained": "El último manifiesto y sus archivos siguen siendo públicos. La publicación automática y la redirección de la instancia están desactivadas.",
+      "relays": "Relés: {{done}} de {{total}} tienen el manifiesto",
+      "servers": "Servidores Blossom: {{done}} de {{total}} tienen todos los archivos",
+      "files": "{{done}} de {{total}} archivos",
+      "delivery": {
+        "done": "recibido",
+        "pending": "pendiente",
+        "failed": "fallido"
+      },
       "invalidHost": "La pasarela y el dominio deben ser nombres de host DNS públicos, sin protocolo, puerto ni ruta.",
       "deleteTitle": "¿Eliminar el nsite ahora?",
       "deleteHint": "Ambas opciones desactivan el alojamiento nsite y la redirección. Las solicitudes eliminan el manifiesto y los archivos sin uso, pero pasarelas, relays y servidores Blossom pueden guardar copias. La eliminación no está garantizada.",

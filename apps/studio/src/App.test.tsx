@@ -139,6 +139,8 @@ describe('Studio save bar', () => {
                       publishedAt: 1,
                       error: null,
                       retained: false,
+                      relays: [],
+                      servers: [],
                     }
             )
           )
@@ -195,6 +197,8 @@ describe('Studio save bar', () => {
                     publishedAt: null,
                     error: null,
                     retained: false,
+                    relays: [],
+                    servers: [],
                   }
           )
         )
@@ -236,6 +240,8 @@ describe('Studio save bar', () => {
               publishedAt: null,
               error: null,
               retained: false,
+              relays: [],
+              servers: [],
             })
           )
         return new Response(null, { status: 404 })

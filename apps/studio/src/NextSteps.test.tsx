@@ -14,6 +14,7 @@ const config = (site: Partial<AdminConfig['site']> = {}): AdminConfig => ({
   videoSources: [],
   interactionRelays: [],
   profileRelays: [],
+  signerRelays: [],
   reach: 'private',
   siteHosting: 'instance',
   nsite: { gateway: 'nsite.lol', domain: '' },

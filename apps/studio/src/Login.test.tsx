@@ -7,7 +7,7 @@ import i18n from './i18n'
 
 vi.mock('./accounts', async importOriginal => ({
   ...(await importOriginal<typeof import('./accounts')>()),
-  loadAccounts: async () => [],
+  loadAccounts: async () => ({ clientName: 'Studio (localhost)', relays: [] }),
 }))
 
 /** The server's login endpoints: `/admin/login` answers `password`, `/admin/login/nostr` 200. */
@@ -70,6 +70,12 @@ it('logs in with a Nostr key from the login dialog through a NIP-98 event', asyn
   const fetch = serve({})
   const onLoggedIn = vi.fn()
   render(<Login onLoggedIn={onLoggedIn} />)
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Log in with Nostr' })).toHaveProperty(
+      'disabled',
+      false
+    )
+  )
   fireEvent.click(screen.getByRole('button', { name: 'Log in with Nostr' }))
   const dialog = await screen.findByRole('dialog')
   fireEvent.click(await within(dialog).findByRole('button', { name: 'Login with Extension' }))

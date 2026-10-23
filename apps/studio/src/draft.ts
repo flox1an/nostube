@@ -34,6 +34,8 @@ export interface Draft {
   interactionRelaysText: string
   /** Visitor profile lookups and, in `public`, where the managed key's kind 0 and 10002 go. */
   profileRelaysText: string
+  /** Additional NIP-46 remote signer relays, besides the interaction relays; empty = none. */
+  signerRelaysText: string
   /** Empty lists: the outbox is off. */
   mirrorRelaysText: string
   mirrorBlossomText: string
@@ -81,6 +83,7 @@ export function toDraft(c: AdminConfig): Draft {
     videoSourcesText: c.videoSources.join('\n'),
     interactionRelaysText: c.interactionRelays.join('\n'),
     profileRelaysText: c.profileRelays.join('\n'),
+    signerRelaysText: c.signerRelays.join('\n'),
     mirrorRelaysText: c.mirror.relays.join('\n'),
     mirrorBlossomText: c.mirror.blossom.join('\n'),
     searchMode: c.search.mode,
@@ -126,6 +129,20 @@ function keys(label: string, text: string, errors: string[]): string[] {
 function relays(label: string, text: string, errors: string[]): string[] {
   return toLines(text).filter(line => {
     const ok = /^wss?:\/\/[^/\s]+\/?$/.test(line)
+    if (!ok) errors.push(i18n.t('studio.errors.notRelay', { label, line }))
+    return ok
+  })
+}
+
+/** The server's signer relay rule: ws(s) with a host, root path only, no credentials, query or fragment. */
+function rootRelays(label: string, text: string, errors: string[]): string[] {
+  return toLines(text).filter(line => {
+    let ok = /^wss?:\/\/[^/\\\s@?#]+\/?$/.test(line)
+    try {
+      ok &&= new URL(line).hostname !== ''
+    } catch {
+      ok = false
+    }
     if (!ok) errors.push(i18n.t('studio.errors.notRelay', { label, line }))
     return ok
   })
@@ -343,6 +360,7 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
   const videoSources = relays(label('videoSources'), d.videoSourcesText, errors)
   const interactionRelays = relays(label('interactionRelays'), d.interactionRelaysText, errors)
   const profileRelays = relays(label('profileRelays'), d.profileRelaysText, errors)
+  const signerRelays = rootRelays(label('signerRelays'), d.signerRelaysText, errors)
   const mirrorRelays = relays(label('mirrorRelays'), d.mirrorRelaysText, errors)
   const mirrorBlossom = servers(label('mirrorBlossom'), d.mirrorBlossomText, errors)
   if (d.reach === 'public' && !draftCanBePublic(originIsPublic, d))
@@ -368,6 +386,7 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
       videoSources,
       interactionRelays,
       profileRelays,
+      signerRelays,
       mirror: { relays: mirrorRelays, blossom: mirrorBlossom },
       search: { mode: d.searchMode },
       storage: { quotaGib, freeSpaceReserveGib, s3 },

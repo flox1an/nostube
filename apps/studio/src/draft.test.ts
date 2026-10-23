@@ -1,5 +1,6 @@
 import {
   DEFAULT_PROFILE_RELAYS,
+  DEFAULT_SIGNER_RELAYS,
   DEFAULT_SITE_LINKS,
   SITE_PAGE_MAX_CHARS,
   noSiteHomepage,
@@ -31,6 +32,7 @@ const config: AdminConfig = {
   videoSources: ['wss://relay.example'],
   interactionRelays: [],
   profileRelays: DEFAULT_PROFILE_RELAYS,
+  signerRelays: DEFAULT_SIGNER_RELAYS,
   reach: 'public',
   siteHosting: 'instance',
   nsite: { gateway: 'nsite.lol', domain: '' },
@@ -117,6 +119,27 @@ describe('draft', () => {
     const result = fromDraft({ ...toDraft(config), profileRelaysText: '  \n' })
     expect(result.config?.profileRelays).toEqual([])
     expect(fromDraft(toDraft(result.config!)).config).toEqual(result.config)
+  })
+
+  it('keeps an emptied signer relay list empty and accepts only root ws(s) relays', () => {
+    const empty = fromDraft({ ...toDraft(config), signerRelaysText: '  \n' })
+    expect(empty.config?.signerRelays).toEqual([])
+    expect(fromDraft(toDraft(empty.config!)).config?.signerRelays).toEqual([])
+    const custom = fromDraft({
+      ...toDraft(config),
+      signerRelaysText: 'wss://relay.example/\nws://relay.lan:7777',
+    })
+    expect(custom.config?.signerRelays).toEqual(['wss://relay.example/', 'ws://relay.lan:7777'])
+    for (const line of [
+      'https://relay.example',
+      'wss://relay.example/path',
+      'wss://user:pw@relay.example',
+      'wss://relay.example?x=1',
+      'wss://relay.example#x',
+      'wss://',
+    ]) {
+      expect(fromDraft({ ...toDraft(config), signerRelaysText: line }).config, line).toBeNull()
+    }
   })
 
   it('keeps the mirror targets and lets both lists be emptied (off)', () => {

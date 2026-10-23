@@ -324,6 +324,10 @@
       "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es, wss://nos.lol and wss://relay.damus.io and on the visitor's NIP-65 outbox relays. With the channel identity and Public reach the server also publishes its profile and relay list here.",
       "profileRelays": "Profile relays",
       "profileRelaysHint": "One ws:// or wss:// relay per line.",
+      "signerRelaysTitle": "Remote signer relays",
+      "signerRelaysDescription": "A signer app (NIP-46, such as Amber on a phone) and the browser meet on a relay both can reach to sign in and sign. This instance's interaction relays are always used (in Private: this server's relay); the relays listed here are added, by default the public wss://nos.lol and wss://relay.damus.io. A phone outside this network needs at least one public relay in common with the browser. Signer traffic is encrypted and separate from publishing: no video or post is published on these relays. Empty the list to use only the interaction relays.",
+      "signerRelays": "Additional signer relays",
+      "signerRelaysHint": "One ws:// or wss:// relay per line, without a path. Keep at least one for NIP-46: the built-in instance relay rejects signer messages.",
       "mirrorTitle": "Mirror to other servers",
       "mirrorDescription": "Copies this instance's own events and videos to servers you list, in the background. It keeps retrying while a target is down. Leave both lists empty to keep everything on this instance.",
       "mirrorRelays": "Mirror relays",
@@ -388,7 +392,7 @@
       "moveFailed": "The move stopped. Start it again to resume. Error: {{error}}"
     },
     "advanced": {
-      "privateNote": "Your instance is Private: video sources and interaction relays have no effect, the site uses only this server's relay for them. The lists keep their values and work only in Public. Profile relays still serve the lookup of signed-in visitors; the mirror lists work in both."
+      "privateNote": "Your instance is Private: video sources and interaction relays have no effect, the site uses only this server's relay for them. The lists keep their values and work only in Public. Profile relays still serve the lookup of signed-in visitors; remote signer relays and the mirror lists work in both."
     },
     "nsite": {
       "title": "Site hosting",
@@ -641,6 +645,7 @@
         "videoSources": "Video sources",
         "interactionRelays": "Interaction relays",
         "profileRelays": "Profile relays",
+        "signerRelays": "Additional signer relays",
         "quota": "Storage quota",
         "reserve": "Free-space reserve",
         "mirrorRelays": "Mirror relays",

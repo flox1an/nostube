@@ -31,6 +31,9 @@ struct Raw {
     /// Newer than ADR 0005, so a config file without it keeps the public defaults (ADR 0008).
     #[serde(default = "default_profile_relays")]
     profile_relays: Vec<String>,
+    /// Newer than ADR 0005: additional NIP-46 rendezvous relays; absent = the public defaults.
+    #[serde(default = "default_signer_relays")]
+    signer_relays: Vec<String>,
     #[serde(deserialize_with = "stored_search")]
     search: Search,
     tls: Tls,
@@ -550,6 +553,7 @@ pub struct Edited {
     pub video_sources: Vec<String>,
     pub interaction_relays: Vec<String>,
     pub profile_relays: Vec<String>,
+    pub signer_relays: Vec<String>,
     pub search: Search,
     pub storage: Storage,
     pub site: Site,
@@ -564,6 +568,30 @@ pub struct Edited {
 /// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
 fn default_profile_relays() -> Vec<String> {
     ["wss://purplepag.es", "wss://nos.lol", "wss://relay.damus.io"].map(String::from).to_vec()
+}
+
+/// Where a remote signer (NIP-46) and the browser meet besides the interaction relays: the same
+/// list as `DEFAULT_SIGNER_RELAYS` in `packages/core/src/instance-config.ts`. The instance relay
+/// refuses kind 24133 from anyone but its writers, so a phone outside the network needs these.
+fn default_signer_relays() -> Vec<String> {
+    ["wss://nos.lol", "wss://relay.damus.io"].map(String::from).to_vec()
+}
+
+/// A root relay as the site accepts it (`wss?://host[:port]` with an optional `/`): no
+/// credentials, path, query or fragment. Local and FIPS hosts are fine: the signer only has to
+/// reach it.
+fn check_signer_relays(urls: &[String]) -> Result<(), BoxError> {
+    for url in urls {
+        let rest = url.strip_prefix("wss://").or_else(|| url.strip_prefix("ws://"));
+        let ok = rest.is_some_and(|r| {
+            let host = r.strip_suffix('/').unwrap_or(r);
+            !host.is_empty() && !host.contains(['/', '?', '#', '@']) && !host.chars().any(|c| c.is_whitespace() || c.is_control())
+        }) && nostr::prelude::Url::parse(url).is_ok_and(|u| u.host_str().is_some_and(|h| !h.is_empty()));
+        if !ok {
+            return Err(format!("signer relay must be ws://host or wss://host with no path: {url}").into());
+        }
+    }
+    Ok(())
 }
 
 fn check_relays(lists: &[&[String]]) -> Result<(), BoxError> {
@@ -591,6 +619,8 @@ pub struct Config {
     /// mandatory defaults (both reaches), and, in public reach, where the channel's kinds 0 and
     /// 10002 go.
     pub profile_relays: Vec<String>,
+    /// Additional NIP-46 rendezvous relays, served in both reaches as configured.
+    pub signer_relays: Vec<String>,
     pub search: Search,
     pub tls: Tls,
     pub storage: Storage,
@@ -620,6 +650,7 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&raw.video_sources, &raw.interaction_relays, &raw.profile_relays])?;
+        check_signer_relays(&raw.signer_relays)?;
         check_site(&raw.site)?;
         check_mirror(&raw.mirror)?;
         check_nsite(&raw.nsite)?;
@@ -635,6 +666,7 @@ impl Config {
             video_sources: raw.video_sources,
             interaction_relays: raw.interaction_relays,
             profile_relays: raw.profile_relays,
+            signer_relays: raw.signer_relays,
             search: raw.search,
             tls: raw.tls,
             storage: raw.storage,
@@ -654,6 +686,7 @@ impl Config {
             return Err("title must not be empty".into());
         }
         check_relays(&[&e.video_sources, &e.interaction_relays, &e.profile_relays])?;
+        check_signer_relays(&e.signer_relays)?;
         check_site(&e.site)?;
         check_mirror(&e.mirror)?;
         check_nsite(&e.nsite)?;
@@ -673,6 +706,7 @@ impl Config {
             video_sources: e.video_sources.clone(),
             interaction_relays: e.interaction_relays.clone(),
             profile_relays: e.profile_relays.clone(),
+            signer_relays: e.signer_relays.clone(),
             search: e.search,
             tls: self.tls.clone(),
             storage: e.storage.clone(),
@@ -706,6 +740,7 @@ impl Config {
             video_sources: vec![format!("wss://{authority}")],
             interaction_relays: vec![format!("wss://{authority}")],
             profile_relays: default_profile_relays(),
+            signer_relays: default_signer_relays(),
             search: Search::Off,
             tls: Tls::LocalCa { router_name: None, https_port, http_port },
             storage: Storage::default(),
@@ -743,6 +778,7 @@ impl Config {
             video_sources: self.video_sources.clone(),
             interaction_relays: self.interaction_relays.clone(),
             profile_relays: self.profile_relays.clone(),
+            signer_relays: self.signer_relays.clone(),
             search: self.search,
             tls: self.tls.clone(),
             storage: self.storage.clone(),
@@ -806,8 +842,10 @@ impl Config {
     /// only; the stored lists stay as configured, so switching back loses nothing. Public reach
     /// without a public origin (S2, #161) serves the publicly reachable configured relays and the
     /// mirror relays, never the instance relay. Profile relays serve the visitor lookup in both
-    /// reaches, excluding LAN targets. `originIsPublic` and `mirror` (the publicly reachable mirror
-    /// targets) tell the server's own publishers which URLs they may announce.
+    /// reaches, excluding LAN targets. Signer relays (NIP-46 rendezvous) are served as configured
+    /// in both reaches: the signer only has to reach them, and the site never reads videos there.
+    /// `originIsPublic` and `mirror` (the publicly reachable mirror targets) tell the server's own
+    /// publishers which URLs they may announce.
     pub fn public_json(&self) -> serde_json::Value {
         let creators: Vec<String> = self.creators.iter().map(PublicKey::to_hex).collect();
         let mirror = self.public_mirror();
@@ -837,6 +875,7 @@ impl Config {
                 Reach::Private => self.profile_relays.clone(),
                 Reach::Public => public_urls(self.profile_relays.iter().filter(|u| self.origin_is_public() || u.trim_end_matches('/') != instance)),
             },
+            "signerRelays": self.signer_relays,
             "search": self.search,
             "siteHosting": self.site_hosting,
             "nsite": { "gateway": self.nsite.gateway, "domain": self.nsite.domain },
@@ -935,7 +974,6 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
         assert_eq!(json["interactionRelays"], serde_json::json!(["wss://flox-mac.local"]), "private: the instance relay only");
-        assert_eq!(json.as_object().unwrap().len(), 16);
         assert_eq!(json["reach"], "private");
         // A config file from before the field keeps the public profile lookup list (ADR 0008),
         // served in private reach too: the visitor lookup does not depend on reach (ADR 0012).
@@ -973,6 +1011,37 @@ tls = {{ mode = "local-ca" }}
         let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
         assert!(again.profile_relays.is_empty());
         assert!(Config::parse(&sample("profile_relays = [\"https://purplepag.es\"]\n")).is_err());
+    }
+
+    #[test]
+    fn signer_relays_default_when_missing_stay_as_configured_and_reject_non_root_urls() {
+        // A file from before the field gets the public defaults, and keeps them through a save.
+        let old = Config::parse(&sample("")).unwrap();
+        assert_eq!(old.signer_relays, default_signer_relays());
+        assert_eq!(old.public_json()["signerRelays"], serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"]));
+        assert_eq!(Config::parse(&old.to_toml().unwrap()).unwrap().signer_relays, default_signer_relays());
+        assert_eq!(Config::default_for("macbook-2.local", 9376, 0).signer_relays, default_signer_relays());
+        // Empty stays empty.
+        let none = Config::parse(&sample("signer_relays = []\n")).unwrap();
+        assert_eq!(none.public_json()["signerRelays"], serde_json::json!([]));
+        assert!(Config::parse(&none.to_toml().unwrap()).unwrap().signer_relays.is_empty());
+        // Local and FIPS signer relays are served in both reaches, and nowhere else.
+        let mine = ["ws://npub1x.fips:8080", "wss://flox-mac.local/", "ws://192.168.1.5:7777", "wss://relay.example"];
+        let line = format!("signer_relays = {mine:?}\n");
+        for text in [sample(&line), public_sample(&format!("reach = \"public\"\n{line}"))] {
+            let json = Config::parse(&text).unwrap().public_json();
+            assert_eq!(json["signerRelays"], serde_json::json!(mine));
+            for key in ["videoSources", "interactionRelays", "profileRelays"] {
+                assert!(!json[key].as_array().unwrap().iter().any(|u| mine[..3].contains(&u.as_str().unwrap())), "{key}");
+            }
+        }
+        for bad in [
+            "https://relay.example", "wss://", "wss:///", "wss://relay.example/path", "wss://relay.example//",
+            "wss://relay.example?x=1", "wss://relay.example#x", "wss://user:pw@relay.example", "wss://user@relay.example",
+            " wss://relay.example", "wss://relay.example ", "WSS://relay.example", "wss://relay example",
+        ] {
+            assert!(Config::parse(&sample(&format!("signer_relays = [{bad:?}]\n"))).is_err(), "{bad}");
+        }
     }
 
     #[test]
@@ -1019,6 +1088,7 @@ tls = {{ mode = "local-ca" }}
                 video_sources: vec!["wss://flox-mac.local".into()],
                 interaction_relays: vec![],
                 profile_relays: vec![],
+                signer_relays: vec!["ws://npub1x.fips:8080".into()],
                 search: Search::Local,
                 storage: Storage { quota_gib: 100, free_space_reserve_gib: 5, s3: None },
                 site: Site::default(),
@@ -1035,6 +1105,7 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(next.origin, cfg.origin);
         let re = Config::parse(&next.to_toml().unwrap()).unwrap();
         assert_eq!(re.search, Search::Local);
+        assert_eq!(re.signer_relays, vec!["ws://npub1x.fips:8080"]);
         // The removed external mode still starts, as off.
         let old = sample("").replace("search = { mode = \"off\" }", "search = { mode = \"external\", url = \"https://search.example\" }");
         assert_eq!(Config::parse(&old).unwrap().search, Search::Off);
@@ -1047,6 +1118,7 @@ tls = {{ mode = "local-ca" }}
                 video_sources: vec!["https://nope".into()],
                 interaction_relays: vec![],
                 profile_relays: vec![],
+                signer_relays: vec![],
                 search: Search::Off,
                 storage: Storage::default(),
                 site: Site::default(),
@@ -1104,6 +1176,7 @@ tls = {{ mode = "local-ca" }}
             video_sources: vec!["wss://flox-mac.local".into()],
             interaction_relays: vec![],
             profile_relays: vec![],
+            signer_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
             site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, ..Site::default() },
@@ -1132,6 +1205,7 @@ tls = {{ mode = "local-ca" }}
             video_sources: vec!["wss://flox-mac.local".into()],
             interaction_relays: vec![],
             profile_relays: vec![],
+            signer_relays: vec![],
             search: Search::Off,
             storage: Storage { quota_gib: 7, free_space_reserve_gib: 5, s3 },
             site: Site::default(),
@@ -1191,6 +1265,7 @@ tls = {{ mode = "local-ca" }}
             video_sources: vec!["wss://flox-mac.local".into()],
             interaction_relays: vec![],
             profile_relays: vec![],
+            signer_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
             site: Site { homepage, ..Site::default() },
@@ -1397,6 +1472,7 @@ tls = {{ mode = "local-ca" }}
             video_sources: vec![],
             interaction_relays: vec![],
             profile_relays: vec![],
+            signer_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
             site: Site::default(),

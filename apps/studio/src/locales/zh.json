@@ -322,6 +322,10 @@
       "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es、wss://nos.lol 和 wss://relay.damus.io 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份并处于公开模式时，服务器还会在这里发布自己的个人资料和中继列表。",
       "profileRelays": "个人资料中继",
       "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。",
+      "signerRelaysTitle": "远程签名器中继",
+      "signerRelaysDescription": "签名应用（NIP-46，例如手机上的 Amber）和浏览器通过双方都能访问的中继进行登录和签名。本实例的互动中继始终会被使用（私密模式下为本服务器的中继）；这里列出的中继会额外加入，默认是公共中继 wss://nos.lol 和 wss://relay.damus.io。位于本网络之外的手机至少需要一个与浏览器共用的公共中继。签名通信经过加密，与内容发布无关：不会在这些中继上发布任何视频或帖子。清空列表即只使用互动中继。",
+      "signerRelays": "额外的签名器中继",
+      "signerRelaysHint": "每行一个 ws:// 或 wss:// 中继，不带路径。NIP-46 至少需要保留一个：实例内置中继会拒绝签名器消息。",
       "mirrorTitle": "镜像到其他服务器",
       "mirrorDescription": "在后台把本实例自己的事件和视频复制到你列出的服务器。目标不可用时会持续重试。两个列表都留空则所有内容只保留在本实例上。",
       "mirrorRelays": "镜像中继",
@@ -386,7 +390,7 @@
       "moveFailed": "移动已停止。再次启动即可继续。错误：{{error}}"
     },
     "advanced": {
-      "privateNote": "你的实例为私密：视频来源和互动中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。个人资料中继仍用于查找已登录访客的个人资料；镜像列表在两种模式下都有效。"
+      "privateNote": "你的实例为私密：视频来源和互动中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。个人资料中继仍用于查找已登录访客的个人资料；签名器中继和镜像列表在两种模式下都有效。"
     },
     "nsite": {
       "title": "站点托管",
@@ -637,6 +641,7 @@
         "videoSources": "视频来源",
         "interactionRelays": "互动中继",
         "profileRelays": "个人资料中继",
+        "signerRelays": "额外的签名器中继",
         "quota": "存储配额",
         "reserve": "预留可用空间",
         "mirrorRelays": "镜像中继",

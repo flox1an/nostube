@@ -36,6 +36,8 @@ export interface AdminConfig {
   interactionRelays: string[]
   /** Visitor profile lookups and, in `public`, where the managed key's kind 0 and 10002 go. */
   profileRelays: string[]
+  /** Additional NIP-46 remote signer relays, besides the interaction relays; empty = none. */
+  signerRelays: string[]
   /** Where the outbox copies this instance's own events and blobs; both empty = off. */
   mirror: { relays: string[]; blossom: string[] }
   search: SearchConfig

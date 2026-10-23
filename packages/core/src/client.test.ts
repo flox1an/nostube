@@ -181,6 +181,7 @@ describe('instance scoping', () => {
     videoSources: ['wss://videos.example'],
     interactionRelays: ['wss://interact.example'],
     profileRelays: [],
+    signerRelays: [],
     search: { mode: 'off' },
     site: {
       tagline: '',

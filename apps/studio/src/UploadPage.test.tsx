@@ -35,14 +35,25 @@ vi.mock('./upload/blossom-upload', () => ({
     type,
   })),
 }))
+const relayPublish = vi.hoisted(() =>
+  vi.fn(async () => [{ ok: true, from: 'wss://videos.example.org' }])
+)
 vi.mock('./instance-client', () => ({
   bootInstanceClient: vi.fn(async () => ({
-    config: { videoSources: ['wss://videos.example.org'] },
+    config: servedConfig,
     client: {
-      relayPool: { publish: vi.fn(async () => [{ ok: true, from: 'wss://videos.example.org' }]) },
+      relayPool: { publish: relayPublish },
     },
   })),
 }))
+
+const servedConfig = {
+  origin: 'https://videos.example.org',
+  title: 'Videos',
+  videoSources: ['wss://videos.example.org'],
+  interactionRelays: ['wss://videos.example.org'],
+  signerRelays: [],
+}
 
 const secret = generateSecretKey()
 const pubkey = getPublicKey(secret)
@@ -67,6 +78,7 @@ const stateFor = (
     videoSources: ['wss://videos.example.org'],
     interactionRelays: [],
     profileRelays: [],
+    signerRelays: [],
     reach: 'private',
     siteHosting: 'instance',
     nsite: { gateway: 'nsite.lol', domain: '' },
@@ -182,7 +194,7 @@ describe('UploadPage', () => {
 
   it('shows the relay’s own reason when no relay takes the video', async () => {
     vi.mocked(bootInstanceClient).mockResolvedValueOnce({
-      config: { videoSources: ['wss://videos.example.org'] },
+      config: servedConfig,
       client: {
         relayPool: {
           publish: vi.fn(async () => [
@@ -207,7 +219,7 @@ describe('UploadPage', () => {
 
   it('gives advice instead of the raw error when the relay cannot be reached', async () => {
     vi.mocked(bootInstanceClient).mockResolvedValueOnce({
-      config: { videoSources: ['wss://videos.example.org'] },
+      config: servedConfig,
       client: {
         relayPool: {
           publish: vi.fn(async () => [
@@ -255,7 +267,7 @@ describe('UploadPage', () => {
       expect(signed.tags).toContainEqual(['published_at', String(fromLocalInput(local))])
       // Signed now (relays refuse a future created_at); only published_at carries the date.
       expect(Math.abs(signed.created_at - inSeconds(0))).toBeLessThan(60)
-      expect(bootInstanceClient).not.toHaveBeenCalled()
+      expect(relayPublish).not.toHaveBeenCalled()
     })
 
     it('does not start for a date that has passed', async () => {

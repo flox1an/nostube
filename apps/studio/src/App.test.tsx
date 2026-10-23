@@ -23,6 +23,7 @@ const state: AdminState = {
     videoSources: ['wss://videos.example.org'],
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: [],
+    signerRelays: [],
     reach: 'private',
     siteHosting: 'instance',
     nsite: { gateway: 'nsite.lol', domain: '' },

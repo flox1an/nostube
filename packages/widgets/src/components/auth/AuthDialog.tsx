@@ -12,8 +12,10 @@ export interface AuthDialogProps {
   onLogin: () => void
   /** Called once a freshly created account is logged in (host marks onboarding, …). */
   onComplete?: () => void
-  /** Relays for the NIP-46 nostrconnect handshake (the web defaults / instance interaction relays). */
+  /** Relays for the NIP-46 nostrconnect handshake (the web defaults / instance signer relays). */
   relays: string[]
+  /** Name the signer app shows for this client (an instance shows its own); defaults to nostube. */
+  clientName?: string
   /** Replaces the subtitle, e.g. with why signing in is needed right now. */
   description?: string
   /** Give "Sign in" the same weight as "Create account" (visitors who may already have a key). */
@@ -34,6 +36,7 @@ export function AuthDialog({
   onLogin,
   onComplete,
   relays,
+  clientName,
   description,
   equalChoices = false,
 }: AuthDialogProps) {
@@ -53,6 +56,7 @@ export function AuthDialog({
         onLogin={onLogin}
         onSignup={() => setStep('signup')}
         relays={relays}
+        clientName={clientName}
       />
     )
   }

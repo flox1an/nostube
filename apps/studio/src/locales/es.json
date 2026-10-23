@@ -326,6 +326,10 @@
       "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es, wss://nos.lol y wss://relay.damus.io y en los relays outbox NIP-65 del visitante. Con la identidad de canal y en Público, el servidor también publica aquí su perfil y su lista de relays.",
       "profileRelays": "Relays de perfiles",
       "profileRelaysHint": "Un relay ws:// o wss:// por línea.",
+      "signerRelaysTitle": "Relays para firmantes remotos",
+      "signerRelaysDescription": "Una app firmante (NIP-46, como Amber en el móvil) y el navegador se encuentran en un relay al que ambos llegan para iniciar sesión y firmar. Siempre se usan los relays de interacción de esta instancia (en Privado: el relay de este servidor); los relays indicados aquí se añaden, por defecto los públicos wss://nos.lol y wss://relay.damus.io. Un móvil fuera de esta red necesita al menos un relay público en común con el navegador. El tráfico del firmante va cifrado y es independiente de la publicación: en estos relays no se publica ningún vídeo ni nota. Vacía la lista para usar solo los relays de interacción.",
+      "signerRelays": "Relays de firmante adicionales",
+      "signerRelaysHint": "Un relay ws:// o wss:// por línea, sin ruta. Conserva al menos uno para NIP-46: el relay integrado de la instancia rechaza los mensajes del firmante.",
       "mirrorTitle": "Replicar en otros servidores",
       "mirrorDescription": "Copia en segundo plano los eventos y vídeos propios de esta instancia a los servidores que indiques. Sigue reintentando mientras un destino no responda. Deja ambas listas vacías para que todo quede en esta instancia.",
       "mirrorRelays": "Relays de réplica",
@@ -390,7 +394,7 @@
       "moveFailed": "El traslado se detuvo. Vuelve a iniciarlo para continuar. Error: {{error}}"
     },
     "advanced": {
-      "privateNote": "Tu instancia es privada: las fuentes de vídeo y los relays de interacción no tienen efecto, el sitio solo usa para ello el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Los relays de perfiles siguen sirviendo para buscar el perfil de los visitantes que inician sesión; las listas de réplica funcionan en ambos casos."
+      "privateNote": "Tu instancia es privada: las fuentes de vídeo y los relays de interacción no tienen efecto, el sitio solo usa para ello el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Los relays de perfiles siguen sirviendo para buscar el perfil de los visitantes que inician sesión; los relays de firmante y las listas de réplica funcionan en ambos casos."
     },
     "nsite": {
       "title": "Alojamiento del sitio",
@@ -645,6 +649,7 @@
         "videoSources": "Fuentes de video",
         "interactionRelays": "Relays de interacción",
         "profileRelays": "Relays de perfiles",
+        "signerRelays": "Relays de firmante adicionales",
         "quota": "Cuota de almacenamiento",
         "reserve": "Reserva de espacio libre",
         "mirrorRelays": "Relays de réplica",

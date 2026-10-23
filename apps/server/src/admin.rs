@@ -653,6 +653,7 @@ fn editable_json(cfg: &Config, secret_set: bool) -> serde_json::Value {
         "videoSources": cfg.video_sources,
         "interactionRelays": cfg.interaction_relays,
         "profileRelays": cfg.profile_relays,
+        "signerRelays": cfg.signer_relays,
         "search": cfg.search,
         "storage": {
             "quotaGib": cfg.storage.quota_gib,
@@ -676,6 +677,7 @@ struct ConfigPut {
     video_sources: Vec<String>,
     interaction_relays: Vec<String>,
     profile_relays: Vec<String>,
+    signer_relays: Vec<String>,
     search: Search,
     storage: StorageBody,
     site: SiteBody,
@@ -936,6 +938,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         video_sources: put.video_sources,
         interaction_relays: put.interaction_relays,
         profile_relays: put.profile_relays,
+        signer_relays: put.signer_relays,
         search: put.search,
         storage: Storage {
             quota_gib: put.storage.quota_gib,
@@ -2061,6 +2064,7 @@ mod tests {
             "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
             "interactionRelays": ["wss://relay.example"],
             "profileRelays": [],
+            "signerRelays": ["ws://npub1x.fips:8080", "wss://signer.example"],
             "search": { "mode": "local" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
             "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} },
@@ -2352,6 +2356,8 @@ mod tests {
         assert_eq!(body["config"]["creators"][0], PK);
         assert_eq!(body["config"]["storage"]["quotaGib"], 7);
         assert_eq!(body["config"]["site"]["theme"]["font"], "sans");
+        // A file from before signer relays reads as the public defaults.
+        assert_eq!(body["config"]["signerRelays"], serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"]));
         // What the studio reads is accepted as it is when saved back.
         let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &body["config"].to_string()).await;
         assert_eq!(status, StatusCode::OK);
@@ -2391,6 +2397,17 @@ mod tests {
                 v.to_string()
             }),
             (json, put_body("#112233").replace("wss://relay.example", "https://relay.example")),
+            (json, {
+                let mut v = put_value("#112233");
+                v.as_object_mut().unwrap().remove("signerRelays");
+                v.to_string()
+            }),
+            (json, put_body("#112233").replace("wss://signer.example", "https://signer.example")),
+            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example/nip46")),
+            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example?x=1")),
+            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example#x")),
+            (json, put_body("#112233").replace("wss://signer.example", "wss://user:pw@signer.example")),
+            (json, put_body("#112233").replace("wss://signer.example", "wss://signer .example")),
             (json, put_body("#112233").replace("https://blossom.example", "ftp://blossom.example")),
             (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
             (json, put_body("#112233").replace("https://shop.example/", "javascript:alert(1)")),
@@ -2444,6 +2461,8 @@ mod tests {
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert!(after.profile_relays.is_empty());
+        assert_eq!(after.signer_relays, vec!["ws://npub1x.fips:8080", "wss://signer.example"]);
+        assert_eq!(read["config"]["signerRelays"], put_value("#112233")["signerRelays"]);
         assert_eq!(after.search, Search::Local);
         assert_eq!((after.storage.quota_gib, after.storage.free_space_reserve_gib), (100, 3));
         assert_eq!(after.mirror.relays, vec!["wss://mirror.example"]);
@@ -2477,13 +2496,25 @@ mod tests {
         // Private reach: the site gets the instance relay only; the studio keeps the stored list.
         assert_eq!(live["videoSources"], serde_json::json!(["wss://flox-mac.local"]));
         assert_eq!(call(&app, "GET", Some(&cookie), None, "").await.1["config"]["videoSources"], serde_json::json!(["wss://other.example"]));
+        // Signer relays are served as saved in private reach too, and stay out of the read lists.
+        edit["signerRelays"] = serde_json::json!(["ws://npub1x.fips:8080"]);
+        let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
+        let live = public();
+        assert_eq!(live["signerRelays"], serde_json::json!(["ws://npub1x.fips:8080"]));
+        assert_eq!((&live["videoSources"], &live["interactionRelays"]), (&serde_json::json!(["wss://flox-mac.local"]), &serde_json::json!(["wss://flox-mac.local"])));
+        assert_eq!(call(&app, "GET", Some(&cookie), None, "").await.1["config"]["signerRelays"], live["signerRelays"]);
+        edit["signerRelays"] = serde_json::json!([]);
+        assert_eq!(call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await.0, StatusCode::OK);
+        assert_eq!(public()["signerRelays"], serde_json::json!([]), "an empty list stays empty");
+        assert!(Config::load(&dir.join("config.toml")).unwrap().signer_relays.is_empty());
 
         edit["storage"]["quotaGib"] = 8.into();
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
         assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(true)), "{body}");
         // Saved for the next start; the running instance keeps serving the last live revision.
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().revision, 6);
-        assert_eq!(public()["revision"], 5);
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().revision, 8);
+        assert_eq!(public()["revision"], 7);
         std::fs::remove_dir_all(&dir).ok();
     }
 

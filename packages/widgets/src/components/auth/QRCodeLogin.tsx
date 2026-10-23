@@ -6,6 +6,7 @@ import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
 import { Button } from '../button'
 import { saveAccountToStorage, saveActiveAccount } from '../../hooks/useAccountPersistence'
+import { allowSignerRelays } from '@nostube/core/instance-config'
 import { useTranslation } from 'react-i18next'
 
 interface QRCodeLoginProps {
@@ -16,9 +17,11 @@ interface QRCodeLoginProps {
   /**
    * Relays the nostrconnect handshake runs on. The host app initializes
    * `NostrConnectSigner.subscriptionMethod`/`publishMethod` (the signer falls back to those
-   * statics); the web app passes its default relays, instance builds their interaction relays.
+   * statics); the web app passes its default relays, instance builds their signer relays.
    */
   relays: string[]
+  /** The name the signer app shows for this client (an instance shows its own). */
+  clientName?: string
 }
 
 // Build a bunker:// URI from signer properties for persistence
@@ -31,7 +34,13 @@ function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string)
   return `bunker://${remotePubkey}?${params.toString()}`
 }
 
-export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCodeLoginProps) {
+export function QRCodeLogin({
+  onLogin,
+  onError,
+  isMobile = false,
+  relays,
+  clientName = 'nostube',
+}: QRCodeLoginProps) {
   const { t } = useTranslation()
   const accountManager = useContext(AccountsContext)
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null)
@@ -53,14 +62,18 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
     const controller = new AbortController()
 
     try {
+      // Pairing relays (e.g. public rendezvous relays) need not be instance relays; like bunker
+      // login, allow them or the instance relay allowlist drops the signer's reply.
+      allowSignerRelays(relays)
+
       // Create a new signer for client-initiated connection; the transport comes from the
-      // host-initialized NostrConnectSigner statics.
+      // host-initialized NostrConnectSigner statics. Each pairing gets a fresh client key.
       const signer = new NostrConnectSigner({ relays })
       signerRef.current = signer
 
       // Generate the nostrconnect:// URI
       const uri = signer.getNostrConnectURI({
-        name: 'nostube',
+        name: clientName,
         url: window.location.origin,
         image: new URL('/apple-touch-icon.png', window.location.origin).toString(),
         // 1111 (NIP-22 comments) so a connected signer can sign site comments.
@@ -93,6 +106,8 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
       // Persist account
       saveAccountToStorage(account, 'bunker', bunkerUri)
       saveActiveAccount(pubkey)
+      // The account owns the connected signer now; unmount must not close its live session.
+      if (abortControllerRef.current === controller) abortControllerRef.current = null
 
       onLogin()
     } catch (error) {
@@ -102,7 +117,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCo
       console.error('QR code login failed:', error)
       onError(error instanceof Error ? error.message : 'Connection failed')
     }
-  }, [accountManager, onLogin, onError, relays])
+  }, [accountManager, onLogin, onError, relays, clientName])
 
   // Generate QR code on mount
   useEffect(() => {

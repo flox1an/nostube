@@ -139,6 +139,9 @@ export const DEFAULT_PROFILE_RELAYS = [
   'wss://relay.damus.io',
 ]
 
+/** Additional NIP-46 rendezvous relays, reachable by signer devices outside the instance network. */
+export const DEFAULT_SIGNER_RELAYS = ['wss://nos.lol', 'wss://relay.damus.io']
+
 /** Where the outbox mirrors an instance set up "into the Nostr network" (server ADR 0009). */
 export const NETWORK_MIRROR_RELAYS = [
   'wss://relay.nostu.be',
@@ -174,6 +177,8 @@ export interface InstanceConfig {
    * Optional on the wire (absent: `DEFAULT_PROFILE_RELAYS`); empty: no additional relays.
    */
   profileRelays: string[]
+  /** Additional NIP-46 relays; pairing also uses interactionRelays. Absent on older servers. */
+  signerRelays: string[]
   search: InstanceSearch
   site: InstanceSite
 }
@@ -199,6 +204,15 @@ const ACCENT = /^#[0-9a-fA-F]{6}$/
 const HIDDEN_VIDEO = /^(?:[0-9a-f]{64}|\d+:[0-9a-f]{64}:.+)$/
 const isWs = (u: unknown) => typeof u === 'string' && /^wss?:\/\/[^/\s]+\/?$/.test(u)
 const isOrigin = (u: unknown) => typeof u === 'string' && /^https?:\/\/[^/\s?#@]+$/.test(u)
+
+const isSignerRelay = (value: unknown): boolean => {
+  if (typeof value !== 'string' || !isWs(value) || /[?#@\\]/.test(value)) return false
+  try {
+    return Boolean(new URL(value).hostname)
+  } catch {
+    return false
+  }
+}
 
 const isHomepageVideoRef = (value: unknown): value is string =>
   typeof value === 'string' &&
@@ -311,8 +325,8 @@ export const isHiddenVideoRef = (v: unknown): v is string =>
   typeof v === 'string' && HIDDEN_VIDEO.test(v)
 
 /**
- * Strict v1 validation. Missing never means "use the app default" (the one exception is
- * `profileRelays`, newer than the contract); unknown fields are ignored.
+ * Strict v1 validation. Missing never means "use the app default", except the newer
+ * `profileRelays` and `signerRelays` fields; unknown fields are ignored.
  */
 export function parseInstanceConfig(json: unknown): ParseResult {
   if (json === null || typeof json !== 'object' || Array.isArray(json)) {
@@ -344,6 +358,13 @@ export function parseInstanceConfig(json: unknown): ParseResult {
   // Optional (nostube-server ADR 0008): absent keeps the defaults, a present value must be valid.
   if ('profileRelays' in c && !(Array.isArray(c.profileRelays) && c.profileRelays.every(isWs)))
     e.push('profileRelays must be a list of ws(s):// relay URLs')
+  if (
+    'signerRelays' in c &&
+    !(Array.isArray(c.signerRelays) && c.signerRelays.every(isSignerRelay))
+  )
+    e.push(
+      'signerRelays must be a list of ws(s):// relay root URLs without credentials, query or fragment'
+    )
   if ('search' in c) {
     const s = c.search as { mode?: unknown } | null
     if (!s || typeof s !== 'object' || !['off', 'local'].includes(s.mode as string))
@@ -384,6 +405,7 @@ export function parseInstanceConfig(json: unknown): ParseResult {
       videoSources,
       interactionRelays,
       profileRelays: (c.profileRelays as string[] | undefined) ?? [...DEFAULT_PROFILE_RELAYS],
+      signerRelays: (c.signerRelays as string[] | undefined) ?? [...DEFAULT_SIGNER_RELAYS],
       search,
       site: {
         tagline: site.tagline,
@@ -519,6 +541,15 @@ export function allowSignerRelays(relays: readonly string[]) {
 export function instanceRelays(config: InstanceConfig): string[] {
   return [...new Set([...config.videoSources, ...config.interactionRelays])]
 }
+
+/** Pairing traffic stays separate from catalog/interaction traffic; public relays come first. */
+export function instanceSignerRelays(config: InstanceConfig): string[] {
+  return [...new Set([...config.signerRelays, ...config.interactionRelays])]
+}
+
+/** Canonical host (including a non-default port) distinguishes equally named instances. */
+export const instanceSignerName = (config: InstanceConfig): string =>
+  `${config.title} (${new URL(config.origin).host})`
 
 const VIDEO_KINDS = new Set([21, 22, 34235, 34236])
 export const isVideoKind = (kind: number) => VIDEO_KINDS.has(kind)

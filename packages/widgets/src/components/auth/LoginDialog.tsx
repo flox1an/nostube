@@ -22,6 +22,8 @@ interface LoginDialogProps {
   onSignup?: () => void
   /** Relays for the NIP-46 nostrconnect handshake. */
   relays: string[]
+  /** Name the signer app shows for this client; defaults to nostube. */
+  clientName?: string
 }
 
 // NIP-07 browser extensions don't exist on mobile browsers (iOS/Android Chrome,
@@ -38,6 +40,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   onLogin,
   onSignup,
   relays,
+  clientName,
 }) => {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
@@ -294,6 +297,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                 onError={setError}
                 isMobile={isMobileBrowser}
                 relays={relays}
+                clientName={clientName}
               />
             </TabsContent>
 

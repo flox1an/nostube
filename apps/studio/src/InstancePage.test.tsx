@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_PROFILE_RELAYS,
+  DEFAULT_SIGNER_RELAYS,
   DEFAULT_SITE_LINKS,
   noSitePages,
 } from '@nostube/core/instance-config'
@@ -30,6 +31,7 @@ const state = (canBePublic: boolean): AdminState => ({
     videoSources: ['wss://videos.example.org'],
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: DEFAULT_PROFILE_RELAYS,
+    signerRelays: DEFAULT_SIGNER_RELAYS,
     reach: 'private',
     siteHosting: 'instance',
     nsite: { gateway: 'nsite.lol', domain: '' },
@@ -147,10 +149,16 @@ describe('Advanced page', () => {
       expect(field(label).disabled, label).toBe(true)
     }
     expect(field('Video sources').value).toBe(s.config.videoSources.join('\n'))
-    for (const label of ['Profile relays', 'Mirror relays', 'Mirror Blossom servers']) {
+    for (const label of [
+      'Profile relays',
+      'Additional signer relays',
+      'Mirror relays',
+      'Mirror Blossom servers',
+    ]) {
       expect(field(label).disabled, label).toBe(false)
     }
     expect(field('Profile relays').value).toBe(DEFAULT_PROFILE_RELAYS.join('\n'))
+    expect(field('Additional signer relays').value).toBe(DEFAULT_SIGNER_RELAYS.join('\n'))
   })
 
   it('makes every list editable in Public', () => {

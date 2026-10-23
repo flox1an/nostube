@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LogIn, LogOut } from 'lucide-react'
 import { useActiveAccount } from 'applesauce-react/hooks'
 import type { NostubeClient } from '@nostube/core/client'
+import {
+  getInstanceConfig,
+  instanceSignerName,
+  instanceSignerRelays,
+} from '@nostube/core/instance-config'
 import { useLoginActions } from '@nostube/widgets/hooks/useLoginActions'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Button } from '@nostube/widgets/components/button'
@@ -15,12 +20,26 @@ import { useVisitorProfile } from './use-visitor-profile'
  */
 export function SiteAuthDialog({
   action,
+  relays,
   ...props
 }: Omit<AuthDialogProps, 'description' | 'equalChoices'> & {
   action?: 'like' | 'comment'
 }) {
   const { t } = useTranslation()
-  return <AuthDialog {...props} equalChoices description={t(`site.auth.why.${action ?? 'any'}`)} />
+  const config = getInstanceConfig()
+  const pairingRelays = useMemo(
+    () => (config ? instanceSignerRelays(config) : relays),
+    [config, relays]
+  )
+  return (
+    <AuthDialog
+      {...props}
+      clientName={config ? instanceSignerName(config) : undefined}
+      relays={pairingRelays}
+      equalChoices
+      description={t(`site.auth.why.${action ?? 'any'}`)}
+    />
+  )
 }
 
 /** The header's visitor controls: sign in, or the signed-in key with a sign-out button. */

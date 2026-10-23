@@ -42,7 +42,7 @@ const en: Policy = {
     ],
     [
       'Signing in (optional)',
-      "You only need to sign in to like, comment or zap. With a browser extension, your key stays in the extension. If you enter a private key (nsec) or an encrypted key (ncryptsec) with its password, it is used only in your browser, kept only while that browser tab is open and never sent to the server. With a remote signer (Nostr Connect, bunker), the connection data and a connection key are stored in your browser, and the website talks to the signer through the relays named in the connection address, or through this server's relay when you scan a QR code. Those relays can see that a connection takes place.",
+      "You only need to sign in to like, comment or zap. With a browser extension, your key stays in the extension. If you enter a private key (nsec) or an encrypted key (ncryptsec) with its password, it is used only in your browser, kept only while that browser tab is open and never sent to the server. With a remote signer (Nostr Connect, bunker), the connection data and a connection key are stored in your browser, and the website talks to the signer through the relays named in the connection address, or through this server's interaction relays and the configured additional signer relays when you scan a QR code. Those relays can see that a connection takes place.",
     ],
     [
       'Your profile after signing in',
@@ -101,7 +101,7 @@ const de: Policy = {
     ],
     [
       'Anmeldung (optional)',
-      'Sie müssen sich nur anmelden, um zu liken, zu kommentieren oder zu zappen. Mit einer Browser-Erweiterung bleibt Ihr Schlüssel in der Erweiterung. Geben Sie einen privaten Schlüssel (nsec) oder einen verschlüsselten Schlüssel (ncryptsec) mit Passwort ein, wird er nur in Ihrem Browser verwendet, nur so lange gehalten, wie dieser Browser-Tab geöffnet ist, und nie an den Server gesendet. Bei einem Remote-Signer (Nostr Connect, Bunker) werden die Verbindungsdaten und ein Verbindungsschlüssel in Ihrem Browser gespeichert; die Website spricht mit dem Signer über die Relays aus der Verbindungsadresse, beim Scannen eines QR-Codes über das Relay dieses Servers. Diese Relays können sehen, dass eine Verbindung besteht.',
+      'Sie müssen sich nur anmelden, um zu liken, zu kommentieren oder zu zappen. Mit einer Browser-Erweiterung bleibt Ihr Schlüssel in der Erweiterung. Geben Sie einen privaten Schlüssel (nsec) oder einen verschlüsselten Schlüssel (ncryptsec) mit Passwort ein, wird er nur in Ihrem Browser verwendet, nur so lange gehalten, wie dieser Browser-Tab geöffnet ist, und nie an den Server gesendet. Bei einem Remote-Signer (Nostr Connect, Bunker) werden die Verbindungsdaten und ein Verbindungsschlüssel in Ihrem Browser gespeichert; die Website spricht mit dem Signer über die Relays aus der Verbindungsadresse, beim Scannen eines QR-Codes über die Interaktions-Relays dieses Servers und die konfigurierten zusätzlichen Signer-Relays. Diese Relays können sehen, dass eine Verbindung besteht.',
     ],
     [
       'Ihr Profil nach der Anmeldung',
@@ -160,7 +160,7 @@ const fr: Policy = {
     ],
     [
       'Connexion (facultative)',
-      "Vous n'avez besoin de vous connecter que pour aimer, commenter ou zapper. Avec une extension de navigateur, votre clé reste dans l'extension. Si vous saisissez une clé privée (nsec) ou une clé chiffrée (ncryptsec) avec son mot de passe, elle n'est utilisée que dans votre navigateur, conservée seulement tant que cet onglet est ouvert et jamais envoyée au serveur. Avec un signataire distant (Nostr Connect, bunker), les données de connexion et une clé de connexion sont enregistrées dans votre navigateur, et le site dialogue avec le signataire via les relais indiqués dans l'adresse de connexion, ou via le relais de ce serveur si vous scannez un code QR. Ces relais peuvent voir qu'une connexion a lieu.",
+      "Vous n'avez besoin de vous connecter que pour aimer, commenter ou zapper. Avec une extension de navigateur, votre clé reste dans l'extension. Si vous saisissez une clé privée (nsec) ou une clé chiffrée (ncryptsec) avec son mot de passe, elle n'est utilisée que dans votre navigateur, conservée seulement tant que cet onglet est ouvert et jamais envoyée au serveur. Avec un signataire distant (Nostr Connect, bunker), les données de connexion et une clé de connexion sont enregistrées dans votre navigateur, et le site dialogue avec le signataire via les relais indiqués dans l'adresse de connexion, ou via les relais d'interaction de ce serveur et les relais de signature supplémentaires configurés si vous scannez un code QR. Ces relais peuvent voir qu'une connexion a lieu.",
     ],
     [
       'Votre profil après la connexion',
@@ -219,7 +219,7 @@ const es: Policy = {
     ],
     [
       'Inicio de sesión (opcional)',
-      'Solo necesita iniciar sesión para dar me gusta, comentar o hacer zaps. Con una extensión del navegador, su clave permanece en la extensión. Si introduce una clave privada (nsec) o una clave cifrada (ncryptsec) con su contraseña, solo se usa en su navegador, se conserva únicamente mientras esa pestaña esté abierta y nunca se envía al servidor. Con un firmante remoto (Nostr Connect, bunker), los datos de conexión y una clave de conexión se guardan en su navegador, y el sitio habla con el firmante a través de los relés indicados en la dirección de conexión, o a través del relé de este servidor si escanea un código QR. Esos relés pueden ver que se establece una conexión.',
+      'Solo necesita iniciar sesión para dar me gusta, comentar o hacer zaps. Con una extensión del navegador, su clave permanece en la extensión. Si introduce una clave privada (nsec) o una clave cifrada (ncryptsec) con su contraseña, solo se usa en su navegador, se conserva únicamente mientras esa pestaña esté abierta y nunca se envía al servidor. Con un firmante remoto (Nostr Connect, bunker), los datos de conexión y una clave de conexión se guardan en su navegador, y el sitio habla con el firmante a través de los relés indicados en la dirección de conexión, o a través de los relés de interacción de este servidor y los relés adicionales de firma configurados si escanea un código QR. Esos relés pueden ver que se establece una conexión.',
     ],
     [
       'Su perfil tras iniciar sesión',
@@ -278,7 +278,7 @@ const ru: Policy = {
     ],
     [
       'Вход (необязательно)',
-      'Входить нужно только для того, чтобы ставить отметки «нравится», комментировать или отправлять зэпы. С расширением браузера ваш ключ остаётся в расширении. Если вы вводите приватный ключ (nsec) или зашифрованный ключ (ncryptsec) с паролем, он используется только в вашем браузере, хранится лишь пока открыта эта вкладка и никогда не отправляется на сервер. При использовании удалённого подписанта (Nostr Connect, bunker) данные подключения и ключ подключения сохраняются в вашем браузере, а сайт общается с подписантом через релеи, указанные в адресе подключения, или через релей этого сервера, если вы сканируете QR-код. Эти релеи видят, что соединение устанавливается.',
+      'Входить нужно только для того, чтобы ставить отметки «нравится», комментировать или отправлять зэпы. С расширением браузера ваш ключ остаётся в расширении. Если вы вводите приватный ключ (nsec) или зашифрованный ключ (ncryptsec) с паролем, он используется только в вашем браузере, хранится лишь пока открыта эта вкладка и никогда не отправляется на сервер. При использовании удалённого подписанта (Nostr Connect, bunker) данные подключения и ключ подключения сохраняются в вашем браузере, а сайт общается с подписантом через релеи, указанные в адресе подключения, или через релеи взаимодействия этого сервера и настроенные дополнительные релеи подписанта, если вы сканируете QR-код. Эти релеи видят, что соединение устанавливается.',
     ],
     [
       'Ваш профиль после входа',
@@ -337,7 +337,7 @@ const zh: Policy = {
     ],
     [
       '登录（可选）',
-      '只有点赞、评论或发送 Zap 时才需要登录。使用浏览器扩展时，您的密钥保留在扩展中。如果您输入私钥（nsec）或带密码的加密密钥（ncryptsec），它只在您的浏览器中使用，仅在该浏览器标签页打开期间保留，绝不会发送到服务器。使用远程签名器（Nostr Connect、bunker）时，连接数据和一个连接密钥会保存在您的浏览器中，网站通过连接地址中列出的中继与签名器通信；扫描二维码时则通过本服务器的中继。这些中继可以看到有连接发生。',
+      '只有点赞、评论或发送 Zap 时才需要登录。使用浏览器扩展时，您的密钥保留在扩展中。如果您输入私钥（nsec）或带密码的加密密钥（ncryptsec）及其密码，它只在您的浏览器中使用，仅在该浏览器标签页打开期间保留，绝不会发送到服务器。使用远程签名器（Nostr Connect、bunker）时，连接数据和一个连接密钥会保存在您的浏览器中，网站通过连接地址中列出的中继与签名器通信；扫描二维码时则通过本服务器的互动中继和已配置的额外签名器中继。这些中继可以看到有连接发生。',
     ],
     [
       '登录后的个人资料',
@@ -396,7 +396,7 @@ const ja: Policy = {
     ],
     [
       'ログイン（任意）',
-      'ログインが必要なのは、いいね、コメント、Zap をするときだけです。ブラウザ拡張機能を使う場合、鍵は拡張機能の中にとどまります。秘密鍵（nsec）またはパスワード付きの暗号化された鍵（ncryptsec）を入力した場合、それはお使いのブラウザ内でのみ使用され、そのブラウザのタブが開いている間だけ保持され、サーバーには送信されません。リモート署名者（Nostr Connect、bunker）を使う場合、接続データと接続用の鍵がブラウザに保存され、ウェブサイトは接続アドレスに記載されたリレー経由で、QR コードを読み取った場合はこのサーバーのリレー経由で署名者とやり取りします。これらのリレーは、接続が行われていることを確認できます。',
+      'ログインが必要なのは、いいね、コメント、Zap をするときだけです。ブラウザ拡張機能を使う場合、鍵は拡張機能の中にとどまります。秘密鍵（nsec）またはパスワード付きの暗号化された鍵（ncryptsec）を入力した場合、それはお使いのブラウザ内でのみ使用され、そのブラウザのタブが開いている間だけ保持され、サーバーには送信されません。リモート署名者（Nostr Connect、bunker）を使う場合、接続データと接続用の鍵がブラウザに保存され、ウェブサイトは接続アドレスに記載されたリレー経由で、QR コードを読み取った場合はこのサーバーのインタラクション用リレーと設定された追加の署名用リレー経由で署名者とやり取りします。これらのリレーは、接続が行われていることを確認できます。',
     ],
     [
       'ログイン後のプロフィール',

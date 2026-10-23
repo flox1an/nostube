@@ -36,6 +36,7 @@ const config: AdminConfig = {
   videoSources: ['wss://relay.example'],
   interactionRelays: [],
   profileRelays: DEFAULT_PROFILE_RELAYS,
+  signerRelays: [],
   reach: 'private',
   siteHosting: 'instance',
   nsite: { gateway: 'nsite.lol', domain: '' },

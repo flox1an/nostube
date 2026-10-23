@@ -4,7 +4,7 @@ import { AccountsProvider } from 'applesauce-react/providers'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
 import LoginDialog from '@nostube/widgets/components/auth/LoginDialog'
-import { accountManager, loadAccounts } from './accounts'
+import { accountManager, loadAccounts, type LoginConnection } from './accounts'
 import { logIn, nostrPost } from './api'
 import { Field } from './fields'
 
@@ -19,11 +19,11 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState(false)
-  const [relays, setRelays] = useState<string[]>([])
+  const [connection, setConnection] = useState<LoginConnection | null>(null)
 
   useEffect(() => {
-    // The NIP-46 transport and the pairing relays; without them the other methods still work.
-    loadAccounts().then(setRelays, () => {})
+    // Initialize the NIP-46 transport before opening a pairing; password login stays independent.
+    loadAccounts().then(setConnection, () => {})
   }, [])
 
   const run = async (action: () => Promise<void>) => {
@@ -74,7 +74,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
           type="button"
           variant="outline"
           className="w-full"
-          disabled={busy}
+          disabled={busy || !connection}
           onClick={() => setDialog(true)}
         >
           {t('studio.login.withNostr')}
@@ -86,12 +86,14 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
         )}
         <p className="text-xs text-muted-foreground">{t('studio.login.forgot')}</p>
       </div>
-      <LoginDialog
-        isOpen={dialog}
-        relays={relays}
-        onLogin={withNostr}
-        onClose={() => setDialog(false)}
-      />
+      {connection && (
+        <LoginDialog
+          isOpen={dialog}
+          {...connection}
+          onLogin={withNostr}
+          onClose={() => setDialog(false)}
+        />
+      )}
     </AccountsProvider>
   )
 }

@@ -4,6 +4,7 @@ import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_PROFILE_RELAYS,
+  DEFAULT_SIGNER_RELAYS,
   DEFAULT_SITE_LINKS,
   noSitePages,
 } from '@nostube/core/instance-config'
@@ -40,6 +41,7 @@ const fresh = (canBePublic = true): AdminState => ({
     videoSources: ['wss://videos.example.org'],
     interactionRelays: ['wss://videos.example.org'],
     profileRelays: DEFAULT_PROFILE_RELAYS,
+    signerRelays: DEFAULT_SIGNER_RELAYS,
     reach: 'private',
     siteHosting: 'instance',
     nsite: { gateway: 'nsite.lol', domain: '' },

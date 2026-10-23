@@ -12,6 +12,7 @@ const config = (accent = '#0d9488'): InstanceConfig => ({
   videoSources: ['wss://videos.example.org'],
   interactionRelays: [],
   profileRelays: [],
+  signerRelays: [],
   search: { mode: 'off' },
   site: {
     tagline: '',

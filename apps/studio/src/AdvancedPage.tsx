@@ -18,6 +18,7 @@ type ListKey =
   | 'videoSourcesText'
   | 'interactionRelaysText'
   | 'profileRelaysText'
+  | 'signerRelaysText'
   | 'mirrorRelaysText'
   | 'mirrorBlossomText'
 
@@ -25,7 +26,7 @@ type ListKey =
 export function AdvancedPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
   // Privat: the server sends only its own relay as video source and interaction relay, whatever
-  // these lists hold (they keep their values). Profile relays still serve the visitor lookup.
+  // these lists hold (they keep their values). Profile and signer relays work in both.
   const publicOnly = draft.reach === 'private'
 
   /** A list edited one entry per line; `name` names its label and hint (`studio.instance.*`). */
@@ -85,6 +86,14 @@ export function AdvancedPage({ draft, update }: PageProps) {
           <CardDescription>{t('studio.instance.profileRelaysDescription')}</CardDescription>
         </CardHeader>
         <CardContent>{list('profile-relays', 'profileRelaysText', 'profileRelays')}</CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.instance.signerRelaysTitle')}</CardTitle>
+          <CardDescription>{t('studio.instance.signerRelaysDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>{list('signer-relays', 'signerRelaysText', 'signerRelays')}</CardContent>
       </Card>
 
       <Card>

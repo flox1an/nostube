@@ -2,11 +2,11 @@
 
 Studio is the admin interface of an instance at `/studio/`. It has three groups:
 
-| Group | Pages |
-| --- | --- |
-| Content | Videos, Upload, Moderation |
-| Site | Appearance, Pages |
-| Server | Instance, Account, Overview, Advanced |
+| Group   | Pages                                 |
+| ------- | ------------------------------------- |
+| Content | Videos, Upload, Moderation            |
+| Site    | Appearance, Pages                     |
+| Server  | Instance, Account, Overview, Advanced |
 
 Settings pages edit a draft that is saved with **Save and apply**. Some saves restart the instance for
 a few seconds; Studio waits up to 90 seconds for it to come back and says so if it does not. Which
@@ -41,13 +41,13 @@ admin address is public.
 Every video is signed with a Nostr key. The onboarding wizard asks whose key that is; **Server →
 Account → Identity** shows the current choice.
 
-| | Own identity | Channel identity |
-| --- | --- | --- |
-| Signing key | Your own Nostr key, signed in the browser | The **managed key**, generated and kept encrypted by the server |
-| Login | The key becomes a bound login key; the password keeps working | Password; a Nostr login key is optional |
-| Channel profile | Your existing profile, copied unchanged to the instance relay | Derived from the site settings (title, tagline, logo, banner, Lightning address and public website) |
-| Mirroring media to Blossom servers | No | Yes |
-| nsite hosting | No | Yes (public reach) |
+|                                    | Own identity                                                  | Channel identity                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Signing key                        | Your own Nostr key, signed in the browser                     | The **managed key**, generated and kept encrypted by the server                                     |
+| Login                              | The key becomes a bound login key; the password keeps working | Password; a Nostr login key is optional                                                             |
+| Channel profile                    | Your existing profile, copied unchanged to the instance relay | Derived from the site settings (title, tagline, logo, banner, Lightning address and public website) |
+| Mirroring media to Blossom servers | No                                                            | Yes                                                                                                 |
+| nsite hosting                      | No                                                            | Yes (public reach)                                                                                  |
 
 In Public reach, the managed profile's `website` links to the public instance origin with instance
 hosting, or to the nsite URL with nsite hosting (custom domain first, otherwise the channel's
@@ -70,11 +70,11 @@ supported ([ADR 0007](https://github.com/flox1an/nostube/blob/main/apps/server/d
 **Reach** decides what the instance announces on the Nostr network and where the site reads from
 ([ADR 0012](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0012-reach.md)).
 
-| | Private (default) | Public |
-| --- | --- | --- |
-| Publishes | Nothing, except copies to the [mirror](#mirrors) targets you enter | With the channel identity: the channel profile (kind 0), relay list (10002) and Blossom server list (10063) to the profile relays, through the outbox |
-| Site reads videos, creator data, comments | Only the instance relay, whatever relay lists are stored | The configured video sources and interaction relays, plus mirrors |
-| Other Nostr apps | Find nothing unless you share links | Find the channel and its videos; comments and zaps arrive at the instance |
+|                                           | Private (default)                                                  | Public                                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publishes                                 | Nothing, except copies to the [mirror](#mirrors) targets you enter | With the channel identity: the channel profile (kind 0), relay list (10002) and Blossom server list (10063) to the profile relays, through the outbox |
+| Site reads videos, creator data, comments | Only the instance relay, whatever relay lists are stored           | The configured video sources and interaction relays, plus mirrors                                                                                     |
+| Other Nostr apps                          | Find nothing unless you share links                                | Find the channel and its videos; comments and zaps arrive at the instance                                                                             |
 
 Public requires either a publicly reachable [origin](/server/tls#canonical-origin) or at least one
 public mirror relay **and** one public mirror Blossom server (configured under **Server → Advanced**).
@@ -163,6 +163,30 @@ and the lists keep their values for Public.
 relays, the public defaults `wss://purplepag.es`, `wss://nos.lol` and `wss://relay.damus.io` and the visitor's NIP-65
 relays. With the channel identity and Public reach the channel's profile and relay list are published
 here too. Details: [What the instance contacts](/server/tls#what-the-instance-contacts-on-the-internet).
+
+### Remote signer relays
+
+**Additional signer relays** (`signer_relays` in `config.toml`) are the rendezvous for Nostr Connect
+(NIP-46). The QR code/deep link includes these plus the instance's interaction relays, with the
+additional relays first. Defaults are `wss://nos.lol` and `wss://relay.damus.io`; edit them here even in
+Private reach. This is independent of profile lookup, video sources, mirrors and Reach.
+
+The browser and the signer app must share at least one reachable relay that accepts NIP-46.
+A phone outside FIPS can use a public signer relay without resolving the instance's `.fips` name.
+That only enables signing: opening the mesh website or its videos on that phone still needs FIPS.
+The relays carry encrypted signing requests/replies and see connection metadata; configuring them
+does not copy videos, profiles or comments there.
+
+An explicit empty list removes the additional public relays. **The built-in instance relay rejects
+NIP-46 kind 24133 from the fresh browser/phone client keys under its writer policy**: an empty list
+therefore does not provide mesh-only pairing by itself. Use at least one suitable rendezvous relay.
+No writer ACL is relaxed for this feature.
+
+The signer sees `<instance title> (<canonical host[:port]>)`, for example
+`My videos (npub1….fips)`, not the official web app's `nostube` name. Each fresh pairing already
+generates its own client key; an established account restores that same key and its pairing relays
+from this origin's browser storage without a new authorization. Title/relay changes affect new
+pairings after reload; they do not silently move an existing signer session.
 
 ### Mirrors
 

@@ -12,7 +12,7 @@ import type { IAccount } from 'applesauce-accounts'
 import { useActiveAccount } from 'applesauce-react/hooks'
 import { AccountsProvider } from 'applesauce-react/providers'
 import LoginDialog from '@nostube/widgets/components/auth/LoginDialog'
-import { accountManager, loadAccounts } from './accounts'
+import { accountManager, loadAccounts, type LoginConnection } from './accounts'
 import { createManagedKey, loadSigner, type SignerInfo } from './api'
 import i18n from './i18n'
 import { managedSigner, type Signer } from './signer'
@@ -70,8 +70,8 @@ function SignerStateProvider({
   const account = useActiveAccount() ?? null
   const [server, setServer] = useState<SignerInfo | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
-  /** The relays for a new Nostr Connect pairing, set once the stored accounts are restored. */
-  const [relays, setRelays] = useState<string[] | null>(null)
+  /** The identity label and relays of a new pairing, set after stored accounts are restored. */
+  const [connection, setConnection] = useState<LoginConnection | null>(null)
   const [accountsError, setAccountsError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
   const settle = useRef<(account: IAccount | null) => void>(undefined)
@@ -83,7 +83,7 @@ function SignerStateProvider({
       e => live && setServerError(message(e))
     )
     loadAccounts().then(
-      next => live && setRelays(next),
+      next => live && setConnection(next),
       e => live && setAccountsError(message(e))
     )
     return () => {
@@ -132,7 +132,7 @@ function SignerStateProvider({
     const error = serverError ?? accountsError
     // Without the server's answer the key might be the managed one: sign with nothing.
     const signer = serverError ? null : account
-    const loading = !error && (server === null || relays === null)
+    const loading = !error && (server === null || connection === null)
     return {
       status: loading ? 'loading' : signer ? 'ready' : 'none',
       mode: server?.mode ?? null,
@@ -147,7 +147,7 @@ function SignerStateProvider({
     server,
     serverError,
     accountsError,
-    relays,
+    connection,
     account,
     creatorKey,
     connect,
@@ -157,10 +157,10 @@ function SignerStateProvider({
   return (
     <SignerContext.Provider value={value}>
       {children}
-      {connecting && (
+      {connecting && connection && (
         <LoginDialog
           isOpen
-          relays={relays ?? []}
+          {...connection}
           // The dialog calls `onLogin` and then `onClose`: the account settles first.
           onLogin={() => close(accountManager.active ?? null)}
           onClose={() => close(null)}

@@ -326,6 +326,10 @@
       "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es, wss://nos.lol et wss://relay.damus.io et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne et en mode Public, le serveur y publie aussi son profil et sa liste de relais.",
       "profileRelays": "Relais de profils",
       "profileRelaysHint": "Un relais ws:// ou wss:// par ligne.",
+      "signerRelaysTitle": "Relais pour signataires distants",
+      "signerRelaysDescription": "Une app de signature (NIP-46, comme Amber sur un téléphone) et le navigateur se retrouvent sur un relais que les deux peuvent joindre pour se connecter et signer. Les relais d'interaction de cette instance sont toujours utilisés (en mode Privé : le relais de ce serveur) ; les relais indiqués ici s'y ajoutent, par défaut les relais publics wss://nos.lol et wss://relay.damus.io. Un téléphone hors de ce réseau a besoin d'au moins un relais public en commun avec le navigateur. Le trafic du signataire est chiffré et distinct de la publication : aucune vidéo ni note n'est publiée sur ces relais. Videz la liste pour n'utiliser que les relais d'interaction.",
+      "signerRelays": "Relais de signature supplémentaires",
+      "signerRelaysHint": "Un relais ws:// ou wss:// par ligne, sans chemin. Gardez-en au moins un pour NIP-46 : le relais intégré de l'instance refuse les messages de signature.",
       "mirrorTitle": "Répliquer vers d'autres serveurs",
       "mirrorDescription": "Copie en arrière-plan les événements et vidéos propres à cette instance vers les serveurs que vous indiquez. Les tentatives reprennent tant qu'une cible est hors service. Laissez les deux listes vides pour tout garder sur cette instance.",
       "mirrorRelays": "Relais miroirs",
@@ -390,7 +394,7 @@
       "moveFailed": "Le déplacement s'est arrêté. Relancez-le pour reprendre. Erreur : {{error}}"
     },
     "advanced": {
-      "privateNote": "Votre instance est privée : les sources vidéo et les relais d'interaction n'ont aucun effet, le site n'utilise pour cela que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les relais de profils servent toujours à rechercher le profil des visiteurs connectés ; les listes de miroirs fonctionnent dans les deux cas."
+      "privateNote": "Votre instance est privée : les sources vidéo et les relais d'interaction n'ont aucun effet, le site n'utilise pour cela que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les relais de profils servent toujours à rechercher le profil des visiteurs connectés ; les relais de signature et les listes de miroirs fonctionnent dans les deux cas."
     },
     "nsite": {
       "title": "Hébergement du site",
@@ -645,6 +649,7 @@
         "videoSources": "Sources vidéo",
         "interactionRelays": "Relais d'interaction",
         "profileRelays": "Relais de profils",
+        "signerRelays": "Relais de signature supplémentaires",
         "quota": "Quota de stockage",
         "reserve": "Réserve d'espace libre",
         "mirrorRelays": "Relais miroirs",

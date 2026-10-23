@@ -1,4 +1,5 @@
 import { AccountManager } from 'applesauce-accounts'
+import { instanceSignerName, instanceSignerRelays } from '@nostube/core/instance-config'
 import {
   restoreAccountsToManager,
   saveActiveAccount,
@@ -11,16 +12,22 @@ import { bootInstanceClient } from './instance-client'
  */
 export const accountManager = new AccountManager()
 
-let loaded: Promise<string[]> | undefined
+/** Instance metadata and rendezvous relays passed to the shared Nostr login dialog. */
+export interface LoginConnection {
+  clientName: string
+  relays: string[]
+}
+
+let loaded: Promise<LoginConnection> | undefined
 
 /**
  * Restores the stored accounts once, after the instance client has set up the NIP-46 transport.
- * Resolves to the relays a new Nostr Connect pairing runs on (the instance's interaction relays).
+ * Resolves to the instance-specific name and rendezvous relays of a new Nostr Connect pairing.
  */
-export function loadAccounts(): Promise<string[]> {
+export function loadAccounts(): Promise<LoginConnection> {
   loaded ??= bootInstanceClient().then(async ({ config }) => {
     await restoreAccountsToManager(accountManager)
-    return config.interactionRelays
+    return { clientName: instanceSignerName(config), relays: instanceSignerRelays(config) }
   })
   // A failed boot may be retried; do not cache the failure.
   loaded.catch(() => {

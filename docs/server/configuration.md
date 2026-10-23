@@ -99,6 +99,7 @@ profile_relays = [
     "wss://nos.lol",
     "wss://relay.damus.io",
 ]
+signer_relays = ["wss://nos.lol", "wss://relay.damus.io"]
 
 [search]
 mode = "off"
@@ -152,9 +153,16 @@ domain = ""
 | `video_sources`      | the instance's `ws://` or `wss://` relay    |           | **Video sources**: relays for the video catalog (public reach only)                                                                            |
 | `interaction_relays` | the instance's `ws://` or `wss://` relay    |           | Relays for profiles, comments and other interactions (public reach only)                                                                       |
 | `profile_relays`     | `purplepag.es`, `nos.lol`, `relay.damus.io` |           | **Profile relays**: extra relays for signed-in visitors' profiles; in public reach also where the channel profile is published. `[]` adds none |
+| `signer_relays`      | `nos.lol`, `relay.damus.io`                 |           | Additional NIP-46 connection relays for browser/phone signers, in both reaches. `[]` removes these additions; not video sources or mirrors     |
 
 All relay lists take `ws://` or `wss://` URLs. In private reach the site uses only the instance relay
 for videos and interactions; the stored lists are kept for public reach.
+
+Signer relays must be root WebSocket URLs, with no credentials, path (except `/`), query or fragment.
+Old config files without `signer_relays` keep the defaults; an explicit empty list stays empty.
+The public config exposes this list as `signerRelays`; pairing uses it alongside the interaction
+relays. At least one must accept NIP-46 messages from fresh client keys: the built-in instance
+relay's writer policy does not. See [Remote signer relays](/server/studio#remote-signer-relays).
 
 ### `[search]`
 

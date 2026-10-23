@@ -213,6 +213,17 @@ Upload, draft and transcode-job identifiers use cryptographic `crypto.getRandomV
 `crypto.randomUUID()` is unavailable on HTTP. This does not enable other secure-context APIs or
 override an extension's HTTP-origin restrictions.
 
+Nostr Connect / remote signing does work over HTTP without a browser extension. Under
+**Server → Advanced → Additional signer relays**, keep a public relay shared with the signer phone
+(defaults: `wss://nos.lol`, `wss://relay.damus.io`). The browser includes those in its pairing link
+and permits their replies through the instance relay allowlist. The phone need not join FIPS to
+sign; only the browser needs access to the mesh instance. This does not make mesh videos reachable
+outside FIPS or turn on public content publication.
+
+The built-in instance relay rejects NIP-46 messages from fresh client keys; its writer ACL is
+unchanged. Removing all additional signer relays does not by itself enable mesh-only pairing.
+Use an appropriate NIP-46 rendezvous relay. See [Remote signer relays](/server/studio#remote-signer-relays).
+
 Password sessions on an explicitly HTTP canonical origin omit the cookie's `Secure` attribute;
 HTTPS origins retain it. Authentication, HttpOnly and SameSite protections remain enabled.
 Keep this HTTP listener inside the mesh: do not publish port 80 on a public host or use it over

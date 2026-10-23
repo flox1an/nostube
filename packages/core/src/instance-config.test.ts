@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PROFILE_RELAYS,
+  DEFAULT_SIGNER_RELAYS,
   DEFAULT_SITE_LINKS,
   allowSignerRelays,
   fillLinkTemplate,
   decideLoad,
   isRelayAllowed,
+  instanceSignerName,
+  instanceSignerRelays,
   parseInstanceConfig,
   scopeVideoRequest,
   setInstanceConfig,
@@ -30,6 +33,7 @@ const good = (): InstanceConfig => ({
   videoSources: [RELAY],
   interactionRelays: [RELAY],
   profileRelays: [],
+  signerRelays: [],
   search: { mode: 'local' },
   site: {
     tagline: 'Hello',
@@ -237,6 +241,52 @@ describe('parseInstanceConfig', () => {
     expect(empty.ok && empty.config.profileRelays).toEqual([])
     expect(parseInstanceConfig({ ...good(), profileRelays: ['https://x.example'] }).ok).toBe(false)
     expect(parseInstanceConfig({ ...good(), profileRelays: null }).ok).toBe(false)
+  })
+})
+
+describe('instance remote signer configuration', () => {
+  it('adds public rendezvous for old servers but preserves an explicitly empty list', () => {
+    const { signerRelays: _s, ...oldServer } = good()
+    const absent = parseInstanceConfig(oldServer)
+    expect(absent.ok && absent.config.signerRelays).toEqual(DEFAULT_SIGNER_RELAYS)
+    const empty = parseInstanceConfig(good())
+    expect(empty.ok && instanceSignerRelays(empty.config)).toEqual([RELAY])
+  })
+
+  it('pairs over configured public relays as well as the mesh without adding catalog sources', () => {
+    const mesh = 'ws://npub1mesh.fips'
+    const config = {
+      ...good(),
+      videoSources: [mesh],
+      interactionRelays: [mesh, 'wss://shared.example'],
+      signerRelays: ['wss://public.example', 'wss://shared.example'],
+    }
+    const pairing = instanceSignerRelays(config)
+    expect(pairing).toEqual(['wss://public.example', 'wss://shared.example', mesh])
+    expect(scopeVideoRequest(config, pairing, [{ kinds: [34235] }])).toEqual({
+      relays: [mesh],
+      filters: [{ kinds: [34235], authors: [CREATOR] }],
+    })
+  })
+
+  it('distinguishes equally named instances by their canonical host and port', () => {
+    const config = { ...good(), title: 'My videos', origin: 'http://npub1mesh.fips' }
+    expect(instanceSignerName(config)).toBe('My videos (npub1mesh.fips)')
+    expect(instanceSignerName({ ...config, origin: 'http://npub1other.fips:8080' })).toBe(
+      'My videos (npub1other.fips:8080)'
+    )
+  })
+
+  it.each([
+    'https://relay.example',
+    'ws://',
+    'wss://user:secret@relay.example',
+    'wss://relay.example#fragment',
+    'wss://relay.example?token=secret',
+    'wss://relay.example/path',
+    'wss://relay.example:invalid',
+  ])('rejects invalid or credential-bearing signer relay: %j', relay => {
+    expect(parseInstanceConfig({ ...good(), signerRelays: [relay] }).ok).toBe(false)
   })
 })
 

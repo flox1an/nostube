@@ -324,6 +324,10 @@
       "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es, wss://nos.lol und wss://relay.damus.io sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität und bei Öffentlich veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
       "profileRelays": "Profil-Relays",
       "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile.",
+      "signerRelaysTitle": "Relays für Remote-Signer",
+      "signerRelaysDescription": "Eine Signer-App (NIP-46, etwa Amber auf dem Handy) und der Browser treffen sich zum Anmelden und Signieren auf einem Relay, das beide erreichen. Die Interaktions-Relays dieser Instanz werden immer genutzt (bei Privat: das Relay dieses Servers); die hier eingetragenen Relays kommen hinzu, standardmäßig die öffentlichen wss://nos.lol und wss://relay.damus.io. Ein Handy außerhalb dieses Netzes braucht mindestens ein öffentliches Relay, das auch der Browser nutzt. Der Signer-Verkehr ist verschlüsselt und getrennt vom Veröffentlichen: Auf diesen Relays werden keine Videos oder Beiträge veröffentlicht. Leere die Liste, um nur die Interaktions-Relays zu nutzen.",
+      "signerRelays": "Zusätzliche Signer-Relays",
+      "signerRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile, ohne Pfad. Für NIP-46 mindestens eines beibehalten: Das eingebaute Instanz-Relay weist Signer-Nachrichten ab.",
       "mirrorTitle": "Auf andere Server spiegeln",
       "mirrorDescription": "Kopiert die eigenen Events und Videos dieser Instanz im Hintergrund auf die Server, die du hier einträgst. Ist ein Ziel nicht erreichbar, wird es immer wieder versucht. Bleiben beide Listen leer, bleibt alles auf dieser Instanz.",
       "mirrorRelays": "Spiegel-Relays",
@@ -388,7 +392,7 @@
       "moveFailed": "Das Verschieben wurde angehalten. Starte es erneut, um fortzusetzen. Fehler: {{error}}"
     },
     "advanced": {
-      "privateNote": "Deine Instanz ist privat: Videoquellen und Interaktions-Relays wirken nicht, die Website nutzt dafür nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Profil-Relays dienen weiter der Profilsuche angemeldeter Besucher; die Spiegel-Listen wirken in beiden Fällen."
+      "privateNote": "Deine Instanz ist privat: Videoquellen und Interaktions-Relays wirken nicht, die Website nutzt dafür nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Profil-Relays dienen weiter der Profilsuche angemeldeter Besucher; die Signer-Relays und die Spiegel-Listen wirken in beiden Fällen."
     },
     "nsite": {
       "title": "Site-Hosting",
@@ -641,6 +645,7 @@
         "videoSources": "Videoquellen",
         "interactionRelays": "Interaktions-Relays",
         "profileRelays": "Profil-Relays",
+        "signerRelays": "Zusätzliche Signer-Relays",
         "quota": "Speicherkontingent",
         "reserve": "Freier Speicher als Reserve",
         "mirrorRelays": "Spiegel-Relays",

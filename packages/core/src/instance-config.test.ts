@@ -203,8 +203,27 @@ describe('parseInstanceConfig', () => {
     })
   })
 
-  it('rejects an origin with a path and the removed external search mode', () => {
-    expect(parseInstanceConfig({ ...good(), origin: 'https://studio.local/app' }).ok).toBe(false)
+  it('accepts an http origin with its ws relay (mesh instance)', () => {
+    const relay = 'ws://npub1abc.fips:8080'
+    const result = parseInstanceConfig({
+      ...good(),
+      origin: 'http://npub1abc.fips:8080',
+      videoSources: [relay],
+      interactionRelays: [relay],
+    })
+    expect(result.ok && result.config.origin).toBe('http://npub1abc.fips:8080')
+  })
+
+  it('rejects an origin with path, query, credentials or other scheme, and external search', () => {
+    for (const origin of [
+      'https://studio.local/app',
+      'https://studio.local?x=1',
+      'https://studio.local#x',
+      'http://user@studio.local',
+      'ftp://studio.local',
+      'wss://studio.local',
+    ])
+      expect(parseInstanceConfig({ ...good(), origin }).ok).toBe(false)
     expect(
       parseInstanceConfig({ ...good(), search: { mode: 'external', url: 'https://x.example' } }).ok
     ).toBe(false)

@@ -9,3 +9,6 @@
 .worktrees
 apps/server/web
 apps/server/research
+# Local Compose state includes admin secrets, signing keys and the FIPS identity.
+apps/server/data
+apps/server/fips

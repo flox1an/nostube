@@ -22,3 +22,7 @@ docs/competitor-analysis/
 
 # local server instance state, including secrets and TLS keys
 /apps/server/tmp3/
+
+# Docker Compose instance state (includes FIPS identity keys).
+/apps/server/data/
+/apps/server/fips/

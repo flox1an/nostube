@@ -7,6 +7,7 @@ import { useAppContext } from './useAppContext'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createAddressLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@nostube/core/deletions'
+import { randomUUID } from '@nostube/core/random-uuid'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
 import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
@@ -418,7 +419,7 @@ export function usePlaylists() {
     async (name: string, description?: string, isPrivate?: boolean) => {
       const playlist: Playlist = {
         eventId: undefined,
-        identifier: 'nostube-' + crypto.randomUUID(),
+        identifier: 'nostube-' + randomUUID(),
         name,
         description,
         videos: [],

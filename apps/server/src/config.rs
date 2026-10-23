@@ -98,6 +98,14 @@ pub fn public_urls<'a>(urls: impl IntoIterator<Item = &'a String>) -> Vec<String
     result
 }
 
+/// The relay on an origin's authority: `https://` becomes `wss://`, `http://` becomes `ws://`.
+pub fn relay_url(origin: &str) -> String {
+    match origin.strip_prefix("http") {
+        Some(rest) => format!("ws{rest}"),
+        None => origin.to_owned(),
+    }
+}
+
 /// Where the creator site is served (#157): by the instance, or as an nsite (NIP-5A) under the
 /// managed key, which needs public reach.
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -186,9 +194,10 @@ pub enum Tls {
         #[serde(default = "http_port")]
         http_port: u16,
     },
-    /// TLS ends at a reverse proxy in front of the instance (Caddy, nginx, Coolify, Traefik).
     /// The server speaks plain HTTP on `port` and reads no forwarded headers: the canonical
-    /// origin comes from the config, and the proxy has to pass `Host` on unchanged.
+    /// origin comes from the config. `https://` origins put TLS on a reverse proxy in front
+    /// (Caddy, nginx, Coolify, Traefik), which has to pass `Host` on unchanged; `http://` origins
+    /// are served as they are (e.g. on a FIPS mesh).
     Proxy {
         #[serde(default = "proxy_port")]
         port: u16,
@@ -604,6 +613,9 @@ impl Config {
             return Err("revision must be a positive integer".into());
         }
         let origin_host = origin_host(&raw.origin)?.to_owned();
+        if matches!(raw.tls, Tls::LocalCa { .. }) && !raw.origin.starts_with("https://") {
+            return Err(format!("tls local-ca serves HTTPS, so the origin must be https://host: {}", raw.origin).into());
+        }
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
@@ -704,16 +716,16 @@ impl Config {
         }
     }
 
-    /// First start behind a TLS-terminating proxy: the origin is given (`https://host`), the own
-    /// relay is `wss://host`, and the server listens on plain HTTP on `port`.
+    /// First start in proxy mode: the origin is given (`https://host` behind a TLS-terminating
+    /// proxy, or plain `http://host`), the own relay is `wss://host` or `ws://host`, and the
+    /// server listens on plain HTTP on `port`.
     pub fn default_for_proxy(origin: &str, port: u16) -> Result<Config, BoxError> {
         let origin = origin.trim_end_matches('/');
         let origin_host = origin_host(origin)?.to_owned();
-        let authority = origin.trim_start_matches("https://").to_owned();
         let mut cfg = Config::default_for(&origin_host, 443, 0);
         cfg.origin = origin.to_owned();
-        cfg.video_sources = vec![format!("wss://{authority}")];
-        cfg.interaction_relays = vec![format!("wss://{authority}")];
+        cfg.video_sources = vec![relay_url(origin)];
+        cfg.interaction_relays = vec![relay_url(origin)];
         cfg.tls = Tls::Proxy { port };
         Ok(cfg)
     }
@@ -741,9 +753,9 @@ impl Config {
         Ok(toml::to_string_pretty(&raw)?)
     }
 
-    /// `wss://` on the origin's authority: this instance's own relay.
+    /// `wss://` (or `ws://` for an `http://` origin) on the origin's authority: this instance's own relay.
     pub fn instance_relay(&self) -> String {
-        self.origin.replacen("https://", "wss://", 1)
+        relay_url(&self.origin)
     }
 
     /// The origin is publicly reachable (S1); else the instance is on the home network (S2) and
@@ -867,10 +879,10 @@ impl Config {
     }
 }
 
-/// `https://host[:port]` with no path, query or fragment (ADR 0003 canonical origin).
+/// `http(s)://host[:port]` with no path, query or fragment (ADR 0003 canonical origin).
 fn origin_host(origin: &str) -> Result<&str, BoxError> {
-    let bad = || -> BoxError { format!("origin must be https://host with no path: {origin}").into() };
-    let rest = origin.strip_prefix("https://").ok_or_else(bad)?;
+    let bad = || -> BoxError { format!("origin must be http(s)://host with no path: {origin}").into() };
+    let rest = origin.strip_prefix("https://").or_else(|| origin.strip_prefix("http://")).ok_or_else(bad)?;
     if rest.is_empty() || rest.contains(['/', '?', '#', '@']) {
         return Err(bad());
     }
@@ -944,6 +956,7 @@ tls = {{ mode = "local-ca" }}
         assert!(Config::parse(&sample("").replace("interaction_relays = []\n", "")).is_err());
         for (from, to) in [
             ("https://flox-mac.local\"", "https://flox-mac.local/x\""),
+            // local-ca serves HTTPS only.
             ("https://flox-mac.local\"", "http://flox-mac.local\""),
             ("revision = 3", "revision = 0"),
             ("wss://flox-mac.local\"", "https://flox-mac.local\""),
@@ -967,6 +980,8 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(origin_host("https://192.168.1.5:8443").unwrap(), "192.168.1.5");
         assert_eq!(origin_host("https://[fd00::1]:8443").unwrap(), "fd00::1");
         assert!(origin_host("https://host:x").is_err());
+        assert_eq!(origin_host("http://npub1x.fips:8080").unwrap(), "npub1x.fips");
+        assert!(origin_host("ws://host").is_err());
     }
 
     #[test]
@@ -1296,11 +1311,29 @@ tls = {{ mode = "local-ca" }}
             Config::default_for_proxy("https://videos.example.org:8443", 8080).unwrap().video_sources,
             vec!["wss://videos.example.org:8443"]
         );
+        // A plain HTTP origin (a FIPS mesh node) gets a plain ws relay on the same authority and,
+        // as a public name like any other, may go public.
+        let mut http = Config::default_for_proxy("http://npub.fips:8080/", 8080).unwrap();
+        assert_eq!(http.origin, "http://npub.fips:8080");
+        assert_eq!(http.origin_host, "npub.fips");
+        assert_eq!(http.video_sources, vec!["ws://npub.fips:8080"]);
+        assert_eq!(http.interaction_relays, vec!["ws://npub.fips:8080"]);
+        assert_eq!(http.public_json()["videoSources"], serde_json::json!(["ws://npub.fips:8080"]), "private");
+        http.reach = Reach::Public;
+        let again = Config::parse(&http.to_toml().unwrap()).unwrap();
+        assert_eq!((again.origin.as_str(), again.instance_relay()), ("http://npub.fips:8080", "ws://npub.fips:8080".into()));
+        assert_eq!(again.reach, Reach::Public);
+        assert!(again.origin_is_public() && again.can_be_public());
+        let json = again.public_json();
+        assert_eq!(json["origin"], "http://npub.fips:8080");
+        assert_eq!(json["originIsPublic"], true);
+        assert_eq!(json["videoSources"], serde_json::json!(["ws://npub.fips:8080"]));
+        assert_eq!(json["interactionRelays"], serde_json::json!(["ws://npub.fips:8080"]));
     }
 
     #[test]
-    fn a_proxy_origin_must_be_https_without_a_path() {
-        for bad in ["http://videos.example.org", "videos.example.org", "https://videos.example.org/app", "https://"] {
+    fn a_proxy_origin_must_be_http_or_https_without_a_path() {
+        for bad in ["videos.example.org", "https://videos.example.org/app", "http://videos.example.org/app", "https://", "http://", "ws://videos.example.org"] {
             assert!(Config::default_for_proxy(bad, 8080).is_err(), "{bad}");
         }
     }

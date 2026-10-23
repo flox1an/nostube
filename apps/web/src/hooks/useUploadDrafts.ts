@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
+import { randomUUID } from '@nostube/core/random-uuid'
 import type { UploadDraft } from '@/types/upload-draft'
 import { removeOldDrafts, stripRuntimeStateFromDrafts } from '@/lib/upload-draft-utils'
 import { useDraftPersistence } from './useDraftPersistence'
@@ -41,7 +42,7 @@ export function useUploadDrafts() {
 
   const createDraftInMemory = useCallback((): UploadDraft => {
     return {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
       title: '',

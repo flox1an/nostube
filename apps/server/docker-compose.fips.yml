@@ -1,0 +1,68 @@
+# Nostube Server on the FIPS mesh only: the instance plus a FIPS sidecar. The canonical origin
+# is http://<node npub>.fips (port 80); the Docker host exposes nothing but 2121/udp (FIPS transport).
+#
+#   1. mkdir -p fips && cp docker/fips/fips.yaml fips/   (Nostr discovery enabled; ./fips keeps the node key)
+#   2. The node identity, which the origin is named after (written to fips/fips.key + fips/fips.pub):
+#      docker build -t nostube-fips docker/fips
+#      docker run --rm -v "$PWD/fips:/etc/fips" --entrypoint fipsctl nostube-fips keygen --dir /etc/fips
+#   3. NOSTUBE_ORIGIN="http://$(cat fips/fips.pub).fips" docker compose -f docker-compose.fips.yml up -d --build
+#   4. docker compose -f docker-compose.fips.yml logs nostube   (the first start prints the admin setup link)
+#      docker compose -f docker-compose.fips.yml exec fips fipsctl show status   (npub, mesh address)
+#
+# The fips container owns the network namespace and nostube runs inside it: both resolve .fips
+# names and reach fd00::/8 mesh addresses through fips0, and the ordinary internet as before.
+# If the fips container ever restarts by itself, nostube is left in the old, dead namespace:
+# recreate the stack (docker compose -f docker-compose.fips.yml down, then up -d).
+services:
+  fips:
+    build: ./docker/fips
+    image: nostube-fips
+    init: true
+    restart: always
+    cap_add:
+      - NET_ADMIN # creates fips0 and its routes
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    security_opt:
+      - no-new-privileges:true
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.bindv6only: 0 # NOSTUBE_BIND=:: serves the mesh and 127.0.0.1 (healthcheck) alike
+      net.ipv4.ip_unprivileged_port_start: 0 # nostube (uid 10001, no capabilities) binds 80; covers IPv6 too
+    ports:
+      - '2121:2121/udp' # FIPS transport; 80 stays unpublished, mesh peers reach it over fips0
+    volumes:
+      - ${FIPS_DIR:-./fips}:/etc/fips # fips.yaml, fips.key, fips.pub, hosts
+      - ./docker/fips/resolv.conf:/etc/resolv.conf:ro
+
+  nostube:
+    # Built from this checkout (the server image of apps/server/Dockerfile, unmodified).
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    image: ${NOSTUBE_IMAGE:-nostube-server:fips}
+    network_mode: service:fips
+    depends_on:
+      fips:
+        condition: service_healthy
+    restart: always # not on-failure: some studio saves end the process on purpose (ADR 0010)
+    stop_grace_period: 40s # running uploads get up to 30 s to finish
+    # Only what the entrypoint needs to take over /data and drop to the nostube user.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # First start only (later starts read /data/config.toml): http://<npub of fips/fips.pub>.fips.
+      # Unset, the first start stops with "needs the public origin"; build and `up fips` still work.
+      NOSTUBE_ORIGIN: ${NOSTUBE_ORIGIN:-}
+      NOSTUBE_BIND: '::'
+      NOSTUBE_PORT: '80' # mesh URLs need no port; the image default (8080) stays for other deployments
+    volumes:
+      - ${NOSTUBE_DATA_DIR:-./data}:/data
+      - ./docker/fips/resolv.conf:/etc/resolv.conf:ro

@@ -67,7 +67,7 @@ impl Public {
     fn parse(bytes: &[u8]) -> Option<Public> {
         let mut p: Self = serde_json::from_slice(bytes).map_err(|e| tracing::warn!("seo: reading the public config: {e}")).ok()?;
         // Derive once per response from the canonical origin, not an access alias or video source.
-        p.relay = Some(RelayUrl::parse(&format!("wss://{}", p.origin.strip_prefix("https://")?)).ok()?);
+        p.relay = Some(RelayUrl::parse(&crate::config::relay_url(&p.origin)).ok()?);
         Some(p)
     }
 
@@ -567,48 +567,51 @@ mod tests {
 
     #[tokio::test]
     async fn published_video_urls_locate_both_video_kinds_on_the_canonical_relay() {
-        let (relay, public, addressable, regular, _) = fixture().await;
-        let mut public: serde_json::Value = serde_json::from_slice(&public).unwrap();
-        public["origin"] = "https://videos.example:8443".into();
-        public["videoSources"] = serde_json::json!(["wss://elsewhere.example"]);
-        public["site"]["videos"]["hidden"] = serde_json::json!([]);
-        let public = serde_json::to_vec(&public).unwrap();
-        let sitemap = axum::body::to_bytes(sitemap(&relay, &public).await.into_body(), usize::MAX).await.unwrap();
-        let sitemap = std::str::from_utf8(&sitemap).unwrap();
-        let rss = axum::body::to_bytes(feed(&relay, &public, false).await.into_body(), usize::MAX).await.unwrap();
-        let atom = axum::body::to_bytes(feed(&relay, &public, true).await.into_body(), usize::MAX).await.unwrap();
-        for ev in [&addressable, &regular] {
-            // A previously shared identifier without hints must still resolve.
-            let old_id = link(ev, []).unwrap();
-            let page = shell(&relay, &public, &format!("/v/{old_id}"), SHELL).await;
-            let canonical = page.split("<link rel=\"canonical\" href=\"").nth(1).unwrap().split('"').next().unwrap();
-            let id = canonical.strip_prefix("https://videos.example:8443/v/").unwrap();
-            let relays = match Nip19::from_bech32(id).unwrap() {
-                Nip19::Coordinate(c) => {
-                    assert_eq!(c.coordinate, Coordinate::new(ev.kind, ev.pubkey).identifier(d_tag(ev)));
-                    c.relays
+        let (relay, fixture_public, addressable, regular, _) = fixture().await;
+        // An HTTPS origin hints its wss relay; a plain HTTP one (a FIPS mesh node) its ws relay.
+        for (origin, own_relay) in [("https://videos.example:8443", "wss://videos.example:8443"), ("http://npub.fips:8080", "ws://npub.fips:8080")] {
+            let mut public: serde_json::Value = serde_json::from_slice(&fixture_public).unwrap();
+            public["origin"] = origin.into();
+            public["videoSources"] = serde_json::json!(["wss://elsewhere.example"]);
+            public["site"]["videos"]["hidden"] = serde_json::json!([]);
+            let public = serde_json::to_vec(&public).unwrap();
+            let sitemap = axum::body::to_bytes(sitemap(&relay, &public).await.into_body(), usize::MAX).await.unwrap();
+            let sitemap = std::str::from_utf8(&sitemap).unwrap();
+            let rss = axum::body::to_bytes(feed(&relay, &public, false).await.into_body(), usize::MAX).await.unwrap();
+            let atom = axum::body::to_bytes(feed(&relay, &public, true).await.into_body(), usize::MAX).await.unwrap();
+            for ev in [&addressable, &regular] {
+                // A previously shared identifier without hints must still resolve.
+                let old_id = link(ev, []).unwrap();
+                let page = shell(&relay, &public, &format!("/v/{old_id}"), SHELL).await;
+                let canonical = page.split("<link rel=\"canonical\" href=\"").nth(1).unwrap().split('"').next().unwrap();
+                let id = canonical.strip_prefix(&format!("{origin}/v/")).unwrap();
+                let relays = match Nip19::from_bech32(id).unwrap() {
+                    Nip19::Coordinate(c) => {
+                        assert_eq!(c.coordinate, Coordinate::new(ev.kind, ev.pubkey).identifier(d_tag(ev)));
+                        c.relays
+                    }
+                    Nip19::Event(e) => {
+                        assert_eq!(e.event_id, ev.id);
+                        assert_eq!(e.author, Some(ev.pubkey));
+                        assert_eq!(e.kind, Some(ev.kind));
+                        e.relays
+                    }
+                    other => panic!("unexpected video identifier: {other:?}"),
+                };
+                assert_eq!(relays.iter().map(|r| r.as_str()).collect::<Vec<_>>(), [own_relay]);
+                assert!(page.contains(&format!("property=\"og:url\" content=\"{canonical}\"")), "{page}");
+                assert!(page.contains(&format!("/embed.html?v={id}")), "{page}");
+                assert!(sitemap.contains(canonical), "{sitemap}");
+                // Only the addressable fixture has the thumbnail required for a video sitemap entry.
+                if ev.id == addressable.id {
+                    assert!(sitemap.contains(&format!("/embed.html?v={id}")), "{sitemap}");
+                    let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
+                    let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
+                    assert_eq!(ld["url"], canonical);
                 }
-                Nip19::Event(e) => {
-                    assert_eq!(e.event_id, ev.id);
-                    assert_eq!(e.author, Some(ev.pubkey));
-                    assert_eq!(e.kind, Some(ev.kind));
-                    e.relays
-                }
-                other => panic!("unexpected video identifier: {other:?}"),
-            };
-            assert_eq!(relays.iter().map(|r| r.as_str()).collect::<Vec<_>>(), ["wss://videos.example:8443"]);
-            assert!(page.contains(&format!("property=\"og:url\" content=\"{canonical}\"")), "{page}");
-            assert!(page.contains(&format!("/embed.html?v={id}")), "{page}");
-            assert!(sitemap.contains(canonical), "{sitemap}");
-            // Only the addressable fixture has the thumbnail required for a video sitemap entry.
-            if ev.id == addressable.id {
-                assert!(sitemap.contains(&format!("/embed.html?v={id}")), "{sitemap}");
-                let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
-                let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
-                assert_eq!(ld["url"], canonical);
+                assert!(std::str::from_utf8(&rss).unwrap().contains(canonical));
+                assert!(std::str::from_utf8(&atom).unwrap().contains(canonical));
             }
-            assert!(std::str::from_utf8(&rss).unwrap().contains(canonical));
-            assert!(std::str::from_utf8(&atom).unwrap().contains(canonical));
         }
     }
 

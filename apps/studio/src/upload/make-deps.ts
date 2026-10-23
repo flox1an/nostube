@@ -1,3 +1,4 @@
+import { randomUUID } from '@nostube/core/random-uuid'
 import { generateEventLink } from '@nostube/core/video-event'
 import { MP4_CONVERSION_VARIANT } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
@@ -22,7 +23,7 @@ const slug = (title: string) =>
 
 /** `my-clip-3f9a1c2b`: readable, and unique among the creator's videos. */
 export const newIdentifier = (title: string) =>
-  `${slug(title) || 'video'}-${crypto.randomUUID().slice(0, 8)}`
+  `${slug(title) || 'video'}-${randomUUID().slice(0, 8)}`
 
 /**
  * What the upload pipeline needs from the browser and the network, bound to the signer and the

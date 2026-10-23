@@ -198,7 +198,7 @@ const HEX64 = /^[0-9a-f]{64}$/
 const ACCENT = /^#[0-9a-fA-F]{6}$/
 const HIDDEN_VIDEO = /^(?:[0-9a-f]{64}|\d+:[0-9a-f]{64}:.+)$/
 const isWs = (u: unknown) => typeof u === 'string' && /^wss?:\/\/[^/\s]+\/?$/.test(u)
-const isOrigin = (u: unknown) => typeof u === 'string' && /^https:\/\/[^/\s]+$/.test(u)
+const isOrigin = (u: unknown) => typeof u === 'string' && /^https?:\/\/[^/\s?#@]+$/.test(u)
 
 const isHomepageVideoRef = (value: unknown): value is string =>
   typeof value === 'string' &&
@@ -330,7 +330,8 @@ export function parseInstanceConfig(json: unknown): ParseResult {
   for (const k of REQUIRED) if (!(k in c)) e.push(`${k} is missing`)
   if ('revision' in c && !(Number.isInteger(c.revision) && (c.revision as number) > 0))
     e.push('revision must be a positive integer')
-  if ('origin' in c && !isOrigin(c.origin)) e.push('origin must be https://host with no path')
+  if ('origin' in c && !isOrigin(c.origin))
+    e.push('origin must be http(s)://host[:port] with no path, query or credentials')
   if ('title' in c && (typeof c.title !== 'string' || !c.title.trim()))
     e.push('title must be a non-empty string')
   const creatorsOk =

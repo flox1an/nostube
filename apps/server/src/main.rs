@@ -106,14 +106,15 @@ struct Cli {
     bind: Option<std::net::IpAddr>,
     port: Option<u16>,
     http_port: Option<u16>,
-    /// First start only: the canonical origin (`https://host`) of an instance behind a proxy.
+    /// First start only: the canonical origin (`https://host` behind a TLS proxy, or plain
+    /// `http://host`) of an instance in proxy mode.
     origin: Option<String>,
     /// First start only. `proxy` when an origin is given, else `local-ca`.
     tls: Option<TlsKind>,
 }
 
 const USAGE: &str = "usage: nostube-server [--data <dir>] [--bind <IP>] [--port <port>] [--http-port <port|0>] \
-[--origin <https://host>] [--tls <proxy|local-ca>] (each also as NOSTUBE_DATA, NOSTUBE_BIND, NOSTUBE_PORT, \
+[--origin <http(s)://host>] [--tls <proxy|local-ca>] (each also as NOSTUBE_DATA, NOSTUBE_BIND, NOSTUBE_PORT, \
 NOSTUBE_HTTP_PORT, NOSTUBE_ORIGIN, NOSTUBE_TLS)";
 
 impl Cli {
@@ -226,7 +227,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         let cfg = match cli.first_start_kind() {
             TlsKind::Proxy => {
                 let origin = cli.origin.as_deref().ok_or(
-                    "behind a proxy the first start needs the public origin: --origin https://host (or NOSTUBE_ORIGIN)",
+                    "the first start in proxy mode needs the public origin: --origin http(s)://host (or NOSTUBE_ORIGIN)",
                 )?;
                 Config::default_for_proxy(origin, cli.port.unwrap_or(8080))?
             }
@@ -400,7 +401,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         }
         Serving::Proxy { port } => {
             let bind = cli.bind.unwrap_or(std::net::Ipv4Addr::LOCALHOST.into());
-            tracing::info!("serving {} as plain HTTP on {bind}:{port} (TLS ends at the proxy)", cfg.origin);
+            let tls = if cfg.origin.starts_with("https://") { " (TLS ends at the proxy)" } else { "" };
+            tracing::info!("serving {} as plain HTTP on {bind}:{port}{tls}", cfg.origin);
             let address = SocketAddr::new(bind, port);
             let listener = std::net::TcpListener::bind(address)
                 .map_err(|e| format!("cannot bind HTTP listener {address}: {e}"))?;

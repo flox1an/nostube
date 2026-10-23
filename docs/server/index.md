@@ -3,14 +3,14 @@
 Nostube Server runs a self-hosted video site for one creator, or a curated set of creators, as a single
 program. Each installation is called an **instance**. An instance serves everything from one origin:
 
-| Part | Where | What it is |
-| --- | --- | --- |
-| Creator site | `/` | The homepage with the displayed creators' videos, video pages, `sitemap.xml`, `feed.xml`, `atom.xml`, `robots.txt` |
-| Studio | `/studio/` | The admin interface: uploads, videos, moderation, site and server settings |
-| Relay | `wss://<origin>/` | A Nostr relay that stores the creators' video events and visitor interactions |
-| Blossom | `/upload`, `/<sha256>` | Media storage, built on the [Almond](https://flox1an.github.io/almond/) library |
-| Embed player | `/embed.html` | The iframe player for other websites |
-| NIP-05 | `/.well-known/nostr.json` | Nostr addresses for the instance's identity |
+| Part         | Where                     | What it is                                                                                                         |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Creator site | `/`                       | The homepage with the displayed creators' videos, video pages, `sitemap.xml`, `feed.xml`, `atom.xml`, `robots.txt` |
+| Studio       | `/studio/`                | The admin interface: uploads, videos, moderation, site and server settings                                         |
+| Relay        | `ws(s)://<origin>/`       | A Nostr relay that stores the creators' video events and visitor interactions                                      |
+| Blossom      | `/upload`, `/<sha256>`    | Media storage, built on the [Almond](https://flox1an.github.io/almond/) library                                    |
+| Embed player | `/embed.html`             | The iframe player for other websites                                                                               |
+| NIP-05       | `/.well-known/nostr.json` | Nostr addresses for the instance's identity                                                                        |
 
 The relay and Blossom storage are built in, so an instance with local storage also works on a LAN
 without internet access. The [Self-hosting options](/guide/self-hosting) page compares it with the
@@ -70,13 +70,17 @@ docker compose logs nostube                         # the first start prints the
 
 The server needs two things:
 
-| What | How | Why |
-| --- | --- | --- |
-| A data folder | a volume at `/data` | Everything the instance keeps lives there, see [Data directory](/server/configuration#data-directory) |
+| What               | How                                                            | Why                                                                                                                          |
+| ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| A data folder      | a volume at `/data`                                            | Everything the instance keeps lives there, see [Data directory](/server/configuration#data-directory)                        |
 | The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | It ends up in links, in the public config and in published events. Without it the first start stops with a message saying so |
 
 After the first start the origin is read from `/data/config.toml`. Changing `NOSTUBE_ORIGIN` later has
 no effect: the server logs a warning and keeps the stored origin.
+
+For hosting inside the mesh without a public domain or certificates, use the
+[FIPS-only HTTP setup](/server/tls#fips-mesh-with-docker-compose). A separate sidecar supplies
+mesh DNS and routing without giving the Nostube process network-administration rights.
 
 ## First run: admin setup
 
@@ -120,16 +124,16 @@ every section.
 
 The same image runs as a Coolify "Docker Image" application; Coolify's proxy provides HTTPS.
 
-| Setting | Value | Why |
-| --- | --- | --- |
-| Image | `ghcr.io/flox1an/nostube-server:main` | Coolify pulls it on every deploy |
-| Port | `8080` | The instance speaks plain HTTP |
-| Domain | `https://<your name>` | Also the value of `NOSTUBE_ORIGIN` |
-| Environment | `NOSTUBE_ORIGIN=https://<your name>` | Read on the first start only |
-| Persistent storage | a volume on `/data` | Everything the instance keeps. Coolify's own backups do not cover it, so back it up yourself |
-| Health check | **off** | Coolify starts the new container before it stops the old one. The server locks its data folder, so the new process waits until the old one has exited. With the health check on, Coolify waits for the new container to become healthy before stopping the old one, and the two wait for each other until the deploy times out. Expect a few seconds of `503` per deploy |
-| Resource limits | for example `2g` memory and the same swap value | |
-| Custom Docker options | `--cap-drop=ALL --cap-add=CHOWN --cap-add=SETUID --cap-add=SETGID` | The entrypoint needs these three only to take over the data volume; the server then runs as uid 10001 without capabilities |
+| Setting               | Value                                                              | Why                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Image                 | `ghcr.io/flox1an/nostube-server:main`                              | Coolify pulls it on every deploy                                                                                                                                                                                                                                                                                                                                         |
+| Port                  | `8080`                                                             | The instance speaks plain HTTP                                                                                                                                                                                                                                                                                                                                           |
+| Domain                | `https://<your name>`                                              | Also the value of `NOSTUBE_ORIGIN`                                                                                                                                                                                                                                                                                                                                       |
+| Environment           | `NOSTUBE_ORIGIN=https://<your name>`                               | Read on the first start only                                                                                                                                                                                                                                                                                                                                             |
+| Persistent storage    | a volume on `/data`                                                | Everything the instance keeps. Coolify's own backups do not cover it, so back it up yourself                                                                                                                                                                                                                                                                             |
+| Health check          | **off**                                                            | Coolify starts the new container before it stops the old one. The server locks its data folder, so the new process waits until the old one has exited. With the health check on, Coolify waits for the new container to become healthy before stopping the old one, and the two wait for each other until the deploy times out. Expect a few seconds of `503` per deploy |
+| Resource limits       | for example `2g` memory and the same swap value                    |                                                                                                                                                                                                                                                                                                                                                                          |
+| Custom Docker options | `--cap-drop=ALL --cap-add=CHOWN --cap-add=SETUID --cap-add=SETGID` | The entrypoint needs these three only to take over the data volume; the server then runs as uid 10001 without capabilities                                                                                                                                                                                                                                               |
 
 Coolify's default restart policy (`unless-stopped`) restarts the container after the clean exit that
 some Studio saves cause. The image build does not deploy anything: redeploy the application in Coolify

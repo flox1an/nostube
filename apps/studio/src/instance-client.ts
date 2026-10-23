@@ -21,7 +21,7 @@ let booted: Promise<InstanceClient> | undefined
 export function bootInstanceClient(): Promise<InstanceClient> {
   booted ??= loadInstanceConfig().then(publicConfig => {
     // Studio manages the local copy; the public site may read only mirrors in S2.
-    const relay = publicConfig.origin.replace('https://', 'wss://')
+    const relay = publicConfig.origin.replace(/^http/, 'ws') // http -> ws, https -> wss
     const config = applyInstanceConfig({
       ...publicConfig,
       videoSources: [relay],

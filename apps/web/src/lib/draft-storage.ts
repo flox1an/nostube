@@ -5,6 +5,7 @@
  * draft-persistence-storage.ts and useDraftPersistence hook.
  */
 
+import { randomUUID } from '@nostube/core/random-uuid'
 import type { UploadDraft } from '@/types/upload-draft'
 
 export const MAX_DRAFTS = 10
@@ -15,7 +16,7 @@ export const MAX_DRAFTS = 10
  */
 export function createEmptyDraft(): UploadDraft {
   return {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
     title: '',

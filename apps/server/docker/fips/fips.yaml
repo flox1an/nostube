@@ -1,0 +1,52 @@
+# FIPS node of the Nostube sidecar (docker-compose.fips.yml). Copy it into ./fips first:
+#
+#   mkdir -p fips && cp docker/fips/fips.yaml fips/
+#
+# Every key not listed keeps the FIPS default (docs/reference/configuration.md upstream).
+# The daemon reads this file at start only: after an edit, recreate the whole stack (down, then
+# up -d), since nostube shares the fips network namespace. ./fips/hosts reloads by itself.
+
+node:
+  identity:
+    # The first start writes fips.key (secret, 0600) and fips.pub next to this file; the node
+    # keeps its npub and fd00::/8 address from then on. Back up fips.key; never share it.
+    persistent: true
+  control:
+    socket_path: /run/fips/control.sock # fipsctl inside the container finds it by default
+  rendezvous:
+    nostr:
+      # Bootstrap from signed adverts on FIPS's default public Nostr relays.
+      enabled: true
+      policy: open
+      advertise: true
+
+tun:
+  enabled: true
+  name: fips0
+  mtu: 1280
+
+dns:
+  enabled: true
+  # Loopback only: dnsmasq on 127.0.0.1:53 forwards .fips here, nothing outside can query it.
+  bind_addr: 127.0.0.1
+  port: 5354
+
+transports:
+  udp:
+    # Published on the host as 2121/udp, so peers can dial this node.
+    bind_addr: 0.0.0.0:2121
+    advertise_on_nostr: true
+    # Docker/home networks are usually behind NAT: publish udp:nat, not a guessed public endpoint.
+    # This controls the transport advert, not whether the service is public within the mesh.
+    public: false
+
+# Open Nostr discovery needs no static seeds. Optional explicit peers can coexist with it.
+peers: []
+# To use a particular peer instead of the empty list above:
+# peers:
+#   - npub: npub1...
+#     alias: friend # friend.fips resolves to this peer
+#     addresses:
+#       - transport: udp
+#         addr: friend.example.org:2121
+#     connect_policy: auto_connect

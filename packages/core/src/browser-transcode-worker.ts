@@ -1,3 +1,4 @@
+import { randomUUID } from './random-uuid'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from './video-transcode'
 
 export interface BrowserTranscodeJobProgress {
@@ -69,7 +70,7 @@ class BrowserTranscodeWorkerQueue {
     onVariantError: (variantIndex: number, message: string) => void,
     signal: AbortSignal
   ): Promise<File[] | Map<string, File>> {
-    const jobId = crypto.randomUUID()
+    const jobId = randomUUID()
 
     return new Promise((resolve, reject) => {
       const job: PendingJob = {

@@ -1,22 +1,23 @@
 # HTTPS and networks
 
-An instance always has an HTTPS origin: the relay is `wss://`, and browsers require HTTPS for logins
-and signing. The **TLS mode** decides where HTTPS comes from. It is chosen on the first start and
-stored in `[tls]` of `config.toml`; Studio shows it but cannot change it.
+The standard internet deployment uses an HTTPS origin and a `wss://` relay. The
+[FIPS deployment](#fips-mesh-with-docker-compose) instead uses an explicit HTTP origin and `ws://`,
+without a public domain or certificates. The **TLS mode** controls the listener; it is chosen on
+the first start and stored in `[tls]` of `config.toml`.
 
-| Mode | HTTPS from | Listens on | Use it for |
-| --- | --- | --- | --- |
-| `proxy` | A reverse proxy in front (Caddy, nginx, Traefik, Coolify) | Plain HTTP, port 8080 | A server with a public DNS name. The container image uses this mode |
-| `local-ca` | The instance's own certificate authority | HTTPS on 443, CA onboarding on 80 | A Mac on a home network, also without internet |
+| Mode       | HTTPS from                                                | Listens on                        | Use it for                                                          |
+| ---------- | --------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------- |
+| `proxy`    | A reverse proxy in front (Caddy, nginx, Traefik, Coolify) | Plain HTTP, port 8080             | A server with a public DNS name. The container image uses this mode |
+| `local-ca` | The instance's own certificate authority                  | HTTPS on 443, CA onboarding on 80 | A Mac on a home network, also without internet                      |
 
 The first start picks `proxy` when an origin is given (`--origin` / `NOSTUBE_ORIGIN`) and `local-ca`
 otherwise; `--tls` / `NOSTUBE_TLS` sets it explicitly. Background: [ADR 0003](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0003-tls-modes-and-canonical-origin.md).
 
 ## Canonical origin
 
-Each instance has exactly one **canonical origin**, `https://host[:port]` without a path. It goes into
-the public config, links, the setup link and, when publicly reachable, into URLs inside published
-Nostr events. Other names the instance answers to are aliases.
+Each instance has exactly one **canonical origin**, `http://host[:port]` or `https://host[:port]`
+without a path. It goes into the public config, links, the setup link and, when publicly reachable,
+into URLs inside published Nostr events. Other names the instance answers to are aliases.
 
 The origin is set on the first start and is not editable in Studio. A different `--origin` on a later
 start is ignored with a warning. URLs already published in events keep the old origin, so changing it
@@ -32,6 +33,9 @@ The server speaks plain HTTP on `port` (default 8080) and reads no `X-Forwarded-
 comes from the config. The binary binds `127.0.0.1` by default in this mode; the container image binds
 `0.0.0.0` because only the Compose network reaches it. A working setup with Caddy is in
 [Getting started](/server/#quick-start-with-docker-compose-and-caddy).
+
+The name `proxy` describes the existing plain-HTTP listener mode: a reverse proxy is not required
+when the canonical origin explicitly uses `http://`, as in the FIPS setup below.
 
 Rules for the proxy:
 
@@ -54,6 +58,212 @@ Rules for the proxy:
   per instance, see [Login protection](/server/studio#login-protection).
 
 There is no built-in ACME client and no `trusted_proxies` setting; the proxy owns the certificate.
+
+## FIPS mesh with Docker Compose
+
+`apps/server/docker-compose.fips.yml` runs **Nostube and a FIPS sidecar only**. There is no Caddy,
+Coolify domain, ACME or certificate setup. The instance is served at
+`http://<this-npub>.fips`; its relay is `ws://<this-npub>.fips/` (port 80).
+The host publishes only `2121/udp` for FIPS transport, not the HTTP port.
+
+Only the FIPS container gets `NET_ADMIN` and `/dev/net/tun`. Nostube shares its network namespace,
+but not its files or identity key. The server runs as uid 10001 without effective capabilities.
+Both containers use the sidecar's loopback DNS: `.fips` queries go to FIPS, other queries to
+Docker's resolver. Mesh routes and ordinary outgoing internet routes coexist; this is FIPS-only
+**hosting**, not an egress firewall or a claim that the application can never contact the internet.
+
+The FIPS Compose file explicitly sets `NOSTUBE_PORT=80`. Its shared network namespace allows
+unprivileged port binding, so the server remains uid 10001 without effective capabilities or
+`NET_BIND_SERVICE`. The standard server image and non-FIPS deployment keep their port-8080 default.
+
+### Start
+
+Requirements: a Linux Docker engine with `/dev/net/tun`, Docker Compose, IPv6 support in the
+container network namespace, outbound DNS/WebSocket access to the Nostr discovery relays and
+a usable FIPS transport path. Docker Desktop/OrbStack must provide TUN inside their Linux VM.
+A provider that denies devices or `NET_ADMIN` cannot run this sidecar. No public DNS name or
+ports 80/443 are needed. The sample discovers peers through Nostr; static seeds are optional.
+
+From a checkout of the repository, prepare the configuration and a persistent mesh identity:
+
+```sh
+cd apps/server
+mkdir -p fips
+cp docker/fips/fips.yaml fips/fips.yaml
+# Optional: edit fips/fips.yaml for your own relays, static peers or transport settings.
+docker build -t nostube-fips docker/fips
+# Generate the identity once; never overwrite an existing node key.
+docker run --rm -v "$PWD/fips:/etc/fips" --entrypoint fipsctl \
+  nostube-fips keygen --dir /etc/fips
+export NOSTUBE_ORIGIN="http://$(cat fips/fips.pub).fips"
+docker compose -f docker-compose.fips.yml up -d --build
+docker compose -f docker-compose.fips.yml exec fips fipsctl show status
+docker compose -f docker-compose.fips.yml exec fips fipsctl show peers
+```
+
+The Compose file builds the standard server Dockerfile from this checkout so HTTP-origin support
+and the bundled site/Studio agree. It does not combine the application with FIPS in one image.
+The sidecar downloads checksum-pinned FIPS release binaries. The same server Dockerfile supports
+the separate HTTPS deployment; no FIPS-specific application image recipe is needed.
+
+The sidecar packages **unmodified FIPS 0.5.3 release binaries**, plus `dnsmasq`, the loopback DNS
+forwarding rules and namespace-preserving process supervision. Ports, peering and discovery remain
+runtime configuration, not a FIPS fork. Upstream's
+[v0.5.3 Compose example](https://github.com/jmcorgan/fips/blob/v0.5.3/examples/sidecar-nostr-relay/docker-compose.yml)
+builds its sidecar locally; the [release](https://github.com/jmcorgan/fips/releases/tag/v0.5.3)
+publishes binaries/packages, with no official versioned registry image documented. We therefore
+keep this small wrapper rather than pulling an unverified third-party image.
+
+For later starts, skip `cp` and `keygen`, export the same origin, and run `docker compose ... up -d`.
+Persist `NOSTUBE_ORIGIN` in the deployment's environment or an uncommitted `.env`; do not substitute
+a temporary origin for the first start. As elsewhere, an existing `data/config.toml` keeps its
+canonical origin even if the environment changes.
+
+For an instance created with the earlier `:8080` mesh origin, stop the stack and back up
+`data/config.toml`. Remove `:8080` from `origin` and the instance's own `video_sources` /
+`interaction_relays`, set `[tls].port = 80`, and increment `revision` before starting again.
+Changing only the environment would leave the old advertised origin in place. Already signed
+events keep their old URLs; changing ports on an established published instance is a URL transition.
+
+Keep `fips/` across deployments and back it up separately from `data/`. `fips.key` is the secret
+node identity; losing it changes the npub and mesh address. Never reuse the creator's signing key.
+Only the sidecar mounts `fips/`; only Nostube mounts `data/`. Both directories are ignored by Git
+and excluded from server image builds. Optional `.fips` aliases belong in `fips/hosts`.
+
+### Automatic bootstrap and reachability
+
+The sample enables FIPS's native Nostr rendezvous:
+
+```yaml
+node:
+  rendezvous:
+    nostr:
+      enabled: true
+      policy: open
+      advertise: true
+transports:
+  udp:
+    advertise_on_nostr: true
+    public: false
+```
+
+These keys belong inside the existing `node` and `transports.udp` sections, not duplicate
+top-level sections. Existing configuration files are **not overwritten** by the Run script:
+if you copied the earlier sample with `peers: []` and no rendezvous block, enable discovery
+there explicitly. With neither static peers nor discovery, FIPS starts as an isolated node.
+
+`enabled` activates the Nostr rendezvous runtime; `policy: open` discovers candidates from signed
+kind 37195 adverts in the default `fips-overlay-v1` namespace, without a seed list. Defaults use
+`wss://relay.damus.io`, `wss://nos.lol` and `wss://offchain.pub`. `connect_policy: auto_connect`
+on an explicit peer only means “dial this peer”; it does not discover arbitrary peers.
+The image's `hosts` file supplies DNS aliases, not bootstrap connections.
+
+Discovery and advertising contact public Nostr relays. UDP NAT traversal also uses FIPS's default
+STUN servers. The node publishes its mesh identity and transport/signaling information; do not
+interpret FIPS-only hosting as “no public-internet traffic.” Discovery can take a minute or two,
+and stale adverts or incompatible peers can fail while other links work.
+
+The UDP `public: false` setting advertises `udp:nat`, rather than guessing that the Docker
+container's listener is publicly reachable. It does **not** make the service private in FIPS.
+NAT hole punching is best effort. On a public server or with an actual router port-forward, use
+`public: true` and, when needed, `external_addr: "<public-ip>:<public-port>"` instead.
+STUN alone does not prove an inbound listener is reachable. An existing outbound peer link is
+already bidirectional and can carry incoming mesh HTTP/WebSocket traffic through the mesh.
+
+The startup log's `connections: 0` is an initial snapshot, not a later connectivity verdict.
+`fipsctl show connections` lists pending handshakes; inspect authenticated links with
+`fipsctl show peers` and look for `connectivity: "connected"`. The sidecar health check verifies
+the daemon, interface and DNS, **not** a working connection to the public mesh.
+
+See upstream [open discovery](https://github.com/jmcorgan/fips/blob/v0.5.3/docs/tutorials/open-discovery.md)
+and [Nostr rendezvous/NAT traversal](https://github.com/jmcorgan/fips/blob/v0.5.3/docs/how-to/enable-nostr-discovery.md).
+
+### Outgoing Nostr and Blossom connections
+
+Server-side clients can use `ws://<remote-npub>.fips:<port>/` relays and
+`http://<remote-npub>.fips:<port>/<hash>` Blossom endpoints directly. Normal DNS and internet
+routes remain available. Resolve `.fips` through this sidecar rather than copying a bare IPv6
+address: the DNS lookup also supplies the public-key mapping needed to route the connection.
+
+Check from the unprivileged **Nostube container**, substituting a real peer and port:
+
+```sh
+docker compose -f docker-compose.fips.yml exec --user 10001 nostube \
+  getent ahosts <remote-npub>.fips
+docker compose -f docker-compose.fips.yml exec --user 10001 nostube \
+  curl --noproxy '*' -fsS -H 'Accept: application/nostr+json' \
+  http://<remote-npub>.fips:<port>/
+docker compose -f docker-compose.fips.yml exec --user 10001 nostube \
+  getent ahosts example.org
+```
+
+Mesh endpoints are publicly reachable **within FIPS**, not from the ordinary internet.
+This setup does not change Reach eligibility or filter `.fips` URLs out of publication.
+Clients consuming announced mesh URLs need their own FIPS DNS and routing. A server-side mirror
+does not proxy a visitor's browser connections.
+
+### HTTP and browser limitations
+
+FIPS encrypts the mesh transport, but an `http://` page is not a browser secure context.
+Nostr extensions, Web Crypto, service workers and other browser capabilities can be unavailable.
+An HTTPS page also cannot generally fetch HTTP media or open an insecure mesh WebSocket.
+This initial deployment deliberately does not solve those browser restrictions with TLS.
+
+Upload, draft and transcode-job identifiers use cryptographic `crypto.getRandomValues()` when
+`crypto.randomUUID()` is unavailable on HTTP. This does not enable other secure-context APIs or
+override an extension's HTTP-origin restrictions.
+
+Password sessions on an explicitly HTTP canonical origin omit the cookie's `Secure` attribute;
+HTTPS origins retain it. Authentication, HttpOnly and SameSite protections remain enabled.
+Keep this HTTP listener inside the mesh: do not publish port 80 on a public host or use it over
+untrusted unencrypted networks. Mesh peers can reach the admin routes too; FIPS membership is
+not admin authorization.
+
+### Restarting and upgrading
+
+FIPS owns the shared network namespace. App-only restarts (including Studio saves) are supported.
+The sidecar restarts a failed FIPS or DNS daemon internally without replacing the namespace.
+A container-level restart/replacement still needs coordinated recovery of the whole stack:
+
+```sh
+docker compose -f docker-compose.fips.yml down
+docker compose -f docker-compose.fips.yml build --pull
+docker compose -f docker-compose.fips.yml up -d
+```
+
+Keep the data directories. Readiness checks gate the initial app start; they are not a runtime
+recovery controller. Compose's `depends_on.restart: true` covers explicit Compose operations,
+not automatic runtime restarts. Check DNS and a real mesh request after recovery, not only HTTP
+health or the existence of `fips0`.
+
+The isolated two-node smoke check exercises normal/mesh DNS from Nostube, peer HTTP and Nostr
+WebSockets, unprivileged execution, identity persistence and daemon recovery. It deliberately
+disables public discovery and uses explicit test peers: it does not verify public-mesh bootstrap.
+
+```sh
+node apps/server/scripts/check-fips.mjs
+```
+
+It uses temporary data and removes its containers afterwards. Upstream references:
+[sidecar example](https://github.com/jmcorgan/fips/tree/v0.5.3/examples/sidecar-nostr-relay),
+[persistent identity](https://github.com/jmcorgan/fips/blob/v0.5.3/docs/how-to/persistent-identity.md).
+
+[`pandacode-run.sh`](https://github.com/flox1an/nostube/blob/main/pandacode-run.sh), run from the
+repository root, now starts a real mesh node. It creates `apps/server/fips/fips.yaml` only when
+missing, generates the mesh identity only once, derives the canonical `.fips` origin from that
+identity, and preserves `apps/server/fips/` and `apps/server/data/` on stop. Override `FIPS_DIR`
+and `NOSTUBE_DATA_DIR` to use other state directories.
+
+The Run script additionally maps `http://localhost:18080` to the HTTP listener for local viewing;
+this is not the canonical origin and does not provide the host browser with mesh DNS/routing.
+UDP port 2121 is published on the host interfaces, not loopback only. `FIPS_UDP_PORT` and
+`NOSTUBE_PREVIEW_PORT` can select other host ports. The loopback HTTP mapping is not part of the
+production FIPS Compose file. The mesh HTTP service remains on port 80.
+
+An already-running Run stack is left alone rather than replaced by another invocation.
+The original Run script used temporary directories and deleted them on stop: back up that old
+instance before stopping it if it contains anything you need. The new script does not migrate a
+running temporary instance or rewrite an existing instance's canonical origin.
 
 ## local-ca mode
 
@@ -88,10 +298,10 @@ and for private IP addresses (10/8, 172.16/12, 192.168/16, fd00::/8), never for 
 
 ### Ports
 
-| Setting | Default | Notes |
-| --- | --- | --- |
-| `https_port` / `--port` | 443 | The HTTPS listener |
-| `http_port` / `--http-port` | 80 | CA onboarding; everything else redirects to HTTPS. `0` disables it. If the port cannot be opened, the instance logs a warning and starts anyway |
+| Setting                     | Default | Notes                                                                                                                                           |
+| --------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https_port` / `--port`     | 443     | The HTTPS listener                                                                                                                              |
+| `http_port` / `--http-port` | 80      | CA onboarding; everything else redirects to HTTPS. `0` disables it. If the port cannot be opened, the instance logs a warning and starts anyway |
 
 The two ports must differ. `--port` and `--http-port` override the stored ports for one run.
 
@@ -99,11 +309,11 @@ The two ports must differ. `--port` and `--http-port` override the stored ports 
 
 Each viewer device trusts the CA once. On port 80 the instance serves:
 
-| Path | Content |
-| --- | --- |
+| Path                     | Content                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
 | `http://<host>.local/ca` | Instructions for macOS, iPhone/iPad, Android, Windows and Linux, plus the CA's SHA-256 fingerprint |
-| `/ca.pem` | The CA certificate (`nostube-ca.crt`) |
-| `/ca.mobileconfig` | An iOS/iPadOS configuration profile |
+| `/ca.pem`                | The CA certificate (`nostube-ca.crt`)                                                              |
+| `/ca.mobileconfig`       | An iOS/iPadOS configuration profile                                                                |
 
 Compare the fingerprint with the one the device shows. In Studio, **Server → Account → This device**
 links to the CA download as well. Platform notes from the onboarding page:

@@ -324,6 +324,26 @@ describe('Onboarding wizard', () => {
     await waitFor(() => expect(none.publish).not.toHaveBeenCalled())
   })
 
+  it('copies the kind 0 to the ws relay of an http (mesh) origin', async () => {
+    serve({ mode: 'none', pubkey: null })
+    const kind0 = {
+      id: 'a'.repeat(64),
+      pubkey: OWN,
+      sig: 's',
+      created_at: 1,
+      kind: 0,
+      tags: [],
+      content: '{}',
+    }
+    const profile = pool(kind0)
+    renderWizard({ ...fresh(), origin: 'http://npub1abc.fips:8080' }, profile)
+    fireEvent.click(await findLabel('Own identity'))
+    await continueThrough()
+    await click('Finish')
+    await waitFor(() => expect(profile.publish).toHaveBeenCalled())
+    expect(profile.publish).toHaveBeenCalledWith(['ws://npub1abc.fips:8080'], kind0)
+  })
+
   it('opens the login dialog for own identity without a Nostr account and takes its key', async () => {
     logOut()
     installExtension(secret)

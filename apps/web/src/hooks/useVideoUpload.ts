@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { EventTemplate } from 'nostr-tools'
 import { imageFileName } from '@nostube/core/image-encode'
+import { randomUUID } from '@nostube/core/random-uuid'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
@@ -298,7 +299,7 @@ export function useVideoUpload(
   const [subtitleUploading, setSubtitleUploading] = useState(false)
 
   // Draft ID for addressable event 'd' tag - use existing draft ID or generate new UUID
-  const [draftId] = useState(() => initialDraft?.id || crypto.randomUUID())
+  const [draftId] = useState(() => initialDraft?.id || randomUUID())
 
   // State for video deletion dialog
   const [videoToDelete, setVideoToDelete] = useState<{

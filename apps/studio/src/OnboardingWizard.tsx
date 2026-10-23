@@ -137,7 +137,8 @@ export function Onboarding({
         }
       }
       if (profile) {
-        await Promise.allSettled(relays.publish([state.origin.replace(/^https:/, 'wss:')], profile))
+        // The own relay: http -> ws, https -> wss.
+        await Promise.allSettled(relays.publish([state.origin.replace(/^http/, 'ws')], profile))
       }
       onFinished()
     } catch (e) {

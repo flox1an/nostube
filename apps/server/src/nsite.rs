@@ -87,13 +87,13 @@ fn servers(public: &Value) -> Vec<String> {
     unique(own.into_iter().chain(public_urls(&public["mirror"]["blossom"])))
 }
 fn targets(public: &Value) -> Vec<String> {
-    let own = (public["originIsPublic"] == true).then(|| public["origin"].as_str().unwrap_or_default().replacen("https://", "wss://", 1));
+    let own = (public["originIsPublic"] == true).then(|| crate::config::relay_url(public["origin"].as_str().unwrap_or_default()));
     unique(own.into_iter().chain(public_urls(&public["mirror"]["relays"])).chain(public_urls(&public["profileRelays"])))
 }
 
 /// The revision identifies baked settings, not the counter of unrelated Studio saves.
 fn baked_config(mut public: Value, origin: &str) -> Value {
-    let instance = public["origin"].as_str().unwrap_or_default().replacen("https://", "wss://", 1);
+    let instance = crate::config::relay_url(public["origin"].as_str().unwrap_or_default());
     let origin_public = public["originIsPublic"] == true;
     for key in ["videoSources", "interactionRelays", "profileRelays"] {
         public[key] = serde_json::json!(unique(public_urls(&public[key]).into_iter()
@@ -549,6 +549,13 @@ mod tests {
         assert_eq!(baked, baked_config(public.clone(), "https://site.example"));
         public["originIsPublic"] = true.into();
         assert_eq!(baked_config(public, "https://site.example")["videoSources"][0], "wss://instance.example");
+        // A plain HTTP origin (a FIPS mesh node): its ws relay is the instance relay.
+        let mut http = serde_json::json!({"origin":"http://npub.fips:8080","originIsPublic":false,
+            "videoSources":["ws://npub.fips:8080","wss://source.example"],"interactionRelays":[],"profileRelays":[],"mirror":{"relays":[]}});
+        assert_eq!(baked_config(http.clone(), "https://site.example")["videoSources"], serde_json::json!(["wss://source.example"]));
+        http["originIsPublic"] = true.into();
+        assert_eq!(baked_config(http.clone(), "https://site.example")["videoSources"][0], "ws://npub.fips:8080");
+        assert_eq!(targets(&http), ["ws://npub.fips:8080"]);
     }
 
     #[test]

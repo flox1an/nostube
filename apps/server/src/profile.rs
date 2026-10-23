@@ -8,7 +8,7 @@
 use nostr::prelude::*;
 use serde_json::{Map, Value};
 
-use crate::{branding::Branding, config::{is_public_url, public_urls}, nsite, outbox::Outbox, relay::Relay};
+use crate::{branding::Branding, config::{is_public_url, public_urls, relay_url}, nsite, outbox::Outbox, relay::Relay};
 
 /// One sync at a time, so the newest settings always end in the newest profile.
 static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -64,7 +64,7 @@ fn derive(public: &Value, key: PublicKey) -> Value {
 /// The announced relay list: public instance first in S1, public mirrors only in S2.
 /// Private NIP-05 lookups keep the local instance relay, without announcing it to indexers.
 fn relays(public: &Value, mirror: &[String]) -> Vec<String> {
-    let instance = public["origin"].as_str().unwrap_or_default().replacen("https://", "wss://", 1);
+    let instance = relay_url(public["origin"].as_str().unwrap_or_default());
     if !is_public(public) {
         return vec![instance];
     }
@@ -314,6 +314,10 @@ mod tests {
         assert_eq!(announced, ["wss://tube.example", MIRROR]);
         let tags: Vec<Vec<String>> = relay_list(&announced).into_iter().map(Tag::to_vec).collect();
         assert_eq!(tags, [vec!["r", "wss://tube.example"], vec!["r", MIRROR, "write"]]);
+        // A plain HTTP origin (a FIPS mesh node) announces its ws relay.
+        let mut http = public_reach("C");
+        http["origin"] = "http://npub.fips:8080".into();
+        assert_eq!(relays(&http, &mirror), ["ws://npub.fips:8080", "wss://tube.example", MIRROR]);
     }
 
     #[test]

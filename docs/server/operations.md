@@ -3,17 +3,20 @@
 Commands below assume the Compose setup from [Getting started](/server/#quick-start-with-docker-compose-and-caddy)
 with the service name `nostube`.
 
+For the FIPS stack, add `-f docker-compose.fips.yml` to Compose commands. A FIPS sidecar replacement
+needs a [whole-stack restart](/server/tls#restarting-and-upgrading), not an app-only rolling upgrade.
+
 ## Images and releases
 
 The image `ghcr.io/flox1an/nostube-server` is built by GitHub Actions on every push to `main` that
 touches the server, site, Studio, web app or shared packages. Each build is smoke-tested before it is
 pushed.
 
-| Tag | Meaning |
-| --- | --- |
-| `main` | The latest build of the `main` branch |
-| `sha-<commit>` | A specific commit |
-| `<version>` | A release, for example `1.2.0`; the commit carries the git tag `server-v<version>` |
+| Tag            | Meaning                                                                            |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `main`         | The latest build of the `main` branch                                              |
+| `sha-<commit>` | A specific commit                                                                  |
+| `<version>`    | A release, for example `1.2.0`; the commit carries the git tag `server-v<version>` |
 
 The image is built for `linux/amd64` only. An `arm64` host (Raspberry Pi, ARM VPS) needs a local build:
 
@@ -121,15 +124,15 @@ sudo tar czf nostube-backup.tar.gz data/   # the files belong to uid 10001
 docker compose up -d nostube
 ```
 
-| What | Why |
-| --- | --- |
-| `config.toml` | All instance settings |
-| `secrets.toml` | Admin password hash, bound login key, the encrypted managed key, the S3 secret |
-| `signer.key` | Unlocks the managed key. `secrets.toml` and `signer.key` together hold the creator identity; one without the other cannot unlock it |
-| `relay.sqlite` | All events, the mirror outbox, nsite state, scheduled videos, play counts |
-| `blossom/` | The media stored on this machine |
-| `branding/` | Logo, favicon, banner, app icon |
-| `tls/` | local-ca only: the CA that viewer devices trust. Losing it means trusting a new CA on every device |
+| What           | Why                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `config.toml`  | All instance settings                                                                                                               |
+| `secrets.toml` | Admin password hash, bound login key, the encrypted managed key, the S3 secret                                                      |
+| `signer.key`   | Unlocks the managed key. `secrets.toml` and `signer.key` together hold the creator identity; one without the other cannot unlock it |
+| `relay.sqlite` | All events, the mirror outbox, nsite state, scheduled videos, play counts                                                           |
+| `blossom/`     | The media stored on this machine                                                                                                    |
+| `branding/`    | Logo, favicon, banner, app icon                                                                                                     |
+| `tls/`         | local-ca only: the CA that viewer devices trust. Losing it means trusting a new CA on every device                                  |
 
 The copy holds secrets and, with a managed key, the creator identity: treat it accordingly. Media in an
 S3 bucket is not in the data directory; back up the bucket with your provider's tools. Mirrors keep

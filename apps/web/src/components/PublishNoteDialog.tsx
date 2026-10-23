@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
 import type { VideoNote } from '@/hooks/useVideoNotes'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
+import { randomUUID } from '@nostube/core/random-uuid'
 
 interface PublishNoteDialogProps {
   note: VideoNote | null
@@ -71,7 +72,7 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
   const [people, setPeople] = useState<SelectedPerson[]>([])
   const [showJson, setShowJson] = useState(false)
   // stable d-tag for preview; regenerated on each open via note change
-  const draftId = useMemo(() => crypto.randomUUID(), [note]) // eslint-disable-line react-hooks/exhaustive-deps
+  const draftId = useMemo(() => randomUUID(), [note]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const description = useMemo(() => (note ? buildDescription(note) : ''), [note])
   const hashtags = useMemo(() => (note ? extractHashtags(note.content) : []), [note])

@@ -120,7 +120,8 @@ describe('UploadPage', () => {
     expect(uploadBlob).not.toHaveBeenCalled()
     expect(signEvent).not.toHaveBeenCalled()
   })
-  it('publishes on the very first click, without asking the extension for its key', async () => {
+  it('publishes on the first click over HTTP without crypto.randomUUID', async () => {
+    vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) })
     await renderPage(stateFor([pubkey], [pubkey]))
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('my clip')
     // An extension signs here, so it will ask; the managed key would not.

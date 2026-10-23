@@ -135,6 +135,8 @@ pub struct AdminState {
     stores: Stores,
     /// The unlocked managed key; shared with the outbox, which signs mirror requests with it.
     managed: crate::signer::Shared,
+    /// Session cookies carry `Secure` unless the canonical origin is plain `http://` (FIPS mesh).
+    secure_cookies: bool,
 }
 
 impl AdminState {
@@ -186,6 +188,7 @@ impl AdminState {
             login_guard: Mutex::new(LoginGuard::default()),
             stores,
             managed: Arc::new(parking_lot::Mutex::new(managed)),
+            secure_cookies: !setup_origin.starts_with("http://"),
         })
     }
 
@@ -241,13 +244,16 @@ fn verify_session(secret_hex: &str, cookie: &str) -> Result<(), ()> {
     Ok(())
 }
 
-fn session_cookie(secret_hex: &str) -> String {
+/// The session cookie; `Secure` only drops for an explicit `http://` origin, where browsers
+/// would refuse to store it.
+fn cookie(secure: bool, value: &str, max_age: u64) -> String {
+    let secure = if secure { " Secure;" } else { "" };
+    format!("{COOKIE}={value}; HttpOnly;{secure} SameSite=Strict; Path=/; Max-Age={max_age}")
+}
+
+fn session_cookie(secret_hex: &str, secure: bool) -> String {
     let expires = now_secs() + SESSION_TTL.as_secs();
-    format!(
-        "{COOKIE}={}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age={}",
-        sign_session(secret_hex, expires),
-        SESSION_TTL.as_secs()
-    )
+    cookie(secure, &sign_session(secret_hex, expires), SESSION_TTL.as_secs())
 }
 
 fn now_secs() -> u64 {
@@ -473,7 +479,7 @@ async fn setup_post(State(state): State<Arc<AdminState>>, Form(f): Form<SetupFor
     }
     drop(secrets);
     tracing::info!("admin setup: admin registered");
-    set_cookie_redirect(&secret, "/admin").into_response()
+    set_cookie_redirect(&state, &secret, "/admin").into_response()
 }
 
 async fn login_page(State(state): State<Arc<AdminState>>) -> Response {
@@ -522,7 +528,7 @@ async fn login_post(State(state): State<Arc<AdminState>>, Form(f): Form<LoginFor
     drop(guard);
     let secret = secrets.session_secret.clone();
     drop(secrets);
-    set_cookie_redirect(&secret, "/admin").into_response()
+    set_cookie_redirect(&state, &secret, "/admin").into_response()
 }
 
 /// 429 with `Retry-After`; the password was not looked at.
@@ -553,7 +559,7 @@ async fn login_nostr(State(state): State<Arc<AdminState>>, headers: HeaderMap) -
     }
     let secret = secrets.session_secret.clone();
     drop(secrets);
-    set_cookie_redirect(&secret, "/admin").into_response()
+    set_cookie_redirect(&state, &secret, "/admin").into_response()
 }
 
 /// Bind a NIP-07 key to the admin (requires a live session).
@@ -585,10 +591,10 @@ async fn unbind_nostr(State(state): State<Arc<AdminState>>, headers: HeaderMap) 
     }
 }
 
-async fn logout() -> Response {
+async fn logout(State(state): State<Arc<AdminState>>) -> Response {
     (
         [
-            (header::SET_COOKIE, format!("{COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")),
+            (header::SET_COOKIE, cookie(state.secure_cookies, "", 0)),
             (header::LOCATION, "/admin/login".to_owned()),
         ],
         StatusCode::SEE_OTHER,
@@ -845,7 +851,7 @@ async fn stats_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> 
     let origin = &blossom.public_url;
     Json(serde_json::json!({
         "relay": {
-            "url": origin.replacen("https://", "wss://", 1),
+            "url": config::relay_url(origin),
             "totalEvents": relay.by_kind.iter().map(|(_, n)| n).sum::<u64>(),
             "eventsByKind": relay.by_kind.iter().map(|(kind, count)| serde_json::json!({ "kind": kind, "count": count })).collect::<Vec<_>>(),
             "databaseBytes": relay.database_bytes,
@@ -1607,9 +1613,9 @@ pub fn rollback(data: &Path) -> Result<(), BoxError> {
 
 // ── HTML helpers ────────────────────────────────────────────────────────────
 
-fn set_cookie_redirect(secret: &str, to: &str) -> Response {
+fn set_cookie_redirect(state: &AdminState, secret: &str, to: &str) -> Response {
     (
-        [(header::SET_COOKIE, session_cookie(secret)), (header::LOCATION, to.to_owned())],
+        [(header::SET_COOKIE, session_cookie(secret, state.secure_cookies)), (header::LOCATION, to.to_owned())],
         StatusCode::SEE_OTHER,
     )
         .into_response()
@@ -1922,7 +1928,7 @@ mod tests {
             stores,
         )
         .unwrap();
-        let cookie = session_cookie(&secret).split(';').next().unwrap().to_owned();
+        let cookie = session_cookie(&secret, true).split(';').next().unwrap().to_owned();
         (router(state), dir, cookie, blossom, branding)
     }
 
@@ -2689,6 +2695,32 @@ mod tests {
             let (status, _, body) = try_login(&app, "wrong").await;
             assert_eq!(status, StatusCode::OK);
             assert!(!body.contains("Wait"));
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn sessions_drop_secure_only_for_an_explicit_http_origin() {
+        use tower::ServiceExt;
+        let (https, dir, _) = studio_fixture().await;
+        // The same instance with a plain HTTP canonical origin (a FIPS mesh node).
+        let http = router(AdminState::open(&dir, "npub1x.fips", vec!["npub1x.fips".into()], "http://npub1x.fips:8080",
+            "boot2".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap());
+        for (app, secure) in [(&https, true), (&http, false)] {
+            let (status, headers, _) = try_login(app, "correct%20horse").await;
+            assert_eq!(status, StatusCode::SEE_OTHER);
+            let set = headers[header::SET_COOKIE].to_str().unwrap().to_owned();
+            assert_eq!(set.contains("Secure"), secure, "{set}");
+            assert!(set.contains("; HttpOnly;") && set.contains("SameSite=Strict"), "{set}");
+            // What the browser keeps opens the studio.
+            let session = set.split(';').next().unwrap();
+            assert_eq!(send(app, "/api/admin/config", Some(session), None).await.0, StatusCode::OK);
+            let req = axum::http::Request::builder().method("POST").uri("/admin/logout").body(axum::body::Body::empty()).unwrap();
+            let res = app.clone().oneshot(req).await.unwrap();
+            assert_eq!(res.status(), StatusCode::SEE_OTHER);
+            let cleared = res.headers()[header::SET_COOKIE].to_str().unwrap();
+            assert_eq!(cleared.contains("Secure"), secure, "{cleared}");
+            assert!(cleared.starts_with(&format!("{COOKIE}=;")) && cleared.ends_with("Max-Age=0"), "{cleared}");
         }
         std::fs::remove_dir_all(&dir).ok();
     }

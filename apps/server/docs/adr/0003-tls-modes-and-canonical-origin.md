@@ -20,3 +20,22 @@ Each instance has exactly one canonical origin, chosen at setup. Only it goes in
 ## Addendum: the `proxy` mode as built
 
 `proxy` is implemented as `[tls] mode = "proxy"` with a `port` (default 8080): plain HTTP, no CA, no certificate files, no port-80 onboarding. The canonical origin is given at the first start (`--origin` or `NOSTUBE_ORIGIN`); an origin implies this mode, and a first start in proxy mode without one stops with a message. `trusted_proxies` is **not** built: the server reads no forwarded headers (the origin comes from the config, the proxy must pass `Host` on), so there is no setting to trust them with. It returns when something needs the client address. To keep plain HTTP from being reachable by accident, the binary binds loopback by default in this mode; the container image sets `NOSTUBE_BIND=0.0.0.0` because it is only reached over the container network. See `docs/server/tls.md` in the repository root.
+
+## Addendum: explicit HTTP origins for FIPS hosting
+
+The FIPS Compose deployment uses the existing `proxy` plain-HTTP listener directly, without a
+TLS proxy, public DNS domain or certificates. Canonical origins may therefore be explicitly
+`http://host[:port]` as well as `https://host[:port]`; their instance relay URLs are `ws://` and
+`wss://` respectively. Path, query, fragment and credential-bearing origins remain invalid.
+This is an opt-in first-start choice, not automatic downgrade based on request headers.
+
+FIPS runs in a separate container with TUN and `NET_ADMIN`; Nostube joins its network namespace
+without those privileges or the mesh key. Only the FIPS transport port is host-published.
+Ordinary outbound networking remains available. Existing Reach rules are unchanged: mesh endpoints
+can be publicly reached by mesh participants and are not automatically filtered from announcements.
+
+HTTP pages still lack browser secure-context guarantees even though FIPS encrypts transport.
+That limitation is accepted for this initial mesh-only deployment, not bypassed with browser flags.
+Admin session cookies omit `Secure` only for an explicitly HTTP canonical origin; HttpOnly,
+SameSite, authentication and the HTTPS cookie policy remain intact. Never expose this HTTP
+listener on an untrusted unencrypted network.

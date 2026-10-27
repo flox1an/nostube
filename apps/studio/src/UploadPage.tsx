@@ -24,6 +24,7 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import type { AdminState } from './api'
 import { isKeyConnected } from './draft'
 import { Field } from './fields'
+import { PageHeader } from './PageHeader'
 import { fromLocalInput, isFuture } from './datetime'
 import { hashFor } from './route'
 import { useSigner } from './signer-context'
@@ -175,77 +176,87 @@ export default function UploadPage({ state }: { state: AdminState }) {
     setCopied(false)
   }
 
+  const header = (
+    <PageHeader title={t('studio.nav.pages.upload')} description={t('studio.upload.description')} />
+  )
+
   if (job && isDone(job)) {
     const published = job.published!
     const address = `${location.origin}/v/${published.link}`
     if (published.scheduledFor !== undefined) {
       return (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('studio.upload.scheduledTitle')}</CardTitle>
-            <CardDescription>
-              {t('studio.upload.scheduledDescription', {
-                date: new Date(published.scheduledFor * 1000).toLocaleString(locale),
-              })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button type="button" variant="outline" onClick={reset}>
-              {t('studio.upload.another')}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {header}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('studio.upload.scheduledTitle')}</CardTitle>
+              <CardDescription>
+                {t('studio.upload.scheduledDescription', {
+                  date: new Date(published.scheduledFor * 1000).toLocaleString(locale),
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button type="button" variant="outline" onClick={reset}>
+                {t('studio.upload.another')}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )
     }
     const mirrors = state.config.mirror.relays.length
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.upload.publishedTitle')}</CardTitle>
-          <CardDescription>
-            {mirrors > 0
-              ? t('studio.upload.publishedMirrored', { count: mirrors })
-              : t('studio.upload.publishedDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            {job.thumbnail && (
-              <img
-                src={job.thumbnail.url}
-                alt=""
-                className="h-16 w-28 shrink-0 rounded bg-muted object-cover"
-              />
-            )}
-            <p className="line-clamp-2 font-medium">{job.input.title}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <a href={address} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                {t('studio.upload.view')}
-              </a>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                void navigator.clipboard.writeText(address).then(() => setCopied(true))
-              }
-            >
-              <span aria-live="polite">
-                {copied ? t('studio.upload.copied') : t('studio.upload.copyLink')}
-              </span>
-            </Button>
-            <Button asChild variant="outline">
-              <a href={hashFor('videos')}>{t('studio.upload.edit')}</a>
-            </Button>
-            <Button type="button" variant="outline" onClick={reset}>
-              {t('studio.upload.another')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {header}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('studio.upload.publishedTitle')}</CardTitle>
+            <CardDescription>
+              {mirrors > 0
+                ? t('studio.upload.publishedMirrored', { count: mirrors })
+                : t('studio.upload.publishedDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              {job.thumbnail && (
+                <img
+                  src={job.thumbnail.url}
+                  alt=""
+                  className="h-16 w-28 shrink-0 rounded bg-muted object-cover"
+                />
+              )}
+              <p className="line-clamp-2 font-medium">{job.input.title}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <a href={address} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {t('studio.upload.view')}
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  void navigator.clipboard.writeText(address).then(() => setCopied(true))
+                }
+              >
+                <span aria-live="polite">
+                  {copied ? t('studio.upload.copied') : t('studio.upload.copyLink')}
+                </span>
+              </Button>
+              <Button asChild variant="outline">
+                <a href={hashFor('videos')}>{t('studio.upload.edit')}</a>
+              </Button>
+              <Button type="button" variant="outline" onClick={reset}>
+                {t('studio.upload.another')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -272,12 +283,9 @@ export default function UploadPage({ state }: { state: AdminState }) {
 
   return (
     <div className="space-y-6">
+      {header}
       <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.upload.title')}</CardTitle>
-          <CardDescription>{t('studio.upload.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <Field id="file" label={t('studio.upload.file')}>
             <FileDropzone
               id="file"

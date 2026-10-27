@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import { PageHeader } from './PageHeader'
 import { loadStats, type AdminStats } from './api'
 
 const UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'] as const
@@ -69,13 +70,16 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{t('studio.overview.description')}</p>
-        <Button type="button" variant="outline" size="sm" onClick={refresh} disabled={busy}>
-          <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} aria-hidden />
-          {busy ? t('studio.overview.refreshing') : t('studio.overview.refresh')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('studio.nav.pages.overview')}
+        description={t('studio.overview.description')}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={refresh} disabled={busy}>
+            <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} aria-hidden />
+            {busy ? t('studio.overview.refreshing') : t('studio.overview.refresh')}
+          </Button>
+        }
+      />
 
       {load.name === 'loading' && <Skeleton className="h-64 w-full" />}
 

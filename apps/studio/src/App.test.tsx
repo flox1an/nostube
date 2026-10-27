@@ -256,7 +256,7 @@ describe('Studio save bar', () => {
     fireEvent.change(screen.getByLabelText('Mirror Blossom servers'), {
       target: { value: 'https://blossom.example' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Instance' }))
+    fireEvent.click(screen.getByRole('button', { name: 'General' }))
     const publicTile = await screen.findByRole('button', { name: /^Public/ })
     expect((publicTile as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(publicTile)

@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "分区",
-      "groupPages": "{{group}}页面",
       "groups": {
+        "start": "开始",
         "content": "内容",
         "site": "网站",
         "server": "服务器"
       },
       "pages": {
+        "start": "入门",
         "videos": "视频",
         "upload": "上传",
         "moderation": "审核",
         "appearance": "外观",
         "sitePages": "页面",
-        "instance": "实例",
+        "instance": "通用",
         "account": "账户",
-        "overview": "概览",
+        "overview": "统计",
         "advanced": "高级"
-      }
+      },
+      "menu": "菜单",
+      "close": "关闭菜单"
     },
     "account": {
       "title": "使用 Nostr 密钥登录",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "视频",
       "description": "网站会显示你的创作者的所有视频，除了你在这里隐藏的视频。新上传的视频会自动出现。",
       "loadFailedWith": "无法加载视频（{{message}}）。",
       "loadFailed": "无法加载视频。",
@@ -457,7 +459,6 @@
       "copyLink": "复制链接",
       "copied": "链接已复制",
       "edit": "编辑",
-      "title": "上传视频",
       "description": "你的浏览器可以播放的 MP4 或 WebM 会按原样发布；其他视频（MOV、MKV、AVI、HEVC）会先在浏览器中转换为 MP4。视频存储在此实例上并发布到其中继。",
       "file": "视频文件",
       "reading": "正在读取视频…",
@@ -504,7 +505,6 @@
       "scheduledDescription": "视频已存储在此实例上，将于 {{date}} 公开。在此之前，它不在任何中继上，也不会出现在网站上。"
     },
     "moderation": {
-      "title": "审核",
       "description": "你的视频下的评论。你静音的内容只会在本站隐藏：静音不会删除任何内容，评论仍保留在中继上，其他 Nostr 应用可能仍会显示它们。",
       "loadFailed": "无法加载评论和静音列表（{{message}}）。",
       "listOf": "{{npub}} 的静音列表",
@@ -688,6 +688,20 @@
         "loginPassword": "密码",
         "freeDisk": "可用磁盘空间",
         "hint": "“完成”会在需要时创建密钥，一次性保存所有设置，并让服务器重启几秒钟。"
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "网站的外观：标题、品牌形象、主页和链接打开方式。"
+      },
+      "instance": {
+        "description": "可见范围、托管、展示的创作者、搜索和存储。"
+      },
+      "account": {
+        "description": "为视频签名的身份，以及登录方式。"
+      },
+      "advanced": {
+        "description": "发布者、中继和镜像：几乎无人改动的列表。"
       }
     }
   }

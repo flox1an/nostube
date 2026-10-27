@@ -47,13 +47,13 @@ Videos and uploads:
 
 ![Studio upload form](/screenshots/studio-upload.webp)
 
-Site appearance with a live preview, instance settings and an overview of the relay and storage:
+Site appearance with a live preview, general settings and statistics of the relay and storage:
 
 ![Studio appearance settings](/screenshots/studio-appearance.webp)
 
-![Studio instance settings](/screenshots/studio-instance.webp)
+![Studio general settings](/screenshots/studio-instance.webp)
 
-![Studio overview](/screenshots/studio-overview.webp)
+![Studio statistics](/screenshots/studio-overview.webp)
 
 ## Embed player
 

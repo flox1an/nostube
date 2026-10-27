@@ -130,4 +130,38 @@ describe('studio translations', () => {
       }
     }
   })
+
+  it('names every sidebar page, its groups and the page descriptions in every Studio locale', () => {
+    const languages = ['en', 'de', 'fr', 'es', 'ru', 'zh', 'ja']
+    for (const language of languages) {
+      for (const id of [
+        'videos',
+        'upload',
+        'moderation',
+        'appearance',
+        'sitePages',
+        'instance',
+        'overview',
+        'advanced',
+        'account',
+      ]) {
+        expect(i18n.getResource(language, 'translation', `studio.nav.pages.${id}`)).toBeTypeOf(
+          'string'
+        )
+      }
+      for (const id of ['content', 'site', 'server']) {
+        expect(i18n.getResource(language, 'translation', `studio.nav.groups.${id}`)).toBeTypeOf(
+          'string'
+        )
+      }
+      for (const key of ['studio.nav.menu', 'studio.nav.close', 'studio.nav.sections']) {
+        expect(i18n.getResource(language, 'translation', key)).toBeTypeOf('string')
+      }
+      for (const id of ['appearance', 'instance', 'account', 'advanced']) {
+        expect(
+          i18n.getResource(language, 'translation', `studio.page.${id}.description`)
+        ).toBeTypeOf('string')
+      }
+    }
+  })
 })

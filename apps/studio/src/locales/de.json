@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "Bereiche",
-      "groupPages": "Seiten: {{group}}",
       "groups": {
+        "start": "Start",
         "content": "Inhalte",
         "site": "Website",
         "server": "Server"
       },
       "pages": {
+        "start": "Erste Schritte",
         "videos": "Videos",
         "upload": "Hochladen",
         "moderation": "Moderation",
         "appearance": "Aussehen",
         "sitePages": "Seiten",
-        "instance": "Instanz",
+        "instance": "Allgemein",
         "account": "Konto",
-        "overview": "Übersicht",
+        "overview": "Statistiken",
         "advanced": "Erweitert"
-      }
+      },
+      "menu": "Menü",
+      "close": "Menü schließen"
     },
     "account": {
       "title": "Anmeldung mit einem Nostr-Schlüssel",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "Videos",
       "description": "Die Website zeigt alle Videos deiner Creator außer denen, die du hier ausblendest. Neue Uploads erscheinen von selbst.",
       "loadFailedWith": "Die Videos konnten nicht geladen werden ({{message}}).",
       "loadFailed": "Die Videos konnten nicht geladen werden.",
@@ -460,7 +462,6 @@
       "copyLink": "Link kopieren",
       "copied": "Link kopiert",
       "edit": "Bearbeiten",
-      "title": "Video hochladen",
       "description": "MP4 oder WebM, das dein Browser abspielen kann, wird unverändert veröffentlicht; andere Videos (MOV, MKV, AVI, HEVC) wandelt dein Browser zuerst in MP4 um. Es wird auf dieser Instanz gespeichert und auf ihrem Relay veröffentlicht.",
       "file": "Videodatei",
       "reading": "Video wird gelesen…",
@@ -507,7 +508,6 @@
       "scheduledDescription": "Das Video liegt auf dieser Instanz und wird am {{date}} öffentlich. Bis dahin ist es auf keinem Relay und nicht auf der Seite."
     },
     "moderation": {
-      "title": "Moderation",
       "description": "Kommentare zu deinen Videos. Was du stummschaltest, wird nur auf dieser Website ausgeblendet: Stummschalten löscht nichts, die Kommentare bleiben auf den Relays und andere Nostr-Apps können sie weiter zeigen.",
       "loadFailed": "Die Kommentare und die Stummschaltliste konnten nicht geladen werden ({{message}}).",
       "listOf": "Stummschaltliste von {{npub}}",
@@ -692,6 +692,20 @@
         "loginPassword": "Passwort",
         "freeDisk": "Freier Speicherplatz",
         "hint": "Fertigstellen erzeugt bei Bedarf den Schlüssel, speichert alles auf einmal und startet den Server für ein paar Sekunden neu."
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "Wie die Seite aussieht: Titel, Branding, Startseite und Verlinkungen."
+      },
+      "instance": {
+        "description": "Reichweite, Hosting, wessen Videos die Seite zeigt, Suche und Speicher."
+      },
+      "account": {
+        "description": "Die Identität, die deine Videos signiert, und wie du dich anmeldest."
+      },
+      "advanced": {
+        "description": "Schreiber, Relays und Mirrors: die Listen, die selten jemand anfasst."
       }
     }
   }

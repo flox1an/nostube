@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "Secciones",
-      "groupPages": "Páginas: {{group}}",
       "groups": {
+        "start": "Inicio",
         "content": "Contenido",
-        "site": "Sitio",
+        "site": "Sitio web",
         "server": "Servidor"
       },
       "pages": {
+        "start": "Primeros pasos",
         "videos": "Videos",
         "upload": "Subir",
         "moderation": "Moderación",
         "appearance": "Apariencia",
         "sitePages": "Páginas",
-        "instance": "Instancia",
+        "instance": "General",
         "account": "Cuenta",
-        "overview": "Resumen",
+        "overview": "Estadísticas",
         "advanced": "Avanzado"
-      }
+      },
+      "menu": "Menú",
+      "close": "Cerrar menú"
     },
     "account": {
       "title": "Inicio de sesión con una clave Nostr",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "Videos",
       "description": "El sitio muestra todos los videos de tus creadores excepto los que ocultes aquí. Las nuevas subidas aparecen solas.",
       "loadFailedWith": "No se pudieron cargar los videos ({{message}}).",
       "loadFailed": "No se pudieron cargar los videos.",
@@ -463,7 +465,6 @@
       "copyLink": "Copiar enlace",
       "copied": "Enlace copiado",
       "edit": "Editar",
-      "title": "Subir un video",
       "description": "El MP4 o WebM que tu navegador pueda reproducir se publica tal cual; otros videos (MOV, MKV, AVI, HEVC) se convierten primero a MP4 en tu navegador. Se guarda en esta instancia y se publica en su relay.",
       "file": "Archivo de video",
       "reading": "Leyendo el video…",
@@ -510,7 +511,6 @@
       "scheduledDescription": "El vídeo se guarda en esta instancia y se hará público el {{date}}. Hasta entonces no está en ningún relay ni en el sitio."
     },
     "moderation": {
-      "title": "Moderación",
       "description": "Comentarios en tus vídeos. Lo que silencias solo se oculta en este sitio: silenciar no borra nada, los comentarios siguen en los relays y otras apps de Nostr pueden seguir mostrándolos.",
       "loadFailed": "No se pudieron cargar los comentarios ni la lista de silenciados ({{message}}).",
       "listOf": "Lista de silenciados de {{npub}}",
@@ -696,6 +696,20 @@
         "loginPassword": "Contraseña",
         "freeDisk": "Espacio libre en disco",
         "hint": "Finalizar crea la clave si hace falta, guarda todo de una vez y reinicia el servidor unos segundos."
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "El aspecto del sitio: título, marca, portada y destino de los enlaces."
+      },
+      "instance": {
+        "description": "Alcance, alojamiento, creadores mostrados, búsqueda y almacenamiento."
+      },
+      "account": {
+        "description": "La identidad que firma tus vídeos y cómo inicias sesión."
+      },
+      "advanced": {
+        "description": "Autores, relés y réplicas: las listas que casi nadie toca."
       }
     }
   }

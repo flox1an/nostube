@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "Sections",
-      "groupPages": "Pages : {{group}}",
       "groups": {
+        "start": "Démarrage",
         "content": "Contenu",
-        "site": "Site",
+        "site": "Site web",
         "server": "Serveur"
       },
       "pages": {
+        "start": "Premiers pas",
         "videos": "Vidéos",
         "upload": "Mise en ligne",
         "moderation": "Modération",
         "appearance": "Apparence",
         "sitePages": "Pages",
-        "instance": "Instance",
+        "instance": "Général",
         "account": "Compte",
-        "overview": "Vue d’ensemble",
+        "overview": "Statistiques",
         "advanced": "Avancé"
-      }
+      },
+      "menu": "Menu",
+      "close": "Fermer le menu"
     },
     "account": {
       "title": "Connexion avec une clé Nostr",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "Vidéos",
       "description": "Le site affiche toutes les vidéos de vos créateurs, sauf celles que vous masquez ici. Les nouvelles mises en ligne apparaissent d'elles-mêmes.",
       "loadFailedWith": "Les vidéos n'ont pas pu être chargées ({{message}}).",
       "loadFailed": "Les vidéos n'ont pas pu être chargées.",
@@ -463,7 +465,6 @@
       "copyLink": "Copier le lien",
       "copied": "Lien copié",
       "edit": "Modifier",
-      "title": "Mettre en ligne une vidéo",
       "description": "Un MP4 ou WebM lisible par votre navigateur est publié tel quel ; les autres vidéos (MOV, MKV, AVI, HEVC) sont d'abord converties en MP4 dans votre navigateur. Elle est stockée sur cette instance et publiée sur son relais.",
       "file": "Fichier vidéo",
       "reading": "Lecture de la vidéo…",
@@ -510,7 +511,6 @@
       "scheduledDescription": "La vidéo est stockée sur cette instance et devient publique le {{date}}. D’ici là, elle n’est sur aucun relais ni sur le site."
     },
     "moderation": {
-      "title": "Modération",
       "description": "Les commentaires sur tes vidéos. Ce que tu mets en sourdine est seulement masqué sur ce site : rien n'est supprimé, les commentaires restent sur les relais et d'autres applis Nostr peuvent encore les afficher.",
       "loadFailed": "Les commentaires et la liste de mise en sourdine n'ont pas pu être chargés ({{message}}).",
       "listOf": "Liste de mise en sourdine de {{npub}}",
@@ -696,6 +696,20 @@
         "loginPassword": "Mot de passe",
         "freeDisk": "Espace disque libre",
         "hint": "Terminer crée la clé si nécessaire, enregistre tout en une fois et redémarre le serveur quelques secondes."
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "L’apparence du site : titre, image de marque, page d’accueil et destination des liens."
+      },
+      "instance": {
+        "description": "Portée, hébergement, créateurs affichés, recherche et stockage."
+      },
+      "account": {
+        "description": "L’identité qui signe vos vidéos, et votre façon de vous connecter."
+      },
+      "advanced": {
+        "description": "Auteurs autorisés, relais et miroirs : les listes que presque personne ne modifie."
       }
     }
   }

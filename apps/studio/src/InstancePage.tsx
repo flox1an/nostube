@@ -27,6 +27,7 @@ import { ReachChoice } from './ReachChoice'
 import { useSigner } from './signer-context'
 import { StorageCard, StorageWarning, useStorageStatus } from './StorageCard'
 import type { PageProps } from './AppearancePage'
+import { PageHeader } from './PageHeader'
 
 /** Key lists show the keys' profiles through the instance client; without it the keys show bare. */
 export function WithKeyProfiles({ children }: { children: ReactNode }) {
@@ -56,6 +57,10 @@ export function InstancePage({
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title={t('studio.nav.pages.instance')}
+        description={t('studio.page.instance.description')}
+      />
       <StorageWarning status={storage.status} />
       <Card>
         <CardHeader>
@@ -113,6 +118,25 @@ export function InstancePage({
               <option value="local">{t('studio.instance.searchModes.local')}</option>
             </select>
           </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.pages.plays.title')}</CardTitle>
+          <CardDescription>{t('studio.pages.plays.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.countPlays}
+              onChange={e => update({ countPlays: e.target.checked })}
+            />
+            {t('studio.pages.plays.toggle')}
+          </label>
+          <p className="text-xs text-muted-foreground">{t('studio.pages.plays.hint')}</p>
+          {draft.countPlays && <p className="text-sm">{t('studio.pages.plays.privacy')}</p>}
         </CardContent>
       </Card>
 

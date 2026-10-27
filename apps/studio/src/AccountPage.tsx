@@ -13,6 +13,7 @@ import {
 import { Input } from '@nostube/widgets/components/input'
 import { exportNsec, nostrPost, unbindNostr, type AdminState } from './api'
 import { Field } from './fields'
+import { PageHeader } from './PageHeader'
 import { useSigner } from './signer-context'
 
 /**
@@ -142,6 +143,10 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title={t('studio.nav.pages.account')}
+        description={t('studio.page.account.description')}
+      />
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

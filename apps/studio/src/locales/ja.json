@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "セクション",
-      "groupPages": "{{group}}のページ",
       "groups": {
+        "start": "スタート",
         "content": "コンテンツ",
         "site": "サイト",
         "server": "サーバー"
       },
       "pages": {
+        "start": "はじめに",
         "videos": "動画",
         "upload": "アップロード",
         "moderation": "モデレーション",
         "appearance": "外観",
         "sitePages": "ページ",
-        "instance": "インスタンス",
+        "instance": "全般",
         "account": "アカウント",
-        "overview": "概要",
+        "overview": "統計",
         "advanced": "詳細設定"
-      }
+      },
+      "menu": "メニュー",
+      "close": "メニューを閉じる"
     },
     "account": {
       "title": "Nostr 鍵でログイン",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "動画",
       "description": "サイトには、ここで非表示にしたものを除き、クリエイターのすべての動画が表示されます。新しいアップロードは自動的に表示されます。",
       "loadFailedWith": "動画を読み込めませんでした（{{message}}）。",
       "loadFailed": "動画を読み込めませんでした。",
@@ -457,7 +459,6 @@
       "copyLink": "リンクをコピー",
       "copied": "リンクをコピーしました",
       "edit": "編集",
-      "title": "動画をアップロード",
       "description": "ブラウザで再生できる MP4 または WebM はそのまま公開され、その他の動画（MOV、MKV、AVI、HEVC）は先にブラウザで MP4 に変換されます。このインスタンスに保存され、そのリレーで公開されます。",
       "file": "動画ファイル",
       "reading": "動画を読み込み中…",
@@ -504,7 +505,6 @@
       "scheduledDescription": "動画はこのインスタンスに保存され、{{date}} に公開されます。それまではどのリレーにもサイトにも表示されません。"
     },
     "moderation": {
-      "title": "モデレーション",
       "description": "あなたの動画へのコメントです。ミュートしたものはこのサイトで非表示になるだけです。何も削除されず、コメントはリレーに残り、他の Nostr アプリでは引き続き表示されることがあります。",
       "loadFailed": "コメントとミュートリストを読み込めませんでした（{{message}}）。",
       "listOf": "{{npub}} のミュートリスト",
@@ -688,6 +688,20 @@
         "loginPassword": "パスワード",
         "freeDisk": "空きディスク容量",
         "hint": "「完了」は必要に応じて鍵を作成し、すべてを一度に保存して、サーバーを数秒間再起動します。"
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "サイトの見た目：タイトル、ブランド、ホームページ、リンクの開き先。"
+      },
+      "instance": {
+        "description": "公開範囲、ホスティング、表示するクリエイター、検索、ストレージ。"
+      },
+      "account": {
+        "description": "動画に署名するIDとログイン方法。"
+      },
+      "advanced": {
+        "description": "投稿者、リレー、ミラーのリスト。"
       }
     }
   }

@@ -47,23 +47,26 @@
     },
     "nav": {
       "sections": "Sections",
-      "groupPages": "{{group}} pages",
       "groups": {
+        "start": "Start",
         "content": "Content",
-        "site": "Site",
+        "site": "Website",
         "server": "Server"
       },
       "pages": {
+        "start": "Getting started",
         "videos": "Videos",
         "upload": "Upload",
         "moderation": "Moderation",
         "appearance": "Appearance",
         "sitePages": "Pages",
-        "instance": "Instance",
+        "instance": "General",
         "account": "Account",
-        "overview": "Overview",
+        "overview": "Statistics",
         "advanced": "Advanced"
-      }
+      },
+      "menu": "Menu",
+      "close": "Close menu"
     },
     "account": {
       "title": "Login with a Nostr key",
@@ -241,7 +244,6 @@
       }
     },
     "videos": {
-      "title": "Videos",
       "description": "The site shows every video of your creators except the ones you hide here. New uploads appear on their own.",
       "loadFailedWith": "The videos could not be loaded ({{message}}).",
       "loadFailed": "The videos could not be loaded.",
@@ -460,7 +462,6 @@
       "copyLink": "Copy link",
       "copied": "Link copied",
       "edit": "Edit",
-      "title": "Upload a video",
       "description": "MP4 or WebM that your browser can play is published as it is; other videos (MOV, MKV, AVI, HEVC) are converted to MP4 in your browser first. It is stored on this instance and published to its relay.",
       "file": "Video file",
       "reading": "Reading the video…",
@@ -507,7 +508,6 @@
       "scheduledDescription": "The video is stored on this instance and goes public on {{date}}. Until then it is on no relay and not on the site."
     },
     "moderation": {
-      "title": "Moderation",
       "description": "Comments on your videos. What you mute is hidden on this site only: muting deletes nothing, the comments stay on the relays and other Nostr apps may still show them.",
       "loadFailed": "The comments and the mute list could not be loaded ({{message}}).",
       "listOf": "Mute list of {{npub}}",
@@ -692,6 +692,20 @@
         "loginPassword": "Password",
         "freeDisk": "Free disk space",
         "hint": "Finish creates the key if needed, saves everything at once and restarts the server for a few seconds."
+      }
+    },
+    "page": {
+      "appearance": {
+        "description": "How the site looks: title, branding, the homepage and where links open."
+      },
+      "instance": {
+        "description": "Reach, site hosting, whose videos the site shows, search and storage."
+      },
+      "account": {
+        "description": "The identity that signs your videos, and how you log in."
+      },
+      "advanced": {
+        "description": "Writers, relays and mirrors: the lists most owners never touch."
       }
     }
   }

@@ -1,16 +1,23 @@
 # Studio
 
-Studio is the admin interface of an instance at `/studio/`. It has three groups:
+Studio is the admin interface of an instance at `/studio/`. Its sidebar lists every page in one
+grouped list — nothing hides behind a second menu level:
 
-| Group   | Pages                                 |
-| ------- | ------------------------------------- |
-| Content | Videos, Upload, Moderation            |
-| Site    | Appearance, Pages                     |
-| Server  | Instance, Account, Overview, Advanced |
+| Group   | Pages                                  |
+| ------- | -------------------------------------- |
+| Start   | Getting started (only while open)      |
+| Content | Upload, Videos, Moderation             |
+| Website | Appearance, Pages                      |
+| Server  | General, Statistics, Advanced, Account |
 
-Settings pages edit a draft that is saved with **Save and apply**. Some saves restart the instance for
-a few seconds; Studio waits up to 90 seconds for it to come back and says so if it does not. Which
-settings restart is listed under [What Studio edits](/server/configuration#what-studio-edits).
+**Getting started** is a checklist (upload a first video, add a logo, fill in the About, Imprint and
+Privacy pages, set a Lightning address, view the site). It is listed with its progress until every
+step is done or you dismiss it; dismissing is remembered in the browser.
+
+On small screens the sidebar collapses into a menu behind the top bar. Settings pages edit a draft
+that is saved with **Save and apply**. Some saves restart the instance for a few seconds; Studio
+waits up to 90 seconds for it to come back and says so if it does not. Which settings restart is
+listed under [What Studio edits](/server/configuration#what-studio-edits).
 
 Studio's language selector (English, German, French, Spanish, Russian, Chinese, Japanese) is
 remembered in the browser, not in the instance configuration.
@@ -59,11 +66,11 @@ the server gets the key too. Export it as `nsec` under **Server → Account → 
 for the admin password, and wrong passwords count towards the login throttle. Switching keys is not
 supported ([ADR 0007](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0007-managed-signer.md)).
 
-## Instance
+## General
 
-**Server → Instance** holds the settings every owner meets.
+**Server → General** holds the settings every owner meets.
 
-![Studio: the Instance page](/screenshots/studio-instance.webp)
+![Studio: the General page](/screenshots/studio-instance.webp)
 
 ### Reach
 
@@ -238,7 +245,7 @@ Only the video's author can edit or delete it; the admin can always hide it.
 
 ### Play counting
 
-**Play counting** is opt-in under **Site → Pages → Play counter**. The instance counts how often a
+**Play counting** is opt-in under **Server → General → Play counter**. The instance counts how often a
 video's media file starts loading from its own Blossom, one total per file and day, kept for one year
 and shown per video on the Videos page. It counts files, never people: no IP address, no user agent, no
 cookie. Plays served from mirrors, caches or other Blossom servers are not counted. While it is on, the
@@ -258,11 +265,11 @@ standard privacy text mentions it; insert the text again in each language.
   is deleted, not when it is hidden); a report on the creator's own account or reply offers nothing to
   mute.
 
-## Site
+## Website
 
 ### Appearance
 
-**Site → Appearance** sets the site title, tagline and Lightning address (zaps to the channel
+**Website → Appearance** sets the site title, tagline and Lightning address (zaps to the channel
 identity), the homepage (introduction, a featured video, up to 12 selected videos, up to 5 links and
 one main button), accent colour and font, and where links to other Nostr content open (nostu.be,
 njump.me or custom `https://` templates with `{nip19}`). Visitors get light or dark mode from their
@@ -275,15 +282,15 @@ system.
 
 ### Pages
 
-**Site → Pages** holds the optional About, Imprint and Privacy policy pages, linked in the site footer.
+**Website → Pages** holds the optional About, Imprint and Privacy policy pages, linked in the site footer.
 Write each in any languages: visitors see their own language, otherwise English, otherwise the first
 one written. A page without text is not shown. **Insert the standard text** fills in a privacy policy
 describing what the site and server do with visitors' data; it follows the current reach, profile
 relays and play counter, so insert it again after changing them. It is not legal advice.
 
-## Overview
+## Statistics
 
-**Server → Overview** shows the relay's event count (expired events excluded) and its distribution by
+**Server → Statistics** shows the relay's event count (expired events excluded) and its distribution by
 kind, the SQLite database size including the write-ahead log, Blossom's file count and used storage,
 the storage quota and free disk space. Upload and download counts and bytes served count since the
 last start. The quota bar is hidden when storage is unlimited.
@@ -291,7 +298,7 @@ last start. The quota bar is hidden when storage is unlimited.
 The numbers come from `GET /api/admin/stats`, which needs the admin session. There are no public
 Prometheus metrics, and the relay does not support NIP-45 `COUNT`.
 
-![Studio: the Overview page](/screenshots/studio-overview.webp)
+![Studio: the Statistics page](/screenshots/studio-overview.webp)
 
 ## What visitors can do
 

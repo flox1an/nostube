@@ -18,13 +18,6 @@ import { processEvent, type VideoEvent } from '@nostube/core/video-event'
 import { getKindsForType } from '@nostube/core/video-types'
 import { formatDate } from '@nostube/widgets'
 import { Button } from '@nostube/widgets/components/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@nostube/widgets/components/card'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
@@ -32,6 +25,7 @@ import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import type { AdminState } from './api'
 import { isKeyConnected } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
+import { PageHeader } from './PageHeader'
 import { useSigner } from './signer-context'
 import { publishChecked, signChecked } from './upload/sign'
 
@@ -67,13 +61,11 @@ export default function ModerationPage({ state }: { state: AdminState }) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.moderation.title')}</CardTitle>
-          <CardDescription>{t('studio.moderation.description')}</CardDescription>
-        </CardHeader>
-        {body && <CardContent>{body}</CardContent>}
-      </Card>
+      <PageHeader
+        title={t('studio.nav.pages.moderation')}
+        description={t('studio.moderation.description')}
+      />
+      {body}
     </div>
   )
 }

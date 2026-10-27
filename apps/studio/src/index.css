@@ -10,3 +10,65 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Motion: enter along the way things leave, short and calm; opacity-only under reduced motion. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.anim-page {
+  animation: page-in 220ms ease-out both;
+}
+.anim-rise {
+  animation: rise-in 240ms ease-out both;
+}
+.anim-fade {
+  animation: fade-in 160ms ease-out both;
+}
+.anim-drawer {
+  animation: drawer-in 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-page,
+  .anim-rise,
+  .anim-fade {
+    animation: fade-in 150ms ease-out both;
+  }
+  .anim-drawer {
+    animation: none;
+  }
+}

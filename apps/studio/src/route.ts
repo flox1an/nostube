@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react'
+import {
+  BarChart3,
+  FileText,
+  Film,
+  ListChecks,
+  Palette,
+  Settings,
+  Upload,
+  User,
+  ShieldCheck,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react'
 
 export type PageId =
+  | 'start'
   | 'videos'
   | 'upload'
   | 'moderation'
@@ -10,7 +24,7 @@ export type PageId =
   | 'account'
   | 'overview'
   | 'advanced'
-export type GroupId = 'content' | 'site' | 'server'
+export type GroupId = 'start' | 'content' | 'site' | 'server'
 
 /** Stable ids only: the names shown are translated at render (`studio.nav.*`). */
 export interface PageDef {
@@ -18,20 +32,27 @@ export interface PageDef {
   group: GroupId
   /** The page edits the config draft, so the save bar belongs under it. */
   editsConfig: boolean
+  icon: LucideIcon
 }
 
-export const GROUPS: { id: GroupId }[] = [{ id: 'content' }, { id: 'site' }, { id: 'server' }]
+export const GROUPS: { id: GroupId }[] = [
+  { id: 'start' },
+  { id: 'content' },
+  { id: 'site' },
+  { id: 'server' },
+]
 
 export const PAGES: PageDef[] = [
-  { id: 'videos', group: 'content', editsConfig: false },
-  { id: 'upload', group: 'content', editsConfig: false },
-  { id: 'moderation', group: 'content', editsConfig: false },
-  { id: 'appearance', group: 'site', editsConfig: true },
-  { id: 'sitePages', group: 'site', editsConfig: true },
-  { id: 'instance', group: 'server', editsConfig: true },
-  { id: 'account', group: 'server', editsConfig: false },
-  { id: 'overview', group: 'server', editsConfig: false },
-  { id: 'advanced', group: 'server', editsConfig: true },
+  { id: 'start', group: 'start', editsConfig: false, icon: ListChecks },
+  { id: 'upload', group: 'content', editsConfig: false, icon: Upload },
+  { id: 'videos', group: 'content', editsConfig: false, icon: Film },
+  { id: 'moderation', group: 'content', editsConfig: false, icon: ShieldCheck },
+  { id: 'appearance', group: 'site', editsConfig: true, icon: Palette },
+  { id: 'sitePages', group: 'site', editsConfig: true, icon: FileText },
+  { id: 'instance', group: 'server', editsConfig: true, icon: Settings },
+  { id: 'overview', group: 'server', editsConfig: false, icon: BarChart3 },
+  { id: 'advanced', group: 'server', editsConfig: true, icon: Wrench },
+  { id: 'account', group: 'server', editsConfig: false, icon: User },
 ]
 
 export const DEFAULT_PAGE: PageId = 'videos'

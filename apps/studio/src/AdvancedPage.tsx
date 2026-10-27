@@ -13,6 +13,7 @@ import { WithKeyProfiles } from './InstancePage'
 import { KeyList } from './KeyList'
 import { MirrorCard } from './MirrorCard'
 import type { PageProps } from './AppearancePage'
+import { PageHeader } from './PageHeader'
 
 type ListKey =
   | 'videoSourcesText'
@@ -46,6 +47,10 @@ export function AdvancedPage({ draft, update }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title={t('studio.nav.pages.advanced')}
+        description={t('studio.page.advanced.description')}
+      />
       <Card>
         <CardHeader>
           <CardTitle>{t('studio.instance.writers')}</CardTitle>

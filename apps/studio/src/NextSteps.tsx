@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Circle, X } from 'lucide-react'
+import { CheckCircle2, Circle } from 'lucide-react'
 import { SITE_PAGES, isVideoKind } from '@nostube/core/instance-config'
 import { Button } from '@nostube/widgets/components/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@nostube/widgets/components/card'
+import { Card, CardContent } from '@nostube/widgets/components/card'
 import { loadStats, type AdminConfig, type AdminState } from './api'
+import { PageHeader } from './PageHeader'
 import { hashFor } from './route'
 import { useSigner } from './signer-context'
 
@@ -34,41 +29,51 @@ function setFlag(key: string) {
   }
 }
 
+export interface Step {
+  id: string
+  done: boolean
+  href: string
+}
+
+export interface Checklist {
+  steps: Step[]
+  dismiss: () => void
+  viewSite: () => void
+}
+
 /**
  * What is left to make the site the creator's own, from the saved config, the branding and the
- * relay's counts. Gone once everything is done or the owner dismisses it (in this browser).
+ * relay's counts. `undefined` while the counts load (so a finished list does not flash up), `null`
+ * once everything is done or the owner dismissed it (in this browser).
  */
-export function NextSteps({
-  config,
-  branding,
-}: {
-  config: AdminConfig
+export function useChecklist(
+  config: AdminConfig,
   branding: AdminState['branding']
-}) {
-  const { t } = useTranslation()
+): Checklist | null | undefined {
   const { mode } = useSigner()
   const [dismissed, setDismissed] = useState(() => flag(DISMISSED))
   const [siteViewed, setSiteViewed] = useState(() => flag(SITE_VIEWED))
-  // null until the stats are in, so a finished checklist does not flash up first.
   const [hasVideos, setHasVideos] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (dismissed) return
     let live = true
-    loadStats().then(
-      stats =>
-        live &&
-        setHasVideos(stats.relay.eventsByKind.some(k => isVideoKind(k.kind) && k.count > 0)),
-      () => live && setHasVideos(false)
-    )
+    loadStats()
+      .then(
+        stats =>
+          live &&
+          setHasVideos(stats.relay.eventsByKind.some(k => isVideoKind(k.kind) && k.count > 0))
+      )
+      .catch(() => live && setHasVideos(false))
     return () => {
       live = false
     }
   }, [dismissed])
 
-  if (dismissed || hasVideos === null) return null
+  if (dismissed) return null
+  if (hasVideos === null) return undefined
 
-  const steps = [
+  const steps: Step[] = [
     { id: 'upload', done: hasVideos, href: hashFor('upload') },
     { id: 'logo', done: branding.logo !== null, href: hashFor('appearance') },
     {
@@ -83,58 +88,63 @@ export function NextSteps({
     { id: 'viewSite', done: siteViewed, href: '/' },
   ]
   if (steps.every(step => step.done)) return null
+  return {
+    steps,
+    dismiss: () => {
+      setFlag(DISMISSED)
+      setDismissed(true)
+    },
+    viewSite: () => {
+      setFlag(SITE_VIEWED)
+      setSiteViewed(true)
+    },
+  }
+}
 
+/** The checklist as a page of its own; the sidebar lists it only while something is left. */
+export function NextSteps({ checklist }: { checklist: Checklist }) {
+  const { t } = useTranslation()
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
-          <CardTitle>{t('studio.nextSteps.title')}</CardTitle>
-          <CardDescription>{t('studio.nextSteps.description')}</CardDescription>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t('studio.nextSteps.dismiss')}
-          onClick={() => {
-            setFlag(DISMISSED)
-            setDismissed(true)
-          }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-2 text-sm">
-          {steps.map(step => {
-            const Icon = step.done ? CheckCircle2 : Circle
-            const external = step.href === '/'
-            return (
-              <li key={step.id} className="flex items-center gap-2">
-                <Icon
-                  className={`h-4 w-4 shrink-0 ${step.done ? 'text-primary' : 'text-muted-foreground'}`}
-                  aria-hidden
-                />
-                <a
-                  href={step.href}
-                  className={`hover:underline ${step.done ? 'text-muted-foreground line-through' : ''}`}
-                  {...(external && {
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => {
-                      setFlag(SITE_VIEWED)
-                      setSiteViewed(true)
-                    },
-                  })}
-                >
-                  {t(`studio.nextSteps.items.${step.id}`)}
-                </a>
-                {step.done && <span className="sr-only">{t('studio.nextSteps.done')}</span>}
-              </li>
-            )
-          })}
-        </ul>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('studio.nav.pages.start')}
+        description={t('studio.nextSteps.description')}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={checklist.dismiss}>
+            {t('studio.nextSteps.dismiss')}
+          </Button>
+        }
+      />
+      <Card>
+        <CardContent className="pt-6">
+          <ul className="space-y-3 text-sm">
+            {checklist.steps.map(step => {
+              const Icon = step.done ? CheckCircle2 : Circle
+              const external = step.href === '/'
+              return (
+                <li key={step.id} className="flex items-center gap-2.5">
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${step.done ? 'text-primary' : 'text-muted-foreground'}`}
+                    aria-hidden
+                  />
+                  <a
+                    href={step.href}
+                    className={`hover:underline ${step.done ? 'text-muted-foreground line-through' : ''}`}
+                    {...(external && {
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                      onClick: checklist.viewSite,
+                    })}
+                  >
+                    {t(`studio.nextSteps.items.${step.id}`)}
+                  </a>
+                  {step.done && <span className="sr-only">{t('studio.nextSteps.done')}</span>}
+                </li>
+              )
+            })}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

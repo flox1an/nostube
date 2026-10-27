@@ -21,8 +21,8 @@ import { Onboarding } from './OnboardingWizard'
 import { needsOnboarding } from './onboarding-config'
 import { InstancePage } from './InstancePage'
 import { Login } from './Login'
-import { Nav } from './Nav'
-import { NextSteps } from './NextSteps'
+import { MobileBar, Sidebar } from './Nav'
+import { NextSteps, useChecklist } from './NextSteps'
 import { OverviewPage } from './OverviewPage'
 import { PagesPage } from './PagesPage'
 import { VideosPage } from './VideosPage'
@@ -176,6 +176,13 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   const saved = useMemo(() => toDraft(config), [config])
   const result = fromDraft(draft, state.originIsPublic)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
+  const checklist = useChecklist(config, branding)
+  const progress = checklist
+    ? {
+        done: checklist.steps.filter(step => step.done).length,
+        total: checklist.steps.length,
+      }
+    : undefined
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
   const restart = result.config !== null && needsRestart(config, result.config)
 
@@ -238,100 +245,130 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
     setConfig(next)
     setDraft(d => ({ ...d, hiddenText }))
   }
+  // A new page starts at its top; the sidebar keeps saying where we are.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [page])
+
   return (
-    <Shell onLogout={() => void signOut()}>
-      <Nav page={page} onNavigate={navigate} />
-      <ConnectSigner />
-
-      {saving === 'stalled' && (
-        <Alert variant="destructive">
-          <AlertTitle>{t('studio.app.stalledTitle')}</AlertTitle>
-          <AlertDescription>
-            <Trans i18nKey="studio.app.stalledBody" components={{ code: <code /> }} />
-          </AlertDescription>
-        </Alert>
-      )}
-      {saveError && (
-        <Alert variant="destructive">
-          <AlertTitle>{t('studio.app.notSaved')}</AlertTitle>
-          <AlertDescription>{saveError}</AlertDescription>
-        </Alert>
-      )}
-      {page === 'videos' && <NextSteps config={config} branding={branding} />}
-      {page === 'videos' && (
-        <VideosPage
-          hiddenText={draft.hiddenText}
-          onHiddenChange={saveHidden}
-          countPlays={saved.countPlays}
+    <div className="min-h-dvh lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-dvh border-r border-sidebar-border lg:block">
+        <Sidebar
+          page={page}
+          onNavigate={navigate}
+          onLogout={() => void signOut()}
+          instanceTitle={config.title}
+          progress={progress}
         />
-      )}
-      {page === 'upload' && (
-        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <UploadPage state={state} />
-        </Suspense>
-      )}
-      {page === 'appearance' && (
-        <AppearancePage
-          draft={draft}
-          update={update}
-          branding={branding}
-          onBranding={(slot, url) => setBranding(b => ({ ...b, [slot]: url }))}
+      </aside>
+      <div className="min-w-0">
+        <MobileBar
+          page={page}
+          onNavigate={navigate}
+          onLogout={() => void signOut()}
+          instanceTitle={config.title}
+          progress={progress}
         />
-      )}
-      {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
-      {page === 'instance' && (
-        <InstancePage draft={draft} update={update} state={state} dirty={dirty} />
-      )}
-      {page === 'advanced' && <AdvancedPage draft={draft} update={update} />}
-      {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
-      {page === 'overview' && <OverviewPage />}
-      {page === 'moderation' && (
-        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <ModerationPage state={state} />
-        </Suspense>
-      )}
+        <main className="mx-auto w-full max-w-4xl space-y-6 px-4 pb-16 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+          <ConnectSigner />
 
-      {editsConfig && (dirty || saving !== null) && (
-        <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
-          {result.errors.length > 0 && (
-            <ul className="list-disc pl-5 text-sm text-destructive">
-              {result.errors.map(message => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
+          {saving === 'stalled' && (
+            <Alert variant="destructive">
+              <AlertTitle>{t('studio.app.stalledTitle')}</AlertTitle>
+              <AlertDescription>
+                <Trans i18nKey="studio.app.stalledBody" components={{ code: <code /> }} />
+              </AlertDescription>
+            </Alert>
           )}
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm font-medium">{t('studio.app.unsaved')}</p>
-            <Button
-              type="button"
-              onClick={save}
-              disabled={!dirty || !result.config || saving !== null}
-            >
-              {saving === 'saving'
-                ? t('studio.app.saving')
-                : saving === 'restarting'
-                  ? t('studio.app.restarting')
-                  : t('studio.app.save')}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={!dirty || saving !== null}
-              onClick={() => {
-                setDraft(saved)
-                setDeleteNsite(undefined)
-              }}
-            >
-              {t('studio.app.discard')}
-            </Button>
-            {restart && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                {t('studio.app.restartWarning')}
-              </p>
+          {saveError && (
+            <Alert variant="destructive">
+              <AlertTitle>{t('studio.app.notSaved')}</AlertTitle>
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div key={page} className="anim-page space-y-6">
+            {page === 'start' && checklist && <NextSteps checklist={checklist} />}
+            {page === 'videos' && (
+              <VideosPage
+                hiddenText={draft.hiddenText}
+                onHiddenChange={saveHidden}
+                countPlays={saved.countPlays}
+              />
+            )}
+            {page === 'upload' && (
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                <UploadPage state={state} />
+              </Suspense>
+            )}
+            {page === 'appearance' && (
+              <AppearancePage
+                draft={draft}
+                update={update}
+                branding={branding}
+                onBranding={(slot, url) => setBranding(b => ({ ...b, [slot]: url }))}
+              />
+            )}
+            {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
+            {page === 'instance' && (
+              <InstancePage draft={draft} update={update} state={state} dirty={dirty} />
+            )}
+            {page === 'advanced' && <AdvancedPage draft={draft} update={update} />}
+            {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
+            {page === 'overview' && <OverviewPage />}
+            {page === 'moderation' && (
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                <ModerationPage state={state} />
+              </Suspense>
             )}
           </div>
-        </div>
-      )}
+
+          {editsConfig && (dirty || saving !== null) && (
+            <div className="anim-rise sticky bottom-4 z-30">
+              <div className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3 pr-4 shadow-lg backdrop-blur-md">
+                {result.errors.length > 0 && (
+                  <ul className="list-disc pl-5 text-sm text-destructive">
+                    {result.errors.map(message => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-medium">{t('studio.app.unsaved')}</p>
+                  <Button
+                    type="button"
+                    onClick={save}
+                    disabled={!dirty || !result.config || saving !== null}
+                  >
+                    {saving === 'saving'
+                      ? t('studio.app.saving')
+                      : saving === 'restarting'
+                        ? t('studio.app.restarting')
+                        : t('studio.app.save')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={!dirty || saving !== null}
+                    onClick={() => {
+                      setDraft(saved)
+                      setDeleteNsite(undefined)
+                    }}
+                  >
+                    {t('studio.app.discard')}
+                  </Button>
+                  {restart && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      {t('studio.app.restartWarning')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
       <AlertDialog
         open={pendingHostingChange !== null}
         onOpenChange={open => {
@@ -354,7 +391,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Shell>
+    </div>
   )
 }
 

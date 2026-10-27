@@ -13,6 +13,7 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import { widgetResources } from '@nostube/widgets/i18n'
 import { LANGUAGES } from '@nostube/widgets/languages'
 import type { PageProps } from './AppearancePage'
+import { PageHeader } from './PageHeader'
 import { DEFAULT_PAGE_LANGUAGES, privacyPolicy } from './default-pages'
 import { Field } from './fields'
 
@@ -137,26 +138,8 @@ export function PagesPage({ draft, update }: PageProps) {
     .map(line => line.trim())
     .filter(Boolean)
   return (
-    <div className="max-w-3xl space-y-6">
-      <p className="text-sm text-muted-foreground">{t('studio.pages.intro')}</p>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('studio.pages.plays.title')}</CardTitle>
-          <CardDescription>{t('studio.pages.plays.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draft.countPlays}
-              onChange={e => update({ countPlays: e.target.checked })}
-            />
-            {t('studio.pages.plays.toggle')}
-          </label>
-          <p className="text-xs text-muted-foreground">{t('studio.pages.plays.hint')}</p>
-          {draft.countPlays && <p className="text-sm">{t('studio.pages.plays.privacy')}</p>}
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <PageHeader title={t('studio.nav.pages.sitePages')} description={t('studio.pages.intro')} />
       {SITE_PAGES.map(kind => (
         <PageCard
           key={kind}

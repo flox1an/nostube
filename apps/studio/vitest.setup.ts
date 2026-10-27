@@ -16,6 +16,9 @@ function storage(): Storage {
 Object.defineProperty(globalThis, 'localStorage', { value: storage() })
 Object.defineProperty(globalThis, 'sessionStorage', { value: storage() })
 
+// The studio scrolls to the top on page changes; jsdom only logs "not implemented".
+if (typeof window !== 'undefined') window.scrollTo = () => {}
+
 // jsdom's TextEncoder returns a Uint8Array from another realm, which noble (inside applesauce's
 // event verification) refuses; copy it into this realm's Uint8Array.
 const Encoder = globalThis.TextEncoder

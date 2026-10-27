@@ -76,12 +76,21 @@ jobs:
           context: .
           file: apps/server/Dockerfile
           pull: true
+          no-cache-filters: runtime
           build-args: REVISION=${{ github.sha }}
           load: true
           tags: nostube-server:ci
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # A security floor of the runtime image: an older libbrotli1 (a cached layer) fails the build
+      # before anything is pushed.
+      - name: Check the runtime packages
+        run: |
+          version=$(docker run --rm --entrypoint dpkg-query nostube-server:ci -W -f='${Version}' libbrotli1)
+          echo "libbrotli1 $version"
+          dpkg --compare-versions "$version" ge '1.0.9-2+deb12u1'
 
       - name: Smoke test the container
         run: |
@@ -127,6 +136,7 @@ jobs:
           context: .
           file: apps/server/Dockerfile
           pull: true
+          no-cache-filters: runtime
           build-args: REVISION=${{ github.sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}

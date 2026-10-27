@@ -39,10 +39,13 @@ COPY --from=web /app/apps/server/web web
 RUN cargo build --release --locked
 
 # 3. The runtime image.
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS runtime
+# libbrotli1 (a curl dependency) must carry the security fix. A cached copy of this layer can keep an
+# older package, so the workflow also checks the finished image (server-image.yml).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl \
+ && apt-get install -y --no-install-recommends ca-certificates curl libbrotli1 \
  && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' ca-certificates)" ge '20250419~deb12u2' \
+ && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.0.9-2+deb12u1' \
  && ! grep -q 'emSign ECC Root CA - G3\|AAA Certificate Services' /etc/ssl/certs/ca-certificates.crt \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --uid 10001 --user-group --no-create-home --shell /usr/sbin/nologin nostube \

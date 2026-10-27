@@ -412,7 +412,9 @@ fn short_name(title: &str) -> &str {
 }
 
 /// `/manifest.webmanifest`: makes the site installable under the instance's title, with its icon
-/// or Nostube's (the site build's `public/` files).
+/// or Nostube's (the site build's `public/` files). `fullscreen` hides Android's status and
+/// navigation bars (the shell's safe-area padding keeps content clear of the cutout); iOS falls
+/// back to `standalone`, where `viewport-fit=cover` already runs edge to edge.
 fn manifest(base: &serde_json::Value, icon: Option<&Asset>) -> Bytes {
     let title = base["title"].as_str().unwrap_or("Nostube");
     let icons = match icon.and_then(|a| Some((a, icon_size(&a.bytes)?))) {
@@ -432,7 +434,7 @@ fn manifest(base: &serde_json::Value, icon: Option<&Asset>) -> Bytes {
         "short_name": short_name(title),
         "start_url": "/",
         "scope": "/",
-        "display": "standalone",
+        "display": "fullscreen",
         "lang": "en",
         "categories": ["entertainment", "social", "video"],
         "theme_color": THEME_COLOR,
@@ -493,7 +495,7 @@ mod tests {
         let read = || serde_json::from_slice::<serde_json::Value>(&branding.manifest()).unwrap();
         let m = read();
         assert_eq!((m["id"].as_str(), m["start_url"].as_str(), m["scope"].as_str()), (Some("/"), Some("/"), Some("/")));
-        assert_eq!(m["display"], "standalone");
+        assert_eq!(m["display"], "fullscreen");
         assert_eq!(m["name"], "My Great Video Channel");
         assert_eq!(m["short_name"], "My Great");
         assert!(m.get("description").is_none(), "{m}");

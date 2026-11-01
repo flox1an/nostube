@@ -124,13 +124,11 @@ pub async fn sync(relay: &Relay, branding: &Branding, outbox: &Outbox, keys: &cr
         let tags = blossom_servers(&public).iter().map(|url| Tag::custom("server", [url.as_str()])).collect();
         ids.extend(replace(relay, &keys, Kind::Custom(10063), String::new(), tags).await);
     }
-    let (indexers, ids) = if is_public(&public) {
-        let targets: Vec<String> = serde_json::from_value(public["profileRelays"].clone()).unwrap_or_default();
-        (public_urls(&targets), ids)
-    } else {
-        (vec![], vec![])
-    };
-    if let Err(e) = outbox.announce(indexers, ids).await {
+    let targets: Vec<String> = serde_json::from_value(public["profileRelays"].clone()).unwrap_or_default();
+    let indexers = public_urls(&targets);
+    let announcing = is_public(&public);
+    if !announcing { ids.clear(); }
+    if let Err(e) = outbox.announce(indexers, ids, announcing).await {
         tracing::warn!("profile: queueing for the indexers: {e}");
     }
 }
@@ -444,7 +442,8 @@ mod tests {
         f.sync(&shared).await;
         assert_eq!(f.stored(keys.public_key(), Kind::RelayList).await, list);
         assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["name"], "Renamed");
-        assert_eq!(f.jobs(INDEXER).len(), 3);
+        let private_profile = f.stored(keys.public_key(), Kind::Metadata).await;
+        assert!(!f.jobs(INDEXER).contains(&private_profile[0].id.to_hex()));
     }
 
     #[tokio::test]
@@ -560,7 +559,6 @@ mod tests {
         let changed = f.stored(keys.public_key(), Kind::Custom(10063)).await;
         assert!(changed[0].created_at > future.created_at);
         assert_eq!(changed[0].tags.clone().to_vec().into_iter().map(Tag::to_vec).collect::<Vec<_>>(), [vec!["server", "https://blobs.example"]]);
-        let indexer_count = f.jobs(INDEXER).len();
         p["reach"] = "private".into();
         p["mirror"]["blossom"] = serde_json::json!(["https://other.example"]);
         f.branding.set_base(p);
@@ -568,7 +566,7 @@ mod tests {
         let private = f.stored(keys.public_key(), Kind::Custom(10063)).await;
         assert!(private[0].created_at > changed[0].created_at);
         assert!(f.jobs(MIRROR).contains(&private[0].id.to_hex()));
-        assert_eq!(f.jobs(INDEXER).len(), indexer_count, "private Blossom lists never go to indexers");
+        assert!(!f.jobs(INDEXER).contains(&private[0].id.to_hex()));
     }
 
     #[tokio::test]

@@ -200,7 +200,7 @@ pairings after reload; they do not silently move an existing signer session.
 **Mirror to other servers** copies the instance's own content in the background
 ([ADR 0009](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0009-outbox-and-mirror.md)):
 
-- **Mirror relays** (`ws://`/`wss://`): every new event of the allowed writers.
+- **Mirror relays** (`ws://`/`wss://`): current stored and new events of the allowed writers. After the restart, newly added targets also receive existing unexpired events; completed deliveries are not repeated.
 - **Mirror Blossom servers** (`https://`, or `http://` on the LAN): uploaded media. This needs the
   managed key, because the server signs the mirror requests.
 
@@ -208,6 +208,11 @@ Mirrors work in both reaches. Leave both lists empty to keep everything on the i
 restarts the instance. **Mirror status** below shows done, waiting and failed jobs per target and the
 recent problems; the outbox keeps retrying while a target is down, and **Retry failed** gives failed
 jobs a fresh set of attempts. See also [Mirrors as backups](/server/storage#mirrors-as-backups).
+
+Profile/index relays receive only the profile (kind 0), relay list (10002) and Blossom list (10063).
+Videos, deletions and nsite manifests go to content/mirror relays, not indexers. Invalid old index jobs
+and jobs for the retired `index.hzrd149.com` are removed automatically. Existing media files are not
+backfilled by adding a mirror relay.
 
 ## Content
 

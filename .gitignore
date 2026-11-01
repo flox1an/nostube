@@ -19,6 +19,7 @@ docs/competitor-analysis/
 
 # local video fixtures, subtitles and download metadata
 /test-media/
+/testtube-archivist-transfer/
 
 # local server instance state, including secrets and TLS keys
 /apps/server/tmp3/

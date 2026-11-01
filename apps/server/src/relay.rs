@@ -113,6 +113,11 @@ CREATE TABLE IF NOT EXISTS visitor_event (
   event_hash BLOB PRIMARY KEY,
   author BLOB NOT NULL
 );
+-- Writer events another instance's outbox delivered (`ingest_from(.., true)`): stored, never
+-- passed on, also not by the startup backfill to mirror relays added later.
+CREATE TABLE IF NOT EXISTS mirrored_event (
+  event_hash BLOB PRIMARY KEY REFERENCES event(event_hash) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS deleted_coordinate (
   author BLOB NOT NULL,
   kind INTEGER NOT NULL,
@@ -238,6 +243,31 @@ impl Relay {
                 }
             }
         }
+        // ponytail: old rows have no origin marker and count as local; new mirror deliveries
+        // are tracked transactionally below. Historical provenance cannot be reconstructed.
+        if !cfg.mirror_relays.is_empty() {
+            // Mirror relays added later get every current event of the allowed writers. Existing
+            // jobs keep their status (`INSERT OR IGNORE`); superseded and deleted events are gone
+            // from `event`; explicit events keep their own target allowlist.
+            let tx = writer.unchecked_transaction()?;
+            {
+                let mut current = tx.prepare(
+                    "SELECT event_hash FROM event e WHERE author = ?1 AND (expires_at IS NULL OR expires_at >= ?2)
+                     AND NOT EXISTS (SELECT 1 FROM mirrored_event m WHERE m.event_hash = e.event_hash)
+                     AND NOT EXISTS (SELECT 1 FROM visitor_event v WHERE v.event_hash = e.event_hash)
+                     AND NOT EXISTS (SELECT 1 FROM outbox_explicit x WHERE x.event_id = lower(hex(e.event_hash)))",
+                )?;
+                let now = Timestamp::now().as_secs() as i64;
+                for author in &cfg.writers {
+                    let ids = current.query_map(params![author.as_bytes().as_slice(), now], |r| r.get::<_, Vec<u8>>(0))?;
+                    for id in ids {
+                        let Ok(id) = EventId::from_slice(&id?) else { continue };
+                        crate::outbox::enqueue_event(&tx, &cfg.mirror_relays, &id)?;
+                    }
+                }
+            }
+            tx.commit()?;
+        }
         let relay = Relay(Arc::new(Inner {
             path: db.to_owned(),
             writer: Mutex::new(writer),
@@ -284,7 +314,7 @@ impl Relay {
             let row = ev.clone();
             let saved = tokio::task::spawn_blocking(move || {
                 let mirror: &[String] = if mirrored { &[] } else { &inner.mirror_relays };
-                admit(&mut inner.writer.lock(), &inner.writers, mirror, &row)
+                admit(&mut inner.writer.lock(), &inner.writers, mirror, mirrored, &row)
             })
             .await;
             match saved {
@@ -1113,15 +1143,16 @@ fn check_visitor_deletion(conn: &Connection, ev: &Event) -> Result<(), &'static 
 }
 
 /// Validates visitor events and records/persists them; writer events pass straight through and
-/// are queued for the `mirror` relays.
+/// are queued for the `mirror` relays, or recorded as `mirrored` copies.
 fn admit(
     conn: &mut Connection,
     writers: &[PublicKey],
     mirror: &[String],
+    mirrored: bool,
     ev: &Event,
 ) -> rusqlite::Result<Result<Saved, &'static str>> {
     if writers.contains(&ev.pubkey) {
-        return persist(conn, ev, mirror).map(Ok);
+        return persist(conn, ev, mirror, mirrored).map(Ok);
     }
     let Some(scope) = visitor_scope(ev) else {
         return Ok(Err("restricted: only this instance's allowed writers may publish"));
@@ -1129,7 +1160,7 @@ fn admit(
     if let Err(refusal) = check_visitor(conn, writers, ev, scope) {
         return Ok(Err(refusal));
     }
-    let saved = persist(conn, ev, &[])?;
+    let saved = persist(conn, ev, &[], false)?;
     if matches!(saved, Saved::Stored | Saved::Duplicate) && ev.kind.as_u16() != 5 {
         conn.execute(
             "INSERT OR IGNORE INTO visitor_event (event_hash, author) VALUES (?, ?)",
@@ -1231,8 +1262,8 @@ fn queue_removed_media(
 /// Upstream `persist_event`, minus NIP-26 and with deletion as real deletes: keeps only the
 /// newest replaceable/addressable version (tie: lowest id), applies kind-5 `e` deletions of
 /// the same author, and refuses events their author already deleted. A stored event gets an
-/// outbox job per `mirror` target in the same transaction.
-fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Result<Saved> {
+/// outbox job per `mirror` target in the same transaction; a `mirrored` one records its origin.
+fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool) -> rusqlite::Result<Saved> {
     let tx = conn.transaction()?;
     let id = ev.id.as_bytes().as_slice();
     let author = ev.pubkey.as_bytes().as_slice();
@@ -1365,6 +1396,9 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Re
         }
     }
 
+    if mirrored {
+        tx.execute("INSERT OR IGNORE INTO mirrored_event (event_hash) VALUES (?)", [id])?;
+    }
     crate::outbox::enqueue_event(&tx, mirror, &ev.id)?;
     tx.commit()?;
     Ok(Saved::Stored)
@@ -1592,7 +1626,7 @@ mod tests {
     }
 
     fn put(relay: &Relay, e: &Event) -> Saved {
-        persist(&mut relay.0.writer.lock(), e, &[]).unwrap()
+        persist(&mut relay.0.writer.lock(), e, &[], false).unwrap()
     }
 
     fn get(relay: &Relay, filters: &[Filter], now: i64) -> Vec<Event> {
@@ -2170,4 +2204,80 @@ mod tests {
         assert!(queued(&copy.id).is_empty());
         assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
     }
+
+    fn reopen(path: &Path, writers: Vec<PublicKey>, mirror_relays: Vec<String>) -> Relay {
+        Relay::open(path, RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays }).unwrap()
+    }
+
+    /// Event jobs as (event id, target, status, attempts), sorted.
+    fn event_jobs(relay: &Relay) -> Vec<(String, String, String, i64)> {
+        let conn = relay.0.writer.lock();
+        let mut stmt = conn
+            .prepare("SELECT ref_id, target, status, attempts FROM outbox WHERE kind = 'event' ORDER BY ref_id, target")
+            .unwrap();
+        let jobs = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap().map(Result::unwrap).collect();
+        jobs
+    }
+
+    #[tokio::test]
+    async fn mirror_relays_added_later_get_the_current_own_events_once() {
+        let (writer, former, visitor) = (Keys::generate(), Keys::generate(), Keys::generate());
+        let w = writer.public_key().to_hex();
+        let relay = open(vec![writer.public_key(), former.public_key()]);
+        let path = relay.0.path.clone();
+        let now = Timestamp::now().as_secs();
+        let video = ev(&writer, 21, now - 50, "video", &[]);
+        let old_clip = ev(&writer, 34235, now - 40, "v1", &[&["d", "clip"]]);
+        let clip = ev(&writer, 34235, now - 30, "v2", &[&["d", "clip"]]);
+        let doomed = ev(&writer, 1, now - 20, "doomed", &[]);
+        let deletion = ev(&writer, 5, now - 10, "", &[&["e", &doomed.id.to_hex()]]);
+        let comment = ev(&visitor, 1111, now, "nice", &[&["E", &video.id.to_hex()], &["K", "21"], &["P", &w], &["e", &video.id.to_hex()], &["k", "21"], &["p", &w]]);
+        let removed_writer = ev(&former, 1, now, "former writer", &[]);
+        for e in [&video, &old_clip, &clip, &doomed, &deletion, &comment, &removed_writer] {
+            assert!(ok_status(relay.ingest(e.clone()).await).0);
+        }
+        // Stored while valid, lapsed by the time the mirrors are added.
+        let expired = ev(&writer, 1, now - 100, "expired", &[&["expiration", &(now - 1).to_string()]]);
+        assert_eq!(put(&relay, &expired), Saved::Stored);
+        // An owner-held explicit event keeps its own target allowlist.
+        let explicit = ev(&writer, 1, now, "explicit", &[]);
+        relay.0.writer.lock().execute("INSERT INTO outbox_explicit (event_id) VALUES (?)", [explicit.id.to_hex()]).unwrap();
+        assert!(ok_status(relay.ingest(explicit).await).0);
+        let copy = ev(&writer, 1, now, "from another instance", &[]);
+        assert!(ok_status(relay.ingest_from(copy.clone(), true).await).0);
+        assert!(event_jobs(&relay).is_empty(), "no mirrors configured yet");
+
+        let (a, b) = ("wss://a.example", "wss://b.example");
+        let expected = |targets: &[&str]| {
+            let mut jobs: Vec<(String, String)> = [&video, &clip, &deletion].iter()
+                .flat_map(|e| targets.iter().map(move |t| (e.id.to_hex(), t.to_string())))
+                .collect();
+            jobs.sort();
+            jobs
+        };
+        let queued = |relay: &Relay| event_jobs(relay).into_iter().map(|(id, target, ..)| (id, target)).collect::<Vec<_>>();
+        let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned()]);
+        assert_eq!(queued(&relay), expected(&[a]));
+        relay.0.writer.lock().execute_batch(&format!(
+            "UPDATE outbox SET status = 'failed', attempts = 24 WHERE ref_id = '{}';
+             UPDATE outbox SET status = 'done', attempts = 1 WHERE ref_id = '{}';",
+            video.id.to_hex(), clip.id.to_hex(),
+        )).unwrap();
+
+        let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned(), b.to_owned()]);
+        assert_eq!(queued(&relay), expected(&[a, b]));
+        let jobs = event_jobs(&relay);
+        let job = |id: &EventId, target: &str| {
+            jobs.iter().find(|j| j.0 == id.to_hex() && j.1 == target).map(|j| (j.2.as_str(), j.3)).unwrap()
+        };
+        assert_eq!(job(&video.id, a), ("failed", 24));
+        assert_eq!(job(&clip.id, a), ("done", 1));
+        assert_eq!(job(&deletion.id, a), ("pending", 0));
+        assert_eq!(job(&video.id, b), ("pending", 0));
+
+        let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned(), b.to_owned()]);
+        assert_eq!(event_jobs(&relay), jobs, "a restart neither duplicates nor resets jobs");
+        assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
+    }
+
 }

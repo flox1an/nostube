@@ -349,6 +349,8 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     };
     // Without the admin area there is no managed key: blob jobs fail with that reason.
     let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
+    // Register index-only destinations and retire legacy jobs before any delivery can start.
+    profile::sync(&relay, &branding, &outbox, &signer).await;
     let admin = admin.map(admin::router);
     let worker = outbox::spawn(outbox.clone(), signer.clone());
     let nsite_worker = nsite::spawn(nsite, relay.clone(), branding.clone(), outbox.clone(), signer.clone());

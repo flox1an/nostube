@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS outbox (
   UNIQUE (kind, target, ref_id)
 );
 CREATE INDEX IF NOT EXISTS outbox_due ON outbox(status, next_attempt_at);
+CREATE TABLE IF NOT EXISTS outbox_indexer (target TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS blob_owner (
   hash TEXT PRIMARY KEY,
   author TEXT NOT NULL,
@@ -181,6 +182,7 @@ pub(crate) fn enqueue_event(conn: &Connection, targets: &[String], id: &EventId)
          VALUES ('event', ?1, ?2, ?3, ?3, ?3)",
     )?;
     for target in targets {
+        if crate::config::is_retired_relay(target) { continue; }
         add.execute(params![target, id.to_hex(), now])?;
     }
     Ok(())
@@ -273,6 +275,15 @@ impl Outbox {
     pub fn open(db: &Path, mirror: Mirror) -> rusqlite::Result<Outbox> {
         let conn = crate::relay::connect(db)?;
         initialize(&conn)?;
+        conn.execute("INSERT OR IGNORE INTO outbox_indexer VALUES ('wss://purplepag.es')", [])?;
+        {
+            let mut stmt = conn.prepare("SELECT DISTINCT target FROM outbox WHERE kind='event'")?;
+            let targets = stmt.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            for target in targets.into_iter().filter(|target| crate::config::is_retired_relay(target)) {
+                conn.execute("DELETE FROM outbox_forced WHERE job IN (SELECT id FROM outbox WHERE target=?)", [&target])?;
+                conn.execute("DELETE FROM outbox WHERE kind='event' AND target=?", [&target])?;
+            }
+        }
         Ok(Outbox(Arc::new(Inner {
             conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
             origin_public: AtomicBool::new(true),
@@ -371,12 +382,21 @@ impl Outbox {
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
             for id in ids {
+                let kind: Option<u16> = tx.query_row("SELECT kind FROM event WHERE event_hash=unhex(?)", [id.to_hex()], |r| r.get(0)).optional()?;
+                let mut allowed = Vec::new();
+                for target in &targets {
+                    let indexer: bool = tx.query_row("SELECT EXISTS (SELECT 1 FROM outbox_indexer WHERE rtrim(target,'/')=rtrim(?,'/'))", [target], |r| r.get(0))?;
+                    if !crate::config::is_retired_relay(target) && (!indexer || matches!(kind, Some(0 | 10002 | 10063))) {
+                        allowed.push(target.clone());
+                    }
+                }
+                let targets = &allowed;
                 tx.execute(
                     "INSERT INTO outbox_explicit (event_id,ready) VALUES (?,1) ON CONFLICT(event_id) DO UPDATE SET ready=1",
                     [id.to_hex()],
                 )?;
                 tx.execute("DELETE FROM outbox_event_target WHERE event_id=?", [id.to_hex()])?;
-                for target in &targets {
+                for target in targets {
                     tx.execute("INSERT OR IGNORE INTO outbox_event_target VALUES (?,?)", params![id.to_hex(), target])?;
                 }
                 tx.execute(
@@ -386,7 +406,7 @@ impl Outbox {
                     params![CANCELED, now(), id.to_hex()],
                 )?;
                 enqueue_event(&tx, &targets, &id)?;
-                for target in &targets {
+                for target in targets {
                     tx.execute("INSERT OR IGNORE INTO outbox_forced SELECT id FROM outbox WHERE kind='event' AND target=? AND ref_id=?", params![target, id.to_hex()])?;
                 }
             }
@@ -432,12 +452,31 @@ impl Outbox {
         }).await
     }
 
-    /// Sets the indexers and queues the channel's derived kinds 0, 10002 and 10063 (`ids`) for them; a
-    /// job that exists already is kept as it is. Private reach passes none of either: jobs still
-    /// pending for an indexer wait, and nothing goes there.
-    pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>) -> Result<(), String> {
-        *self.0.indexers.write() = indexers.clone();
-        self.db(move |conn| ids.iter().try_for_each(|id| enqueue_event(conn, &indexers, id))).await
+    /// Only profile metadata, relay lists and Blossom lists may go to indexers, including old
+    /// mirror jobs and explicit deliveries. Remember indexer targets across private reach/restarts.
+    pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>, public: bool) -> Result<(), String> {
+        *self.0.indexers.write() = if public { indexers.clone() } else { vec![] };
+        self.db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            for target in &indexers {
+                tx.execute("INSERT OR IGNORE INTO outbox_indexer VALUES (?)", [target])?;
+            }
+            for id in ids {
+                let kind: Option<u16> = tx.query_row("SELECT kind FROM event WHERE event_hash=unhex(?)", [id.to_hex()], |r| r.get(0)).optional()?;
+                if matches!(kind, Some(0 | 10002 | 10063)) { enqueue_event(&tx, &indexers, &id)?; }
+            }
+            tx.execute(
+                "DELETE FROM outbox_forced WHERE job IN (SELECT id FROM outbox WHERE kind='event'
+                 AND rtrim(target,'/') IN (SELECT rtrim(target,'/') FROM outbox_indexer)
+                 AND NOT EXISTS (SELECT 1 FROM event WHERE event_hash=unhex(outbox.ref_id) AND kind IN (0,10002,10063)))", [],
+            )?;
+            tx.execute(
+                "DELETE FROM outbox WHERE kind='event'
+                 AND rtrim(target,'/') IN (SELECT rtrim(target,'/') FROM outbox_indexer)
+                 AND NOT EXISTS (SELECT 1 FROM event WHERE event_hash=unhex(outbox.ref_id) AND kind IN (0,10002,10063))", [],
+            )?;
+            tx.commit()
+        }).await
     }
 
     /// Called only after Almond accepted an upload. Its index does not retain auth authors.
@@ -574,8 +613,7 @@ impl Outbox {
 
     /// Cleanup always runs. Outbound jobs run for configured targets or explicit durable owner
     /// authorizations; manifests also wait for their exact required blob copies.
-    // ponytail: an indexer URL that was once a mirror relay also gets that relay's old pending
-    // event jobs; filter by kind and author here if that ever matters.
+    /// Indexer restrictions take precedence over mirrors and explicit authorizations.
     async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
         let targets: Vec<String> = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
         let indexers = self.0.indexers.read().clone();
@@ -586,6 +624,8 @@ impl Outbox {
                 "SELECT id, kind, target, ref_id, size, source_url, attempts FROM outbox
                  WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks})
                    OR id IN (SELECT job FROM outbox_forced) OR (kind = 'event' AND target IN ({indexer_marks})))
+                 AND (kind != 'event' OR rtrim(target,'/') NOT IN (SELECT rtrim(target,'/') FROM outbox_indexer)
+                   OR EXISTS (SELECT 1 FROM event WHERE event_hash=unhex(outbox.ref_id) AND kind IN (0,10002,10063)))
                  AND (kind != 'event' OR NOT EXISTS (SELECT 1 FROM outbox_explicit e WHERE e.event_id=outbox.ref_id)
                    OR EXISTS (SELECT 1 FROM outbox_explicit e JOIN outbox_event_target t ON t.event_id=e.event_id
                      WHERE e.event_id=outbox.ref_id AND e.ready=1 AND e.canceled=0 AND t.target=outbox.target))
@@ -1600,22 +1640,41 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn indexers_get_only_what_was_announced_and_nothing_in_private_reach() {
-        let (outbox, _relay, _path) = fixture(Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![] });
-        let (profile, other) = (EventId::from_byte_array([0; 32]), EventId::from_byte_array([1; 32]));
-        enqueue_event(&outbox.0.conn.lock(), &["wss://mirror.example".to_owned()], &other).unwrap();
-        outbox.announce(vec!["wss://indexer.example".into()], vec![profile]).await.unwrap();
-        let due = |jobs: Vec<Job>| jobs.into_iter().map(|j| (j.target, j.ref_id)).collect::<Vec<_>>();
-        let mut public = due(outbox.due(100).await.unwrap());
-        public.sort();
-        assert_eq!(public, [
-            ("wss://indexer.example".to_owned(), profile.to_hex()),
-            ("wss://mirror.example".to_owned(), other.to_hex()),
-        ]);
-        // Private reach: the mirror keeps going, the indexers' jobs wait.
-        outbox.announce(vec![], vec![]).await.unwrap();
-        assert_eq!(due(outbox.due(100).await.unwrap()), [("wss://mirror.example".to_owned(), other.to_hex())]);
-        assert_eq!(row(&outbox, "event", "wss://indexer.example").0, "pending");
+    async fn indexers_receive_only_profile_and_server_lists_even_for_legacy_or_explicit_jobs() {
+        let keys = Keys::generate();
+        let index_seen = Arc::new(AtomicUsize::new(0));
+        let mirror_seen = Arc::new(AtomicUsize::new(0));
+        let index = fake_relay(true, "", index_seen.clone()).await;
+        let mirror = fake_relay(true, "", mirror_seen.clone()).await;
+        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
+            relays: vec![mirror.clone()], blossom: vec![],
+        }).await;
+        let mut ids = Vec::new();
+        for kind in [0, 10002, 10063, 21, 5, 15128] {
+            let event = EventBuilder::new(Kind::Custom(kind), "").finalize(&keys).unwrap();
+            accepted(&relay, event.clone()).await;
+            // Old versions queued these jobs, including exhausted retries.
+            enqueue_event(&outbox.0.conn.lock(), &[index.clone()], &event.id).unwrap();
+            if kind == 5 {
+                outbox.deliver(vec![index.clone(), mirror.clone()], vec![event.id]).await.unwrap();
+                outbox.0.conn.lock().execute("UPDATE outbox SET status='failed',last_error='blocked' WHERE target=? AND ref_id=?", params![index, event.id.to_hex()]).unwrap();
+            }
+            ids.push(event.id);
+        }
+        outbox.announce(vec![index.clone()], ids, true).await.unwrap();
+        assert!(outbox.status().await.unwrap()["problems"].as_array().unwrap().is_empty(), "obsolete index jobs must not remain in Studio");
+        assert_eq!(outbox.due(100).await.unwrap().iter().filter(|j| j.target == index).count(), 3);
+        run_due(&outbox, &shared(None)).await;
+        assert_eq!(index_seen.load(Ordering::SeqCst), 3);
+        assert_eq!(mirror_seen.load(Ordering::SeqCst), 6);
+        // A mirror URL cannot bypass the index-only policy when the roles overlap.
+        let reopened = Outbox::open(&state.storage.root.with_extension("sqlite"), Mirror { relays: vec![index.clone()], blossom: vec![] }).unwrap();
+        reopened.announce(vec![index.clone()], vec![], false).await.unwrap();
+        let video = EventBuilder::new(Kind::Custom(22), "new video").finalize(&keys).unwrap();
+        accepted(&relay, video.clone()).await;
+        reopened.deliver(vec![index], vec![video.id]).await.unwrap();
+        run_due(&reopened, &shared(None)).await;
+        assert_eq!(index_seen.load(Ordering::SeqCst), 3);
     }
 
     #[tokio::test]

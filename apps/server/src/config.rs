@@ -109,6 +109,11 @@ pub fn relay_url(origin: &str) -> String {
     }
 }
 
+/// Retired public indexer; old saved lists must not keep contacting it.
+pub fn is_retired_relay(url: &str) -> bool {
+    nostr::prelude::Url::parse(url).is_ok_and(|u| u.host_str() == Some("index.hzrd149.com"))
+}
+
 /// Where the creator site is served (#157): by the instance, or as an nsite (NIP-5A) under the
 /// managed key, which needs public reach.
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -632,6 +637,13 @@ pub struct Config {
 }
 
 impl Config {
+    fn remove_retired_relays(&mut self) {
+        for relays in [&mut self.video_sources, &mut self.interaction_relays, &mut self.profile_relays,
+            &mut self.signer_relays, &mut self.mirror.relays] {
+            relays.retain(|url| !is_retired_relay(url));
+        }
+    }
+
     pub fn load(path: &std::path::Path) -> Result<Config, BoxError> {
         let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         Self::parse(&text).map_err(|e| format!("invalid {}: {e}", path.display()).into())
@@ -655,7 +667,7 @@ impl Config {
         check_mirror(&raw.mirror)?;
         check_nsite(&raw.nsite)?;
         check_storage(&raw.storage)?;
-        let cfg = Config {
+        let mut cfg = Config {
             revision: raw.revision,
             origin: raw.origin,
             origin_host,
@@ -675,6 +687,7 @@ impl Config {
             site_hosting: raw.site_hosting,
             nsite: raw.nsite,
         };
+        cfg.remove_retired_relays();
         cfg.check_reach()?;
         Ok(cfg)
     }
@@ -695,7 +708,7 @@ impl Config {
         if self.storage.s3.is_some() && e.storage.s3.is_none() {
             return Err("S3 storage cannot be turned off once enabled".into());
         }
-        let cfg = Config {
+        let mut cfg = Config {
             revision: self.revision + 1,
             origin: self.origin.clone(),
             origin_host: self.origin_host.clone(),
@@ -716,6 +729,7 @@ impl Config {
             site_hosting: if e.reach == Reach::Private { SiteHosting::Instance } else { e.site_hosting },
             nsite: e.nsite.clone(),
         };
+        cfg.remove_retired_relays();
         cfg.check_reach()?;
         Ok(cfg)
     }
@@ -1011,6 +1025,14 @@ tls = {{ mode = "local-ca" }}
         let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
         assert!(again.profile_relays.is_empty());
         assert!(Config::parse(&sample("profile_relays = [\"https://purplepag.es\"]\n")).is_err());
+    }
+
+    #[test]
+    fn retired_indexer_is_removed_from_saved_configuration() {
+        let cfg = Config::parse(&sample("profile_relays = [\"wss://index.hzrd149.com/\", \"wss://purplepag.es\"]\n[mirror]\nrelays = [\"wss://INDEX.HZRD149.COM\", \"wss://mirror.example\"]")).unwrap();
+        assert_eq!(cfg.profile_relays, ["wss://purplepag.es"]);
+        assert_eq!(cfg.mirror.relays, ["wss://mirror.example"]);
+        assert!(!cfg.to_toml().unwrap().contains("hzrd149"));
     }
 
     #[test]

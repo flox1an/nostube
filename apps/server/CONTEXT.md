@@ -68,7 +68,7 @@ The configured relays that video catalog queries may use. Profiles, comments, an
 _Avoid_: default relays, relay list
 
 **Profile relays** (Profil-Relays):
-The relays where the site looks up a signed-in visitor's profile besides the instance relays, mandatory public defaults and the visitor's NIP-65 write relays, in both reaches; in public reach they also receive the managed channel's profile, relay list, Blossom server list and nsite manifest.
+The relays where the site looks up a signed-in visitor's profile besides the instance relays, mandatory public defaults and the visitor's NIP-65 write relays, in both reaches; in public reach they also receive the managed channel's profile, relay list and Blossom server list, but no content events.
 _Avoid_: discovery relays, lookup relays
 
 **Reach** (Privat / Öffentlich):

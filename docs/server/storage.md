@@ -100,7 +100,7 @@ Configure the targets under **Server → Advanced → Mirror to other servers**:
 
 | List | Format | Copies |
 | --- | --- | --- |
-| Mirror relays | `ws://` or `wss://`, one per line | Every new event of the allowed writers |
+| Mirror relays | `ws://` or `wss://`, one per line | Current stored and new events of the allowed writers |
 | Mirror Blossom servers | `https://`, or `http://` on the LAN, one per line | Uploaded media files |
 
 Notes:
@@ -115,6 +115,12 @@ Notes:
   shows done, waiting and failed jobs per target, and **Retry failed** queues failed jobs again.
 - Deleting a video in Studio also removes its unused media from the configured mirrors.
 - Changing the mirror lists restarts the instance.
+- After that restart, existing unexpired writer events are queued for newly added relay targets.
+  Replaced/deleted versions, visitor interactions and tracked incoming mirror copies are excluded;
+  completed deliveries are not repeated. This event backfill does not backfill old media files.
+- Profile/index relays receive only kinds 0 (profile), 10002 (relay list) and 10063 (Blossom list),
+  never videos, deletions or nsite manifests, even if also listed as mirrors. Old invalid jobs are removed.
+- The retired `index.hzrd149.com` relay is removed from saved relay lists on load and from the outbox.
 
 Mirrors protect the media and events, not the instance itself: back up the data directory as well, see
 [Backups](/server/operations#backups).

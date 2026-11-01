@@ -157,6 +157,9 @@ domain = ""
 
 All relay lists take `ws://` or `wss://` URLs. In private reach the site uses only the instance relay
 for videos and interactions; the stored lists are kept for public reach.
+The retired `index.hzrd149.com` is removed from stored relay lists when loaded and omitted on the
+next save. Profile/index targets accept only profile (kind 0), relay-list (10002) and Blossom-list
+(10063) deliveries from the outbox, not videos, deletions or nsite manifests.
 
 Signer relays must be root WebSocket URLs, with no credentials, path (except `/`), query or fragment.
 Old config files without `signer_relays` keep the defaults; an explicit empty list stays empty.

@@ -88,7 +88,7 @@ fn servers(public: &Value) -> Vec<String> {
 }
 fn targets(public: &Value) -> Vec<String> {
     let own = (public["originIsPublic"] == true).then(|| crate::config::relay_url(public["origin"].as_str().unwrap_or_default()));
-    unique(own.into_iter().chain(public_urls(&public["mirror"]["relays"])).chain(public_urls(&public["profileRelays"])))
+    unique(own.into_iter().chain(public_urls(&public["mirror"]["relays"])))
 }
 
 /// The revision identifies baked settings, not the counter of unrelated Studio saves.
@@ -541,6 +541,7 @@ mod tests {
             "videoSources":["wss://instance.example","wss://source.example","ws://192.168.1.2"],
             "interactionRelays":["wss://instance.example","wss://source.example"],
             "profileRelays":["wss://profile.example"],"mirror":{"relays":["wss://mirror.example"]}});
+        assert_eq!(targets(&public), ["wss://mirror.example"], "manifests must not go to profile indexers");
         let baked = baked_config(public.clone(), "https://site.example");
         assert_eq!(baked["origin"], "https://site.example");
         assert_eq!(baked["videoSources"], serde_json::json!(["wss://source.example","wss://mirror.example"]));

@@ -1,10 +1,13 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useReadRelays } from '@/hooks/useReadRelays'
 import { useFollowSetContext } from '@/contexts/FollowSetContext'
 import { getKindsForType } from '@nostube/core/video-types'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
-import { getTimelineLoader } from '@/nostr/core'
+import { client } from '@/nostr/core'
+import { createSubscriptionsLoader } from '@nostube/core/subscriptions-loader'
+import { INDEXER_RELAYS, METADATA_RELAYS } from '@/constants/relays'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 import { getPublishDate } from '@nostube/core/video-event'
 import type { VideoEvent } from '@nostube/core/video-event'
 
@@ -16,7 +19,7 @@ import type { VideoEvent } from '@nostube/core/video-event'
 export function useSubscriptionsVideos() {
   // Optimistic: falls back to the cached list so the timeline filter exists
   // before the live kind 10020 lands.
-  const { optimisticFollowedPubkeys } = useFollowSetContext()
+  const { optimisticFollowedPubkeys, followSetEvent } = useFollowSetContext()
   const followedPubkeys = optimisticFollowedPubkeys
 
   const relays = useReadRelays()
@@ -25,93 +28,46 @@ export function useSubscriptionsVideos() {
   // Stable key based on sorted pubkeys — only recreate loader when actual follows change
   const pubkeysKey = useMemo(() => [...followedPubkeys].sort().join(','), [followedPubkeys])
 
-  const videosLoader = useMemo(() => {
-    if (followedPubkeys.length === 0) return undefined
-    const timelineLoader = getTimelineLoader(
-      `subscriptions:videos:${pubkeysKey}`,
-      { kinds: getKindsForType('videos'), authors: followedPubkeys },
-      relays
-    )
-    return () => timelineLoader
-    // pubkeysKey captures followedPubkeys changes; relays is separately tracked
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeysKey, relays])
-
-  const shortsLoader = useMemo(() => {
-    if (followedPubkeys.length === 0) return undefined
-    const timelineLoader = getTimelineLoader(
-      `subscriptions:shorts:${pubkeysKey}`,
-      { kinds: getKindsForType('shorts'), authors: followedPubkeys },
-      relays
-    )
-    return () => timelineLoader
-    // pubkeysKey captures followedPubkeys changes; relays is separately tracked
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeysKey, relays])
-
-  const videosFilter = useMemo(() => {
-    if (followedPubkeys.length === 0) return undefined
-    return { kinds: getKindsForType('videos'), authors: followedPubkeys }
-    // pubkeysKey captures followedPubkeys changes with stable ordering.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeysKey])
-
-  const shortsFilter = useMemo(() => {
-    if (followedPubkeys.length === 0) return undefined
-    return { kinds: getKindsForType('shorts'), authors: followedPubkeys }
-    // pubkeysKey captures followedPubkeys changes with stable ordering.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeysKey])
-
-  const {
-    videos: horizontalVideos,
-    loading: loadingVideos,
-    exhausted: exhaustedVideos,
-    loadMore: loadMoreVideos,
-    prefetchMore: prefetchMoreVideos,
-    isPrefetching: prefetchingVideos,
-    subscriptionActive: subscriptionActiveVideos,
-    phase: phaseVideos,
-  } = useInfiniteTimeline(videosLoader, relays, {
-    filters: videosFilter,
-  })
-
-  const {
-    videos: verticalVideos,
-    loading: loadingShorts,
-    exhausted: exhaustedShorts,
-    loadMore: loadMoreShorts,
-    prefetchMore: prefetchMoreShorts,
-    isPrefetching: prefetchingShorts,
-    subscriptionActive: subscriptionActiveShorts,
-    phase: phaseShorts,
-  } = useInfiniteTimeline(shortsLoader, relays, {
-    filters: shortsFilter,
-  })
-
-  const videos = useMemo(
-    () =>
-      [...horizontalVideos, ...verticalVideos].sort(
-        (a, b) => getPublishDate(b) - getPublishDate(a)
-      ),
-    [horizontalVideos, verticalVideos]
+  const discoveryRelays = useMemo(
+    () => [...relays, ...METADATA_RELAYS, ...INDEXER_RELAYS],
+    [relays]
   )
+  const relayHints = useMemo(() => {
+    const hints: Record<string, string[]> = {}
+    for (const [tag, pubkey, relay] of followSetEvent?.tags ?? []) {
+      if (tag === 'p' && relay) (hints[pubkey] ??= []).push(relay)
+    }
+    return hints
+  }, [followSetEvent])
+  const loader = useMemo(() => {
+    if (!pubkeysKey) return undefined
+    const authors = pubkeysKey.split(',')
+    const timeline = getInstanceConfig()
+      ? client.getTimelineLoader(
+          'subscriptions',
+          { kinds: getKindsForType('all'), authors },
+          relays
+        )
+      : createSubscriptionsLoader(client, authors, relays, discoveryRelays, relayHints)
+    return () => timeline
+  }, [pubkeysKey, relays, discoveryRelays, relayHints])
 
-  const loading = loadingVideos || loadingShorts
-  const exhausted = exhaustedVideos && exhaustedShorts
-  const prefetching = prefetchingVideos || prefetchingShorts
-  const subscriptionActive = subscriptionActiveVideos || subscriptionActiveShorts
-  const error = phaseVideos === 'error' || phaseShorts === 'error'
-
-  const loadMore = useCallback(() => {
-    loadMoreVideos()
-    loadMoreShorts()
-  }, [loadMoreVideos, loadMoreShorts])
-
-  const prefetchMore = useCallback(() => {
-    prefetchMoreVideos()
-    prefetchMoreShorts()
-  }, [prefetchMoreShorts, prefetchMoreVideos])
+  const filters = useMemo(
+    () =>
+      pubkeysKey ? { kinds: getKindsForType('all'), authors: pubkeysKey.split(',') } : undefined,
+    [pubkeysKey]
+  )
+  const {
+    videos,
+    loading,
+    exhausted,
+    isPrefetching: prefetching,
+    subscriptionActive,
+    phase,
+    loadMore,
+    prefetchMore,
+  } = useInfiniteTimeline(loader, relays, { filters })
+  const error = phase === 'error'
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {

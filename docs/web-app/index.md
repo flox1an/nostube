@@ -124,6 +124,14 @@ The search service and the image proxy are not part of this repository. To run t
 
 To ship different defaults on your own deployment, edit the files in the table and rebuild. Read more about storage servers in [Blossom storage](/media/blossom).
 
+### Relays for subscriptions
+
+The **Subscriptions** feed and the home page's **From creators you follow** shelf also query the followed creators' NIP-65 outbox relays (kind 10002, `write` or unmarked `r` tags). Videos and shorts are fetched together. Creators sharing an outbox relay are grouped into one author-filtered request per page; each relay keeps its own pagination cursor. Configured read relays remain available for creators whose relay lists cannot be found and for mirrored videos.
+
+Relay-list discovery uses the existing Applesauce relay pool and batched address loader. Concurrent lookups are shared, and results—including missing lists—are reused for five minutes. Stored relay lists and follow-list relay hints can start outbox requests while discovery refreshes in parallel; newly discovered relay/author pairs are added without restarting existing sources. Relay lists are persisted in the event cache and do not expire merely because their publication date is old.
+
+This applies to the public web client. Instance builds retain their configured relay allowlist and creator scope.
+
 ![The web app on a phone](/screenshots/web-mobile-home.webp)
 
 ## Branding left in a self-hosted copy

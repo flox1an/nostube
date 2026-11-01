@@ -6,16 +6,33 @@ import { finalizeEvent, verifyEvent, type Filter, type NostrEvent } from 'nostr-
 import { createNostubeClient, isRelaySecureForPage, type PageLoader } from './client'
 import { setInstanceConfig, type InstanceConfig } from './instance-config'
 
+// The only IndexedDB seam: the client talks to the cache through these nostr-idb calls.
+const idb = vi.hoisted(() => ({
+  openDB: vi.fn(async () => ({})),
+  getEventsForFilters: vi.fn<(db: unknown, filters: Filter[]) => Promise<NostrEvent[]>>(
+    async () => []
+  ),
+  addEvents: vi.fn(async () => {}),
+  deleteEvent: vi.fn(async () => {}),
+  deleteReplaceable: vi.fn(async () => {}),
+}))
+vi.mock('nostr-idb', () => idb)
+
 const { eventStore, getTimelineLoader, relayPool } = createNostubeClient({
   defaultRelays: [],
   cache: false,
 })
 
 /** `content` carries the test label; ids are unique per label. */
-function makeEvent(label: string, created_at: number, kind = 21): NostrEvent {
+function makeEvent(
+  label: string,
+  created_at: number,
+  kind = 21,
+  pubkey = 'a'.repeat(64)
+): NostrEvent {
   return {
     id: label,
-    pubkey: 'a'.repeat(64),
+    pubkey,
     kind,
     created_at,
     content: label,
@@ -24,7 +41,7 @@ function makeEvent(label: string, created_at: number, kind = 21): NostrEvent {
   }
 }
 
-/** Fake relays answering like NIP-01: newest first, `until` inclusive, `limit` honoured. */
+/** Fake relays answering like NIP-01: newest first, `until` inclusive, `limit` and `authors` honoured. */
 function mockRelays(relayEvents: Record<string, NostrEvent[] | 'error' | 'ignores-until'>) {
   return vi.spyOn(relayPool, 'request').mockImplementation(((
     relays: string[],
@@ -33,10 +50,13 @@ function mockRelays(relayEvents: Record<string, NostrEvent[] | 'error' | 'ignore
     const events = relayEvents[relays[0]]
     if (events === 'error') return throwError(() => new Error('connection refused'))
     if (events === 'ignores-until') return from([makeEvent('stuck', 50)]).pipe(delay(0))
-    const list = filters.flatMap(({ kinds, until, limit }) =>
+    const list = filters.flatMap(({ kinds, authors, until, limit }) =>
       events
         .filter(
-          event => kinds?.includes(event.kind) && (until === undefined || event.created_at <= until)
+          event =>
+            kinds?.includes(event.kind) &&
+            (!authors || authors.includes(event.pubkey)) &&
+            (until === undefined || event.created_at <= until)
         )
         .slice(0, limit)
     )
@@ -165,6 +185,121 @@ describe('getTimelineLoader', () => {
       await loadPage(loader)
       expect(loader.exhausted?.()).toBe(false)
     })
+  })
+
+  describe('relayAuthors', () => {
+    const at = (pubkey: string, n: number, kind = 21) =>
+      makeEvent(`${kind === 5 ? 'del' : pubkey}-${n}`, n, kind, pubkey)
+    const everyone = [at('alice', 10), at('bob', 9), at('carol', 8)]
+
+    it('asks each relay only for its own authors and pages each from its own cursor', async () => {
+      const request = mockRelays({
+        'wss://r1': [
+          at('alice', 100),
+          at('carol', 99), // carol lives on r2; r1 must not be asked for her
+          at('bob', 98),
+          at('alice', 97),
+          at('bob', 96),
+          at('carol', 90, 5),
+          at('alice', 89, 5),
+        ],
+        'wss://r2': [at('carol', 50), at('alice', 49), at('carol', 48), at('carol', 47)],
+        'wss://missing': everyone,
+        'wss://empty': everyone,
+      })
+      const loader = getTimelineLoader(
+        't-outbox',
+        { kinds: [21], authors: ['alice', 'bob', 'carol'], limit: 2 },
+        ['wss://r1', 'wss://r2', 'wss://missing', 'wss://empty'],
+        {
+          skipCache: true,
+          relayAuthors: {
+            'wss://r1': ['alice', 'bob', 'mallory'],
+            'wss://r2': ['carol'],
+            'wss://empty': [],
+          },
+        }
+      )
+
+      const first = await loadPage(loader)
+      expect(first).toEqual(
+        expect.arrayContaining(['alice-100', 'bob-98', 'carol-50', 'carol-48', 'del-89'])
+      )
+      expect(first).not.toEqual(expect.arrayContaining(['carol-99']))
+      expect(first).not.toEqual(expect.arrayContaining(['alice-49']))
+      expect(first).not.toEqual(expect.arrayContaining(['del-90']))
+      expect(await loadPage(loader)).toEqual(
+        expect.arrayContaining(['alice-97', 'bob-96', 'carol-47'])
+      )
+      await loadPage(loader) // r1 only has a deletion left, r2 nothing
+      expect(loader.exhausted?.()).toBe(true)
+
+      const r1 = ['alice', 'bob']
+      const r2 = ['carol']
+      const page = (authors: string[], until?: number) => [
+        { kinds: [21], authors, limit: 2, until },
+        { kinds: [5], authors, limit: 2, until },
+      ]
+      expect(request.mock.calls.slice(0, 4).map(([relays, filters]) => [relays, filters])).toEqual([
+        [['wss://r1'], page(r1)],
+        [['wss://r2'], page(r2)],
+        [['wss://r1'], page(r1, 97)],
+        [['wss://r2'], page(r2, 47)],
+      ])
+      const asked = request.mock.calls.map(([relays]) => (relays as string[])[0])
+      expect(asked).not.toContain('wss://missing')
+      expect(asked).not.toContain('wss://empty')
+    })
+
+    it('never sends an unfiltered query for a missing, empty or disjoint mapping', async () => {
+      const request = mockRelays({ 'wss://a': everyone, 'wss://b': everyone, 'wss://c': everyone })
+      const loader = getTimelineLoader(
+        't-outbox-empty',
+        { kinds: [21], authors: ['alice'], limit: 5 },
+        ['wss://a', 'wss://b', 'wss://c'],
+        { skipCache: true, relayAuthors: { 'wss://b': [], 'wss://c': ['bob'] } }
+      )
+
+      expect(await loadPage(loader)).toEqual([])
+      expect(request).not.toHaveBeenCalled()
+      expect(loader.exhausted?.()).toBe(true)
+    })
+  })
+})
+
+describe('local cache', () => {
+  const client = createNostubeClient({ defaultRelays: [] })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    idb.getEventsForFilters.mockClear()
+  })
+
+  it('keeps relay lists past the TTL that drops old timeline events', async () => {
+    const yearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60
+    idb.getEventsForFilters.mockResolvedValueOnce([
+      makeEvent('old-relays', yearAgo, 10002),
+      makeEvent('old-video', yearAgo),
+      makeEvent('new-video', Math.floor(Date.now() / 1000)),
+    ])
+
+    const events = await client.cacheRequest([{ kinds: [10002, 21] }])
+    expect(events.map(event => event.content)).toEqual(['old-relays', 'new-video'])
+  })
+
+  it('reads every base author from cache while relays stay scoped', async () => {
+    const request = vi.spyOn(client.relayPool, 'request')
+    const loader = client.getTimelineLoader(
+      't-cache',
+      { kinds: [21], authors: ['alice', 'bob'], limit: 5 },
+      ['wss://r1'],
+      { relayAuthors: {} }
+    )
+
+    await lastValueFrom(loader().pipe(toArray()))
+    expect(request).not.toHaveBeenCalled()
+    const [, filters] = idb.getEventsForFilters.mock.calls[0]
+    expect(filters[0]).toEqual({ kinds: [21], authors: ['alice', 'bob'], limit: 5 })
+    expect(filters.every(filter => filter.authors?.join() === 'alice,bob')).toBe(true)
   })
 })
 

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.52] - 2026-11-01
+
+### Fixed
+
+- Subscriptions and the home page's followed-creators shelf now find videos and shorts published only on creators' NIP-65 outbox relays. Relay-list lookups are batched and shared, with a five-minute cache; persisted lists and follow hints start requests immediately. Creators are grouped by relay, each relay is queried only for its associated authors, and pagination retains independent cursors. Configured read relays remain the fallback.
+
 ## [Unreleased]
 
 ### Changed

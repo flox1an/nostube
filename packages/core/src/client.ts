@@ -227,6 +227,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
 
   // Only return cached events whose created_at is within this window.
   // Older events are ignored so timeline loaders always fetch fresh data from relays.
+  // Relay lists (kind 10002) stay valid until replaced, however old.
   const CACHE_TTL_SECONDS = 4 * 60 * 60 // 4 hours
 
   async function cacheRequest(filters: Filter[]) {
@@ -240,7 +241,9 @@ export function createNostubeClient(config: NostubeClientConfig) {
       const cutoff = Math.floor(Date.now() / 1000) - CACHE_TTL_SECONDS
       return events.filter(
         (event): event is NostrEvent =>
-          event.created_at >= cutoff && 'sig' in event && typeof event.sig === 'string'
+          (event.created_at >= cutoff || event.kind === 10002) &&
+          'sig' in event &&
+          typeof event.sig === 'string'
       )
     } catch (error) {
       console.warn('Cache unavailable (possibly iOS lockdown mode):', error)
@@ -404,24 +407,39 @@ export function createNostubeClient(config: NostubeClientConfig) {
   // local cache) pages backward from its own cursor: with a shared cursor a
   // dense relay's middle window gets skipped once a sparse relay reaches far
   // back. Sources that return nothing, ignore `until`, or error are done.
+  // `relayAuthors` (outbox routing) narrows each relay to its own authors, intersected with
+  // `baseFilters.authors`; a relay left with no authors is not queried. The cache keeps the
+  // full `baseFilters`.
   type FilterKey = string
 
   function getTimelineLoader(
     _key: FilterKey,
     baseFilters: Filter,
     relays: string[] = defaultRelays,
-    options?: { skipCache?: boolean; endOnShortPage?: boolean }
+    options?: {
+      skipCache?: boolean
+      endOnShortPage?: boolean
+      relayAuthors?: Record<string, string[]>
+    }
   ): PageLoader {
     const limit = baseFilters.limit ?? 100
-    const pageFilters = (until?: number) => {
-      const page: Filter =
-        until === undefined ? { ...baseFilters, limit } : { ...baseFilters, limit, until }
+    const pageFilters = (until?: number, authors?: string[]) => {
+      const page: Filter = { ...baseFilters, limit }
+      if (until !== undefined) page.until = until
+      if (authors) page.authors = authors
       return [page, ...buildDeletionFilters([page])]
     }
 
-    const requests: Array<(until?: number) => Observable<NostrEvent>> = relays.map(
-      relay => until => relayPool.request([relay], pageFilters(until))
-    )
+    const relayAuthors = options?.relayAuthors
+    const baseAuthors = baseFilters.authors && new Set(baseFilters.authors)
+    const requests: Array<(until?: number) => Observable<NostrEvent>> = relays.flatMap(relay => {
+      if (!relayAuthors) return [(until?: number) => relayPool.request([relay], pageFilters(until))]
+      const authors = (relayAuthors[relay] ?? []).filter(a => !baseAuthors || baseAuthors.has(a))
+      return authors.length > 0
+        ? [(until?: number) => relayPool.request([relay], pageFilters(until, authors))]
+        : []
+    })
+
     if (!options?.skipCache) {
       requests.push(until =>
         from(cacheRequest(pageFilters(until))).pipe(mergeMap(events => events))

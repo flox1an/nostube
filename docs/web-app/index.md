@@ -116,7 +116,7 @@ New visitors start with these defaults. Visitors change the bold ones under **Se
 | **Video Hosting** (Blossom upload servers) | `https://blossom.primal.net`, `https://nostr.download`, `https://almond.slidestr.net` | `packages/core/src/instance-config.ts` (`DEFAULT_BLOSSOM_SERVERS`) |
 | **Streaming Servers** (caching servers) | none | `apps/web/src/constants/relays.ts` |
 | **Image Proxy URL** (Service endpoints) | `https://imgproxy.nostu.be` | `packages/core/src/imgproxy-config.ts` |
-| **Search Service URL** (Service endpoints) | `https://nostube-search.apps2.slidestr.net` | `apps/web/src/lib/search-client.ts` |
+| **Search Service URL** (Service endpoints) | `https://search.nostu.be` | `apps/web/src/lib/search-client.ts` |
 
 The **Reset** buttons in **Settings → Network** take their values from the moderation preset selected under **Settings → Presets**: its default relays and its default Blossom proxy. Signed-in users who published a Blossom server list (kind 10063) get that list when they reset **Video Hosting**.
 

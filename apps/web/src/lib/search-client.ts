@@ -4,7 +4,7 @@ import { getTypeForKind } from '@nostube/core/video-types'
 import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
-export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
+export const SEARCH_SERVICE_URL = 'https://search.nostu.be'
 
 /**
  * Instance build: never searches, whatever `search.mode` says. The server embeds `apps/site`,

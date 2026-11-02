@@ -1,15 +1,22 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@nostube/widgets/components/button'
 import { Checkbox } from '@nostube/widgets/components/checkbox'
 import { Label } from '@nostube/widgets/components/label'
 import { Progress } from '@nostube/widgets/components/progress'
-import {
-  mirrorBlobsToServers,
-  uploadFileToMultipleServersChunked,
-  type ChunkedUploadProgress,
-} from '@/lib/blossom-upload'
+import { type ChunkedUploadProgress } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from '@/lib/blossom-auth'
-import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
+import {
+  type VideoVariant,
+  createBlobPlacement,
+  processUploadedVideo,
+  processVideoUrl,
+} from '@/lib/video-processing'
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_MAX_CONCURRENT_CHUNKS,
+  trackBlobActivity,
+  type BlobActivity,
+} from '@/lib/transcode-upload'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import { InputMethodSelector } from '@/components/video-upload/InputMethodSelector'
 
@@ -28,6 +35,27 @@ import {
 import { Loader2, X, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+
+/** Mirrored copies are verified same-hash locations, so they belong in the published placement. */
+function withMirroredBlobs(variant: VideoVariant, blobs: BlobDescriptor[]): VideoVariant {
+  const mirroredBlobs = [
+    ...variant.mirroredBlobs,
+    ...blobs.filter(blob => !variant.mirroredBlobs.some(existing => existing.url === blob.url)),
+  ]
+  return {
+    ...variant,
+    mirroredBlobs,
+    placement: createBlobPlacement({
+      primaryBlob: variant.placement.primaryBlob,
+      candidateBlobs: [...variant.uploadedBlobs, ...mirroredBlobs],
+      directUrl: variant.placement.directUrl,
+    }),
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (error as { name?: unknown } | undefined)?.name === 'AbortError'
+}
 
 interface ReplaceVideoFlowProps {
   originalImeta?: ParsedImeta // undefined when adding new variant
@@ -90,7 +118,18 @@ export function ReplaceVideoFlow({
   const [result, setResult] = useState<VideoVariant | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
+  // The running operation; its retries only touch the result that operation produced.
+  const operationRef = useRef(0)
+  const controllerRef = useRef<AbortController | null>(null)
+  const resultRef = useRef<VideoVariant | null>(null)
+  // Set once the imeta tag is built: later mirror retries can only reach 1063 announcements.
+  const confirmedRef = useRef(false)
+
   const resetUpload = useCallback(() => {
+    operationRef.current++
+    controllerRef.current?.abort()
+    controllerRef.current = null
+    resultRef.current = null
     setStatus('idle')
     setUploadProgress(null)
     setMirrorProgress(null)
@@ -98,12 +137,81 @@ export function ReplaceVideoFlow({
     setUploadError(null)
   }, [])
 
+  const announceMirrors = useCallback(
+    async (variant: VideoVariant) => {
+      const hash = variant.uploadedBlobs[0]?.sha256
+      if (!user || !videoEventInfo || !hash || variant.mirroredBlobs.length === 0) return
+      try {
+        const relayHint = writeRelays[0] || ''
+        const announcements: MirrorAnnouncementOptions[] = [
+          {
+            blob: {
+              type: 'video',
+              variant: {
+                url: variant.url || '',
+                hash,
+                size: variant.sizeMB ? Math.round(variant.sizeMB * 1024 * 1024) : undefined,
+                dimensions: variant.dimension,
+                mimeType: variant.file?.type,
+                quality: variant.qualityLabel,
+                fallbackUrls: variant.mirroredBlobs.map(b => b.url),
+              },
+              label: `Video ${variant.qualityLabel || variant.dimension}`,
+              hash,
+              ext: 'mp4',
+            },
+            mirrorResults: variant.mirroredBlobs,
+            videoEvent: {
+              id: videoEventInfo.id,
+              kind: videoEventInfo.kind,
+              pubkey: videoEventInfo.pubkey,
+              dTag: videoEventInfo.dTag,
+            },
+            relayHint,
+          },
+        ]
+
+        const publishRelays = getMirrorAnnouncementRelays(writeRelays, writeRelays)
+        await publishMirrorAnnouncements(
+          announcements,
+          { signEvent: async eventTemplate => await user.signer.signEvent(eventTemplate) },
+          publishRelays
+        )
+      } catch (err) {
+        console.warn('Failed to publish mirror announcements:', err)
+      }
+    },
+    [user, videoEventInfo, writeRelays]
+  )
+
+  // A retried mirror lands after the result exists: fold the copies into the pending
+  // replacement, and announce them when the imeta tag was already handed off.
+  const mirrorRetryFor = useCallback(
+    (operation: number) => (blobs: BlobDescriptor[]) => {
+      if (operation !== operationRef.current || !resultRef.current) return
+      const merged = withMirroredBlobs(resultRef.current, blobs)
+      resultRef.current = merged
+      setResult(merged)
+      if (confirmedRef.current) void announceMirrors(merged)
+    },
+    [announceMirrors]
+  )
+
   const uploadFile = useCallback(
     async (file: File): Promise<VideoVariant> => {
+      const operation = ++operationRef.current
+      const controller = new AbortController()
+      controllerRef.current = controller
+      resultRef.current = null
       setUploadError(null)
       setResult(null)
       setMirrorProgress(null)
 
+      // One status entry for the whole replacement: upload, probe and mirrors.
+      const activity = trackBlobActivity(file.name, signer!, {
+        cancel: () => controller.abort(),
+        onMirrorRetry: mirrorRetryFor(operation),
+      })
       try {
         // Step 1: Upload
         setStatus('uploading')
@@ -115,17 +223,20 @@ export function ReplaceVideoFlow({
           totalChunks: 1,
         })
 
-        const uploadedBlobs = await uploadFileToMultipleServersChunked({
+        const uploadedBlobs = await activity.upload({
           file,
           servers: blossomInitialUploadServers,
-          signer: signer!,
           options: {
-            chunkSize: 10 * 1024 * 1024,
-            maxConcurrentChunks: 2,
+            chunkSize: DEFAULT_CHUNK_SIZE,
+            maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS,
           },
           callbacks: {
-            onProgress: setUploadProgress,
+            onProgress: progress => {
+              setUploadProgress(progress)
+              activity.bytes(progress.uploadedBytes, progress.totalBytes)
+            },
           },
+          signal: controller.signal,
         })
 
         // Step 2: Probe video metadata
@@ -138,37 +249,55 @@ export function ReplaceVideoFlow({
         if (blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
           setStatus('mirroring')
           setMirrorProgress({ completed: 0, total: blossomMirrorServers.length })
-
-          mirroredBlobs = await mirrorBlobsToServers({
-            mirrorServers: blossomMirrorServers,
-            blob: uploadedBlobs[0],
-            signer: signer!,
+          activity.set({
+            phase: 'mirroring',
+            completed: 0,
+            total: uploadedBlobs[0].size * blossomMirrorServers.length,
+            unit: 'bytes',
           })
+
+          mirroredBlobs = await activity.mirror(
+            uploadedBlobs[0],
+            blossomMirrorServers,
+            controller.signal
+          )
 
           setMirrorProgress({ completed: mirroredBlobs.length, total: blossomMirrorServers.length })
         }
 
-        const finalVariant: VideoVariant = { ...videoVariant, mirroredBlobs }
+        const finalVariant = withMirroredBlobs(videoVariant, mirroredBlobs)
+        resultRef.current = finalVariant
         setResult(finalVariant)
         setStatus('done')
+        activity.finish()
         return finalVariant
       } catch (err) {
+        activity.finish(err)
+        if (isAbortError(err)) {
+          if (operation === operationRef.current) resetUpload()
+          throw err
+        }
         const message = err instanceof Error ? err.message : 'Unknown upload error'
         setUploadError(message)
         setStatus('error')
         throw err
       }
     },
-    [blossomInitialUploadServers, blossomMirrorServers, signer]
+    [blossomInitialUploadServers, blossomMirrorServers, signer, mirrorRetryFor, resetUpload]
   )
 
   const processUrl = useCallback(
     async (url: string): Promise<VideoVariant> => {
+      const operation = ++operationRef.current
+      const controller = new AbortController()
+      controllerRef.current = controller
+      resultRef.current = null
       setUploadError(null)
       setResult(null)
       setUploadProgress(null)
       setMirrorProgress(null)
 
+      let activity: BlobActivity | undefined
       try {
         setStatus('probing')
 
@@ -177,6 +306,11 @@ export function ReplaceVideoFlow({
         let mirroredBlobs: BlobDescriptor[] = []
 
         if (blossomInfo.isBlossomUrl && blossomInfo.sha256 && blossomMirrorServers.length > 0) {
+          activity = trackBlobActivity(url, signer!, {
+            phase: 'mirroring',
+            cancel: () => controller.abort(),
+            onMirrorRetry: mirrorRetryFor(operation),
+          })
           try {
             setStatus('mirroring')
             setMirrorProgress({ completed: 0, total: blossomMirrorServers.length })
@@ -189,17 +323,18 @@ export function ReplaceVideoFlow({
               uploaded: Date.now(),
             }
 
-            mirroredBlobs = await mirrorBlobsToServers({
-              mirrorServers: blossomMirrorServers,
-              blob: originalBlob,
-              signer: signer!,
-            })
+            mirroredBlobs = await activity.mirror(
+              originalBlob,
+              blossomMirrorServers,
+              controller.signal
+            )
 
             setMirrorProgress({
               completed: mirroredBlobs.length,
               total: blossomMirrorServers.length,
             })
           } catch (mirrorErr) {
+            if (isAbortError(mirrorErr)) throw mirrorErr
             console.error('Failed to mirror Blossom URL:', mirrorErr)
           }
         }
@@ -207,18 +342,31 @@ export function ReplaceVideoFlow({
         setStatus('probing')
         const videoVariant = await processVideoUrl(url, mirroredBlobs)
 
+        resultRef.current = videoVariant
         setResult(videoVariant)
         setStatus('done')
+        activity?.finish()
         return videoVariant
       } catch (err) {
+        activity?.finish(err)
+        if (isAbortError(err)) {
+          if (operation === operationRef.current) resetUpload()
+          throw err
+        }
         const message = err instanceof Error ? err.message : 'Unknown error processing URL'
         setUploadError(message)
         setStatus('error')
         throw err
       }
     },
-    [blossomMirrorServers, signer]
+    [blossomMirrorServers, signer, mirrorRetryFor, resetUpload]
   )
+
+  // Leaving the flow drops the replacement, so stop its transfers too.
+  const handleCancel = useCallback(() => {
+    controllerRef.current?.abort()
+    onCancel()
+  }, [onCancel])
 
   const upload = useMemo(
     () => ({
@@ -270,6 +418,7 @@ export function ReplaceVideoFlow({
     setIsConfirming(true)
 
     try {
+      confirmedRef.current = true
       // Build new imeta tag
       const newTag = buildImetaTagFromParsed({
         variant: upload.result,
@@ -322,57 +471,12 @@ export function ReplaceVideoFlow({
         }
       }
 
-      // Publish mirror announcements (non-blocking)
-      if (
-        upload.result.mirroredBlobs.length > 0 &&
-        upload.result.uploadedBlobs[0]?.sha256 &&
-        videoEventInfo
-      ) {
-        try {
-          const relayHint = writeRelays[0] || ''
-          const announcements: MirrorAnnouncementOptions[] = [
-            {
-              blob: {
-                type: 'video',
-                variant: {
-                  url: upload.result.url || '',
-                  hash: upload.result.uploadedBlobs[0].sha256,
-                  size: upload.result.sizeMB
-                    ? Math.round(upload.result.sizeMB * 1024 * 1024)
-                    : undefined,
-                  dimensions: upload.result.dimension,
-                  mimeType: upload.result.file?.type,
-                  quality: upload.result.qualityLabel,
-                  fallbackUrls: upload.result.mirroredBlobs.map(b => b.url),
-                },
-                label: `Video ${upload.result.qualityLabel || upload.result.dimension}`,
-                hash: upload.result.uploadedBlobs[0].sha256,
-                ext: 'mp4',
-              },
-              mirrorResults: upload.result.mirroredBlobs,
-              videoEvent: {
-                id: videoEventInfo.id,
-                kind: videoEventInfo.kind,
-                pubkey: videoEventInfo.pubkey,
-                dTag: videoEventInfo.dTag,
-              },
-              relayHint,
-            },
-          ]
-
-          const publishRelays = getMirrorAnnouncementRelays(writeRelays, writeRelays)
-          await publishMirrorAnnouncements(
-            announcements,
-            { signEvent: async eventTemplate => await user.signer.signEvent(eventTemplate) },
-            publishRelays
-          )
-        } catch (err) {
-          console.warn('Failed to publish mirror announcements:', err)
-        }
-      }
+      // Publish mirror announcements (best-effort)
+      await announceMirrors(upload.result)
 
       onComplete(newTag)
     } catch (err) {
+      confirmedRef.current = false
       console.error('Failed to confirm replacement:', err)
       toast.error(t('editVideo.replaceFailed'))
     } finally {
@@ -399,7 +503,7 @@ export function ReplaceVideoFlow({
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          onClick={onCancel}
+          onClick={handleCancel}
           disabled={isConfirming}
         >
           <X className="h-4 w-4" />
@@ -534,7 +638,7 @@ export function ReplaceVideoFlow({
           type="button"
           variant="outline"
           size="sm"
-          onClick={onCancel}
+          onClick={handleCancel}
           disabled={isConfirming}
         >
           {t('common.cancel')}

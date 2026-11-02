@@ -582,6 +582,8 @@
       "description": "Was die Warteschlange auf deine Spiegelserver kopiert hat. Änderungen an den Zielen gelten nach dem Speichern.",
       "loadFailed": "Der Spiegel-Status konnte nicht geladen werden.",
       "empty": "Noch nichts in der Warteschlange.",
+      "event": "Zustellung von Event {{id}}",
+      "eventEmpty": "Für dieses Event muss der Server keine Kopien anlegen.",
       "target": "Ziel",
       "kind": "Art",
       "done": "Fertig",

@@ -12,13 +12,8 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
-import {
-  loadNsite,
-  publishNsite,
-  type AdminState,
-  type NsiteDelivery,
-  type NsiteStatus,
-} from './api'
+import { loadNsite, type AdminState, type NsiteDelivery, type NsiteStatus } from './api'
+import { publishNsiteTracked } from './delivery'
 import { draftCanBePublic } from './draft'
 import { Field, Tile } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
@@ -200,8 +195,8 @@ function NsiteCard({
     setPublishing(true)
     setError(null)
     try {
-      await publishNsite()
-      setStatus(await loadNsite())
+      // The activity follows the delivery after this card is gone; the card's status follows too.
+      await publishNsiteTracked(t('studio.nsite.publish'), setStatus)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

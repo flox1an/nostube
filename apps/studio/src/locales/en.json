@@ -582,6 +582,8 @@
       "description": "What the outbox has copied to your mirror servers. Changes to the target lists apply after saving.",
       "loadFailed": "The mirror status could not be loaded.",
       "empty": "Nothing has been queued yet.",
+      "event": "Delivery of event {{id}}",
+      "eventEmpty": "The server has no copies to make for this event.",
       "target": "Target",
       "kind": "Kind",
       "done": "Done",

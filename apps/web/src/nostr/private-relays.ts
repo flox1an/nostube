@@ -1,5 +1,6 @@
 import type { ISigner } from 'applesauce-signers'
 import type { PublishResponse, RelayPool } from 'applesauce-relay'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import type { Observable } from 'rxjs'
 import type { Event, EventTemplate } from 'nostr-tools'
 
@@ -73,24 +74,26 @@ export async function decryptPrivateRelayList(
   return normalizePrivateRelayUrls(urls)
 }
 
+/** Publishes to the private relays only; visible in the shared status when `activityId` is given. */
 export async function publishPrivateEvent(
   pool: Pick<RelayPool, 'publish'>,
   relays: readonly string[],
-  event: Event
+  event: Event,
+  { activityId, onConfirmed }: { activityId?: string; onConfirmed?: () => void } = {}
 ): Promise<void> {
   const privateRelays = normalizePrivateRelayUrls(relays)
   if (privateRelays.length === 0) {
     throw new Error('Configure at least one private relay before publishing private content')
   }
 
-  const responses = await pool.publish(privateRelays, event)
-  if (!responses.some(response => response.ok)) {
-    const reasons = responses
-      .map(response => response.message)
-      .filter(Boolean)
-      .join('; ')
-    throw new Error(reasons || 'All private relays rejected the event')
-  }
+  await publishRelays({
+    pool,
+    event,
+    relays: privateRelays,
+    activityId,
+    quiet: !activityId,
+    onConfirmed,
+  })
 }
 
 export function monitorPrivateRelayAuthentication(

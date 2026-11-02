@@ -11,12 +11,14 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { loadOutbox, retryOutbox, type OutboxStatus } from './api'
+import { loadEventOutbox, loadOutbox, retryOutbox, type OutboxJob, type OutboxStatus } from './api'
+import { deliveryEventId, jobStatus } from './delivery'
 
 type Load =
   | { name: 'loading' }
   | { name: 'failed'; message: string }
-  | { name: 'ready'; status: OutboxStatus }
+  /** `jobs`: the outbox jobs of the event the address names (`#/advanced?event=<id>`). */
+  | { name: 'ready'; status: OutboxStatus; jobs: OutboxJob[] | null }
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -29,18 +31,29 @@ export function MirrorCard() {
   const [load, setLoad] = useState<Load>({ name: 'loading' })
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [eventId, setEventId] = useState(() => deliveryEventId(location.hash))
+  const delivery = useRef<HTMLElement>(null)
   // Only the latest request may land: an older answer, or one after leaving the page, is dropped.
   const latest = useRef({ id: 0 })
+
+  useEffect(() => {
+    const onChange = () => setEventId(deliveryEventId(location.hash))
+    window.addEventListener('hashchange', onChange)
+    return () => window.removeEventListener('hashchange', onChange)
+  }, [])
 
   const refresh = useCallback(async () => {
     const id = ++latest.current.id
     try {
-      const status = await loadOutbox()
-      if (id === latest.current.id) setLoad({ name: 'ready', status })
+      const [status, jobs] = await Promise.all([
+        loadOutbox(),
+        eventId ? loadEventOutbox(eventId) : null,
+      ])
+      if (id === latest.current.id) setLoad({ name: 'ready', status, jobs })
     } catch (e) {
       if (id === latest.current.id) setLoad({ name: 'failed', message: message(e) })
     }
-  }, [])
+  }, [eventId])
 
   useEffect(() => {
     const requests = latest.current
@@ -50,11 +63,24 @@ export function MirrorCard() {
     }
   }, [refresh])
 
-  const retry = async (target?: string) => {
+  useEffect(() => {
+    if (load.name !== 'ready' || !load.jobs?.some(job => job.status === 'pending' && job.active))
+      return
+    const timer = setTimeout(() => void refresh(), 3000)
+    return () => clearTimeout(timer)
+  }, [load, refresh])
+
+  // A delivery link opens this page at its top; the event's status is what it came for.
+  const shown = load.name === 'ready' && load.jobs !== null
+  useEffect(() => {
+    if (shown) delivery.current?.scrollIntoView({ block: 'start' })
+  }, [shown, eventId])
+
+  const retry = async (target?: string, event?: string) => {
     setBusy(true)
     setNotice(null)
     try {
-      setNotice(t('studio.mirror.retried', { count: await retryOutbox(target) }))
+      setNotice(t('studio.mirror.retried', { count: await retryOutbox(target, event) }))
       await refresh()
     } catch (e) {
       setNotice(message(e))
@@ -133,6 +159,57 @@ export function MirrorCard() {
                   ))}
                 </ul>
               </div>
+            )}
+
+            {eventId && load.jobs && (
+              <section
+                ref={delivery}
+                aria-labelledby="delivery-title"
+                className="scroll-mt-4 space-y-2"
+              >
+                <h3 id="delivery-title" className="text-sm font-medium break-all">
+                  {t('studio.mirror.event', { id: eventId })}
+                </h3>
+                {load.jobs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('studio.mirror.eventEmpty')}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {load.jobs.map(job => {
+                      const status = jobStatus(job)
+                      return (
+                        <li key={job.id} className="rounded-md border p-2 text-xs">
+                          <p className="font-mono break-all">
+                            {t(`studio.mirror.kinds.${job.kind}`, { defaultValue: job.kind })}{' '}
+                            {job.ref.slice(0, 12)} → {job.target}
+                          </p>
+                          <p className={status === 'failed' ? 'text-destructive' : undefined}>
+                            {t(`publication.target.${status}`)}
+                          </p>
+                          {(job.lastError ?? (job.status === 'pending' && !job.active)) && (
+                            <p className="break-words">
+                              {job.lastError ?? t('publication.inactive')}
+                            </p>
+                          )}
+                          {status === 'pending' && job.nextAttemptAt && (
+                            <p className="text-muted-foreground">
+                              {t('publication.nextAttempt', { time: date(job.nextAttemptAt) })}
+                            </p>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={busy || !load.jobs.some(job => job.status === 'failed')}
+                  onClick={() => void retry(undefined, eventId)}
+                >
+                  {t('publication.retry')}
+                </Button>
+              </section>
             )}
 
             <div className="flex flex-wrap items-center gap-3">

@@ -7,6 +7,7 @@ import { use$, useAccountManager, useActiveAccount, useEventStore } from 'apples
 import { isAddressableKind, type VideoEvent } from '@nostube/core/video-event'
 import { useNostubeHost } from '@nostube/widgets/host'
 import { Button } from '@nostube/widgets/components/button'
+import { PublishRelaysError, signAndPublish } from '@nostube/widgets/publish-relays'
 import { SiteAuthDialog } from './AuthArea'
 import type { IAccount } from 'applesauce-accounts'
 
@@ -117,22 +118,33 @@ export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string
     setPending(likeKey)
     setFailure(null)
     try {
-      const signed = (await visitor.signer.signEvent({
-        kind: 7,
-        content: '+',
-        tags: [...buildLikeTags(video), ['client', 'nostube']],
-        created_at: Math.floor(Date.now() / 1000),
-      })) as unknown as NostrEvent
-      // Only a relay's OK(true) counts; no relay, a refusal or a timeout leaves it retryable.
-      const results = await pool.publish(relays, signed)
-      if (!results.some(r => r.ok)) {
+      const signer = visitor.signer
+      // Liking again after no relay confirmed re-sends the same signed like; a later status
+      // retry still lands it in the store (and so in the count).
+      await signAndPublish({
+        key: likeKey,
+        sign: async () =>
+          (await signer.signEvent({
+            kind: 7,
+            content: '+',
+            tags: [...buildLikeTags(video), ['client', 'nostube']],
+            created_at: Math.floor(Date.now() / 1000),
+          })) as unknown as NostrEvent,
+        pool,
+        relays,
+        label: t('site.reactions.liking'),
+        onConfirmed: event => eventStore.add(event),
+      }).catch((err: unknown) => {
+        // Only a relay's OK(true) counts; no relay, a refusal or a timeout leaves it retryable.
+        if (!(err instanceof PublishRelaysError)) throw err
         throw new Error(
-          results.length
-            ? results.map(r => `${r.from}: ${r.message || t('site.reactions.refused')}`).join('; ')
+          err.responses.length
+            ? err.responses
+                .map(r => `${r.from}: ${r.message || t('site.reactions.refused')}`)
+                .join('; ')
             : t('site.reactions.noRelays')
         )
-      }
-      eventStore.add(signed)
+      })
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err)
       setFailure({ key: likeKey, message: t('site.reactions.failed', { reason }) })

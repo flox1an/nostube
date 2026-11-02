@@ -17,6 +17,7 @@ import {
 } from '@nostube/core/comments'
 import { isMuted, MUTE_LIST_KIND, mutedOf } from '@nostube/core/mute-list'
 import { useNostubeHost } from '@nostube/widgets/host'
+import { PublishRelaysError, signAndPublish } from '@nostube/widgets/publish-relays'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { Button } from '@nostube/widgets/components/button'
 import { CommentInput } from '@nostube/widgets/components/CommentInput'
@@ -144,25 +145,43 @@ export function Comments({
     [eventStore, allFilters, videoId]
   )
 
-  const publish = async (draft: { kind: number; content: string; tags: string[][] }) => {
+  const publish = async (
+    draft: { kind: number; content: string; tags: string[][] },
+    label: string
+  ) => {
     if (!account) throw new Error(t('site.comments.signInFirst'))
-    const signed = await account.signer.signEvent({
-      kind: draft.kind,
-      content: draft.content,
-      tags: [...draft.tags, ['client', 'nostube']],
-      created_at: Math.floor(Date.now() / 1000),
-    })
-    // The relay answers per relay; an explicit OK(false) must not count as success.
-    const results = await pool.publish(relays, signed as unknown as NostrEvent)
-    const refused = results.filter(r => !r.ok)
-    if (results.length > 0 && refused.length === results.length) {
+    const signer = account.signer
+    try {
+      // Re-submitting the same draft after no relay confirmed re-sends the same signed event.
+      return await signAndPublish({
+        key: JSON.stringify([account.pubkey, draft]),
+        sign: async () =>
+          (await signer.signEvent({
+            kind: draft.kind,
+            content: draft.content,
+            tags: [...draft.tags, ['client', 'nostube']],
+            created_at: Math.floor(Date.now() / 1000),
+          })) as unknown as NostrEvent,
+        pool,
+        relays,
+        label,
+        // An explicit OK(false) never counts; a later status retry still lands it in the store.
+        onConfirmed: event => eventStore.add(event),
+      })
+    } catch (err) {
       // Relay messages are the relays' own words; only the missing-reason fallback is ours.
-      throw new Error(
-        refused.map(r => `${r.from}: ${r.message ?? t('site.comments.refused')}`).join('; ')
-      )
+      if (err instanceof PublishRelaysError && err.responses.length) {
+        throw Object.assign(
+          new Error(
+            err.responses
+              .map(r => `${r.from}: ${r.message ?? t('site.comments.refused')}`)
+              .join('; ')
+          ),
+          { cause: err }
+        )
+      }
+      throw err
     }
-    eventStore.add(signed as unknown as NostrEvent)
-    return signed
   }
 
   const submit = async (content: string, parent: Comment | null) => {
@@ -174,13 +193,15 @@ export function Comments({
           parent.kind === 1
             ? buildLegacyReplyTags(target, { id: parent.id, pubkey: parent.pubkey }, RELAY_HINT)
             : buildCommentReplyTags(target, { id: parent.id, pubkey: parent.pubkey }, RELAY_HINT)
-        await publish({ kind: parent.kind === 1 ? 1 : 1111, content, tags: builder })
+        await publish(
+          { kind: parent.kind === 1 ? 1 : 1111, content, tags: builder },
+          t('site.comments.reply')
+        )
       } else {
-        await publish({
-          kind: 1111,
-          content,
-          tags: buildTopLevelCommentTags(target, RELAY_HINT),
-        })
+        await publish(
+          { kind: 1111, content, tags: buildTopLevelCommentTags(target, RELAY_HINT) },
+          t('site.comments.title')
+        )
       }
       if (parent) {
         setReplyTo(null)
@@ -200,11 +221,14 @@ export function Comments({
     setBusy(true)
     setError(null)
     try {
-      await publish({
-        kind: 5,
-        content: 'Deleted by author',
-        tags: buildCommentDeletionTags(comment.id, comment.kind),
-      })
+      await publish(
+        {
+          kind: 5,
+          content: 'Deleted by author',
+          tags: buildCommentDeletionTags(comment.id, comment.kind),
+        },
+        t('site.comments.delete')
+      )
       // The event store keeps serving the deleted event until the deletion arrives from a
       // relay query, so hide it right away.
       setRemoved(previous => new Set(previous).add(comment.id))

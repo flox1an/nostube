@@ -21,6 +21,11 @@ import type { TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { Input } from '@nostube/widgets/components/input'
 import { Progress } from '@nostube/widgets/components/progress'
 import { Textarea } from '@nostube/widgets/components/textarea'
+import {
+  beginPublication,
+  dismissPublication,
+  updatePublication,
+} from '@nostube/widgets/publication'
 import type { AdminState } from './api'
 import { isKeyConnected } from './draft'
 import { Field } from './fields'
@@ -78,6 +83,7 @@ export default function UploadPage({ state }: { state: AdminState }) {
   const [notice, setNotice] = useState<string | null>(null)
   const busy = useRef(false)
   const abort = useRef<AbortController | null>(null)
+  const activity = useRef<string | null>(null)
   const selection = useRef(0)
   const [videoUrl, setVideoUrl] = useState<string>()
   const [thumbnail, setThumbnail] = useState<Blob | null>(null)
@@ -133,36 +139,62 @@ export default function UploadPage({ state }: { state: AdminState }) {
 
   const start = async () => {
     if (!file || !(probe || convert) || busy.current) return
-    busy.current = true
-    setRunning(true)
     setNotice(null)
-    try {
-      if (!mayPublish) return setNotice(t('studio.upload.notConnected'))
-      if (!signer) return setNotice(t('studio.errors.noSigner'))
-      const deps = makeUploadDeps({ signer, pubkey, title, publishAt, state })
-      const input = {
-        file,
-        title: title.trim(),
-        description,
-        tags,
-        contentWarning: warning ? reason : undefined,
-        // A converted file's still is taken from the MP4 made of it.
-        thumbnail: probe ? thumbnail : undefined,
-        subtitles,
-        publishAt,
-        convert: convert ?? undefined,
-      }
-      abort.current = new AbortController()
-      await runUpload(
-        job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe ?? undefined),
-        deps,
-        setJob,
-        abort.current.signal
-      )
-    } finally {
-      busy.current = false
-      setRunning(false)
+    if (!mayPublish) return setNotice(t('studio.upload.notConnected'))
+    if (!signer) return setNotice(t('studio.errors.noSigner'))
+    const input = {
+      file,
+      title: title.trim(),
+      description,
+      tags,
+      contentWarning: warning ? reason : undefined,
+      // A converted file's still is taken from the MP4 made of it.
+      thumbnail: probe ? thumbnail : undefined,
+      subtitles,
+      publishAt,
+      convert: convert ?? undefined,
     }
+    // One activity per upload: it outlives this page, and its retry continues the same job.
+    if (activity.current) dismissPublication(activity.current)
+    const id = (activity.current = beginPublication({
+      label: input.title,
+      phase: 'preparing',
+      lifetime: 'browser',
+    }))
+    const deps = makeUploadDeps({ signer, pubkey, title, publishAt, state, activity: id })
+    const run = async (from: UploadJob) => {
+      if (busy.current) return
+      busy.current = true
+      setRunning(true)
+      const controller = (abort.current = new AbortController())
+      updatePublication(id, {
+        status: 'pending',
+        error: undefined,
+        retry: undefined,
+        retryLabel: undefined,
+        cancel: () => controller.abort(),
+      })
+      try {
+        const result = await runUpload(from, deps, setJob, controller.signal)
+        const failed = STEPS.map(step => result.steps[step.id]).find(s => s.status === 'error')
+        if (failed) {
+          updatePublication(id, {
+            status: 'failed',
+            error: failed.error,
+            cancel: undefined,
+            retry: () => run(result),
+            // The upload continues where it stopped, not just failed targets.
+            retryLabel: t('studio.upload.retry'),
+          })
+        }
+      } finally {
+        busy.current = false
+        setRunning(false)
+      }
+    }
+    await run(
+      job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe ?? undefined)
+    )
   }
 
   const reset = () => {

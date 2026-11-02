@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "发布活动",
+    "phase": {
+      "preparing": "正在准备文件…",
+      "signing": "正在等待签名器…",
+      "uploading": "正在上传文件…",
+      "processing": "正在等待服务器确认文件…",
+      "mirroring": "正在确认镜像副本…",
+      "publishing": "正在等待中继确认…",
+      "background": "已在本地发布。副本将在服务器上继续传输。"
+    },
+    "result": {
+      "success": "已确认",
+      "partial": "部分确认——部分目标需要处理",
+      "failed": "未确认"
+    },
+    "target": {
+      "pending": "等待中",
+      "confirmed": "已确认",
+      "failed": "失败",
+      "timeout": "未及时确认"
+    },
+    "confirmed": "已确认 {{done}}/{{total}} 个目标",
+    "elapsed": "已用时 {{seconds}} 秒",
+    "files": "{{done}}/{{total}} 个文件",
+    "slow": "暂无新的确认。打开详情查看哪些目标仍在等待。",
+    "signerWait": "请在签名扩展或签名应用中查看是否有待批准的请求。",
+    "details": "显示详情",
+    "hideDetails": "隐藏详情",
+    "dismiss": "隐藏状态（不会取消）",
+    "retry": "重试失败的目标",
+    "cancel": "取消剩余工作",
+    "copy": "复制详情",
+    "copied": "已复制",
+    "copyFailed": "无法复制。请手动选择并复制详情。",
+    "nextAttempt": "下次尝试：{{time}}",
+    "serverLifetime": "关闭此标签页后，服务器仍会继续工作。已确认的副本会被保留。",
+    "browserLifetime": "请保持此标签页打开，直到工作完成。隐藏此状态不会停止工作；已发送的数据无法撤回。",
+    "backgroundDetails": "查看传送状态",
+    "inactive": "服务器已不再向此目标传送（已从设置中移除）。"
+  },
   "player": {
     "qualityNumber": "画质 {{number}}",
     "currentQuality": "当前 {{quality}}",

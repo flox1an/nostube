@@ -214,6 +214,16 @@ Videos, deletions and nsite manifests go to content/mirror relays, not indexers.
 and jobs for the retired `index.hzrd149.com` are removed automatically. Existing media files are not
 backfilled by adding a mirror relay.
 
+After publishing or editing a video, **View delivery status** opens the outbox for that event and
+the media it currently references (`#/advanced?event=<event-id>`). Pending active jobs refresh
+automatically. Each job shows its target, confirmation/error and next retry time; retries from this
+view are scoped to that event and its media, not unrelated publications. Removed targets are marked
+inactive instead of presented as work the server is still delivering.
+
+Upload and signing phases belong to the browser and need the tab open. Once the instance accepted
+the event, its mirror copies run durably on the server, independently of the tab. A quick action
+stays compact; longer waits reveal details automatically. Hiding the status never cancels delivery.
+
 ## Content
 
 ### Upload

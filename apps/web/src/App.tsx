@@ -1,3 +1,5 @@
+import { PublicationStatusHost } from '@nostube/widgets/components/PublicationStatus'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
 import { Suspense, useEffect, useRef, useContext } from 'react'
@@ -18,7 +20,7 @@ import { ActionRunner } from 'applesauce-actions'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 // Import applesauce-common to register EventFactory extensions (note, reaction, etc.)
 import 'applesauce-common'
-import { DEFAULT_RELAYS, eventStore, publishMethod } from '@/nostr/core'
+import { DEFAULT_RELAYS, eventStore, relayPool } from '@/nostr/core'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
@@ -90,7 +92,11 @@ const actionRunner = new ActionRunner(eventStore, accountManager.signer, (event,
   // Actions pass the user's outbox relays. Fall back to the defaults, since
   // publishing to an empty relay list would silently drop the event.
   // Instance build: always the interaction relays (DEFAULT_RELAYS), never the outbox.
-  publishMethod(!instance && relays?.length ? relays : DEFAULT_RELAYS, event)
+  return publishRelays({
+    pool: relayPool,
+    relays: !instance && relays?.length ? relays : DEFAULT_RELAYS,
+    event,
+  })
 })
 
 /**
@@ -201,6 +207,7 @@ export function App() {
                             {/* Toast viewports: without them every toast() call is a no-op. */}
                             <Toaster />
                             <SonnerToaster />
+                            <PublicationStatusHost />
                           </TooltipProvider>
                         </WalletProvider>
                       </UploadManagerProvider>

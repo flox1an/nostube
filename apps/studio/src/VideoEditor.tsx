@@ -10,6 +10,11 @@ import { FileDropzone } from '@nostube/widgets/components/FileDropzone'
 import { ThumbnailSection } from '@nostube/widgets/components/ThumbnailSection'
 import { SubtitleSection } from '@nostube/widgets/components/SubtitleSection'
 import { Progress } from '@nostube/widgets/components/progress'
+import {
+  beginPublication,
+  dismissPublication,
+  updatePublication,
+} from '@nostube/widgets/publication'
 import { detectLanguageFromFilename, generateSubtitleId } from '@nostube/core/subtitle-utils'
 import { Field } from './fields'
 import { fromLocalInput, isFuture, toLocalInput } from './datetime'
@@ -30,7 +35,8 @@ export function VideoEditor({
 }: {
   event: NostrEvent
   getCurrent: () => NostrEvent
-  publish: (template: EventTemplate) => Promise<PublishedVideo>
+  /** Signs and publishes as the activity's last phases. */
+  publish: (template: EventTemplate, activity: string) => Promise<PublishedVideo>
   replace: boolean
   /** A scheduled video: its publish date (unix seconds) can be changed here. */
   dueAt?: number
@@ -72,6 +78,7 @@ export function VideoEditor({
   const cache = useRef<VideoEditCache>(new Map())
   const busy = useRef(false)
   const abort = useRef<AbortController | null>(null)
+  const activity = useRef<string | null>(null)
   const selection = useRef(0)
   const imeta = event.tags.filter(tag => tag[0] === 'imeta').flatMap(tag => tag.slice(1))
   const oldThumbnail =
@@ -119,9 +126,23 @@ export function VideoEditor({
     setRunning(true)
     setError(null)
     setErrorDetail(undefined)
-    abort.current = new AbortController()
+    const controller = (abort.current = new AbortController())
+    // One activity per edit: a run again replaces the failed one.
+    if (activity.current) dismissPublication(activity.current)
+    const id = (activity.current = beginPublication({
+      label: `${t(replace ? 'studio.videos.replace' : 'studio.videos.edit')}: ${title}`,
+      phase: 'preparing',
+      lifetime: 'browser',
+      cancel: () => controller.abort(),
+    }))
     try {
-      const deps = makeUploadDeps({ signer, pubkey, title, onMirrorWait: () => setMirroring(true) })
+      const deps = makeUploadDeps({
+        signer,
+        pubkey,
+        title,
+        activity: id,
+        onMirrorWait: () => setMirroring(true),
+      })
       await runVideoEdit(
         getCurrent,
         pubkey,
@@ -146,26 +167,35 @@ export function VideoEditor({
                     tags: template.tags.map(tag =>
                       tag[0] === 'published_at' ? ['published_at', String(due)] : tag
                     ),
-                  }
+                  },
+              id
             ),
         },
         cache.current,
         (done, total) => setProgress(total > 0 ? done / total : 0),
-        abort.current.signal
+        controller.signal
       )
       onClose()
     } catch (e) {
-      const message = abort.current.signal.aborted
+      const message = controller.signal.aborted
         ? t('studio.upload.cancelled')
         : e instanceof Error
           ? e.message
           : String(e)
-      setError(
-        ['authorMismatch', 'notAddressable', 'eventMissing'].includes(message)
-          ? t(`studio.videos.${message}`)
-          : message
-      )
+      const shown = ['authorMismatch', 'notAddressable', 'eventMissing'].includes(message)
+        ? t(`studio.videos.${message}`)
+        : message
+      setError(shown)
       setErrorDetail(e instanceof PublishError ? e.detail : undefined)
+      // Uploaded files stay cached: a retry continues after them.
+      updatePublication(id, {
+        status: 'failed',
+        error: shown,
+        cancel: undefined,
+        retry: save,
+        // The whole edit runs again (cached uploads are kept), not just failed targets.
+        retryLabel: t('studio.upload.retry'),
+      })
     } finally {
       busy.current = false
       setRunning(false)

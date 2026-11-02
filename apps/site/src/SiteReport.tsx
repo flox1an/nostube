@@ -6,6 +6,7 @@ import { useActiveAccount } from 'applesauce-react/hooks'
 import { buildReportTags, type ReportReason, type ReportTarget } from '@nostube/core/reports'
 import { useNostubeHost } from '@nostube/widgets/host'
 import { Button } from '@nostube/widgets/components/button'
+import { PublishRelaysError, signAndPublish } from '@nostube/widgets/publish-relays'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import { Label } from '@nostube/widgets/components/label'
 import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
@@ -72,20 +73,30 @@ function ReportButton({
     setBusy(true)
     setError(null)
     try {
-      const signed = (await account.signer.signEvent({
-        kind: 1984,
-        content: details,
-        tags: [...buildReportTags(target, reason), ['client', 'nostube']],
-        created_at: Math.floor(Date.now() / 1000),
-      })) as unknown as NostrEvent
-      const results = await pool.publish(relays, signed)
-      if (!results.some(r => r.ok)) {
+      const signer = account.signer
+      // Re-submitting the same report after no relay confirmed re-sends the same signed event.
+      await signAndPublish({
+        key: JSON.stringify([account.pubkey, target, reason, details]),
+        sign: async () =>
+          (await signer.signEvent({
+            kind: 1984,
+            content: details,
+            tags: [...buildReportTags(target, reason), ['client', 'nostube']],
+            created_at: Math.floor(Date.now() / 1000),
+          })) as unknown as NostrEvent,
+        pool,
+        relays,
+        label: title,
+      }).catch((err: unknown) => {
+        if (!(err instanceof PublishRelaysError)) throw err
         throw new Error(
-          results.length
-            ? results.map(r => `${r.from}: ${r.message || t('site.report.refused')}`).join('; ')
+          err.responses.length
+            ? err.responses
+                .map(r => `${r.from}: ${r.message || t('site.report.refused')}`)
+                .join('; ')
             : t('site.report.noRelays')
         )
-      }
+      })
       setReported(true)
       setOpen(false)
       reset()

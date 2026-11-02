@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "Veröffentlichungen",
+    "phase": {
+      "signing": "Warte auf deinen Signer …",
+      "preparing": "Datei wird vorbereitet …",
+      "uploading": "Dateien werden hochgeladen …",
+      "processing": "Warte auf die Dateibestätigung des Servers …",
+      "mirroring": "Spiegelkopien werden bestätigt …",
+      "publishing": "Warte auf Relay-Bestätigung …",
+      "background": "Lokal veröffentlicht. Kopien werden auf dem Server weiter übertragen."
+    },
+    "result": {
+      "success": "Bestätigt",
+      "partial": "Teilweise bestätigt – einige Ziele benötigen Aufmerksamkeit",
+      "failed": "Nicht bestätigt"
+    },
+    "target": {
+      "pending": "Wartet",
+      "confirmed": "Bestätigt",
+      "failed": "Fehlgeschlagen",
+      "timeout": "Keine rechtzeitige Bestätigung"
+    },
+    "confirmed": "{{done}} von {{total}} Zielen bestätigt",
+    "elapsed": "{{seconds}} s vergangen",
+    "files": "{{done}} von {{total}} Dateien",
+    "slow": "Noch keine neue Bestätigung. In den Details siehst du, welche Ziele noch warten.",
+    "signerWait": "Prüfe deine Signier-Erweiterung oder Signer-App auf eine Freigabeanfrage.",
+    "details": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "dismiss": "Status ausblenden (bricht nicht ab)",
+    "retry": "Fehlgeschlagene Ziele erneut versuchen",
+    "cancel": "Verbleibende Arbeit abbrechen",
+    "copy": "Details kopieren",
+    "copied": "Kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen. Markiere und kopiere die Details stattdessen.",
+    "nextAttempt": "Nächster Versuch: {{time}}",
+    "serverLifetime": "Der Server arbeitet nach dem Schließen dieses Tabs weiter. Bereits bestätigte Kopien bleiben erhalten.",
+    "browserLifetime": "Lass diesen Tab bis zum Abschluss geöffnet. Ausblenden hält den Vorgang nicht an; bereits gesendete Daten lassen sich nicht zurückholen.",
+    "backgroundDetails": "Zustellstatus anzeigen",
+    "inactive": "Der Server stellt an dieses Ziel nicht mehr zu (aus den Einstellungen entfernt)."
+  },
   "player": {
     "qualityNumber": "Qualität {{number}}",
     "currentQuality": "Aktuell {{quality}}",

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   Circle,
   AlertCircle,
   SkipForward,
+  RotateCcw,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -45,6 +46,7 @@ import {
   extractAllBlossomBlobs,
   deduplicateVariants,
   getTotalBlobSize,
+  type BlossomBlob,
 } from '@/lib/blossom-blob-extractor'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import type { BlossomServer } from '@nostube/core'
@@ -58,6 +60,12 @@ interface MirrorVideoDialogProps {
   blossomServers?: BlossomServer[]
   userServers?: string[]
   onMirrorComplete?: () => void
+}
+
+/** One mirror run: its blobs by hash and every copy servers confirmed, for retries and 1063s. */
+interface MirrorRun {
+  blobs: Map<string, BlossomBlob>
+  results: Map<string, BlobDescriptor[]>
 }
 
 // Helper to get icon for blob type
@@ -263,6 +271,8 @@ export function MirrorVideoDialog({
   const [selectedServers, setSelectedServers] = useState<Set<string>>(new Set())
   const [isMirroring, setIsMirroring] = useState(false)
   const [mirrorState, setMirrorState] = useState<Map<string, MirrorCell>>(() => new Map())
+  // The grid's run, so "retry failed" re-mirrors exactly its failed cells.
+  const runRef = useRef<MirrorRun | null>(null)
   const mirrorStarted = isMirroring || mirrorState.size > 0
   // 1 = pick files · 2 = pick servers · 3 = review + mirror
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1)
@@ -401,17 +411,42 @@ export function MirrorVideoDialog({
       }
     }
     setMirrorState(initialState)
+
+    const run: MirrorRun = {
+      blobs: new Map(selectedBlobList.map(blob => [blob.hash!, blob])),
+      results: new Map(),
+    }
+    runRef.current = run
+    await runMirrors(
+      run,
+      selectedBlobList.map((blob): [string, string[]] => [blob.hash!, selectedServerList])
+    )
+  }
+
+  // Retries exactly the failed cells; every other cell keeps its result.
+  const handleRetryFailed = async () => {
+    const run = runRef.current
+    if (!run) return
+    const failed = new Map<string, string[]>()
+    for (const [key, cell] of mirrorState) {
+      if (cell.status !== 'failed') continue
+      const sep = key.indexOf('|')
+      const hash = key.slice(0, sep)
+      failed.set(hash, [...(failed.get(hash) ?? []), key.slice(sep + 1)])
+      patchCell(key, { status: 'pending' })
+    }
+    await runMirrors(run, Array.from(failed))
+  }
+
+  const runMirrors = async (run: MirrorRun, work: Array<[hash: string, servers: string[]]>) => {
+    if (!user?.signer) return
     setIsMirroring(true)
 
     let totalSuccess = 0
     let totalSkipped = 0
     let totalFailed = 0
-
-    // Track mirror results per blob for 1063 publishing
-    const mirrorResultsPerBlob: Array<{
-      blob: (typeof allBlobs)[number]
-      results: BlobDescriptor[]
-    }> = []
+    // Blobs that gained copies in this pass; their 1063 then lists every copy they have.
+    const gained = new Set<string>()
 
     const mimeTypes: Record<string, string> = {
       mp4: 'video/mp4',
@@ -427,8 +462,8 @@ export function MirrorVideoDialog({
     }
 
     try {
-      for (const blob of selectedBlobList) {
-        const blobHash = blob.hash!
+      for (const [blobHash, servers] of work) {
+        const blob = run.blobs.get(blobHash)!
         const mimeType =
           blob.variant.mimeType || mimeTypes[blob.ext || ''] || 'application/octet-stream'
 
@@ -442,7 +477,7 @@ export function MirrorVideoDialog({
 
         try {
           const results = await mirrorBlobsToServers({
-            mirrorServers: selectedServerList,
+            mirrorServers: servers,
             blob: blobDescriptor,
             signer: async draft => await user.signer.signEvent(draft),
             onServerStart: server => {
@@ -465,16 +500,17 @@ export function MirrorVideoDialog({
             },
           })
 
-          // Track results for 1063 publishing
           if (results.length > 0) {
-            mirrorResultsPerBlob.push({ blob, results })
+            run.results.set(blobHash, [...(run.results.get(blobHash) ?? []), ...results])
+            gained.add(blobHash)
           }
         } catch (err) {
           // mirrorBlobsToServers swallows per-server failures into onServerSettle;
           // a thrown error here means something outside the per-server scope
           // failed (auth signing, etc.). Mark any still-pending cells as failed.
           const message = err instanceof Error ? err.message : String(err)
-          for (const server of selectedServerList) {
+          totalFailed += servers.length
+          for (const server of servers) {
             const key = `${blobHash}|${server}`
             setMirrorState(prev => {
               const current = prev.get(key)
@@ -490,7 +526,7 @@ export function MirrorVideoDialog({
       }
 
       // Publish kind 1063 events for successful mirrors
-      if (mirrorResultsPerBlob.length > 0 && video) {
+      if (gained.size > 0 && video) {
         try {
           // Get relay hint from video event's seen relays or user's relays
           const videoEventRelays = video.id
@@ -504,19 +540,17 @@ export function MirrorVideoDialog({
           const relayHint = publishRelays[0] || ''
 
           // Build announcement options
-          const announcements: MirrorAnnouncementOptions[] = mirrorResultsPerBlob.map(
-            ({ blob, results }) => ({
-              blob,
-              mirrorResults: results,
-              videoEvent: {
-                id: video.id,
-                kind: video.kind,
-                pubkey: video.pubkey,
-                dTag: video.identifier,
-              },
-              relayHint,
-            })
-          )
+          const announcements: MirrorAnnouncementOptions[] = Array.from(gained, hash => ({
+            blob: run.blobs.get(hash)!,
+            mirrorResults: run.results.get(hash)!,
+            videoEvent: {
+              id: video.id,
+              kind: video.kind,
+              pubkey: video.pubkey,
+              dTag: video.identifier,
+            },
+            relayHint,
+          }))
 
           // Publish 1063 events (non-blocking, errors are logged but don't fail the mirror)
           await publishMirrorAnnouncements(
@@ -1005,16 +1039,24 @@ export function MirrorVideoDialog({
 
         <DialogFooter>
           {wizardStep === 3 && mirrorStarted ? (
-            <Button onClick={() => onOpenChange(false)} disabled={isMirroring}>
-              {isMirroring ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('video.mirror.mirroring')}
-                </>
-              ) : (
-                t('common.close')
+            <>
+              {!isMirroring && matrixCounts.failed > 0 && (
+                <Button variant="outline" onClick={handleRetryFailed} disabled={!user}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {t('publication.retry')}
+                </Button>
               )}
-            </Button>
+              <Button onClick={() => onOpenChange(false)} disabled={isMirroring}>
+                {isMirroring ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('video.mirror.mirroring')}
+                  </>
+                ) : (
+                  t('common.close')
+                )}
+              </Button>
+            </>
           ) : wizardStep === 1 ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>

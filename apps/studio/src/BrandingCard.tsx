@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BRANDING_SLOTS, type BrandingSlot } from '@nostube/core/instance-config'
 import { Button } from '@nostube/widgets/components/button'
+import { beginPublication, updatePublication } from '@nostube/widgets/publication'
 import {
   Card,
   CardContent,
@@ -21,7 +22,7 @@ import { CROP_SOURCE_LIMIT, CROP_SOURCE_TYPES, ImageCropDialog } from './ImageCr
 import { useSigner } from './signer-context'
 import { uploadBlob } from './upload/blossom-upload'
 import { sha256File } from './upload/sha256-file'
-import { signChecked } from './upload/sign'
+import { signUploadAuth } from './upload/sign'
 
 export interface BrandingProps {
   branding: AdminState['branding']
@@ -82,6 +83,35 @@ function SlotRow({
     }
   }
 
+  /**
+   * One upload as a shared activity: its failure stays retryable from there, a retry clears it.
+   * The server's own profile update afterwards has no event to follow and is not claimed.
+   */
+  const track = (work: (activity: string) => Promise<string>) => {
+    const activity = beginPublication({
+      label: `${t('studio.branding.title')}: ${label}`,
+      phase: 'uploading',
+      lifetime: 'browser',
+    })
+    const attempt = async () => {
+      updatePublication(activity, { status: 'pending', error: undefined, retry: undefined })
+      try {
+        const url = await work(activity)
+        updatePublication(activity, { status: 'success' })
+        onChange(url)
+        return url
+      } catch (e) {
+        updatePublication(activity, {
+          status: 'failed',
+          error: e instanceof Error ? e.message : String(e),
+          retry: attempt,
+        })
+        throw e
+      }
+    }
+    return attempt()
+  }
+
   const pick = (file: File | undefined) => {
     if (input.current) input.current.value = ''
     if (!file) return
@@ -89,7 +119,16 @@ function SlotRow({
     if (direct) {
       const problem = brandingProblem(slot, file)
       if (problem) setError(problem)
-      else void run(() => uploadBranding(slot, file))
+      else
+        void run(() =>
+          track(async activity => {
+            // One request: its bytes count as there once the server has answered.
+            updatePublication(activity, { completed: 0, total: file.size, unit: 'bytes' })
+            const url = await uploadBranding(slot, file)
+            updatePublication(activity, { completed: file.size })
+            return url
+          })
+        )
     } else if (!CROP_SOURCE_TYPES.includes(file.type)) {
       setError(t('studio.branding.errors.wrongType'))
     } else if (file.size > CROP_SOURCE_LIMIT) {
@@ -103,15 +142,33 @@ function SlotRow({
     if (!signer || !pubkey) throw new Error(t('studio.errors.noSigner'))
     setBusy(true)
     try {
-      const sha256 = await sha256File(file)
-      await uploadBlob({
-        file,
-        fileName: file.name,
-        sha256,
-        type: file.type,
-        sign: event => signChecked(signer, event, pubkey),
+      await track(async activity => {
+        const progress = (done: number, total: number) =>
+          updatePublication(activity, { completed: done, total })
+        updatePublication(activity, {
+          phase: 'preparing',
+          completed: 0,
+          total: file.size,
+          unit: 'bytes',
+        })
+        const sha256 = await sha256File(file, progress)
+        updatePublication(activity, { phase: 'uploading', completed: 0, total: file.size })
+        await uploadBlob({
+          file,
+          fileName: file.name,
+          sha256,
+          type: file.type,
+          onProgress: progress,
+          sign: event => signUploadAuth(activity, signer, event, pubkey),
+        })
+        updatePublication(activity, {
+          phase: 'processing',
+          completed: undefined,
+          total: undefined,
+          unit: undefined,
+        })
+        return setBrandingBlob(slot, sha256)
       })
-      onChange(await setBrandingBlob(slot, sha256))
     } finally {
       setBusy(false)
     }

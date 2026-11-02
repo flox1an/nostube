@@ -26,30 +26,49 @@ For each file, the web app:
 
 The upload succeeds if at least one Primary server accepts the file. Its URL becomes the event's `url`. The other uploads and the mirrors become `fallback` URLs.
 
+### Progress and relay confirmations
+
+The action shows activity immediately. Work lasting more than two seconds also opens a compact
+status card; after eight seconds without new progress its target details open automatically.
+Relay refusals and timeouts appear immediately. These display thresholds do not change network timeouts.
+
+- Upload progress counts bytes; once all bytes are sent, the phase changes to waiting for the
+  server's file confirmation. Mirroring counts confirmed copies, not elapsed time.
+- Relay publishing shows how many targets confirmed the event, not an estimated percentage.
+  No confirming relay is a failure; a mixture of confirmations and failures is a partial result.
+  A timeout means no confirmation arrived in time, not proof that the event was never received.
+- **Retry failed targets** reuses the same signed event and sends only to the failed relays.
+  Mirror retries are offered only where recovered copies can be added to the current upload's metadata.
+- **Hide status** does not cancel work. Browser uploads require the tab to stay open; cancellation
+  stops remaining work, but cannot remove files or events already received by a server.
+- Details include each target's response and can be copied. The same feedback is used for comments,
+  reactions, profile changes and other user-initiated publications; background protocol traffic does
+  not open a status card for every message.
+
 ## Browser transcoding
 
 Nostube converts videos in the browser with [Mediabunny](https://mediabunny.dev) and the WebCodecs API, in a Web Worker. Only the converted output is uploaded, so the original file never leaves your device unless you choose to upload it too. Browser transcoding is the main encoding path; the reasons are recorded in [ADR 0002](https://github.com/flox1an/nostube/blob/main/docs/adr/0002-browser-based-transcoding.md). The code lives in `packages/core/src/video-transcode.ts`.
 
 ### When the app suggests a conversion
 
-| Source | Suggestion |
-| --- | --- |
-| Not MP4 (`video/mp4`, `video/x-m4v`), or a video codec other than H.264 (`avc1`, `avc3`) or HEVC (`hvc1`, `hev1`) | Full conversion |
-| Short side above 1080 pixels | Full conversion |
-| Bitrate above 8 Mbps | Re-encode to reduce the size |
-| Anything else | Already fine |
+| Source                                                                                                            | Suggestion                   |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Not MP4 (`video/mp4`, `video/x-m4v`), or a video codec other than H.264 (`avc1`, `avc3`) or HEVC (`hvc1`, `hev1`) | Full conversion              |
+| Short side above 1080 pixels                                                                                      | Full conversion              |
+| Bitrate above 8 Mbps                                                                                              | Re-encode to reduce the size |
+| Anything else                                                                                                     | Already fine                 |
 
 The short side is the height of a landscape video and the width of a portrait one, so a 1080×1920 short counts as 1080p.
 
 ### Settings
 
-| Setting | Options |
-| --- | --- |
-| Output | **MP4** (default): one file per resolution. **HLS** (experimental): one adaptive stream with all selected resolutions. **Upload only**: the original file, unchanged. |
-| Resolutions | 240p, 360p, 480p, 720p, 1080p, 1440p and 2160p, but only those at or below the source's short side; videos are never upscaled. For files under 50 MB, the highest available resolution is preselected; otherwise 720p and 480p. |
-| Codec | HEVC for every selected resolution except the lowest, which uses H.264, so older devices always have a playable variant. If the browser cannot encode HEVC, all variants use H.264. |
-| Quality | **Compact**, **Balanced** (default) or **High motion**: 4.5, 6.75 or 9 Mbps at 1080p and 30 fps, scaled by pixel count for other resolutions. A high-bitrate source can raise the bitrate by up to 1.35× (Balanced) or 1.5× (High motion). |
-| Keep original | For MP4 output, also uploads the source file as one more variant. |
+| Setting       | Options                                                                                                                                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Output        | **MP4** (default): one file per resolution. **HLS** (experimental): one adaptive stream with all selected resolutions. **Upload only**: the original file, unchanged.                                                                      |
+| Resolutions   | 240p, 360p, 480p, 720p, 1080p, 1440p and 2160p, but only those at or below the source's short side; videos are never upscaled. For files under 50 MB, the highest available resolution is preselected; otherwise 720p and 480p.            |
+| Codec         | HEVC for every selected resolution except the lowest, which uses H.264, so older devices always have a playable variant. If the browser cannot encode HEVC, all variants use H.264.                                                        |
+| Quality       | **Compact**, **Balanced** (default) or **High motion**: 4.5, 6.75 or 9 Mbps at 1080p and 30 fps, scaled by pixel count for other resolutions. A high-bitrate source can raise the bitrate by up to 1.35× (Balanced) or 1.5× (High motion). |
+| Keep original | For MP4 output, also uploads the source file as one more variant.                                                                                                                                                                          |
 
 Audio is re-encoded at 96 kbps. MP4 output has a keyframe every 2 seconds. HLS output uses fMP4 (CMAF) segments with a 4-second target duration. For an MP4 source with H.264 or HEVC, HLS can include the original resolution as an untouched variant. The encoder prefers hardware acceleration and falls back to software. A conversion fails if the browser cannot keep the audio track, so a video is never silently published without sound.
 

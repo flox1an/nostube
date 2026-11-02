@@ -139,7 +139,8 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
             tags: [['d', nostrIdentifier]],
           }
 
-          await publishPrivate(event)
+          // Background autosave: no visible publication status.
+          await publishPrivate(event, { quiet: true })
 
           // Update last synced content on success
           lastSyncedContentRef.current = contentJson

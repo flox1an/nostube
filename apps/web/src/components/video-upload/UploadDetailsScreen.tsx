@@ -9,7 +9,7 @@ import {
 import { Badge } from '@nostube/widgets/components/badge'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BrowserTranscodeState, SubtitleVariant, TaggedPerson } from '@/types/upload-draft'
-import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
+import type { TranscodeStatus } from '@/hooks/useDvmTranscodeManager'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
 import type { ThumbnailUploadInfo, UploadInfo } from '@/hooks/useVideoUpload'
 import type { SelectedPerson } from '@/components/ui/people-picker'

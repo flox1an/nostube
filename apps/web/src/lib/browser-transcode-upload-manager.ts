@@ -2,14 +2,11 @@ import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
 import {
   DEFAULT_CHUNK_SIZE,
   DEFAULT_MAX_CONCURRENT_CHUNKS,
+  trackBlobActivity,
   uploadAndProcessFile,
+  type BlobActivity,
 } from '@/lib/transcode-upload'
 import type { BrowserTranscodeState, BrowserTranscodeVariantState } from '@/types/upload-draft'
-import {
-  mirrorBlobsToServers,
-  uploadFileToMultipleServersChunked,
-  type ChunkedUploadProgress,
-} from '@/lib/blossom-upload'
 import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
 import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
@@ -39,6 +36,8 @@ export interface BrowserTranscodeUploadJobOptions {
   initialServers: string[]
   mirrorServers: string[]
   signer: Signer
+  /** Enables retrying failed mirrors from the status UI; receives the recovered copies. */
+  onMirrorRetry?: (blobs: BlobDescriptor[]) => void
 }
 
 const activeJobs = new Map<string, AbortController>()
@@ -241,18 +240,15 @@ async function runWithConcurrency<T>(
 async function uploadAndGetUrl(
   file: File,
   initialServers: string[],
-  signer: Signer,
-  onProgress?: (progress: ChunkedUploadProgress) => void,
+  activity: BlobActivity,
   signal?: AbortSignal
 ): Promise<{ url: string; blobs: BlobDescriptor[] }> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
   const uploadFile = normaliseHlsFile(file)
-  const blobs = await uploadFileToMultipleServersChunked({
+  const blobs = await activity.upload({
     file: uploadFile,
     servers: initialServers,
-    signer,
     options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
-    callbacks: { onProgress },
     skipExistenceCheck: true, // HLS files are freshly generated — skip the HEAD round-trip
     signal,
   })
@@ -302,6 +298,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     initialServers,
     mirrorServers,
     signer,
+    onMirrorRetry,
   } = options
 
   if (activeJobs.has(draftId)) {
@@ -323,6 +320,12 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     message: 'Browser transcode queued.',
   })
 
+  // One status entry for the whole job: local transcode, every upload and every mirror.
+  const activity = trackBlobActivity(file.name, signer, {
+    phase: 'preparing',
+    cancel: () => cancelBrowserTranscodeUpload(draftId),
+    onMirrorRetry,
+  })
   const endWork = beginUploadWork()
   try {
     updateBrowserState(draftId, state => ({
@@ -359,6 +362,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               const now = Date.now()
               if (now - lastProgressTime > 500 || progress === 1) {
                 lastProgressTime = now
+                // Synchronous, so a late throttled flush can't overwrite later upload counters.
+                activity.set({ completed: Math.round(progress * 100), total: 100 })
                 throttledUpdateProgress(progress)
               }
             },
@@ -419,6 +424,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       let uploadedBytes = 0
 
       const reportProgress = (filesUploaded: number, label: string) => {
+        activity.set({ completed: filesUploaded })
         const pct =
           totalBytes > 0
             ? Math.round((uploadedBytes / totalBytes) * 100)
@@ -454,6 +460,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           totalChunks: totalFiles,
         },
       }))
+      activity.set({ phase: 'uploading', completed: 0, total: totalFiles, unit: 'files' })
+      // Upload servers stay pending until every HLS file reached them.
+      activity.hold(initialServers)
 
       // Collect all blobs for later deletion support
       const allHlsBlobs: BlobDescriptor[] = []
@@ -612,8 +621,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           const { url, blobs } = await uploadAndGetUrl(
             hlsFile,
             initialServers,
-            signer,
-            undefined,
+            activity,
             controller.signal
           )
           uploadedUrls.set(path, url)
@@ -694,8 +702,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           const { url, blobs } = await uploadAndGetUrl(
             playlistFile,
             initialServers,
-            signer,
-            undefined,
+            activity,
             controller.signal
           )
           uploadedUrls.set(path, url)
@@ -763,14 +770,14 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       const { url: masterUrl, blobs: masterBlobs } = await uploadAndGetUrl(
         finalMaster,
         initialServers,
-        signer,
-        undefined,
+        activity,
         controller.signal
       )
       allHlsBlobs.push(...masterBlobs)
       uploadedBytes += finalMaster.size
       reportProgress(totalFiles, `Uploading master playlist (${totalFiles}/${totalFiles})…`)
 
+      activity.release(initialServers)
       console.log('[BrowserTranscodeUploadManager] HLS master playlist URL:', masterUrl)
 
       // Stage 4: Mirror all HLS blobs to mirror servers
@@ -809,6 +816,13 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
             mirrorProgress: { mirrored: 0, total, percentage: 0 },
           }))
         }
+        activity.set({
+          phase: 'mirroring',
+          completed: 0,
+          total: allHlsBlobs.reduce((sum, blob) => sum + blob.size, 0) * mirrorServers.length,
+          unit: 'bytes',
+        })
+        activity.hold(mirrorServers)
 
         const mirrorResults = await runWithConcurrency(
           allHlsBlobs.map(blob => async () => {
@@ -818,10 +832,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               liveMirrorStatuses[loc.stateIdx][loc.segIdx] = 'mirroring'
               flushMirrorStates()
             }
-            const result = await mirrorBlobsToServers({ mirrorServers, blob, signer })
+            const result = await activity.mirror(blob, mirrorServers, controller.signal)
             mirrored++
             if (loc) {
-              liveMirrorStatuses[loc.stateIdx][loc.segIdx] = 'done'
+              liveMirrorStatuses[loc.stateIdx][loc.segIdx] =
+                result.length === mirrorServers.length ? 'done' : 'error'
               flushMirrorStates()
             }
             updateBrowserState(draftId, state => ({
@@ -837,6 +852,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           4
         )
         hlsMirroredBlobs = mirrorResults.flat()
+        activity.release(mirrorServers)
         updateBrowserState(draftId, state => ({
           ...state,
           mirrorProgress: { mirrored: total, total, percentage: 100 },
@@ -873,6 +889,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       })
     } else if (transcodedFiles instanceof Array) {
       const filesToUpload = keepOriginal ? [...transcodedFiles, file] : transcodedFiles
+      // Job-wide bytes: what earlier files sent plus the current file's live transfer.
+      const jobBytes = filesToUpload.reduce((sum, f) => sum + f.size, 0) * initialServers.length
+      let earlierBytes = 0
       for (const fileToUpload of filesToUpload) {
         const video = await uploadAndProcessFile(
           fileToUpload,
@@ -880,6 +899,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           mirrorServers,
           signer,
           progress => {
+            activity.bytes(earlierBytes + progress.uploadedBytes, jobBytes)
             updateBrowserState(draftId, state => ({
               ...state,
               status: 'uploading',
@@ -887,8 +907,10 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               uploadProgress: progress,
             }))
           },
-          controller.signal
+          controller.signal,
+          activity
         )
+        earlierBytes += fileToUpload.size * initialServers.length
         uploadedVideos.push(video)
       }
     }
@@ -921,8 +943,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       },
       videos
     )
+    activity.finish()
   } catch (error) {
     console.error('[BrowserTranscodeUploadManager] Job failed:', error)
+    // Cancelling removes the status entry; blobs already uploaded stay on the servers.
+    activity.finish(controller.signal.aborted ? new DOMException('Aborted', 'AbortError') : error)
     if (controller.signal.aborted) {
       updateBrowserState(draftId, state => ({
         ...state,

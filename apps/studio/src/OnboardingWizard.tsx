@@ -16,6 +16,7 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import { loadStats, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
 import { Field, Tile } from './fields'
 import { identityChoices, wizardConfig, type Identity } from './onboarding-config'
@@ -137,8 +138,29 @@ export function Onboarding({
         }
       }
       if (profile) {
-        // The own relay: http -> ws, https -> wss.
-        await Promise.allSettled(relays.publish([state.origin.replace(/^http/, 'ws')], profile))
+        // The own relay: http -> ws, https -> wss. A relay that refused fails the setup here
+        // (the relays' own words); finishing again copies it again.
+        const url = state.origin.replace(/^http/, 'ws')
+        await publishRelays({
+          pool: {
+            publish: () =>
+              Promise.all(
+                relays.publish([url], profile).map(answer =>
+                  answer.then(
+                    message => ({ ok: true, from: url, message }),
+                    (error: unknown) => ({
+                      ok: false,
+                      from: url,
+                      message: error instanceof Error ? error.message : String(error),
+                    })
+                  )
+                )
+              ),
+          },
+          event: profile,
+          relays: [url],
+          label: t('studio.overview.kinds.0'),
+        })
       }
       onFinished()
     } catch (e) {

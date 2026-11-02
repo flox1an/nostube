@@ -25,6 +25,19 @@ export interface DeleteBlobsOptions {
   onProgress?: (progress: DeleteBlobsProgress) => void
 }
 
+// ponytail: fixed network bounds; make them per-server settings if slow servers need longer.
+const PROBE_TIMEOUT_MS = 15_000 // HEAD / OPTIONS
+const MIRROR_TIMEOUT_MS = 5 * 60_000 // the server downloads the whole blob before answering
+const TRANSFER_IDLE_TIMEOUT_MS = 2 * 60_000 // PUT: no bytes sent and no response
+// ponytail: PATCH has a whole-request deadline; use streaming idle progress if slow links need it.
+const MIN_CHUNK_RATE = 32 * 1024 // 256 kbit/s, plus the two-minute response allowance
+
+/** Caller cancellation plus a hard deadline; the deadline rejects with a `TimeoutError`. */
+function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeout = AbortSignal.timeout(ms)
+  return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
 /**
  * Custom implementation of blob mirroring without X-SHA-256 header
  * Makes a PUT request to /mirror endpoint with the blob URL to copy
@@ -32,20 +45,13 @@ export interface DeleteBlobsOptions {
 async function customMirrorBlob(
   server: string,
   blob: BlobDescriptor,
-  authToken: string
+  authToken: string,
+  signal?: AbortSignal
 ): Promise<BlobDescriptor> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
   console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
-  console.log(
-    `[MIRROR] Auth token received:`,
-    authToken ? 'YES' : 'NO',
-    'Length:',
-    authToken?.length || 0,
-    'First 50:',
-    authToken?.substring(0, 50) || 'EMPTY'
-  )
 
   const response = await fetch(`${normalizedServer}/mirror`, {
     method: 'PUT',
@@ -54,6 +60,7 @@ async function customMirrorBlob(
       Authorization: `Nostr ${authToken}`,
     },
     body: JSON.stringify({ url: blob.url }),
+    signal: withTimeout(signal, MIRROR_TIMEOUT_MS),
   })
 
   if (!response.ok) {
@@ -68,10 +75,10 @@ async function customMirrorBlob(
 }
 
 /**
- * Outcome of a single server in a `mirrorBlobsToServers` batch. Reported via the
- * optional `onServerSettle` callback so callers (e.g. the mirror dialog) can show
- * live per-server progress and per-cell error messages without re-implementing
- * the upload logic.
+ * Outcome of a single server in a `mirrorBlobsToServers` or
+ * `uploadFileToMultipleServersChunked` batch. Reported via the optional `onServerSettle`
+ * callback so callers (e.g. the mirror dialog, publication status) can show live
+ * per-server progress and per-cell error messages without re-implementing the upload logic.
  */
 export type MirrorServerOutcome =
   | { ok: true; server: string; blob: BlobDescriptor; alreadyExisted: boolean }
@@ -85,6 +92,8 @@ export interface MirrorBlobsToServersOptions {
   onServerStart?: (server: string) => void
   /** Fires exactly once per server with the resolved outcome (success or failure). */
   onServerSettle?: (outcome: MirrorServerOutcome) => void
+  /** Cancels every pending server request; the call then rejects with an `AbortError`. */
+  signal?: AbortSignal
 }
 
 export async function mirrorBlobsToServers({
@@ -93,6 +102,7 @@ export async function mirrorBlobsToServers({
   signer,
   onServerStart,
   onServerSettle,
+  signal,
 }: MirrorBlobsToServersOptions): Promise<BlobDescriptor[]> {
   if (import.meta.env.DEV) console.log('Mirroring blobs to servers', mirrorServers, blob)
 
@@ -106,7 +116,7 @@ export async function mirrorBlobsToServers({
 
       try {
         // Check if file already exists on this server
-        const fileExists = await checkFileExists(server, blob.sha256)
+        const fileExists = await checkFileExists(server, blob.sha256, signal)
         if (fileExists) {
           console.debug(`File already exists on ${server}, skipping mirror`)
           const existing = createMockBlobDescriptor(
@@ -128,7 +138,8 @@ export async function mirrorBlobsToServers({
           extractServerDomain(server)
         )
         const authToken = encodeAuthToken(auth)
-        const uploaded = await customMirrorBlob(server, blob, authToken)
+        const mirrored = await customMirrorBlob(server, blob, authToken, signal)
+        const uploaded = confirmBlob(mirrored, blob.sha256)
         onServerSettle?.({ ok: true, server, blob: uploaded, alreadyExisted: false })
         return uploaded
       } catch (error) {
@@ -139,9 +150,18 @@ export async function mirrorBlobsToServers({
     })
   )
 
+  throwIfAborted(signal)
   return results
     .filter((r): r is PromiseFulfilledResult<BlobDescriptor> => r.status === 'fulfilled')
     .map(r => r.value)
+}
+
+/** A server only holds the blob when its descriptor names the hash we sent. */
+function confirmBlob(blob: BlobDescriptor, sha256: string): BlobDescriptor {
+  if (blob?.sha256 !== sha256) {
+    throw new Error(`Server returned hash ${blob?.sha256 ?? 'none'} instead of ${sha256}`)
+  }
+  return blob
 }
 
 // Chunked upload implementation
@@ -206,7 +226,7 @@ export async function checkFileExists(
     // Try HEAD request with hash as path parameter
     const response = await fetch(`${normalizedServer}/${fileHash}`, {
       method: 'HEAD',
-      signal,
+      signal: withTimeout(signal, PROBE_TIMEOUT_MS),
     })
 
     console.debug(`File existence check for ${normalizedServer}:`, response.status)
@@ -236,6 +256,7 @@ export async function getUploadCapabilities(server: string): Promise<{
   try {
     const response = await fetch(`${normalizedServer}/upload`, {
       method: 'OPTIONS',
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })
 
     console.debug(`Server ${normalizedServer} OPTIONS response status:`, response.status)
@@ -496,7 +517,10 @@ export async function uploadChunk(
       Authorization: `Nostr ${authToken}`,
     },
     body: chunk,
-    signal,
+    signal: withTimeout(
+      signal,
+      TRANSFER_IDLE_TIMEOUT_MS + Math.ceil(chunk.size / MIN_CHUNK_RATE) * 1000
+    ),
   })
 
   if (import.meta.env.DEV) {
@@ -757,12 +781,26 @@ export async function uploadFileChunked(
   }
 }
 
+export interface UploadToServersOptions {
+  file: File
+  servers: string[]
+  signer: Signer
+  options?: ChunkedUploadOptions
+  /** `onProgress` reports bytes accepted across every server still transferring. */
+  callbacks?: ChunkedUploadCallbacks
+  /** Skip the HEAD existence check — use when the file is known to be new (e.g. freshly generated HLS segments). */
+  skipExistenceCheck?: boolean
+  signal?: AbortSignal
+  /** Fires exactly once per server with the resolved outcome (success or failure). */
+  onServerSettle?: (outcome: MirrorServerOutcome) => void
+}
+
 /**
  * Upload file using chunked upload to multiple servers. Counts as active upload work
  * (no automatic reload, screen kept awake) until it settles.
  */
 export async function uploadFileToMultipleServersChunked(
-  args: Parameters<typeof uploadToServersChunked>[0]
+  args: UploadToServersOptions
 ): Promise<BlobDescriptor[]> {
   const endWork = beginUploadWork()
   try {
@@ -780,50 +818,112 @@ async function uploadToServersChunked({
   callbacks = {},
   skipExistenceCheck = false,
   signal,
-}: {
-  file: File
-  servers: string[]
-  signer: Signer
-  options?: ChunkedUploadOptions
-  callbacks?: ChunkedUploadCallbacks
-  /** Skip the HEAD existence check — use when the file is known to be new (e.g. freshly generated HLS segments). */
-  skipExistenceCheck?: boolean
-  signal?: AbortSignal
-}): Promise<BlobDescriptor[]> {
+  onServerSettle,
+}: UploadToServersOptions): Promise<BlobDescriptor[]> {
   // Calculate file hash once for all servers
   const fileHash = await calculateSHA256(file, signal)
   throwIfAborted(signal)
 
+  // Per-server transfer state; servers that already hold the blob or failed are left out,
+  // so the aggregate only counts bytes that still have to (or did) reach a server.
+  const transfers = new Map<string, { bytes: number; chunks: number; totalChunks: number }>()
+  const startTime = Date.now()
+  const reportProgress = () => {
+    if (!callbacks.onProgress) return
+    let uploadedBytes = 0
+    let currentChunk = 0
+    let totalChunks = 0
+    for (const transfer of transfers.values()) {
+      uploadedBytes += transfer.bytes
+      currentChunk += transfer.chunks
+      totalChunks += transfer.totalChunks
+    }
+    const totalBytes = file.size * transfers.size
+    const seconds = (Date.now() - startTime) / 1000
+    callbacks.onProgress({
+      uploadedBytes,
+      totalBytes,
+      percentage: totalBytes > 0 ? Math.round((uploadedBytes / totalBytes) * 100) : 0,
+      currentChunk,
+      totalChunks,
+      speedMBps: seconds > 0 ? uploadedBytes / (1024 * 1024) / seconds : undefined,
+    })
+  }
+  const setTransfer = (server: string, bytes: number, chunks: number, totalChunks: number) => {
+    transfers.set(server, { bytes, chunks, totalChunks })
+    reportProgress()
+  }
+
+  const uploadToServer = async (server: string): Promise<BlobDescriptor> => {
+    if (!skipExistenceCheck) {
+      const fileExists = await checkFileExists(server, fileHash, signal)
+      if (fileExists) {
+        console.debug(`File already exists on ${server}, skipping upload`)
+        return createMockBlobDescriptor(server, fileHash, file.size, file.type)
+      }
+    }
+
+    // Use regular PUT (core Blossom BUD-01/02) by default.
+    // BUD-10 PATCH chunked upload is only attempted for very large files where
+    // resumability is actually useful. Most servers only reliably support PUT.
+    const CHUNKED_THRESHOLD = 100 * 1024 * 1024 // 100 MB
+    const useChunked = file.size > CHUNKED_THRESHOLD
+
+    if (useChunked) {
+      try {
+        console.debug(`File does not exist on ${server}, attempting chunked upload (large file)`)
+        setTransfer(server, 0, 0, 1)
+        const serverCallbacks: ChunkedUploadCallbacks = {
+          onChunkComplete: callbacks.onChunkComplete,
+          onProgress: progress =>
+            setTransfer(
+              server,
+              progress.uploadedBytes,
+              progress.currentChunk,
+              progress.totalChunks
+            ),
+        }
+        return await uploadFileChunked(
+          file,
+          server,
+          signer,
+          options,
+          serverCallbacks,
+          fileHash,
+          signal
+        )
+      } catch (chunkedError) {
+        if (chunkedError instanceof DOMException && chunkedError.name === 'AbortError') {
+          throw chunkedError
+        }
+        console.debug(
+          `Chunked upload failed for ${server}, falling back to regular upload:`,
+          chunkedError
+        )
+      }
+    }
+
+    console.debug(`File does not exist on ${server}, uploading via regular PUT`)
+    setTransfer(server, 0, 0, 1)
+    const blob = await uploadFileToSingleServer(file, server, signer, fileHash, signal, bytes =>
+      setTransfer(server, bytes, 0, 1)
+    )
+    setTransfer(server, file.size, 1, 1)
+    return blob
+  }
+
   const results = await Promise.allSettled(
     servers.map(async server => {
-      if (!skipExistenceCheck) {
-        const fileExists = await checkFileExists(server, fileHash, signal)
-        if (fileExists) {
-          console.debug(`File already exists on ${server}, skipping upload`)
-          return createMockBlobDescriptor(server, fileHash, file.size, file.type)
-        }
+      try {
+        const blob = confirmBlob(await uploadToServer(server), fileHash)
+        onServerSettle?.({ ok: true, server, blob, alreadyExisted: !transfers.has(server) })
+        return blob
+      } catch (error) {
+        if (transfers.delete(server)) reportProgress()
+        const wrapped = error instanceof Error ? error : new Error(String(error))
+        onServerSettle?.({ ok: false, server, error: wrapped })
+        throw error
       }
-
-      // Use regular PUT (core Blossom BUD-01/02) by default.
-      // BUD-10 PATCH chunked upload is only attempted for very large files where
-      // resumability is actually useful. Most servers only reliably support PUT.
-      const CHUNKED_THRESHOLD = 100 * 1024 * 1024 // 100 MB
-      const useChunked = file.size > CHUNKED_THRESHOLD
-
-      if (useChunked) {
-        try {
-          console.debug(`File does not exist on ${server}, attempting chunked upload (large file)`)
-          return await uploadFileChunked(file, server, signer, options, callbacks, fileHash, signal)
-        } catch (chunkedError) {
-          console.debug(
-            `Chunked upload failed for ${server}, falling back to regular upload:`,
-            chunkedError
-          )
-        }
-      }
-
-      console.debug(`File does not exist on ${server}, uploading via regular PUT`)
-      return await uploadFileToSingleServer(file, server, signer, fileHash, signal)
     })
   )
 
@@ -851,14 +951,16 @@ async function uploadToServersChunked({
 
 /**
  * Upload file to a single server (regular upload, not chunked)
- * This is used as a fallback when chunked upload is not supported
+ * This is used as a fallback when chunked upload is not supported.
+ * Uses XMLHttpRequest because fetch exposes no request-body progress.
  */
 async function uploadFileToSingleServer(
   file: File,
   server: string,
   signer: Signer,
   fileHash: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onBytesSent?: (bytes: number) => void
 ): Promise<BlobDescriptor> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
@@ -876,25 +978,62 @@ async function uploadFileToSingleServer(
   const authToken = encodeAuthToken(authEvent)
   throwIfAborted(signal)
 
-  // Upload file
-  const response = await fetch(`${normalizedServer}/upload`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': file.type,
-      'X-SHA-256': fileHash,
-      Authorization: `Nostr ${authToken}`,
-    },
-    body: file,
-    signal,
+  const blobData = await new Promise<BlobDescriptor>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    let idleTimer: ReturnType<typeof setTimeout> | undefined
+    const settle = (error?: Error, blob?: BlobDescriptor) => {
+      clearTimeout(idleTimer)
+      signal?.removeEventListener('abort', onAbort)
+      if (error) reject(error)
+      else resolve(blob!)
+    }
+    const onAbort = () => {
+      xhr.abort()
+      settle(new DOMException('Aborted', 'AbortError'))
+    }
+    // Bounded by inactivity, not total duration: large files on slow links stay alive
+    // while bytes keep flowing.
+    const armIdleTimer = () => {
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        xhr.abort()
+        settle(
+          new DOMException(
+            `No response from ${normalizedServer} for ${TRANSFER_IDLE_TIMEOUT_MS / 1000}s`,
+            'TimeoutError'
+          )
+        )
+      }, TRANSFER_IDLE_TIMEOUT_MS)
+    }
+
+    xhr.open('PUT', `${normalizedServer}/upload`)
+    xhr.setRequestHeader('Content-Type', file.type)
+    xhr.setRequestHeader('X-SHA-256', fileHash)
+    xhr.setRequestHeader('Authorization', `Nostr ${authToken}`)
+    xhr.upload.onprogress = event => {
+      armIdleTimer()
+      onBytesSent?.(event.loaded)
+    }
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        settle(new Error(`Regular upload failed: ${xhr.status} ${xhr.statusText}`))
+        return
+      }
+      try {
+        settle(undefined, JSON.parse(xhr.responseText) as BlobDescriptor)
+      } catch (error) {
+        settle(error instanceof Error ? error : new Error(String(error)))
+      }
+    }
+    // Same message fetch uses for network/CORS failures, so existing handling still matches.
+    xhr.onerror = () => settle(new TypeError('Failed to fetch'))
+    signal?.addEventListener('abort', onAbort, { once: true })
+    armIdleTimer()
+    xhr.send(file)
   })
 
-  if (!response.ok) {
-    throw new Error(`Regular upload failed: ${response.status} ${response.statusText}`)
-  }
-
-  const blobData = await response.json()
   console.log(`[UPLOAD] Regular upload completed successfully to ${normalizedServer}`)
-  return blobData as BlobDescriptor
+  return blobData
 }
 
 /**

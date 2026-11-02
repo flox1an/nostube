@@ -38,6 +38,7 @@ import { useDraftPersistence } from '@/hooks/useDraftPersistence'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks/useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import { nowInSecs } from '@/lib/utils'
 import {
   buildDvmEncryptedContent,
@@ -54,7 +55,8 @@ import {
 } from '@/lib/dvm-transcode-session'
 import { extractBlossomHash } from '@nostube/core/video-event'
 import { getTrackedDvms } from '@/hooks/useDvmTracker'
-import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import { trackBlobActivity } from '@/lib/transcode-upload'
+import i18n from 'i18next' // the instance src/i18n/config initialises
 import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'
 import {
   createBlobPlacement,
@@ -348,102 +350,117 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   // ========== DVM OPERATIONS ==========
 
-  // Mirror transcoded video to user's servers
-  const mirrorTranscodedVideo = useCallback(async (video: VideoVariant): Promise<VideoVariant> => {
-    const currentUser = userRef.current
-    const currentConfig = configRef.current
+  // Copy a finished DVM result to the user's servers. One status entry per DVM job, opened
+  // only here: the remote transcode survives a closed tab, this browser-driven copy does not.
+  const mirrorTranscodedVideo = useCallback(
+    async (taskId: string, video: VideoVariant): Promise<VideoVariant> => {
+      const currentUser = userRef.current
+      const currentConfig = configRef.current
 
-    if (!currentUser) throw new Error('User not logged in')
+      if (!currentUser) throw new Error('User not logged in')
 
-    const uploadServers =
-      currentConfig.blossomServers
-        ?.filter(s => s.tags.includes('initial upload'))
-        .map(s => s.url) || []
-    const mirrorServers =
-      currentConfig.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+      const uploadServers =
+        currentConfig.blossomServers
+          ?.filter(s => s.tags.includes('initial upload'))
+          .map(s => s.url) || []
+      const mirrorServers =
+        currentConfig.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
 
-    if (uploadServers.length === 0 && mirrorServers.length === 0) {
-      return video
-    }
-
-    const { sha256: urlHash } = extractBlossomHash(video.url!)
-    let sha256: string | undefined = urlHash
-    let size: number | undefined
-
-    if (!sha256) {
-      try {
-        const headResponse = await fetch(video.url!, { method: 'HEAD' })
-        sha256 = headResponse.headers.get('x-sha-256') || undefined
-        const contentLength = headResponse.headers.get('content-length')
-        size = contentLength ? parseInt(contentLength, 10) : undefined
-      } catch {
-        // Continue without hash
+      if (uploadServers.length === 0 && mirrorServers.length === 0) {
+        return video
       }
-    } else {
+
+      const signal = jobsRef.current.get(taskId)?.abortController.signal
+      // No retry: the copies reach the draft and the open upload form once, matched by URL.
+      const activity = trackBlobActivity(
+        [tasksRef.current.get(taskId)?.videoTitle, video.qualityLabel ?? video.dimension]
+          .filter(Boolean)
+          .join(' · '),
+        async draft => await currentUser.signer.signEvent(draft),
+        { cancel: () => cancelTask(taskId) }
+      )
+
       try {
-        const headResponse = await fetch(video.url!, { method: 'HEAD' })
-        const contentLength = headResponse.headers.get('content-length')
-        size = contentLength ? parseInt(contentLength, 10) : undefined
-      } catch {
-        size = video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined
-      }
-    }
+        const { sha256: urlHash } = extractBlossomHash(video.url!)
+        let sha256: string | undefined = urlHash
+        let size: number | undefined
+        // Cancel stops the probe too; a slow DVM host must not hold the status open forever.
+        const timeout = AbortSignal.timeout(15_000)
+        const headSignal = signal ? AbortSignal.any([signal, timeout]) : timeout
 
-    if (!sha256) {
-      console.warn('[UploadManager] Could not get SHA256 hash, cannot mirror')
-      return video
-    }
-
-    const sourceBlob: BlobDescriptor = {
-      url: video.url!,
-      sha256,
-      size: size || 0,
-      type: 'video/mp4',
-      uploaded: Date.now(),
-    }
-
-    const updatedVideo = { ...video }
-    const directUrl = video.placement.directUrl ?? video.url
-
-    if (uploadServers.length > 0) {
-      try {
-        const uploadedBlobs = await mirrorBlobsToServers({
-          mirrorServers: uploadServers,
-          blob: sourceBlob,
-          signer: async draft => await currentUser.signer.signEvent(draft),
-        })
-        updatedVideo.uploadedBlobs = uploadedBlobs
-        if (uploadedBlobs.length > 0) {
-          updatedVideo.url = uploadedBlobs[0].url
+        if (!sha256) {
+          try {
+            const headResponse = await fetch(video.url!, { method: 'HEAD', signal: headSignal })
+            sha256 = headResponse.headers.get('x-sha-256') || undefined
+            const contentLength = headResponse.headers.get('content-length')
+            size = contentLength ? parseInt(contentLength, 10) : undefined
+          } catch {
+            signal?.throwIfAborted()
+            // Continue without hash
+          }
+        } else {
+          try {
+            const headResponse = await fetch(video.url!, { method: 'HEAD', signal: headSignal })
+            const contentLength = headResponse.headers.get('content-length')
+            size = contentLength ? parseInt(contentLength, 10) : undefined
+          } catch {
+            signal?.throwIfAborted()
+            size = video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined
+          }
         }
-      } catch (err) {
-        console.warn('[UploadManager] Failed to mirror to upload servers:', err)
-      }
-    }
 
-    if (mirrorServers.length > 0) {
-      try {
-        const mirroredBlobs = await mirrorBlobsToServers({
-          mirrorServers,
-          blob: sourceBlob,
-          signer: async draft => await currentUser.signer.signEvent(draft),
+        if (!sha256) {
+          // The variant keeps the DVM's temporary URL; say so instead of going quiet.
+          activity.finish(new Error(i18n.t('video.mirror.noVideoHash')))
+          return video
+        }
+
+        const sourceBlob: BlobDescriptor = {
+          url: video.url!,
+          sha256,
+          size: size || 0,
+          type: 'video/mp4',
+          uploaded: Date.now(),
+        }
+
+        const updatedVideo = { ...video }
+        const directUrl = video.placement.directUrl ?? video.url
+
+        activity.set(
+          sourceBlob.size > 0
+            ? {
+                phase: 'mirroring',
+                completed: 0,
+                total: sourceBlob.size * (uploadServers.length + mirrorServers.length),
+                unit: 'bytes',
+              }
+            : { phase: 'mirroring' }
+        )
+        // Server failures settle into the activity; only cancellation throws.
+        if (uploadServers.length > 0) {
+          updatedVideo.uploadedBlobs = await activity.mirror(sourceBlob, uploadServers, signal)
+        }
+        if (mirrorServers.length > 0) {
+          updatedVideo.mirroredBlobs = await activity.mirror(sourceBlob, mirrorServers, signal)
+        }
+        activity.finish()
+
+        const candidateBlobs = [...updatedVideo.uploadedBlobs, ...updatedVideo.mirroredBlobs]
+        updatedVideo.placement = createBlobPlacement({
+          primaryBlob: updatedVideo.uploadedBlobs[0] ?? updatedVideo.mirroredBlobs[0],
+          candidateBlobs,
+          directUrl,
         })
-        updatedVideo.mirroredBlobs = mirroredBlobs
-      } catch (err) {
-        console.warn('[UploadManager] Failed to mirror to mirror servers:', err)
+        updatedVideo.url = updatedVideo.placement.primaryBlob?.url ?? directUrl
+
+        return updatedVideo
+      } catch (error) {
+        activity.finish(error)
+        throw error
       }
-    }
-
-    const candidateBlobs = [...updatedVideo.uploadedBlobs, ...updatedVideo.mirroredBlobs]
-    updatedVideo.placement = createBlobPlacement({
-      primaryBlob: updatedVideo.uploadedBlobs[0] ?? updatedVideo.mirroredBlobs[0],
-      candidateBlobs,
-      directUrl,
-    })
-    updatedVideo.url = updatedVideo.placement.primaryBlob?.url ?? directUrl
-
-    return updatedVideo
-  }, [])
+    },
+    [cancelTask]
+  )
 
   /**
    * Process a single resolution transcode.
@@ -558,7 +575,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       }
 
       const signedRequest = await currentUser.signer.signEvent(jobRequest)
-      await relayPool.publish(writeRelays, signedRequest)
+      // Quiet: the upload task tracks the job; no ACK fails instead of waiting for bids.
+      await publishRelays({
+        pool: relayPool,
+        event: signedRequest,
+        relays: writeRelays,
+        quiet: true,
+      })
 
       // Update task state with request ID (use ref to avoid stale closure)
       updateTasksState(taskId, {
@@ -710,7 +733,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         } as TranscodeState,
       })
 
-      const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
+      const mirroredVideo = await mirrorTranscodedVideo(taskId, transcodedResult)
 
       return { ...mirroredVideo, dvmPubkey: selectedDvmPubkey! }
     },
@@ -903,7 +926,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         completeTask(taskId)
         job.onAllComplete?.()
       } catch (err) {
-        if (err instanceof Error && err.message === 'Cancelled') {
+        if (err instanceof Error && (err.message === 'Cancelled' || err.name === 'AbortError')) {
           updateTasksState(taskId, { status: 'cancelled' })
           return
         }
@@ -1008,7 +1031,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               } as TranscodeState,
             })
 
-            const mirroredVideo = await mirrorTranscodedVideo(existingVideo)
+            const mirroredVideo = await mirrorTranscodedVideo(taskId, existingVideo)
             completedResolutions.push(currentResolution)
 
             // DIRECTLY UPDATE DRAFT
@@ -1090,7 +1113,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               },
             })
 
-            const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
+            const mirroredVideo = await mirrorTranscodedVideo(taskId, transcodedResult)
             completedResolutions.push(currentResolution)
 
             // DIRECTLY UPDATE DRAFT
@@ -1160,7 +1183,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         completeTask(taskId)
         job.onAllComplete?.()
       } catch (err) {
-        if (err instanceof Error && err.message === 'Cancelled') {
+        if (err instanceof Error && (err.message === 'Cancelled' || err.name === 'AbortError')) {
           updateTasksState(taskId, { status: 'cancelled' })
           return
         }

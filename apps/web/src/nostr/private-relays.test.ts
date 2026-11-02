@@ -67,12 +67,11 @@ describe('private event publishing', () => {
     })
     const publish = vi
       .fn<RelayPool['publish']>()
-      .mockResolvedValue(PRIVATE_RELAYS.map(from => ({ ok: true, from })))
+      .mockImplementation(async relays => (relays as string[]).map(from => ({ ok: true, from })))
 
     await publishPrivateEvent({ publish }, PRIVATE_RELAYS, event)
 
-    expect(publish).toHaveBeenCalledOnce()
-    expect(publish).toHaveBeenCalledWith(PRIVATE_RELAYS, event)
+    expect(publish.mock.calls).toEqual(PRIVATE_RELAYS.map(url => [[url], event]))
   })
 
   it('never falls back when no private relay is configured', async () => {

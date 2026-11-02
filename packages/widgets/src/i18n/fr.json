@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "Activité de publication",
+    "phase": {
+      "preparing": "Préparation du fichier…",
+      "signing": "En attente de votre signataire…",
+      "uploading": "Envoi des fichiers…",
+      "processing": "En attente de la confirmation du fichier par le serveur…",
+      "mirroring": "Confirmation des copies miroirs…",
+      "publishing": "En attente de la confirmation des relais…",
+      "background": "Publié localement. Les copies se poursuivent sur le serveur."
+    },
+    "result": {
+      "success": "Confirmé",
+      "partial": "Partiellement confirmé — certaines cibles nécessitent votre attention",
+      "failed": "Non confirmé"
+    },
+    "target": {
+      "pending": "En attente",
+      "confirmed": "Confirmé",
+      "failed": "Échec",
+      "timeout": "Aucune confirmation à temps"
+    },
+    "confirmed": "{{done}} cibles sur {{total}} confirmées",
+    "elapsed": "{{seconds}} s écoulées",
+    "files": "{{done}} fichiers sur {{total}}",
+    "slow": "Aucune nouvelle confirmation pour l'instant. Ouvrez les détails pour voir quelles cibles sont encore en attente.",
+    "signerWait": "Vérifiez votre extension ou application de signature : une demande d'approbation vous attend peut-être.",
+    "details": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "dismiss": "Masquer l'état (n'annule pas)",
+    "retry": "Réessayer les cibles en échec",
+    "cancel": "Annuler le travail restant",
+    "copy": "Copier les détails",
+    "copied": "Copié",
+    "copyFailed": "Copie impossible. Sélectionnez et copiez les détails manuellement.",
+    "nextAttempt": "Prochaine tentative : {{time}}",
+    "serverLifetime": "Le serveur continue de travailler si vous fermez cet onglet. Les copies déjà confirmées sont conservées.",
+    "browserLifetime": "Gardez cet onglet ouvert jusqu'à la fin du travail. Masquer cet état ne l'arrête pas ; les données déjà envoyées ne peuvent pas être récupérées.",
+    "backgroundDetails": "Voir l'état de diffusion",
+    "inactive": "Le serveur ne diffuse plus vers cette cible (retirée des paramètres)."
+  },
   "player": {
     "qualityNumber": "Qualité {{number}}",
     "currentQuality": "Actuellement {{quality}}",

@@ -1,12 +1,13 @@
 import type { EventTemplate } from 'nostr-tools'
-import { waitForMirrors } from '../api'
+import { waitForMirrors, type OutboxJob } from '../api'
 import i18n from '../i18n'
 
 /** Every media URL is replaced only after its hash has a confirmed public copy. */
 export async function mirrorMedia(
   template: EventTemplate,
   onProgress: (done: number, total: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onTargets?: (jobs: OutboxJob[]) => void
 ): Promise<EventTemplate> {
   const tags = template.tags.map(tag => [...tag])
   const media: { tag: string[]; index: number; prefix: string; hash: string }[] = []
@@ -29,7 +30,7 @@ export async function mirrorMedia(
   }
   const hashes = [...new Set(media.map(field => field.hash))]
   if (hashes.length === 0) throw new Error(i18n.t('studio.videos.assetMissing'))
-  const urls = await waitForMirrors(hashes, onProgress, signal)
+  const urls = await waitForMirrors(hashes, onProgress, signal, { onTargets })
   signal?.throwIfAborted()
   for (const { tag, index, prefix, hash } of media) {
     if (!urls[hash]) throw new Error(i18n.t('studio.videos.assetMissing'))

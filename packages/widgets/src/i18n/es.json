@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "Actividad de publicación",
+    "phase": {
+      "preparing": "Preparando el archivo…",
+      "signing": "Esperando a tu firmante…",
+      "uploading": "Subiendo archivos…",
+      "processing": "Esperando a que el servidor confirme el archivo…",
+      "mirroring": "Confirmando copias espejo…",
+      "publishing": "Esperando la confirmación de los relés…",
+      "background": "Publicado localmente. Las copias continúan en el servidor."
+    },
+    "result": {
+      "success": "Confirmado",
+      "partial": "Confirmado parcialmente: algunos destinos requieren atención",
+      "failed": "No confirmado"
+    },
+    "target": {
+      "pending": "En espera",
+      "confirmed": "Confirmado",
+      "failed": "Fallido",
+      "timeout": "Sin confirmación a tiempo"
+    },
+    "confirmed": "{{done}} de {{total}} destinos confirmados",
+    "elapsed": "{{seconds}} s transcurridos",
+    "files": "{{done}} de {{total}} archivos",
+    "slow": "Aún no hay nuevas confirmaciones. Abre los detalles para ver qué destinos siguen esperando.",
+    "signerWait": "Revisa tu extensión o aplicación de firma por si hay una solicitud de aprobación.",
+    "details": "Mostrar detalles",
+    "hideDetails": "Ocultar detalles",
+    "dismiss": "Ocultar estado (no cancela)",
+    "retry": "Reintentar destinos fallidos",
+    "cancel": "Cancelar el trabajo restante",
+    "copy": "Copiar detalles",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar. Selecciona y copia los detalles manualmente.",
+    "nextAttempt": "Próximo intento: {{time}}",
+    "serverLifetime": "El servidor sigue trabajando si cierras esta pestaña. Las copias ya confirmadas se conservan.",
+    "browserLifetime": "Mantén esta pestaña abierta hasta que termine el trabajo. Ocultar este estado no lo detiene; los datos ya enviados no se pueden recuperar.",
+    "backgroundDetails": "Ver estado de entrega",
+    "inactive": "El servidor ya no entrega a este destino (eliminado de los ajustes)."
+  },
   "player": {
     "qualityNumber": "Calidad {{number}}",
     "currentQuality": "Actualmente {{quality}}",

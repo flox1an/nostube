@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "公開アクティビティ",
+    "phase": {
+      "preparing": "ファイルを準備中…",
+      "signing": "署名者を待っています…",
+      "uploading": "ファイルをアップロード中…",
+      "processing": "サーバーによるファイルの確認を待っています…",
+      "mirroring": "ミラーコピーを確認中…",
+      "publishing": "リレーの確認を待っています…",
+      "background": "ローカルで公開しました。コピーはサーバーで続行されます。"
+    },
+    "result": {
+      "success": "確認済み",
+      "partial": "一部確認済み — 対応が必要な送信先があります",
+      "failed": "未確認"
+    },
+    "target": {
+      "pending": "待機中",
+      "confirmed": "確認済み",
+      "failed": "失敗",
+      "timeout": "時間内に確認なし"
+    },
+    "confirmed": "{{total}} 件中 {{done}} 件の送信先を確認済み",
+    "elapsed": "{{seconds}} 秒経過",
+    "files": "{{total}} 件中 {{done}} 件のファイル",
+    "slow": "まだ新しい確認はありません。詳細を開くと、待機中の送信先を確認できます。",
+    "signerWait": "署名拡張機能または署名アプリに承認リクエストが届いていないか確認してください。",
+    "details": "詳細を表示",
+    "hideDetails": "詳細を隠す",
+    "dismiss": "ステータスを隠す（キャンセルされません）",
+    "retry": "失敗した送信先を再試行",
+    "cancel": "残りの処理をキャンセル",
+    "copy": "詳細をコピー",
+    "copied": "コピーしました",
+    "copyFailed": "コピーできませんでした。詳細を選択して手動でコピーしてください。",
+    "nextAttempt": "次回の試行：{{time}}",
+    "serverLifetime": "このタブを閉じてもサーバーは処理を続けます。確認済みのコピーは保持されます。",
+    "browserLifetime": "処理が完了するまでこのタブを開いたままにしてください。このステータスを隠しても処理は止まりません。送信済みのデータは取り消せません。",
+    "backgroundDetails": "配信ステータスを表示",
+    "inactive": "サーバーはこの宛先への配信を停止しました（設定から削除済み）。"
+  },
   "player": {
     "qualityNumber": "画質 {{number}}",
     "currentQuality": "現在 {{quality}}",

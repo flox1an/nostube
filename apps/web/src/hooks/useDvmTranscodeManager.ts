@@ -1,8 +1,8 @@
 /**
  * DVM Transcode Manager Hook
  *
- * A thin wrapper around useUploadManager that provides the same API as useDvmTranscode.
- * This allows DvmTranscodeAlert to use the global upload manager for background transcoding.
+ * A thin wrapper around useUploadManager so DvmTranscodeAlert can drive DVM transcodes
+ * through the global upload manager for background transcoding.
  */
 
 import { useCallback, useEffect, useRef } from 'react'
@@ -141,7 +141,7 @@ function mapTaskToProgress(task: UploadTask | undefined): TranscodeProgress {
 }
 
 /**
- * Hook that wraps useUploadManager to provide useDvmTranscode-like API
+ * Hook that wraps useUploadManager to provide a per-draft transcode API
  * for background transcoding that survives navigation.
  */
 export function useDvmTranscodeManager({

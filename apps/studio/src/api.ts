@@ -265,6 +265,7 @@ export interface MediaMirrorConfirmation {
   ready: boolean
   urls: Record<string, string>
   error: string | null
+  jobs?: OutboxJob[]
 }
 
 /** Requests confirmed public copies; missing blobs remain pending, never publication-ready. */
@@ -291,13 +292,19 @@ export async function waitForMirrors(
   hashes: string[],
   onProgress: (done: number, total: number) => void,
   signal?: AbortSignal,
-  { intervalMs = 3000 } = {}
+  {
+    intervalMs = 3000,
+    onTargets,
+  }: { intervalMs?: number; onTargets?: (jobs: OutboxJob[]) => void } = {}
 ): Promise<Record<string, string>> {
   hashes = [...new Set(hashes)]
   for (;;) {
     signal?.throwIfAborted()
-    const { ready, urls, error } = await confirmMediaMirrors(hashes, signal)
-    if (error) throw new Error(i18n.t('studio.errors.mirrorFailed', { reason: error }))
+    const { ready, urls, error, jobs } = await confirmMediaMirrors(hashes, signal)
+    if (jobs) onTargets?.(jobs)
+    if (error && (!jobs || !jobs.some(job => job.status === 'pending' && job.active))) {
+      throw new Error(i18n.t('studio.errors.mirrorFailed', { reason: error }))
+    }
     const done = hashes.filter(hash => urls[hash]).length
     onProgress(done, hashes.length)
     signal?.throwIfAborted()
@@ -429,10 +436,33 @@ export async function loadOutbox(): Promise<OutboxStatus> {
   return (await res.json()) as OutboxStatus
 }
 
-/** Gives failed jobs (of one target, or all) a fresh set of attempts. Answers how many. */
-export async function retryOutbox(target?: string): Promise<number> {
-  return (await postJson<{ retried: number }>('/api/admin/outbox/retry', target ? { target } : {}))
+/** Gives failed jobs (of one target, one event and its media, or all) a fresh set of attempts. Answers how many. */
+export async function retryOutbox(target?: string, eventId?: string): Promise<number> {
+  return (await postJson<{ retried: number }>('/api/admin/outbox/retry', { target, eventId }))
     .retried
+}
+
+/** One outbox job of an event or of a file it references (`GET /api/admin/outbox/event/{id}`). */
+export interface OutboxJob {
+  id: number
+  kind: string
+  target: string
+  ref: string
+  status: 'pending' | 'done' | 'failed'
+  attempts: number
+  lastError: string | null
+  /** Unix seconds. */
+  nextAttemptAt: number | null
+  updatedAt: number
+  /** Pending and still run by the worker: a pending job of a removed target never runs. */
+  active: boolean
+}
+
+export async function loadEventOutbox(eventId: string): Promise<OutboxJob[]> {
+  const res = await fetch(`/api/admin/outbox/event/${eventId}`, { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  const body = (await res.json()) as { jobs: OutboxJob[] }
+  return body.jobs
 }
 
 /** A video held by the server until its due date (`GET /api/admin/schedule`). */

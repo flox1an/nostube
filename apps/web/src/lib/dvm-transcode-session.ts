@@ -3,7 +3,7 @@
  *
  * Encapsulates the Nostr DVM protocol for kind-5207 video transcoding jobs:
  * bid collection, bid approval, result subscription, and query for existing results.
- * Both useDvmTranscode and UploadManagerProvider delegate to this class.
+ * UploadManagerProvider delegates to this class.
  */
 
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
@@ -11,6 +11,7 @@ import type { Filter } from 'nostr-tools'
 import type { Subscription } from 'rxjs'
 import type { RelayPool } from 'applesauce-relay'
 import { nowInSecs } from '@nostube/core/common-utils'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import {
   parseDvmBid,
   parseDvmResultContent,
@@ -186,7 +187,13 @@ export class DVMTranscodeSession {
       dvmPubkey,
       tags: signedApproval.tags,
     })
-    await this.pool.publish(writeRelays, signedApproval)
+    // Quiet: part of the transcode job's own progress; no ACK fails the approval.
+    await publishRelays({
+      pool: this.pool,
+      event: signedApproval,
+      relays: writeRelays,
+      quiet: true,
+    })
     return signedApproval
   }
 

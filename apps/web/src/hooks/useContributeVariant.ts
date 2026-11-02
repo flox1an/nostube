@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EventTemplate } from 'nostr-tools'
-import type { Signer } from '@/lib/blossom-auth'
+import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
 import { loadSourceForContribution } from '@/lib/variant-source'
 import {
   assignMp4ResolutionCodecs,
@@ -10,7 +10,7 @@ import {
   type BrowserTranscodeVariant,
 } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
-import { uploadAndProcessFile } from '@/lib/transcode-upload'
+import { trackBlobActivity, uploadAndProcessFile, type BlobActivity } from '@/lib/transcode-upload'
 import { beginUploadWork } from '@/lib/active-work'
 import type { VideoVariant as UploadedVideoVariant } from '@/lib/video-processing'
 import type { VideoVariant } from '@nostube/core/video-event'
@@ -81,6 +81,19 @@ function progressRowsForVariants(variants: BrowserTranscodeVariant[]): Contribut
   }))
 }
 
+function toContributeResults(variants: UploadedVideoVariant[]): ContributeResult[] {
+  return variants.map(variant => {
+    const blobs = [...variant.uploadedBlobs, ...variant.mirroredBlobs]
+    return {
+      variantLabel: variant.qualityLabel ?? variant.dimension,
+      dimension: variant.dimension,
+      sizeMB: variant.sizeMB ?? 0,
+      sha256: blobs[0]?.sha256 ?? '',
+      serverUrls: blobs.map(blob => blob.url),
+    }
+  })
+}
+
 export function useContributeVariant(): UseContributeVariantReturn {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
@@ -94,10 +107,13 @@ export function useContributeVariant(): UseContributeVariantReturn {
   const [results, setResults] = useState<ContributeResult[]>([])
   const [error, setError] = useState<string | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
+  // The run whose results are on screen; a later mirror retry only updates that run.
+  const runRef = useRef<AbortController | null>(null)
 
   const reset = useCallback(() => {
     controllerRef.current?.abort()
     controllerRef.current = null
+    runRef.current = null
     setStatus('idle')
     setDownloadProgress(null)
     setVariantProgress([])
@@ -126,12 +142,14 @@ export function useContributeVariant(): UseContributeVariantReturn {
 
       const controller = new AbortController()
       controllerRef.current = controller
+      runRef.current = controller
       setError(null)
       setResults([])
       setVariantProgress([])
       setDownloadProgress(null)
 
       const endWork = beginUploadWork()
+      let activity: BlobActivity | undefined
       try {
         setStatus('downloading')
         const { file, meta } = await loadSourceForContribution(
@@ -185,7 +203,49 @@ export function useContributeVariant(): UseContributeVariantReturn {
         setStatus('uploading')
         const signer = (async (draft: EventTemplate) =>
           await user.signer.signEvent(draft)) as Signer
+        const userWriteRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+        const relayHint = params.relayHint || userWriteRelays[0] || ''
+        const publishRelays = getMirrorAnnouncementRelays(
+          userWriteRelays,
+          relayHint ? [relayHint] : []
+        )
+        const announce = (variants: UploadedVideoVariant[]) =>
+          publishMirrorAnnouncements(
+            variants.map(variant =>
+              buildContributedVariantAnnouncement({
+                uploadedBlobs: [...variant.uploadedBlobs, ...variant.mirroredBlobs],
+                variant,
+                videoEvent: params.videoEvent,
+                relayHint,
+              })
+            ),
+            { signEvent: async draft => await user.signer.signEvent(draft) },
+            publishRelays
+          )
         const uploadedVariants: UploadedVideoVariant[] = []
+        // A retried mirror lands after the 1063s went out: attach the recovered copies to
+        // their variant and announce that variant again with every location it now has.
+        const mergeRetriedMirrors = (recovered: BlobDescriptor[]) => {
+          const touched = uploadedVariants.filter(variant => {
+            const added = recovered.filter(
+              blob =>
+                blob.sha256 === variant.uploadedBlobs[0]?.sha256 &&
+                !variant.mirroredBlobs.some(existing => existing.url === blob.url)
+            )
+            variant.mirroredBlobs.push(...added)
+            return added.length > 0
+          })
+          if (touched.length === 0) return
+          if (runRef.current === controller) setResults(toContributeResults(uploadedVariants))
+          void announce(touched)
+        }
+        // One status entry for every transcoded variant of this contribution.
+        activity = trackBlobActivity(file.name, signer, {
+          cancel: () => controller.abort(),
+          onMirrorRetry: mergeRetriedMirrors,
+        })
+        const totalBytes = transcoded.reduce((sum, output) => sum + output.size, 0)
+        let sentBytes = 0
         for (let index = 0; index < transcoded.length; index += 1) {
           const uploaded = await uploadAndProcessFile(
             transcoded[index],
@@ -193,6 +253,7 @@ export function useContributeVariant(): UseContributeVariantReturn {
             params.mirrorServers,
             signer,
             progress => {
+              activity?.bytes(sentBytes + progress.uploadedBytes, totalBytes)
               setVariantProgress(current =>
                 current.map((row, rowIndex) => {
                   if (rowIndex < index) return { ...row, progress: 1, status: 'done' }
@@ -203,47 +264,23 @@ export function useContributeVariant(): UseContributeVariantReturn {
                 })
               )
             },
-            controller.signal
+            controller.signal,
+            activity
           )
+          sentBytes += transcoded[index].size
           uploadedVariants.push(uploaded)
         }
+        activity.finish()
+        activity = undefined
         setVariantProgress(current => current.map(row => ({ ...row, progress: 1, status: 'done' })))
 
         setStatus('publishing')
-        const userWriteRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-        const relayHint = params.relayHint || userWriteRelays[0] || ''
-        const publishRelays = getMirrorAnnouncementRelays(
-          userWriteRelays,
-          relayHint ? [relayHint] : []
-        )
-        const announcements = uploadedVariants.map(variant =>
-          buildContributedVariantAnnouncement({
-            uploadedBlobs: [...variant.uploadedBlobs, ...variant.mirroredBlobs],
-            variant,
-            videoEvent: params.videoEvent,
-            relayHint,
-          })
-        )
-        await publishMirrorAnnouncements(
-          announcements,
-          { signEvent: async draft => await user.signer.signEvent(draft) },
-          publishRelays
-        )
+        await announce(uploadedVariants)
 
-        setResults(
-          uploadedVariants.map(variant => {
-            const blobs = [...variant.uploadedBlobs, ...variant.mirroredBlobs]
-            return {
-              variantLabel: variant.qualityLabel ?? variant.dimension,
-              dimension: variant.dimension,
-              sizeMB: variant.sizeMB ?? 0,
-              sha256: blobs[0]?.sha256 ?? '',
-              serverUrls: blobs.map(blob => blob.url),
-            }
-          })
-        )
+        setResults(toContributeResults(uploadedVariants))
         setStatus('done')
       } catch (err) {
+        activity?.finish(err)
         if (isAbortError(err)) {
           setStatus('cancelled')
           return

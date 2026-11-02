@@ -10,7 +10,10 @@ import {
   useState,
 } from 'react'
 
+import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
+import { beginPublication, updatePublication } from '@nostube/widgets/publication'
+import { publishRelays, PublishRelaysError } from '@nostube/widgets/publish-relays'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -33,12 +36,14 @@ interface PrivateRelaysContextValue {
   canConfigure: boolean
   statuses: Record<string, PrivateRelayStatus>
   configure: (relays: readonly string[]) => Promise<void>
-  publish: (template: EventTemplate) => Promise<Event>
+  /** Visible in the shared publication status unless `quiet` (background saves). */
+  publish: (template: EventTemplate, options?: { quiet?: boolean }) => Promise<Event>
 }
 
 const PrivateRelaysContext = createContext<PrivateRelaysContextValue | undefined>(undefined)
 
 export function PrivateRelaysProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
   const { pool } = useAppContext()
   const { user } = useCurrentUser()
   const { writeRelays } = useUserRelaysContext()
@@ -145,10 +150,8 @@ export function PrivateRelaysProvider({ children }: { children: ReactNode }) {
 
       const normalized = normalizePrivateRelayUrls(nextRelays)
       const event = await createPrivateRelayListEvent(signer, user.pubkey, normalized)
-      const responses = await pool.publish(writeRelays, event)
-      if (!responses.some(response => response.ok)) {
-        throw new Error('The private relay list was rejected by every NIP-65 write relay')
-      }
+      // Quiet: the settings section reports failure itself.
+      await publishRelays({ pool, event, relays: writeRelays, quiet: true })
 
       eventStore.add(event)
       setRelays(normalized)
@@ -158,14 +161,31 @@ export function PrivateRelaysProvider({ children }: { children: ReactNode }) {
   )
 
   const publish = useCallback(
-    async (template: EventTemplate) => {
+    async (template: EventTemplate, { quiet = false }: { quiet?: boolean } = {}) => {
       if (!signer) throw new Error('User is not logged in')
-      const event = await signer.signEvent(template)
-      await publishPrivateEvent(pool, relays, event)
-      eventStore.add(event)
-      return event
+      const activityId = quiet
+        ? undefined
+        : beginPublication({ label: t('upload.publishToRelays'), phase: 'signing' })
+      try {
+        const event = await signer.signEvent(template)
+        // The store also gets it when a later activity retry is the first confirmation.
+        await publishPrivateEvent(pool, relays, event, {
+          activityId,
+          onConfirmed: () => eventStore.add(event),
+        })
+        return event
+      } catch (err) {
+        // Relay outcomes are already on the activity (with retry); report the rest.
+        if (activityId && !(err instanceof PublishRelaysError)) {
+          updatePublication(activityId, {
+            status: 'failed',
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+        throw err
+      }
     },
-    [eventStore, pool, relays, signer]
+    [eventStore, pool, relays, signer, t]
   )
 
   const value = useMemo<PrivateRelaysContextValue>(

@@ -5,9 +5,11 @@
  * Supports Cashu tokens (direct from wallet) and NWC (mint fresh tokens via Lightning).
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@nostube/widgets/components/button'
 import { Loader2, Zap, Wallet, AlertCircle, ExternalLink } from 'lucide-react'
+import { beginPublication, updatePublication } from '@nostube/widgets/publication'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import { Wallet as CashuWallet, getEncodedToken, normalizeProofAmounts } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'
 import { useWalletContext } from '@/contexts/WalletContext'
@@ -15,7 +17,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { relayPool, eventStore } from '@/nostr/core'
 import { nowInSecs } from '@/lib/utils'
 import { type DvmBid } from '@/lib/dvm-utils'
-import type { EventTemplate } from 'nostr-tools'
+import { type Event, type EventTemplate } from 'nostr-tools'
 
 interface DvmPaymentProps {
   bid: DvmBid
@@ -47,6 +49,8 @@ export function DvmPayment({
   const wallet = useWalletContext()
   const [isPaying, setIsPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const payment = useRef<{ template: EventTemplate; signed?: Event } | null>(null)
+  const paying = useRef(false)
 
   const amountSats = msatsToSats(bid.amount)
   // bid.cashu holds the mint URL the DVM accepts payment at
@@ -66,63 +70,88 @@ export function DvmPayment({
   const canPay = canPayCashu || canPayNwc
 
   const handlePay = async () => {
-    if (!user || !mintUrl) return
+    if (!user || !mintUrl || paying.current) return
+    paying.current = true
     setIsPaying(true)
     setError(null)
 
     try {
-      let encodedToken: string
+      let paymentEvent = payment.current?.template
+      if (!paymentEvent) {
+        let encodedToken: string
 
-      if (canPayCashu && wallet.cashuWalletEvent) {
-        // Select proofs from the user's existing Cashu wallet tokens at this mint
-        const tokenEvents = eventStore.getByFilters([
-          { kinds: [WalletHelpers.WALLET_TOKEN_KIND], authors: [user.pubkey] },
-        ])
-        const { proofs } = WalletHelpers.dumbTokenSelection(tokenEvents, amountSats, mintUrl)
-        if (proofs.length === 0) {
-          throw new Error(`Insufficient tokens at mint ${mintUrl}`)
+        if (canPayCashu && wallet.cashuWalletEvent) {
+          // Select proofs from the user's existing Cashu wallet tokens at this mint
+          const tokenEvents = eventStore.getByFilters([
+            { kinds: [WalletHelpers.WALLET_TOKEN_KIND], authors: [user.pubkey] },
+          ])
+          const { proofs } = WalletHelpers.dumbTokenSelection(tokenEvents, amountSats, mintUrl)
+          if (proofs.length === 0) {
+            throw new Error(`Insufficient tokens at mint ${mintUrl}`)
+          }
+          // Encode the selected proofs as a Cashu token string
+          encodedToken = getEncodedToken({ mint: mintUrl, proofs: normalizeProofAmounts(proofs) })
+          // Note: The mint will mark these proofs as spent when the DVM claims them.
+          // The wallet will sync and remove them on next balance refresh.
+        } else if (canPayNwc) {
+          // Mint fresh Cashu tokens by getting a Lightning invoice from the mint and paying via NWC
+          const cashuWallet = new CashuWallet(mintUrl)
+          await cashuWallet.loadMint()
+
+          // Get a BOLT11 mint quote (including its Lightning invoice).
+          const mintQuote = await cashuWallet.createMintQuoteBolt11(amountSats)
+
+          // Pay the Lightning invoice via NWC.
+          await wallet.payInvoice(mintQuote.request)
+
+          // Collect fresh Cashu proofs and encode them for the DVM.
+          const proofs = await cashuWallet.mintProofsBolt11(amountSats, mintQuote)
+          encodedToken = getEncodedToken({ mint: mintUrl, proofs })
+        } else {
+          throw new Error('No compatible wallet available for payment')
         }
-        // Encode the selected proofs as a Cashu token string
-        encodedToken = getEncodedToken({ mint: mintUrl, proofs: normalizeProofAmounts(proofs) })
-        // Note: The mint will mark these proofs as spent when the DVM claims them.
-        // The wallet will sync and remove them on next balance refresh.
-      } else if (canPayNwc) {
-        // Mint fresh Cashu tokens by getting a Lightning invoice from the mint and paying via NWC
-        const cashuWallet = new CashuWallet(mintUrl)
-        await cashuWallet.loadMint()
 
-        // Get a BOLT11 mint quote (including its Lightning invoice).
-        const mintQuote = await cashuWallet.createMintQuoteBolt11(amountSats)
-
-        // Pay the Lightning invoice via NWC.
-        await wallet.payInvoice(mintQuote.request)
-
-        // Collect fresh Cashu proofs and encode them for the DVM.
-        const proofs = await cashuWallet.mintProofsBolt11(amountSats, mintQuote)
-        encodedToken = getEncodedToken({ mint: mintUrl, proofs })
-      } else {
-        throw new Error('No compatible wallet available for payment')
+        // Save the minted proof before requesting a signature: retries must never pay twice.
+        paymentEvent = {
+          kind: 7000,
+          content: '',
+          created_at: nowInSecs(),
+          tags: [
+            ['e', requestEventId],
+            ['p', bid.pubkey],
+            ['status', 'payment-sent'],
+            ['cashu', encodedToken],
+          ],
+        }
+        payment.current = { template: paymentEvent }
       }
-
-      // Publish a kind 7000 payment event to the DVM with the Cashu token
-      const paymentEvent: EventTemplate = {
-        kind: 7000,
-        content: '',
-        created_at: nowInSecs(),
-        tags: [
-          ['e', requestEventId],
-          ['p', bid.pubkey],
-          ['status', 'payment-sent'],
-          ['cashu', encodedToken],
-        ],
-      }
-      const signed = await user.signer.signEvent(paymentEvent)
-      await relayPool.publish(writeRelays, signed)
-
-      onPaid()
+      const activityId = beginPublication({
+        label: `Pay ${amountSats} sats`,
+        phase: payment.current?.signed ? 'publishing' : 'signing',
+      })
+      const signed =
+        payment.current?.signed ??
+        (await user.signer.signEvent(paymentEvent).catch((err: unknown) => {
+          updatePublication(activityId, {
+            status: 'failed',
+            error: err instanceof Error ? err.message : String(err),
+          })
+          throw err
+        }))
+      payment.current = { template: paymentEvent, signed }
+      // The token is spent: a failed relay stays retryable with this same signed event, and
+      // a confirmation on that later retry still completes the payment.
+      await publishRelays({
+        pool: relayPool,
+        event: signed,
+        relays: writeRelays,
+        activityId,
+        onConfirmed: onPaid,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed')
     } finally {
+      paying.current = false
       setIsPaying(false)
     }
   }

@@ -228,6 +228,22 @@ fn now() -> i64 {
     Timestamp::now().as_secs() as i64
 }
 
+/// The jobs the worker runs once due: cleanup, configured targets, explicit durable owner
+/// authorizations, and indexers for event jobs. Indexer restrictions take precedence over mirrors
+/// and explicit authorizations. Binds `targets` mirror targets, then `indexers` indexers.
+fn runnable(targets: usize, indexers: usize) -> String {
+    let (marks, indexer_marks) = (vec!["?"; targets].join(","), vec!["?"; indexers].join(","));
+    format!(
+        "(kind = 'cleanup' OR target IN ({marks})
+           OR id IN (SELECT job FROM outbox_forced) OR (kind = 'event' AND target IN ({indexer_marks})))
+         AND (kind != 'event' OR rtrim(target,'/') NOT IN (SELECT rtrim(target,'/') FROM outbox_indexer)
+           OR EXISTS (SELECT 1 FROM event WHERE event_hash=unhex(outbox.ref_id) AND kind IN (0,10002,10063)))
+         AND (kind != 'event' OR NOT EXISTS (SELECT 1 FROM outbox_explicit e WHERE e.event_id=outbox.ref_id)
+           OR EXISTS (SELECT 1 FROM outbox_explicit e JOIN outbox_event_target t ON t.event_id=e.event_id
+             WHERE e.event_id=outbox.ref_id AND e.ready=1 AND e.canceled=0 AND t.target=outbox.target))"
+    )
+}
+
 /// Delay in seconds after the `attempt`-th failure (1-based): `BACKOFF_BASE·2^(attempt-1)`, at
 /// most `BACKOFF_CAP`, scaled into [½, 1] of that by `jitter` ∈ [0, 1) so that jobs failing
 /// together do not all come back at the same second.
@@ -611,24 +627,100 @@ impl Outbox {
         .await
     }
 
-    /// Cleanup always runs. Outbound jobs run for configured targets or explicit durable owner
-    /// authorizations; manifests also wait for their exact required blob copies.
-    /// Indexer restrictions take precedence over mirrors and explicit authorizations.
-    async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
-        let targets: Vec<String> = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
-        let indexers = self.0.indexers.read().clone();
+    /// For the studio's per-event tracking: the event's own jobs and the blob jobs of the media it
+    /// references now (`media_ref`), with their stored state and error (`canceled` when closed
+    /// without a delivery). `active`: pending, and the worker still runs it (`runnable`); a
+    /// manifest may yet wait for its required blobs.
+    pub async fn event_jobs(&self, event: EventId) -> Result<serde_json::Value, String> {
+        let id = event.to_hex();
+        let (targets, indexers) = self.targets();
         self.db(move |conn| {
-            let marks = vec!["?"; targets.len()].join(",");
-            let indexer_marks = vec!["?"; indexers.len()].join(",");
+            let mut stmt = conn.prepare(&format!(
+                "SELECT id, kind, target, ref_id, status, attempts, last_error, next_attempt_at, updated_at,
+                   status = 'pending' AND {} FROM outbox
+                 WHERE (kind = 'event' AND ref_id = ?)
+                   OR (kind = 'blob' AND ref_id IN (SELECT hash FROM media_ref WHERE event_hash = unhex(?)))
+                 ORDER BY kind = 'blob', target, ref_id",
+                runnable(targets.len(), indexers.len()),
+            ))?;
+            let args = targets.into_iter().chain(indexers).chain([id.clone(), id.clone()]);
+            let jobs = stmt
+                .query_map(params_from_iter(args), |r| {
+                    let status: String = r.get(4)?;
+                    Ok(serde_json::json!({
+                        "id": r.get::<_, i64>(0)?,
+                        "kind": r.get::<_, String>(1)?,
+                        "target": r.get::<_, String>(2)?,
+                        "ref": r.get::<_, String>(3)?,
+                        "attempts": r.get::<_, i64>(5)?,
+                        "lastError": r.get::<_, Option<String>>(6)?,
+                        "nextAttemptAt": (status == "pending").then(|| r.get::<_, i64>(7)).transpose()?,
+                        "updatedAt": r.get::<_, i64>(8)?,
+                        "active": r.get::<_, bool>(9)?,
+                        "status": status,
+                    }))
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(serde_json::json!({ "eventId": id, "jobs": jobs, "lifetime": "server" }))
+        })
+        .await
+    }
+
+    /// Current mirror jobs for the specific files the studio is waiting for.
+    pub async fn media_jobs(&self, hashes: Vec<String>) -> Result<Vec<serde_json::Value>, String> {
+        if hashes.is_empty() { return Ok(vec![]); }
+        let (targets, indexers) = self.targets();
+        self.db(move |conn| {
+            let marks = vec!["?"; hashes.len()].join(",");
+            let mut stmt = conn.prepare(&format!(
+                "SELECT id, kind, target, ref_id, status, attempts, last_error, next_attempt_at, updated_at,
+                   status = 'pending' AND {} FROM outbox WHERE kind='blob' AND ref_id IN ({marks})
+                   ORDER BY target, ref_id", runnable(targets.len(), indexers.len()),
+            ))?;
+            let args = targets.into_iter().chain(indexers).chain(hashes);
+            let jobs = stmt.query_map(params_from_iter(args), |r| {
+                let status: String = r.get(4)?;
+                Ok(serde_json::json!({
+                    "id": r.get::<_, i64>(0)?, "kind": r.get::<_, String>(1)?,
+                    "target": r.get::<_, String>(2)?, "ref": r.get::<_, String>(3)?,
+                    "status": status, "attempts": r.get::<_, i64>(5)?,
+                    "lastError": r.get::<_, Option<String>>(6)?,
+                    "nextAttemptAt": (status == "pending").then(|| r.get::<_, i64>(7)).transpose()?,
+                    "updatedAt": r.get::<_, i64>(8)?, "active": r.get::<_, bool>(9)?,
+                }))
+            })?.collect();
+            jobs
+        }).await
+    }
+
+    /// `retry` limited to one event's failed jobs and the blob jobs of the media it references.
+    pub async fn retry_event(&self, event: EventId, target: Option<String>) -> Result<usize, String> {
+        self.db(move |conn| {
+            conn.execute(
+                "UPDATE outbox SET status = 'pending', attempts = 0, next_attempt_at = ?1, last_error = NULL, updated_at = ?1
+                 WHERE status = 'failed' AND (?2 IS NULL OR target = ?2)
+                   AND ((kind = 'event' AND ref_id = ?3)
+                     OR (kind = 'blob' AND ref_id IN (SELECT hash FROM media_ref WHERE event_hash = unhex(?3))))",
+                params![now(), target, event.to_hex()],
+            )
+        })
+        .await
+    }
+
+    /// Mirror targets, then the current indexers: the arguments of `runnable`'s placeholders.
+    fn targets(&self) -> (Vec<String>, Vec<String>) {
+        let targets = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
+        (targets, self.0.indexers.read().clone())
+    }
+
+    /// Cleanup always runs. Outbound jobs run for configured targets or explicit durable owner
+    /// authorizations (`runnable`); manifests also wait for their exact required blob copies.
+    async fn due(&self, limit: usize) -> Result<Vec<Job>, String> {
+        let (targets, indexers) = self.targets();
+        self.db(move |conn| {
             let mut stmt = conn.prepare(&format!(
                 "SELECT id, kind, target, ref_id, size, source_url, attempts FROM outbox
-                 WHERE status = 'pending' AND next_attempt_at <= ? AND (kind = 'cleanup' OR target IN ({marks})
-                   OR id IN (SELECT job FROM outbox_forced) OR (kind = 'event' AND target IN ({indexer_marks})))
-                 AND (kind != 'event' OR rtrim(target,'/') NOT IN (SELECT rtrim(target,'/') FROM outbox_indexer)
-                   OR EXISTS (SELECT 1 FROM event WHERE event_hash=unhex(outbox.ref_id) AND kind IN (0,10002,10063)))
-                 AND (kind != 'event' OR NOT EXISTS (SELECT 1 FROM outbox_explicit e WHERE e.event_id=outbox.ref_id)
-                   OR EXISTS (SELECT 1 FROM outbox_explicit e JOIN outbox_event_target t ON t.event_id=e.event_id
-                     WHERE e.event_id=outbox.ref_id AND e.ready=1 AND e.canceled=0 AND t.target=outbox.target))
+                 WHERE status = 'pending' AND next_attempt_at <= ? AND {}
                  AND (kind != 'event' OR NOT EXISTS (
                    SELECT 1 FROM outbox_requires r WHERE r.event_id=outbox.ref_id AND NOT EXISTS (
                      SELECT 1 FROM outbox b WHERE b.kind='blob' AND b.ref_id=r.hash AND b.target=r.target
@@ -636,7 +728,8 @@ impl Outbox {
                  AND (kind != 'blob-delete' OR NOT EXISTS (
                    SELECT 1 FROM outbox c JOIN blob_owner b ON b.hash=c.ref_id AND b.author=c.target
                    WHERE c.kind='cleanup' AND c.ref_id=outbox.ref_id AND c.status!='done'))
-                 ORDER BY next_attempt_at, id LIMIT {limit}"
+                 ORDER BY next_attempt_at, id LIMIT {limit}",
+                runnable(targets.len(), indexers.len()),
             ))?;
             let args = std::iter::once(rusqlite::types::Value::from(now()))
                 .chain(targets.into_iter().chain(indexers).map(rusqlite::types::Value::from));

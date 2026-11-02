@@ -8,7 +8,7 @@ import { VideoVariantsTable } from './VideoVariantsTable'
 import { DvmTranscodeAlert } from './DvmTranscodeAlert'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
-import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
+import type { TranscodeStatus } from '@/hooks/useDvmTranscodeManager'
 
 export interface VideoFilesPanelProps {
   draftId: string

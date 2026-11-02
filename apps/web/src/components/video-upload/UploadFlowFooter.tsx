@@ -26,16 +26,16 @@ export function UploadFlowFooter({
   const { t } = useTranslation()
 
   return (
-    <div className="flex items-center justify-between gap-2 pt-4 border-t sticky bottom-0 bg-background md:relative md:bottom-auto px-1 py-2 md:p-0">
+    <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t bg-card py-4 md:relative md:bottom-auto">
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="md:size-auto md:px-3"
+        className="size-11 md:h-10 md:w-auto md:px-3"
         onClick={onBack}
         aria-label={t('common.back', { defaultValue: 'Back' })}
       >
-        <ChevronLeft className="h-4 w-4 md:mr-2" />
+        <ChevronLeft className="h-4 w-4" />
         <span className="hidden md:inline">{t('common.back')}</span>
       </Button>
 
@@ -45,7 +45,7 @@ export function UploadFlowFooter({
             type="button"
             variant="ghost"
             size="icon"
-            className="text-destructive hover:text-destructive"
+            className="size-11 text-destructive hover:text-destructive md:size-10"
             onClick={onDeleteDraft}
             aria-label={t('upload.draft.deleteDraft', { defaultValue: 'Delete draft' })}
           >
@@ -58,11 +58,11 @@ export function UploadFlowFooter({
             type="button"
             variant="secondary"
             size="icon"
-            className="md:size-auto md:px-3"
+            className="size-11 md:h-10 md:w-auto md:px-3"
             onClick={onSaveDraft}
             aria-label={t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
           >
-            <Save className="h-4 w-4 md:mr-2" />
+            <Save className="h-4 w-4" />
             <span className="hidden md:inline">
               {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
             </span>
@@ -70,7 +70,12 @@ export function UploadFlowFooter({
         )}
 
         {showContinue && screen !== 'review' && (
-          <Button type="button" onClick={onContinue} disabled={continueDisabled}>
+          <Button
+            type="button"
+            className="min-h-11 md:min-h-10"
+            onClick={onContinue}
+            disabled={continueDisabled}
+          >
             <span>{t('upload.next', { defaultValue: 'Next' })}</span>
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>

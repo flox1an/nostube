@@ -27,6 +27,7 @@ import { useSigner } from './signer-context'
 import type { InstanceClient } from './instance-client'
 import { VideoEditor } from './VideoEditor'
 import { publishVideoChange } from './upload/publish-video-change'
+import { signAndPublish } from './upload/sign'
 
 /**
  * A video row's actions: View on site, an Edit button and a menu (replace, hide/show on the site,
@@ -63,9 +64,9 @@ export function VideoActions({
       ? { signer, pubkey }
       : null
   const canEdit = author !== null
-  const publish = (template: EventTemplate) => {
+  const publish = (template: EventTemplate, activity: string) => {
     if (!author) throw new Error('authorMismatch')
-    return publishVideoChange(instance, author.signer, author.pubkey, template)
+    return publishVideoChange(instance, author.signer, author.pubkey, template, activity)
   }
 
   const getCurrent = () => {
@@ -99,7 +100,18 @@ export function VideoActions({
     setRunning(true)
     setError(null)
     try {
-      await publish(buildVideoDeletion(getCurrent(), video.pubkey))
+      if (!author) throw new Error('authorMismatch')
+      const { signed } = await signAndPublish(
+        instance.client,
+        instance.config.videoSources,
+        author.signer,
+        buildVideoDeletion(getCurrent(), video.pubkey),
+        author.pubkey,
+        'studio.errors.noRelayAccepted',
+        `${t('studio.videos.delete')}: ${video.title}`
+      )
+      // Only an accepted deletion reaches the local list.
+      instance.client.eventStore.add(signed)
       setConfirming(false)
     } catch (e) {
       showError(e)

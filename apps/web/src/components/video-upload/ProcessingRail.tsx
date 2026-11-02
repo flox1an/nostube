@@ -6,7 +6,7 @@ import { Progress } from '@nostube/widgets/components/progress'
 import { estimateRemainingSeconds, formatEtaSeconds } from '@/lib/transcode-progress'
 import { VideoFilesPanel } from './VideoFilesPanel'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
-import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
+import type { TranscodeStatus } from '@/hooks/useDvmTranscodeManager'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 export interface ProcessingRailProps {

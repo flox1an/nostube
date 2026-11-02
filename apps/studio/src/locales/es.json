@@ -585,6 +585,8 @@
       "description": "Lo que la cola ha copiado a tus servidores de réplica. Los cambios en los destinos se aplican al guardar.",
       "loadFailed": "No se pudo cargar el estado de la réplica.",
       "empty": "Todavía no hay nada en la cola.",
+      "event": "Entrega del evento {{id}}",
+      "eventEmpty": "El servidor no tiene copias que hacer para este evento.",
       "target": "Destino",
       "kind": "Tipo",
       "done": "Hecho",

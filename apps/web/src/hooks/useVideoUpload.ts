@@ -3,11 +3,8 @@ import type { EventTemplate } from 'nostr-tools'
 import { imageFileName } from '@nostube/core/image-encode'
 import { randomUUID } from '@nostube/core/random-uuid'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
-import {
-  mirrorBlobsToServers,
-  deleteBlobsFromServers,
-  type ChunkedUploadProgress,
-} from '@/lib/blossom-upload'
+import { deleteBlobsFromServers, type ChunkedUploadProgress } from '@/lib/blossom-upload'
+import { type BlobActivity, trackBlobActivity } from '@/lib/transcode-upload'
 import { useFileUpload } from './useFileUpload'
 import { type BlobDescriptor, type Signer } from '@/lib/blossom-auth'
 import { nowInSecs } from '@/lib/utils'
@@ -16,6 +13,7 @@ import {
   processOriginalVideoInfo,
   processUploadedVideo,
   processVideoUrl,
+  createBlobPlacement,
   normalizeVideoVariantPlacement,
 } from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
@@ -72,6 +70,7 @@ interface BuildVideoEventParams {
   hasPendingThumbnail?: boolean
   publishAt?: number // Scheduled publish timestamp (seconds), undefined = now
   origins?: string[][][] // External platform references
+  now?: number // Publish-intent time (seconds) for created_at, default published_at, expiration
 }
 
 interface BuildVideoEventResult {
@@ -109,6 +108,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     hasPendingThumbnail = false,
     publishAt,
     origins = [],
+    now = nowInSecs(),
   } = params
 
   const firstVideo = videos[0]
@@ -131,7 +131,6 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
   const getExpirationTimestamp = (): string | null => {
     if (expiration === 'none') return null
 
-    const now = Math.floor(Date.now() / 1000)
     const durations = {
       '1day': 24 * 60 * 60,
       '7days': 7 * 24 * 60 * 60,
@@ -142,14 +141,14 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     return (now + durations[expiration]).toString()
   }
 
-  // created_at is always the current time (when the event is actually published)
-  // published_at carries the user-chosen publish date (or current time if not scheduled)
-  const createdAt = isPreview ? '<generated on publish>' : nowInSecs()
+  // created_at is the publish-intent time (reused when the same intent is retried)
+  // published_at carries the user-chosen publish date (or the intent time if not scheduled)
+  const createdAt = isPreview ? '<generated on publish>' : now
   const publishedAt = isPreview
     ? publishAt
       ? publishAt.toString()
       : '<generated on publish>'
-    : (publishAt ?? nowInSecs()).toString()
+    : (publishAt ?? now).toString()
 
   // Build text-track tags for subtitles
   const textTrackTags: string[][] = subtitles
@@ -250,6 +249,8 @@ export function useVideoUpload(
     sourceMeta: TranscodeSourceMeta
     keepOriginal: boolean
   } | null>(null)
+  // Publish-intent time, reused while the event content stays the same (see handleSubmit).
+  const publishIntentRef = useRef<{ intent: string; now: number } | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
   const [uploadInfo, setUploadInfo] = useState<UploadInfo>(initialUploadInfo)
   const [uploadState, setUploadState] = useState<
@@ -426,16 +427,56 @@ export function useVideoUpload(
     ? async (draft: EventTemplate) => await user.signer.signEvent(draft)
     : undefined
 
+  const uploadSigner = signer || ((async d => d) as unknown as Signer)
   const fileUpload = useFileUpload({
     initialServers: blossomInitalUploadServers?.map(s => s.url) || [],
     mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
-    signer: signer || ((async d => d) as unknown as Signer),
+    signer: uploadSigner,
   })
 
   // Sync fileUpload progress to local state for backwards compatibility
   useEffect(() => {
     setUploadProgress(fileUpload.progress)
   }, [fileUpload.progress])
+
+  // A user-retried mirror lands after the upload already returned: attach the recovered
+  // copies to whichever video, thumbnail or subtitle owns that hash, as the original
+  // mirror result would have been.
+  const mergeRetriedMirrors = useCallback((blobs: BlobDescriptor[]) => {
+    const merge = (owned: BlobDescriptor[], mirrored: BlobDescriptor[]) => {
+      const hashes = new Set(owned.map(blob => blob.sha256))
+      const added = blobs.filter(
+        blob => hashes.has(blob.sha256) && !mirrored.some(existing => existing.url === blob.url)
+      )
+      return added.length > 0 ? [...mirrored, ...added] : mirrored
+    }
+    setUploadInfo(ui => ({
+      videos: ui.videos.map(video => {
+        const mirroredBlobs = merge(video.uploadedBlobs, video.mirroredBlobs)
+        if (mirroredBlobs === video.mirroredBlobs) return video
+        const placement = normalizeVideoVariantPlacement(video).placement
+        return {
+          ...video,
+          mirroredBlobs,
+          placement: createBlobPlacement({
+            primaryBlob: placement.primaryBlob,
+            candidateBlobs: [...video.uploadedBlobs, ...mirroredBlobs],
+            directUrl: placement.directUrl,
+          }),
+        }
+      }),
+    }))
+    setThumbnailUploadInfo(info => ({
+      ...info,
+      mirroredBlobs: merge(info.uploadedBlobs, info.mirroredBlobs),
+    }))
+    setSubtitles(prev =>
+      prev.map(subtitle => ({
+        ...subtitle,
+        mirroredBlobs: merge(subtitle.uploadedBlobs, subtitle.mirroredBlobs),
+      }))
+    )
+  }, [])
 
   const handleUrlVideoProcessing = async (url: string) => {
     if (!url) return
@@ -454,6 +495,10 @@ export function useVideoUpload(
         blossomMirrorServers &&
         blossomMirrorServers.length > 0
       ) {
+        // No retry: a URL video's placement is built from these mirrors once, below.
+        const activity = trackBlobActivity(url, async draft => await user.signer.signEvent(draft), {
+          phase: 'mirroring',
+        })
         try {
           const originalBlob: BlobDescriptor = {
             url: url,
@@ -463,12 +508,13 @@ export function useVideoUpload(
             uploaded: Date.now(),
           }
 
-          mirroredBlobs = await mirrorBlobsToServers({
-            mirrorServers: blossomMirrorServers.map(s => s.url),
-            blob: originalBlob,
-            signer: async draft => await user.signer.signEvent(draft),
-          })
+          mirroredBlobs = await activity.mirror(
+            originalBlob,
+            blossomMirrorServers.map(s => s.url)
+          )
+          activity.finish()
         } catch (error) {
+          activity.finish(error)
           console.error('Failed to mirror Blossom URL:', error)
         }
       }
@@ -491,7 +537,9 @@ export function useVideoUpload(
     if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true })
     try {
-      const result = await fileUpload.upload(acceptedFiles[0])
+      const result = await fileUpload.upload(acceptedFiles[0], {
+        onMirrorRetry: mergeRetriedMirrors,
+      })
       setThumbnailUploadInfo({
         uploadedBlobs: result.uploadedBlobs,
         mirroredBlobs: result.mirroredBlobs,
@@ -687,6 +735,7 @@ export function useVideoUpload(
       initialServers: blossomInitalUploadServers.map(s => s.url),
       mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
       signer,
+      onMirrorRetry: mergeRetriedMirrors,
     })
   }
 
@@ -714,34 +763,55 @@ export function useVideoUpload(
     setUploadProgress(null)
   }
 
-  const uploadFileAndProcess = async (fileToUpload: File): Promise<VideoVariant> => {
-    const result = await fileUpload.upload(fileToUpload)
+  const uploadFileAndProcess = async (
+    fileToUpload: File,
+    activity?: BlobActivity
+  ): Promise<VideoVariant> => {
+    const result = await fileUpload.upload(fileToUpload, {
+      activity,
+      onMirrorRetry: mergeRetriedMirrors,
+    })
     const videoVariant = await processUploadedVideo(fileToUpload, result.uploadedBlobs)
-    return { ...videoVariant, mirroredBlobs: result.mirroredBlobs }
+    return {
+      ...videoVariant,
+      mirroredBlobs: result.mirroredBlobs,
+      placement: createBlobPlacement({
+        primaryBlob: videoVariant.placement.primaryBlob,
+        candidateBlobs: [...result.uploadedBlobs, ...result.mirroredBlobs],
+        directUrl: videoVariant.placement.directUrl,
+      }),
+    }
   }
 
   const handleBrowserTranscodeComplete = async (transcodedFiles: File[] | Map<string, File>) => {
     setUploadState('uploading')
     setUploadProgress(null)
 
+    let activity: BlobActivity | undefined
     try {
       if (!(transcodedFiles instanceof Array)) {
         throw new Error('HLS upload is currently only supported in background mode.')
       }
 
+      // One status entry for all transcoded variants of this source.
+      activity = trackBlobActivity(file?.name ?? transcodedFiles[0]?.name ?? '', uploadSigner, {
+        onMirrorRetry: mergeRetriedMirrors,
+      })
       const variants: VideoVariant[] = []
       for (const transcodedFile of transcodedFiles) {
-        variants.push(await uploadFileAndProcess(transcodedFile))
+        variants.push(await uploadFileAndProcess(transcodedFile, activity))
       }
+      activity.finish()
       setUploadInfo(ui => ({
         videos: browserTranscodeMode === 'append' ? [...ui.videos, ...variants] : variants,
       }))
     } catch (error) {
+      activity?.finish(error)
       console.error('Upload after browser transcode failed:', error)
       setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
       if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
       setUploadProgress(null)
-      showVideoUploadError(error)
+      if (!(error instanceof Error && error.name === 'AbortError')) showVideoUploadError(error)
       return
     }
 
@@ -768,7 +838,7 @@ export function useVideoUpload(
       setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
       if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
       setUploadProgress(null)
-      showVideoUploadError(error)
+      if (!(error instanceof Error && error.name === 'AbortError')) showVideoUploadError(error)
       return
     }
 
@@ -917,7 +987,7 @@ export function useVideoUpload(
 
         try {
           const uploadFile = await prepareSubtitleFile(file)
-          const result = await fileUpload.upload(uploadFile)
+          const result = await fileUpload.upload(uploadFile, { onMirrorRetry: mergeRetriedMirrors })
 
           // Update subtitle with uploaded blobs
           setSubtitles(prev =>
@@ -936,7 +1006,7 @@ export function useVideoUpload(
 
       setSubtitleUploading(false)
     },
-    [blossomInitalUploadServers, user, fileUpload]
+    [blossomInitalUploadServers, user, fileUpload, mergeRetriedMirrors]
   )
 
   // Handler to remove a subtitle
@@ -1022,11 +1092,7 @@ export function useVideoUpload(
           reportProgress(100)
         },
         publish: async () => {
-          const {
-            event,
-            allFallbackUrls: fallbackUrls,
-            primaryVideoUrl: primaryUrl,
-          } = buildVideoEvent({
+          const eventParams: BuildVideoEventParams = {
             videos: uploadInfo.videos,
             title,
             description,
@@ -1044,7 +1110,25 @@ export function useVideoUpload(
             isPreview: false,
             publishAt,
             origins,
-          })
+          }
+          // Publishing the same content again (e.g. retry after relay failures) reuses the
+          // intent time, so the event and its published_at do not change between attempts.
+          const probe = buildVideoEvent(eventParams).event
+          const intent = JSON.stringify([
+            probe.kind,
+            probe.content,
+            probe.tags.filter(([name]) => name !== 'published_at' && name !== 'expiration'),
+            expiration,
+            publishAt,
+          ])
+          if (publishIntentRef.current?.intent !== intent) {
+            publishIntentRef.current = { intent, now: nowInSecs() }
+          }
+          const {
+            event,
+            allFallbackUrls: fallbackUrls,
+            primaryVideoUrl: primaryUrl,
+          } = buildVideoEvent({ ...eventParams, now: publishIntentRef.current.now })
 
           allFallbackUrls = fallbackUrls
           primaryVideoUrl = primaryUrl

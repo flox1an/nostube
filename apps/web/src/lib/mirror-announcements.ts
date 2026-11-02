@@ -9,6 +9,7 @@
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { relayPool } from '@/nostr/core'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import { nowInSecs, buildAdvancedMimeType } from '@nostube/core/common-utils'
 import type { BlossomBlob } from '@/lib/blossom-blob-extractor'
 import type { VideoVariant as ProcessingVideoVariant } from '@/lib/video-processing'
@@ -182,14 +183,14 @@ function getMimeTypeForBlob(blob: BlossomBlob): string {
  *
  * @param announcements - Array of mirror announcement options (one per blob)
  * @param signer - Signer to sign the events
- * @param publishRelays - Relays to publish the 1063 events to
+ * @param relays - Relays to publish the 1063 events to
  */
 export async function publishMirrorAnnouncements(
   announcements: MirrorAnnouncementOptions[],
   signer: MirrorAnnouncementSigner,
-  publishRelays: string[]
+  relays: string[]
 ): Promise<void> {
-  if (announcements.length === 0 || publishRelays.length === 0) {
+  if (announcements.length === 0 || relays.length === 0) {
     return
   }
 
@@ -211,14 +212,15 @@ export async function publishMirrorAnnouncements(
       try {
         const eventTemplate = buildFileMetadataEvent(announcement)
         const signedEvent = await signer.signEvent(eventTemplate)
-        await relayPool.publish(publishRelays, signedEvent)
+        // Quiet: secondary to the mirror; rejects when no relay confirmed.
+        await publishRelays({ pool: relayPool, event: signedEvent, relays, quiet: true })
 
         if (import.meta.env.DEV) {
           console.log(
             '[MirrorAnnouncements] Published 1063 for:',
             announcement.blob.label,
             'to',
-            publishRelays.length,
+            relays.length,
             'relays'
           )
         }
@@ -228,6 +230,7 @@ export async function publishMirrorAnnouncements(
           announcement.blob.label,
           error
         )
+        throw error
       }
     })
   )

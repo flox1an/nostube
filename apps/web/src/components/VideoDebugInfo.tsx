@@ -15,6 +15,7 @@ import { extractBlossomHash } from '@nostube/core/video-event'
 import { useTranslation } from 'react-i18next'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { Button } from '@nostube/widgets/components/button'
+import { publishRelays, PublishRelaysError } from '@nostube/widgets/publish-relays'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -745,18 +746,20 @@ export function VideoDebugInfo({
     setBroadcastStatus('broadcasting')
     setBroadcastResult(null)
 
-    try {
-      const results = await relayPool.publish(selectedBroadcastRelays, videoEvent)
-      const success = results.filter(r => r).length
-      setBroadcastResult({
-        success,
-        failed: selectedBroadcastRelays.length - success,
-        total: selectedBroadcastRelays.length,
-      })
-      setBroadcastStatus('done')
-    } catch {
+    // Quiet: this dialog shows its own per-broadcast result.
+    const results = await publishRelays({
+      pool: relayPool,
+      event: videoEvent,
+      relays: selectedBroadcastRelays,
+      quiet: true,
+    }).catch((err: unknown) => (err instanceof PublishRelaysError ? err.responses : null))
+    if (!results?.length) {
       setBroadcastStatus('error')
+      return
     }
+    const success = results.filter(r => r.ok).length
+    setBroadcastResult({ success, failed: results.length - success, total: results.length })
+    setBroadcastStatus('done')
   }, [videoEvent, selectedBroadcastRelays])
 
   // Deduplicate thumbnails with same URL or hash

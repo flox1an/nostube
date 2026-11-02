@@ -1,4 +1,5 @@
 import { relayPool } from '@/nostr/core'
+import { publishRelays } from '@nostube/widgets/publish-relays'
 import {
   getRetryableEvents,
   deleteById,
@@ -51,7 +52,8 @@ export async function flushPendingViewEvents(
     await markPublishing(pending.id)
 
     try {
-      await relayPool.publish(relays, pending.event)
+      // Quiet background retry: the row is kept until at least one relay confirms.
+      await publishRelays({ pool: relayPool, event: pending.event, relays, quiet: true })
       await deleteById(pending.id)
     } catch (error) {
       await markFailed(pending.id, String(error))

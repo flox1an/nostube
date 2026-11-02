@@ -585,6 +585,8 @@
       "description": "Ce que la file d'attente a copié vers vos serveurs miroirs. Les modifications des cibles s'appliquent après l'enregistrement.",
       "loadFailed": "L'état de la réplication n'a pas pu être chargé.",
       "empty": "Rien n'est encore en file d'attente.",
+      "event": "Diffusion de l'événement {{id}}",
+      "eventEmpty": "Le serveur n'a aucune copie à faire pour cet événement.",
       "target": "Cible",
       "kind": "Type",
       "done": "Terminé",

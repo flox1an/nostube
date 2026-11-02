@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
-import { cancelScheduled, loadSchedule, scheduleVideo, type ScheduledVideo } from './api'
+import { cancelScheduled, loadSchedule, type ScheduledVideo } from './api'
 import { useSigner } from './signer-context'
-import { signChecked } from './upload/sign'
+import { scheduleSigned, signFor } from './upload/sign'
 import { VideoEditor } from './VideoEditor'
 
 /** The server releases due videos about once a minute; the list follows at that pace. */
@@ -101,9 +101,9 @@ export function ScheduledVideos() {
                   getCurrent={() => item.event}
                   replace={false}
                   dueAt={item.dueAt}
-                  publish={async template => {
-                    const signed = await signChecked(signer, template, pubkey)
-                    await scheduleVideo(signed)
+                  publish={async (template, activity) => {
+                    const signed = await signFor(activity, signer, template, pubkey)
+                    await scheduleSigned(activity, signed)
                     return { eventId: signed.id, link: '', accepted: [] }
                   }}
                   onClose={() => {

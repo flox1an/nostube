@@ -1,4 +1,45 @@
 {
+  "publication": {
+    "title": "Publishing activity",
+    "phase": {
+      "signing": "Waiting for your signer…",
+      "preparing": "Preparing the file…",
+      "uploading": "Uploading files…",
+      "processing": "Waiting for the server to confirm the file…",
+      "mirroring": "Confirming mirror copies…",
+      "publishing": "Waiting for relay confirmation…",
+      "background": "Published locally. Copies continue on the server."
+    },
+    "result": {
+      "success": "Confirmed",
+      "partial": "Partly confirmed — some targets need attention",
+      "failed": "Not confirmed"
+    },
+    "target": {
+      "pending": "Waiting",
+      "confirmed": "Confirmed",
+      "failed": "Failed",
+      "timeout": "No confirmation in time"
+    },
+    "confirmed": "{{done}} of {{total}} targets confirmed",
+    "elapsed": "{{seconds}} s elapsed",
+    "files": "{{done}} of {{total}} files",
+    "slow": "No new confirmation yet. Open details to see which targets are still waiting.",
+    "signerWait": "Check your signing extension or signer app for an approval request.",
+    "details": "Show details",
+    "hideDetails": "Hide details",
+    "dismiss": "Hide status (does not cancel)",
+    "retry": "Retry failed targets",
+    "cancel": "Cancel remaining work",
+    "copy": "Copy details",
+    "copied": "Copied",
+    "copyFailed": "Could not copy. Select and copy the details instead.",
+    "nextAttempt": "Next attempt: {{time}}",
+    "serverLifetime": "The server keeps working if you close this tab. Already confirmed copies are kept.",
+    "browserLifetime": "Keep this tab open until the work finishes. Hiding this status does not stop it; already sent data cannot be taken back.",
+    "backgroundDetails": "View delivery status",
+    "inactive": "The server no longer delivers to this target (removed from settings)."
+  },
   "player": {
     "qualityNumber": "Quality {{number}}",
     "currentQuality": "Currently {{quality}}",

@@ -30,6 +30,47 @@ describe('waitForRestart', () => {
 })
 
 describe('confirmed media mirrors', () => {
+  it('reports the server and retry time while waiting for a public copy', async () => {
+    const job = {
+      id: 1,
+      kind: 'blob',
+      target: 'https://slow.example',
+      ref: 'video',
+      status: 'pending',
+      attempts: 1,
+      lastError: '503',
+      nextAttemptAt: 200,
+      updatedAt: 100,
+      active: true,
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ ready: false, urls: {}, error: '503', jobs: [job] }))
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              ready: true,
+              urls: { video: 'https://mirror.example/video' },
+              error: null,
+              jobs: [
+                { ...job, status: 'done', lastError: null, nextAttemptAt: null, active: false },
+              ],
+            })
+          )
+        )
+    )
+    const targets = vi.fn()
+    await expect(
+      waitForMirrors(['video'], () => {}, undefined, { intervalMs: 1, onTargets: targets })
+    ).resolves.toEqual({ video: 'https://mirror.example/video' })
+    expect(targets.mock.calls[0][0]).toEqual([job])
+    expect(targets.mock.calls[1][0][0].status).toBe('done')
+  })
+
   it('does not accept partial URLs or a reply not marked ready', async () => {
     const fetch = vi
       .fn()

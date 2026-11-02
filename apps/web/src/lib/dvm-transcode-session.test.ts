@@ -489,6 +489,7 @@ describe('DVMTranscodeSession.subscribeToDvmResponses', () => {
 describe('DVMTranscodeSession.approveBid', () => {
   it('signs and publishes a kind-7000 approval event to the write relays', async () => {
     const pool = makeMockPool()
+    pool.publish.mockResolvedValue([{ ok: true, from: 'wss://write.relay' }])
     const user = makeMockUser()
     const session = new DVMTranscodeSession(['wss://relay.test'], user, pool as never)
 

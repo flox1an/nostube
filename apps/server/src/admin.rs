@@ -405,6 +405,7 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
         .route("/api/admin/outbox", get(outbox_get))
         .route("/api/admin/outbox/retry", post(outbox_retry))
+        .route("/api/admin/outbox/event/{id}", get(outbox_event))
         .route("/api/admin/nsite", get(nsite_get))
         .route("/api/admin/nsite/publish", post(nsite_publish))
         .route("/api/admin/media/mirrors", post(media_mirrors))
@@ -1075,7 +1076,7 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
     let mut ready = true;
     let mut problem: Option<String> = None;
     let public_servers = cfg.public_mirror().blossom;
-    for hash in put.hashes {
+    for hash in put.hashes.iter().cloned() {
         let Some(metadata) = state.stores.blossom.file_index.get(&hash).await else {
             return json_error(StatusCode::NOT_FOUND, &format!("required output is not on this instance: {hash}"));
         };
@@ -1107,7 +1108,10 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
             }
         }
     }
-    Json(serde_json::json!({ "ready": ready, "urls": urls, "error": problem })).into_response()
+    match state.stores.outbox.media_jobs(put.hashes).await {
+        Ok(jobs) => Json(serde_json::json!({ "ready": ready, "urls": urls, "error": problem, "jobs": jobs })).into_response(),
+        Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
+    }
 }
 
 // ── Storage (#170) ──────────────────────────────────────────────────────────
@@ -1312,24 +1316,51 @@ async fn outbox_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
     }
 }
 
+/// One event's jobs and its media's blob jobs (empty when none are queued).
+async fn outbox_event(
+    State(state): State<Arc<AdminState>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    let Ok(event) = nostr::prelude::EventId::from_hex(&id) else {
+        return json_error(StatusCode::BAD_REQUEST, "invalid event id");
+    };
+    match state.stores.outbox.event_jobs(event).await {
+        Ok(jobs) => Json(jobs).into_response(),
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    }
+}
+
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct RetryBody {
     /// Only this target's failed jobs; all failed jobs when absent.
     #[serde(default)]
     target: Option<String>,
+    /// Only this event's failed jobs and those of the media it references.
+    #[serde(default)]
+    event_id: Option<String>,
 }
 
-/// Failed jobs get a fresh set of attempts, due now. Body `{}` or `{"target": "<url>"}`.
+/// Failed jobs get a fresh set of attempts, due now. Body `{}`, `{"target": "<url>"}`, and/or
+/// `{"eventId": "<hex>"}`.
 async fn outbox_retry(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
-    let RetryBody { target } = match serde_json::from_slice(&body) {
+    let RetryBody { target, event_id } = match serde_json::from_slice(&body) {
         Ok(b) => b,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
     };
-    match state.stores.outbox.retry(target).await {
+    let retried = match event_id.map(|id| nostr::prelude::EventId::from_hex(&id)) {
+        None => state.stores.outbox.retry(target).await,
+        Some(Ok(event)) => state.stores.outbox.retry_event(event, target).await,
+        Some(Err(_)) => return json_error(StatusCode::BAD_REQUEST, "invalid event id"),
+    };
+    match retried {
         Ok(n) => Json(serde_json::json!({ "retried": n })).into_response(),
         Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     }
@@ -2025,6 +2056,8 @@ mod tests {
         let (status, response) = api_call(&app, "POST", path, c, body.clone()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(response["ready"], false);
+        let waiting = response["jobs"].as_array().unwrap();
+        assert!(waiting.iter().any(|job| job["target"] == "https://blossom.example" && job["status"] == "pending" && job["active"] == true));
         outbox.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://home.example'", []).map(|_| ())).await.unwrap();
         let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
         assert_eq!(response["ready"], false, "a local-ca self-copy is not publicly available");
@@ -2042,6 +2075,8 @@ mod tests {
         assert_eq!(response["ready"], true);
         assert!(response["error"].is_null(), "optional mirror failures cannot block confirmed media");
         assert_eq!(response["urls"][&thumbnail], format!("https://blossom.example/{thumbnail}.png"));
+        assert!(response["jobs"].as_array().unwrap().iter().any(|job|
+            job["target"] == "https://optional.example" && job["status"] == "pending" && job["lastError"] == "offline"));
         assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["../secrets"]})).await.0, StatusCode::BAD_REQUEST);
         assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["00".repeat(32)]})).await.0, StatusCode::NOT_FOUND);
         cfg.origin = "https://instance.example".into();
@@ -2531,6 +2566,64 @@ mod tests {
         let (status, _, body) = send(&app, "/api/admin/outbox", c, None).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(body, serde_json::json!({ "relays": [], "blossom": [], "counts": [], "problems": [] }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn event_outbox_shows_and_retries_only_that_event_and_its_media() {
+        let (app, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        let (event, other, gone) = ("e1".repeat(32), "0f".repeat(32), "ab".repeat(32));
+        let (media, unrelated) = ("11".repeat(32), "22".repeat(32));
+        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let seed = format!(
+            "INSERT INTO event (event_hash,created_at,author,kind,content) VALUES (unhex('{event}'),1,zeroblob(32),34235,'{{}}'),(unhex('{other}'),1,zeroblob(32),1,'{{}}');
+             INSERT INTO media_ref VALUES (unhex('{event}'),'{media}'),(unhex('{other}'),'{unrelated}');
+             INSERT INTO outbox (kind,target,ref_id,status,attempts,next_attempt_at,last_error,created_at,updated_at) VALUES
+               ('event','wss://a.example','{event}','failed',24,1,'refused',1,5),
+               ('event','wss://b.example','{event}','done',1,1,'canceled',1,5),
+               ('blob','https://blossom.example','{media}','failed',24,1,'503',1,5),
+               ('blob','https://blossom.example','{unrelated}','failed',24,1,'x',1,5),
+               ('event','wss://a.example','{other}','failed',24,1,'x',1,5),
+               ('cleanup','{PK}','{media}','failed',24,1,'x',1,5),
+               ('event','wss://a.example','{gone}','done',1,1,NULL,1,5),
+               ('blob','https://other.example','{media}','pending',2,99,'timeout',1,5),
+               ('blob','https://removed.example','{media}','pending',3,99,'timeout',1,5);
+             -- An explicit owner authorization keeps a job running without a configured mirror.
+             INSERT INTO outbox_forced VALUES (8);"
+        );
+        outbox.db(move |conn| conn.execute_batch(&seed)).await.unwrap();
+        let path = format!("/api/admin/outbox/event/{event}");
+        assert_eq!(send(&app, &path, None, None).await.0, StatusCode::UNAUTHORIZED);
+        let scoped = format!(r#"{{"eventId":"{event}"}}"#);
+        assert_eq!(send(&app, "/api/admin/outbox/retry", None, Some(&scoped)).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(send(&app, "/api/admin/outbox/event/xyz", c, None).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(r#"{"eventId":"xyz"}"#)).await.0, StatusCode::BAD_REQUEST);
+        let unknown = "cd".repeat(32);
+        let (status, _, body) = send(&app, &format!("/api/admin/outbox/event/{unknown}"), c, None).await;
+        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "eventId": unknown, "jobs": [], "lifetime": "server" })));
+
+        let (status, _, body) = send(&app, &format!("/api/admin/outbox/event/{}", event.to_uppercase()), c, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, serde_json::json!({ "eventId": event, "lifetime": "server", "jobs": [
+            { "id": 1, "kind": "event", "target": "wss://a.example", "ref": event, "status": "failed", "attempts": 24, "lastError": "refused", "nextAttemptAt": null, "updatedAt": 5, "active": false },
+            { "id": 2, "kind": "event", "target": "wss://b.example", "ref": event, "status": "done", "attempts": 1, "lastError": "canceled", "nextAttemptAt": null, "updatedAt": 5, "active": false },
+            { "id": 3, "kind": "blob", "target": "https://blossom.example", "ref": media, "status": "failed", "attempts": 24, "lastError": "503", "nextAttemptAt": null, "updatedAt": 5, "active": false },
+            { "id": 8, "kind": "blob", "target": "https://other.example", "ref": media, "status": "pending", "attempts": 2, "lastError": "timeout", "nextAttemptAt": 99, "updatedAt": 5, "active": true },
+            // Pending for a target no longer configured: the worker never runs it.
+            { "id": 9, "kind": "blob", "target": "https://removed.example", "ref": media, "status": "pending", "attempts": 3, "lastError": "timeout", "nextAttemptAt": 99, "updatedAt": 5, "active": false },
+        ] }));
+        let (_, _, body) = send(&app, &format!("/api/admin/outbox/event/{gone}"), c, None).await;
+        assert_eq!((&body["jobs"][0]["status"], &body["jobs"][0]["lastError"]), (&"done".into(), &serde_json::Value::Null), "stored state, nothing inferred");
+
+        let one_target = format!(r#"{{"eventId":"{event}","target":"https://blossom.example"}}"#);
+        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(&one_target)).await.2, serde_json::json!({ "retried": 1 }));
+        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(&scoped)).await.2, serde_json::json!({ "retried": 1 }));
+        let (_, _, body) = send(&app, &path, c, None).await;
+        assert_eq!((&body["jobs"][0]["status"], body["jobs"][0]["attempts"].as_i64(), &body["jobs"][0]["lastError"]), (&"pending".into(), Some(0), &serde_json::Value::Null));
+        assert_eq!(body["jobs"][2]["status"], "pending");
+        // Another event, unrelated media and cleanup stayed failed until a global retry.
+        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some("{}")).await.2, serde_json::json!({ "retried": 3 }));
         std::fs::remove_dir_all(&dir).ok();
     }
 

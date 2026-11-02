@@ -27,7 +27,7 @@ import { isKeyConnected } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { PageHeader } from './PageHeader'
 import { useSigner } from './signer-context'
-import { publishChecked, signChecked } from './upload/sign'
+import { signAndPublish } from './upload/sign'
 
 /** The comments on the owner's videos, and the owner's mute list that hides some of them on the site. */
 export default function ModerationPage({ state }: { state: AdminState }) {
@@ -243,12 +243,14 @@ function Moderation({ booted, owner }: { booted: InstanceClient; owner: string }
     setBusy(true)
     setError(null)
     try {
-      const signed = await signChecked(signer, next(list), owner)
-      await publishChecked(
+      const { signed } = await signAndPublish(
         client,
         config.interactionRelays,
-        signed,
-        'studio.errors.listNotAccepted'
+        signer,
+        next(list),
+        owner,
+        'studio.errors.listNotAccepted',
+        t('studio.moderation.listOf', { npub: nip19.npubEncode(owner) })
       )
       setLoaded({ ...loaded, list: signed })
     } catch (e) {

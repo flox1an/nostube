@@ -18,6 +18,7 @@ import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { publishRelays } from '@nostube/widgets/publish-relays'
 import { loadStats, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
+import { applyConfig } from './config-session'
 import { Field, Tile } from './fields'
 import { identityChoices, wizardConfig, type Identity } from './onboarding-config'
 import { bytesText } from './OverviewPage'
@@ -128,15 +129,8 @@ export function Onboarding({
               .catch(() => null)
           : null
       if (identity === 'own' || bindLogin) await nostrPost('/admin/bind-nostr', account!)
-      const { restart } = await saveConfig(result.config)
-      if (restart) {
-        setPhase('restarting')
-        // Stalled: say so, but keep waiting; the wizard goes on once the server is back.
-        if (!(await waitForRestart(state.bootId))) {
-          setPhase('stalled')
-          await waitForRestart(state.bootId, { timeoutMs: Infinity })
-        }
-      }
+      // Stalled: the wizard says so and goes on once the server is back.
+      await applyConfig({ saveConfig, waitForRestart }, result.config, state.bootId, setPhase)
       if (profile) {
         // The own relay: http -> ws, https -> wss. A relay that refused fails the setup here
         // (the relays' own words); finishing again copies it again.

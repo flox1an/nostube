@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
@@ -33,15 +33,8 @@ import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
 const ModerationPage = lazy(() => import('./ModerationPage'))
-import {
-  loadAdmin,
-  saveConfig,
-  signOut,
-  waitForRestart,
-  type AdminConfig,
-  type AdminState,
-} from './api'
-import { fromDraft, needsRestart, toDraft, type Draft } from './draft'
+import { loadAdmin, signOut, type AdminState } from './api'
+import { useConfigSession } from './config-session'
 import { PAGES, useRoute } from './route'
 import { SignerProvider, useSigner } from './signer-context'
 
@@ -50,8 +43,6 @@ type Phase =
   | { name: 'login' }
   | { name: 'failed'; message: string }
   | { name: 'ready'; state: AdminState }
-
-type Saving = null | 'saving' | 'restarting' | 'stalled'
 
 export function App() {
   const [phase, setPhase] = useState<Phase>({ name: 'loading' })
@@ -168,18 +159,11 @@ export function Shell({
 function Studio({ state, reload }: { state: AdminState; reload: () => Promise<void> }) {
   const [page, navigate] = useRoute()
   const { t } = useTranslation()
-  // The saved config; hiding a video saves it at once, so it moves on without a reload.
-  const [config, setConfig] = useState(state.config)
-  const [draft, setDraft] = useState<Draft>(() => toDraft(config))
-  const [saving, setSaving] = useState<Saving>(null)
+  const [view, session] = useConfigSession(state)
+  const { saved: config, draft, result, dirty, restart, saving, saveError } = view
+  const update = session.update
   // Branding uploads apply at once; kept here so the page shows them after navigating away.
   const [branding, setBranding] = useState(state.branding)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [pendingHostingChange, setPendingHostingChange] = useState<Partial<Draft> | null>(null)
-  const [deleteNsite, setDeleteNsite] = useState<boolean | undefined>()
-  const saved = useMemo(() => toDraft(config), [config])
-  const result = fromDraft(draft, state.originIsPublic)
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
   const checklist = useChecklist(config, branding)
   const progress = checklist
     ? {
@@ -188,67 +172,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       }
     : undefined
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
-  const restart = result.config !== null && needsRestart(config, result.config)
 
-  const update = (patch: Partial<Draft>) => {
-    if (
-      draft.siteHosting === 'nsite' &&
-      (patch.siteHosting === 'instance' || patch.reach === 'private')
-    ) {
-      setPendingHostingChange({ ...patch, siteHosting: 'instance' })
-      return
-    }
-    if (patch.siteHosting === 'nsite') setDeleteNsite(undefined)
-    setDraft(d => ({ ...d, ...patch }))
-  }
-
-  const finishHostingChange = (remove: boolean) => {
-    setDeleteNsite(remove)
-    setDraft(d => ({ ...d, ...pendingHostingChange }))
-    setPendingHostingChange(null)
-  }
-
-  /** Saves a whole config: the server checks it, keeps the old one and applies it, at once or by
-   * restarting (then we wait for it). */
-  const apply = async (config: AdminConfig) => {
-    setSaveError(null)
-    setSaving('saving')
-    let restart: boolean
-    try {
-      ;({ restart } = await saveConfig(
-        config,
-        state.config.siteHosting === 'nsite' && config.siteHosting === 'instance'
-          ? deleteNsite
-          : undefined
-      ))
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : String(e))
-      setSaving(null)
-      return
-    }
-    // A fresh page: the admin data, the draft and the public config the video list was built
-    // on all come from the new revision (the address, and with it the page, stays).
-    if (!restart) return location.reload()
-    setSaving('restarting')
-    // Stalled: say so, but keep waiting; the page reloads once the server is back.
-    if (!(await waitForRestart(state.bootId))) {
-      setSaving('stalled')
-      await waitForRestart(state.bootId, { timeoutMs: Infinity })
-    }
-    location.reload()
-  }
-
-  const save = () => (result.config ? apply(result.config) : Promise.resolve())
-
-  /** Hiding applies at once: only the hidden list is saved, pending edits elsewhere stay drafts.
-   * The server applies site settings without a restart. */
-  const saveHidden = async (hiddenText: string) => {
-    const hidden = hiddenText.split('\n').filter(Boolean)
-    const next = { ...config, site: { ...config.site, videos: { hidden } } }
-    await saveConfig(next)
-    setConfig(next)
-    setDraft(d => ({ ...d, hiddenText }))
-  }
   // A new page starts at its top; the sidebar keeps saying where we are.
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -296,8 +220,8 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
             {page === 'videos' && (
               <VideosPage
                 hiddenText={draft.hiddenText}
-                onHiddenChange={saveHidden}
-                countPlays={saved.countPlays}
+                onHiddenChange={session.saveHidden}
+                countPlays={view.savedDraft.countPlays}
               />
             )}
             {page === 'upload' && (
@@ -347,7 +271,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
                   <p className="text-sm font-medium">{t('studio.app.unsaved')}</p>
                   <Button
                     type="button"
-                    onClick={save}
+                    onClick={() => void session.save()}
                     disabled={!dirty || !result.config || saving !== null}
                   >
                     {saving === 'saving'
@@ -360,10 +284,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
                     type="button"
                     variant="ghost"
                     disabled={!dirty || saving !== null}
-                    onClick={() => {
-                      setDraft(saved)
-                      setDeleteNsite(undefined)
-                    }}
+                    onClick={session.discard}
                   >
                     {t('studio.app.discard')}
                   </Button>
@@ -380,9 +301,9 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       </div>
 
       <AlertDialog
-        open={pendingHostingChange !== null}
+        open={view.askNsiteDeletion}
         onOpenChange={open => {
-          if (!open) setPendingHostingChange(null)
+          if (!open) session.answerNsiteDeletion(null)
         }}
       >
         <AlertDialogContent>
@@ -392,10 +313,18 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('studio.nsite.cancel')}</AlertDialogCancel>
-            <Button type="button" variant="outline" onClick={() => finishHostingChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => session.answerNsiteDeletion(false)}
+            >
               {t('studio.nsite.keep')}
             </Button>
-            <Button type="button" variant="destructive" onClick={() => finishHostingChange(true)}>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => session.answerNsiteDeletion(true)}
+            >
               {t('studio.nsite.delete')}
             </Button>
           </AlertDialogFooter>

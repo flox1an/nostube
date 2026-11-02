@@ -397,6 +397,7 @@ pub fn router(state: AdminState) -> Router {
         .route("/admin/unbind-nostr", post(unbind_nostr))
         .route("/admin/logout", post(logout))
         .route("/api/admin/config", get(config_get).put(config_put))
+        .route("/api/admin/config/check", post(config_check))
         .route("/api/admin/stats", get(stats_get))
         .route("/api/admin/plays", get(plays_get))
         .route("/api/admin/signer", get(signer_get).post(signer_create))
@@ -913,6 +914,84 @@ pub(crate) fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
     Ok(s.f_bavail as u64 * s.f_frsize as u64)
 }
 
+impl ConfigPut {
+    /// The edit as the config knows it; the S3 body (with its write-only secret) and the nsite
+    /// deletion choice stay with the request.
+    fn into_parts(self) -> (Edited, Option<S3Body>, Option<bool>) {
+        let edited = Edited {
+            title: self.title,
+            reach: self.reach,
+            site_hosting: self.site_hosting,
+            nsite: self.nsite,
+            creators: self.creators,
+            allowed_writers: self.allowed_writers,
+            video_sources: self.video_sources,
+            interaction_relays: self.interaction_relays,
+            profile_relays: self.profile_relays,
+            signer_relays: self.signer_relays,
+            search: self.search,
+            storage: Storage {
+                quota_gib: self.storage.quota_gib,
+                free_space_reserve_gib: self.storage.free_space_reserve_gib,
+                s3: self.storage.s3.as_ref().map(S3Body::config),
+            },
+            site: config::Site {
+                tagline: self.site.tagline,
+                accent: self.site.theme.accent,
+                font: self.site.theme.font,
+                hidden_videos: self.site.videos.hidden,
+                links: config::Links {
+                    profile: self.site.links.profile,
+                    video: self.site.links.video,
+                    note: self.site.links.note,
+                },
+                pages: self.site.pages,
+                lightning: self.site.lightning,
+                count_plays: self.site.count_plays,
+                homepage: config::SiteHomepage {
+                    intro: self.site.homepage.intro,
+                    featured: self.site.homepage.featured,
+                    featured_text: self.site.homepage.featured_text,
+                    selected: self.site.homepage.selected,
+                    links: self.site.homepage.links,
+                    action: self.site.homepage.action,
+                },
+            },
+            mirror: self.mirror,
+        };
+        (edited, self.storage.s3, self.delete_nsite)
+    }
+}
+
+/// What saving this edit would do, without saving it: the config's own refusal, whether the
+/// instance restarts (the rule of `apply`), and whether its mirrors allow public reach. The studio
+/// asks while the owner edits, so the rules live only here.
+async fn config_check(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let put: ConfigPut = match serde_json::from_slice(&body) {
+        Ok(p) => p,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
+    };
+    let current = match Config::load(&state.data.join("config.toml")) {
+        Ok(c) => c,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    let (edited, s3, _) = put.into_parts();
+    let mut eligible = current.clone();
+    eligible.mirror = edited.mirror.clone();
+    let typed_secret = s3.and_then(|s3| s3.secret_access_key).filter(|s| !s.is_empty());
+    let (error, restart) = match current.with_edits(&edited) {
+        Ok(next) => {
+            let stored = state.secrets.lock().unwrap().s3_secret_access_key.clone();
+            (None, current.needs_restart(&next) || typed_secret.is_some_and(|s| Some(s) != stored))
+        }
+        Err(e) => (Some(e.to_string()), false),
+    };
+    Json(serde_json::json!({ "error": error, "restart": restart, "canBePublic": eligible.can_be_public() })).into_response()
+}
+
 /// Saves the edited config: validates everything, keeps `config.prev`, applies it (`restart` in
 /// the answer says whether the instance restarts for it, see `Config::needs_restart`).
 /// The body must be JSON (see `refuse_write`). Origin, TLS and the revision are not editable.
@@ -929,47 +1008,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Ok(c) => c,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     };
-    let edited = Edited {
-        title: put.title,
-        reach: put.reach,
-        site_hosting: put.site_hosting,
-        nsite: put.nsite,
-        creators: put.creators,
-        allowed_writers: put.allowed_writers,
-        video_sources: put.video_sources,
-        interaction_relays: put.interaction_relays,
-        profile_relays: put.profile_relays,
-        signer_relays: put.signer_relays,
-        search: put.search,
-        storage: Storage {
-            quota_gib: put.storage.quota_gib,
-            free_space_reserve_gib: put.storage.free_space_reserve_gib,
-            s3: put.storage.s3.as_ref().map(S3Body::config),
-        },
-        site: config::Site {
-            tagline: put.site.tagline,
-            accent: put.site.theme.accent,
-            font: put.site.theme.font,
-            hidden_videos: put.site.videos.hidden,
-            links: config::Links {
-                profile: put.site.links.profile,
-                video: put.site.links.video,
-                note: put.site.links.note,
-            },
-            pages: put.site.pages,
-            lightning: put.site.lightning,
-            count_plays: put.site.count_plays,
-            homepage: config::SiteHomepage {
-                intro: put.site.homepage.intro,
-                featured: put.site.homepage.featured,
-                featured_text: put.site.homepage.featured_text,
-                selected: put.site.homepage.selected,
-                links: put.site.homepage.links,
-                action: put.site.homepage.action,
-            },
-        },
-        mirror: put.mirror,
-    };
+    let (edited, s3_body, delete_nsite) = put.into_parts();
     // Validate first; nothing is written unless the whole edit checks out (#7).
     let next = match current.with_edits(&edited) {
         Ok(c) => c,
@@ -983,13 +1022,13 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         }
     }
     let disabling = current.site_hosting == config::SiteHosting::Nsite && next.site_hosting != config::SiteHosting::Nsite;
-    if disabling && put.delete_nsite.is_none() {
+    if disabling && delete_nsite.is_none() {
         return json_error(StatusCode::BAD_REQUEST, "choose deleteNsite explicitly: true deletes the nsite, false keeps public copies");
     }
     // S3 preflight (#171): new or changed settings, or a new secret, must pass Almond's probe
     // before anything is written. Unchanged settings save without one, so the rest of the config
     // stays editable while the bucket is unavailable (#173).
-    let s3_secret = match (&next.storage.s3, &put.storage.s3) {
+    let s3_secret = match (&next.storage.s3, &s3_body) {
         (Some(s3), Some(body)) => {
             let secret = match body.secret(&state) {
                 Ok(secret) => secret,
@@ -1010,7 +1049,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
     if disabling {
-        if let Err(error) = state.stores.nsite.disable(put.delete_nsite == Some(true), &state.stores.outbox).await {
+        if let Err(error) = state.stores.nsite.disable(delete_nsite == Some(true), &state.stores.outbox).await {
             return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error);
         }
     }
@@ -1989,6 +2028,35 @@ mod tests {
         let status = res.status();
         let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
         (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
+    #[tokio::test]
+    async fn config_check_answers_what_saving_would_do_without_saving() {
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let c = Some(cookie.as_str());
+        let path = "/api/admin/config/check";
+        let saved = Config::load(&dir.join("config.toml")).unwrap();
+        assert_eq!(api_call(&app, "POST", path, None, put_value("#112233")).await.0, StatusCode::UNAUTHORIZED);
+
+        let mut edit = editable_json(&saved, false);
+        edit["title"] = "Checked".into();
+        let (status, body) = api_call(&app, "POST", path, c, edit.clone()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body, serde_json::json!({ "error": null, "restart": false, "canBePublic": false }));
+
+        edit["storage"]["quotaGib"] = (saved.storage.quota_gib + 1).into();
+        assert_eq!(api_call(&app, "POST", path, c, edit.clone()).await.1["restart"], true);
+
+        // A private origin needs public mirrors for public reach (ADR 0012/0013).
+        edit["reach"] = "public".into();
+        let (_, body) = api_call(&app, "POST", path, c, edit.clone()).await;
+        assert!(body["error"].as_str().unwrap().contains("mirror"), "{body}");
+        assert_eq!(body["canBePublic"], false);
+        edit["mirror"] = serde_json::json!({ "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] });
+        let (_, body) = api_call(&app, "POST", path, c, edit).await;
+        assert_eq!(body, serde_json::json!({ "error": null, "restart": true, "canBePublic": true }));
+
+        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().title, saved.title, "a check saves nothing");
     }
 
     #[tokio::test]

@@ -417,7 +417,6 @@
         "pending": "ausstehend",
         "failed": "fehlgeschlagen"
       },
-      "invalidHost": "Gateway und eigene Domain müssen öffentliche DNS-Hostnamen sein, ohne Protokoll, Port oder Pfad.",
       "deleteTitle": "Das nsite jetzt löschen?",
       "deleteHint": "Beide Optionen schalten nsite-Hosting und Weiterleitung aus. Löschanfragen entfernen das Manifest und ungenutzte Dateien, aber Gateways, Relays und Blossom-Server können Kopien behalten. Löschen ist nicht garantiert.",
       "delete": "Jetzt löschen",

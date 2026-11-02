@@ -160,7 +160,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   const [page, navigate] = useRoute()
   const { t } = useTranslation()
   const [view, session] = useConfigSession(state)
-  const { saved: config, draft, result, dirty, restart, saving, saveError } = view
+  const { saved: config, draft, dirty, restart, saving, saveError } = view
   const update = session.update
   // Branding uploads apply at once; kept here so the page shows them after navigating away.
   const [branding, setBranding] = useState(state.branding)
@@ -243,7 +243,13 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
             {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
             {page === 'features' && <FeaturesPage draft={draft} update={update} />}
             {page === 'distribution' && (
-              <DistributionPage draft={draft} update={update} state={state} dirty={dirty} />
+              <DistributionPage
+                draft={draft}
+                update={update}
+                state={state}
+                dirty={dirty}
+                canBePublic={view.canBePublic}
+              />
             )}
             {page === 'storage' && <StoragePage draft={draft} update={update} state={state} />}
             {page === 'access' && <AccessPage draft={draft} update={update} />}
@@ -260,9 +266,9 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           {editsConfig && (dirty || saving !== null) && (
             <div className="anim-rise sticky bottom-4 z-30">
               <div className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3 pr-4 shadow-lg backdrop-blur-md">
-                {result.errors.length > 0 && (
+                {view.errors.length > 0 && (
                   <ul className="list-disc pl-5 text-sm text-destructive">
-                    {result.errors.map(message => (
+                    {view.errors.map(message => (
                       <li key={message}>{message}</li>
                     ))}
                   </ul>
@@ -272,7 +278,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
                   <Button
                     type="button"
                     onClick={() => void session.save()}
-                    disabled={!dirty || !result.config || saving !== null}
+                    disabled={!dirty || view.errors.length > 0 || saving !== null}
                   >
                     {saving === 'saving'
                       ? t('studio.app.saving')

@@ -417,7 +417,6 @@
         "pending": "pending",
         "failed": "failed"
       },
-      "invalidHost": "Gateway and custom domain must be public DNS hostnames, without scheme, port or path.",
       "deleteTitle": "Delete the nsite now?",
       "deleteHint": "Either choice turns off nsite hosting and its redirect. Deletion requests remove the manifest and unused site files, but gateways, relays and Blossom servers may keep copies. Deletion is not guaranteed.",
       "delete": "Delete now",

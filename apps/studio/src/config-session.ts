@@ -1,6 +1,13 @@
 import { useState, useSyncExternalStore } from 'react'
-import { saveConfig, waitForRestart, type AdminConfig, type AdminState } from './api'
-import { fromDraft, needsRestart, toDraft, type Draft, type DraftResult } from './draft'
+import {
+  checkConfig,
+  saveConfig,
+  waitForRestart,
+  type AdminConfig,
+  type AdminState,
+  type ConfigCheck,
+} from './api'
+import { fromDraft, toDraft, type Draft, type DraftResult } from './draft'
 
 /** What saving talks to: the admin HTTP calls in the studio, a fake in tests. */
 export interface SaveDeps {
@@ -39,11 +46,15 @@ export interface ConfigSessionView {
   saved: AdminConfig
   savedDraft: Draft
   draft: Draft
-  /** The draft as the config it would save, or the reasons it cannot be saved. */
+  /** The draft as the config it would save, or the form's own reasons it cannot be saved. */
   result: DraftResult
+  /** The form's reasons and the server's refusal, if it gave one. */
+  errors: string[]
   dirty: boolean
-  /** Saving the draft restarts the server. */
+  /** Saving the draft restarts the server (the server's answer for the last checked draft). */
   restart: boolean
+  /** The draft's mirror lists allow public reach (the server's answer). */
+  canBePublic: boolean
   saving: null | 'saving' | RestartPhase
   saveError: string | null
   /** An edit that takes the nsite down waits for the owner to keep or delete the published copies. */
@@ -53,25 +64,36 @@ export interface ConfigSessionView {
 interface SessionState {
   saved: AdminConfig
   draft: Draft
+  check: ConfigCheck
   saving: ConfigSessionView['saving']
   saveError: string | null
   pendingHostingChange: Partial<Draft> | null
   deleteNsite: boolean | undefined
 }
 
+/** Typing pauses this long before the server is asked about the draft. */
+const CHECK_DELAY_MS = 300
+
 /**
  * One editing session over the instance config: the saved config and the draft, what saving it
  * would do, the save with its restart wait, and the edits that apply at once (the hidden videos).
  * Turning the nsite off asks first whether to delete the published copies (ADR 0013).
+ * The server answers what saving the draft would do (refusal, restart, public eligibility), so
+ * its rules exist only there; the form keeps its own parse errors for instant feedback.
  */
 export function createConfigSession(
-  admin: Pick<AdminState, 'config' | 'bootId' | 'originIsPublic'>,
-  deps: SaveDeps & { reload: () => void }
+  admin: Pick<AdminState, 'config' | 'bootId' | 'canBePublic'>,
+  deps: SaveDeps & {
+    reload: () => void
+    checkConfig: (config: AdminConfig) => Promise<ConfigCheck>
+  }
 ) {
   const listeners = new Set<() => void>()
+  const savedCheck: ConfigCheck = { error: null, restart: false, canBePublic: admin.canBePublic }
   let state: SessionState = {
     saved: admin.config,
     draft: toDraft(admin.config),
+    check: savedCheck,
     saving: null,
     saveError: null,
     pendingHostingChange: null,
@@ -79,24 +101,46 @@ export function createConfigSession(
   }
   const view = (s: SessionState): ConfigSessionView => {
     const savedDraft = toDraft(s.saved)
-    const result = fromDraft(s.draft, admin.originIsPublic)
+    const result = fromDraft(s.draft)
+    const dirty = JSON.stringify(s.draft) !== JSON.stringify(savedDraft)
     return {
       saved: s.saved,
       savedDraft,
       draft: s.draft,
       result,
-      dirty: JSON.stringify(s.draft) !== JSON.stringify(savedDraft),
-      restart: result.config !== null && needsRestart(s.saved, result.config),
+      errors: s.check.error ? [...result.errors, s.check.error] : result.errors,
+      dirty,
+      restart: dirty && s.check.restart,
+      canBePublic: s.check.canBePublic,
       saving: s.saving,
       saveError: s.saveError,
       askNsiteDeletion: s.pendingHostingChange !== null,
     }
   }
   let snapshot = view(state)
+  // Only the answer for the latest draft may land.
+  let latestCheck = 0
+  let checkTimer: ReturnType<typeof setTimeout> | undefined
   const set = (patch: Partial<SessionState>) => {
     state = { ...state, ...patch }
     snapshot = view(state)
     for (const listener of listeners) listener()
+    if (patch.draft) scheduleCheck()
+  }
+  function scheduleCheck() {
+    clearTimeout(checkTimer)
+    const id = ++latestCheck
+    if (!snapshot.dirty) return set({ check: savedCheck })
+    const { config } = snapshot.result
+    // The form's own errors come first; the last answer stays until the draft parses again.
+    if (!config) return
+    checkTimer = setTimeout(() => {
+      deps.checkConfig(config).then(
+        check => id === latestCheck && set({ check }),
+        // Unanswered: no refusal blocks the save; saving gets the server's word anyway.
+        () => id === latestCheck && set({ check: { ...state.check, error: null } })
+      )
+    }, CHECK_DELAY_MS)
   }
 
   return {
@@ -164,7 +208,7 @@ export function createConfigSession(
 
 export type ConfigSession = ReturnType<typeof createConfigSession>
 
-const studioDeps = { saveConfig, waitForRestart, reload: () => location.reload() }
+const studioDeps = { saveConfig, waitForRestart, checkConfig, reload: () => location.reload() }
 
 /** The session for this studio page, created once from the loaded admin state. */
 export function useConfigSession(admin: AdminState): [ConfigSessionView, ConfigSession] {

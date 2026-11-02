@@ -15,12 +15,10 @@ import {
   fromDraft,
   isKeyConnected,
   isLightningAddress,
-  needsRestart,
   isRefHidden,
   linkPresetOf,
   setRefHidden,
   toDraft,
-  draftCanBePublic,
   type Draft,
 } from './draft'
 
@@ -64,43 +62,6 @@ describe('draft', () => {
     }
     expect(fromDraft(toDraft(hosted)).config).toEqual(hosted)
     expect(fromDraft({ ...toDraft(hosted), reach: 'private' }).config?.siteHosting).toBe('instance')
-    expect(
-      fromDraft({ ...toDraft(hosted), nsiteGateway: 'https://gateway.example/path' }).config
-    ).toBeNull()
-    for (const host of [
-      'gateway.example.',
-      'gateway.123',
-      'gateway.local',
-      '127.0.0.1',
-      'https://gateway.example',
-      'gateway.example:443',
-    ]) {
-      expect(fromDraft({ ...toDraft(hosted), nsiteGateway: host }).config, host).toBeNull()
-    }
-  })
-
-  it('requires publicly reachable draft mirrors for public reach without a public origin', () => {
-    const base = toDraft(config)
-    expect(draftCanBePublic(true, base)).toBe(true)
-    expect(draftCanBePublic(false, base)).toBe(false)
-    const mirrors = {
-      ...base,
-      mirrorRelaysText: 'ws://relay.example',
-      mirrorBlossomText: 'http://blossom.example',
-    }
-    expect(draftCanBePublic(false, mirrors)).toBe(true)
-    expect(fromDraft(mirrors, false).config?.reach).toBe('public')
-    expect(fromDraft({ ...mirrors, mirrorRelaysText: '' }, false).config).toBeNull()
-    expect(fromDraft({ ...mirrors, mirrorBlossomText: '' }, false).config).toBeNull()
-    for (const target of [
-      'https://127.0.0.1',
-      'https://[::1]',
-      'https://home.local',
-      'https://localhost',
-      'https://user@blossom.example',
-    ]) {
-      expect(draftCanBePublic(false, { ...mirrors, mirrorBlossomText: target }), target).toBe(false)
-    }
   })
 
   it('accepts npub keys and pasted video links, and stores hex and video refs', () => {
@@ -217,19 +178,6 @@ describe('draft', () => {
       'x@y.z'
     )
   })
-
-  it('needs a restart only for writers, storage and mirror changes', () => {
-    const edit = (patch: Partial<Draft>) => fromDraft({ ...toDraft(config), ...patch }).config!
-    expect(needsRestart(config, edit({ title: 'New', lightning: '', creatorsText: '' }))).toBe(
-      false
-    )
-    expect(needsRestart(config, edit({ videoSourcesText: 'wss://other.example' }))).toBe(false)
-    expect(needsRestart(config, edit({ writersText: '' }))).toBe(true)
-    expect(needsRestart(config, edit({ quota: '10' }))).toBe(true)
-    expect(needsRestart(config, edit({ reserve: '1' }))).toBe(true)
-    expect(needsRestart(config, edit({ mirrorRelaysText: 'wss://mirror.example' }))).toBe(true)
-    expect(needsRestart(config, edit({ mirrorBlossomText: 'https://b.example' }))).toBe(true)
-  })
 })
 
 describe('S3 storage draft', () => {
@@ -283,15 +231,6 @@ describe('S3 storage draft', () => {
     const result = fromDraft({ ...toDraft(config), ...fresh, ...patch })
     expect(result.config).toBeNull()
     expect(result.errors.join('\n')).toMatch(message)
-  })
-
-  it('restarts for any S3 change, a new secret alone included', () => {
-    const edit = (patch: Partial<Draft>) => fromDraft({ ...toDraft(withS3), ...patch }).config!
-    expect(needsRestart(withS3, edit({}))).toBe(false)
-    expect(needsRestart(config, edit({}))).toBe(true)
-    expect(needsRestart(withS3, edit({ s3Bucket: 'other' }))).toBe(true)
-    expect(needsRestart(withS3, edit({ s3PathStyle: true }))).toBe(true)
-    expect(needsRestart(withS3, edit({ s3Secret: 'new' }))).toBe(true)
   })
 })
 

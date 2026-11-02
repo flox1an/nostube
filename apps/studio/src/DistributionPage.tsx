@@ -8,7 +8,6 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import { loadNsite, type AdminState, type NsiteDelivery, type NsiteStatus } from './api'
 import type { PageProps } from './AppearancePage'
 import { publishNsiteTracked } from './delivery'
-import { draftCanBePublic } from './draft'
 import { FeatureCard, Field } from './fields'
 import { MirrorCard } from './MirrorCard'
 import { PageHeader } from './PageHeader'
@@ -17,8 +16,17 @@ import { useSigner } from './signer-context'
 
 type DistributionProps = PageProps & { state: AdminState; dirty: boolean }
 
-/** Who can find the videos: the reach, the copies on other servers and the nsite. */
-export function DistributionPage({ draft, update, state, dirty }: DistributionProps) {
+/**
+ * Who can find the videos: the reach, the copies on other servers and the nsite. `canBePublic`
+ * is the server's answer for the draft's mirror lists.
+ */
+export function DistributionPage({
+  draft,
+  update,
+  state,
+  dirty,
+  canBePublic,
+}: DistributionProps & { canBePublic: boolean }) {
   const { t } = useTranslation()
   const { mode } = useSigner()
   return (
@@ -35,7 +43,7 @@ export function DistributionPage({ draft, update, state, dirty }: DistributionPr
           <ReachChoice
             reach={draft.reach}
             onChange={reach => update({ reach })}
-            canBePublic={draftCanBePublic(state.originIsPublic, draft)}
+            canBePublic={canBePublic}
             originIsPublic={state.originIsPublic}
             own={mode === 'own'}
           />

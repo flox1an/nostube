@@ -156,70 +156,10 @@ function servers(label: string, text: string, errors: string[]): string[] {
   })
 }
 
-const PUBLIC_DNS =
-  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
-
-/** Matches the server's public-host rule: DNS names, not LAN names or IP addresses. */
-function publicHost(host: string): boolean {
-  const name = host.toLowerCase().replace(/\.$/, '')
-  return (
-    PUBLIC_DNS.test(name) &&
-    !name.endsWith('.local') &&
-    !name.endsWith('.localhost') &&
-    !/\.\d+$/.test(name)
-  )
-}
-
-/** Public eligibility follows the draft, not the server's last saved mirror lists. */
-export function draftCanBePublic(
-  originIsPublic: boolean,
-  draft: Pick<Draft, 'mirrorRelaysText' | 'mirrorBlossomText'>
-): boolean {
-  if (originIsPublic) return true
-  const hasTarget = (text: string, scheme: RegExp) =>
-    toLines(text).some(line => {
-      try {
-        const url = new URL(line)
-        return (
-          scheme.test(url.protocol) &&
-          !url.username &&
-          !url.password &&
-          (url.pathname === '' || url.pathname === '/') &&
-          !url.search &&
-          !url.hash &&
-          publicHost(url.hostname)
-        )
-      } catch {
-        return false
-      }
-    })
-  return (
-    hasTarget(draft.mirrorRelaysText, /^wss?:$/) && hasTarget(draft.mirrorBlossomText, /^https?:$/)
-  )
-}
-
 /** The server's rule: empty, or `local@domain` with a dot in the domain, no whitespace, ≤ 254 bytes. */
 export const isLightningAddress = (value: string) =>
   value === '' ||
   (new TextEncoder().encode(value).length <= 254 && /^[^@\s]+@[^@\s]*\.[^@\s]*$/.test(value))
-
-/** True when saving `next` restarts the server: the fields of `Config::needs_restart` (server `config.rs`). */
-export function needsRestart(saved: AdminConfig, next: AdminConfig): boolean {
-  const same = (a: string[], b: string[]) => a.join('\n') === b.join('\n')
-  // Field by field: the server's key order is not ours. A typed secret alone restarts too.
-  const s3 = (s: S3Config | null) =>
-    JSON.stringify(
-      s && [s.endpoint, s.bucket, s.region, s.forcePathStyle, s.accessKeyId, s.secretAccessKey]
-    )
-  return (
-    !same(saved.allowedWriters, next.allowedWriters) ||
-    saved.storage.quotaGib !== next.storage.quotaGib ||
-    saved.storage.freeSpaceReserveGib !== next.storage.freeSpaceReserveGib ||
-    s3(saved.storage.s3) !== s3(next.storage.s3) ||
-    !same(saved.mirror.relays, next.mirror.relays) ||
-    !same(saved.mirror.blossom, next.mirror.blossom)
-  )
-}
 
 /**
  * The S3 settings as the server takes them (null: this machine), with what is wrong. Saving and
@@ -292,8 +232,11 @@ const HOMEPAGE_ERRORS: Record<keyof SiteHomepage, string> = {
 
 export type DraftResult = { config: AdminConfig; errors: [] } | { config: null; errors: string[] }
 
-/** Checks the draft with the same rules as the server and builds what gets saved. */
-export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
+/**
+ * Parses the form and builds what gets saved. Only the form's own errors are found here (an
+ * entry that is no key, relay or number); the server's rules answer through `checkConfig`.
+ */
+export function fromDraft(d: Draft): DraftResult {
   const errors: string[] = []
   if (!d.title.trim()) errors.push(i18n.t('studio.errors.titleEmpty'))
   const hidden = toLines(d.hiddenText).flatMap(line => {
@@ -363,16 +306,8 @@ export function fromDraft(d: Draft, originIsPublic = true): DraftResult {
   const signerRelays = rootRelays(label('signerRelays'), d.signerRelaysText, errors)
   const mirrorRelays = relays(label('mirrorRelays'), d.mirrorRelaysText, errors)
   const mirrorBlossom = servers(label('mirrorBlossom'), d.mirrorBlossomText, errors)
-  if (d.reach === 'public' && !draftCanBePublic(originIsPublic, d))
-    errors.push(i18n.t('studio.reach.unavailable'))
   const gateway = d.nsiteGateway.trim().toLowerCase()
   const domain = d.nsiteDomain.trim().toLowerCase()
-  if (
-    !PUBLIC_DNS.test(gateway) ||
-    !publicHost(gateway) ||
-    (domain !== '' && (!PUBLIC_DNS.test(domain) || !publicHost(domain)))
-  )
-    errors.push(i18n.t('studio.nsite.invalidHost'))
   const quotaGib = count(label('quota'), d.quota, errors)
   const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
   const { s3, errors: s3Errors } = s3FromDraft(d)

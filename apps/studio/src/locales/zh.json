@@ -415,7 +415,6 @@
         "pending": "等待中",
         "failed": "失败"
       },
-      "invalidHost": "网关和自定义域名必须是公共 DNS 主机名，不含协议、端口或路径。",
       "deleteTitle": "现在删除 nsite 吗？",
       "deleteHint": "两种选择都会关闭 nsite 托管和重定向。删除请求会移除清单和未使用的文件，但网关、中继和 Blossom 服务器可能保留副本。无法保证彻底删除。",
       "delete": "现在删除",

@@ -41,6 +41,30 @@ const state: AdminState = {
   },
 }
 
+/**
+ * The admin API for `admin`. Its config check restarts for a new quota and allows public reach
+ * with a mirror relay and a mirror Blossom server; without them it refuses public reach.
+ */
+const serve = (admin: AdminState) =>
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, options?: RequestInit) => {
+      const json = (body: unknown) => new Response(JSON.stringify(body))
+      if (url === '/api/admin/config') return json(admin)
+      if (url === '/api/admin/signer') return json({ mode: 'managed', pubkey: PK })
+      if (url === '/api/admin/config/check') {
+        const config = JSON.parse(options!.body as string) as AdminState['config']
+        const canBePublic = config.mirror.relays.length > 0 && config.mirror.blossom.length > 0
+        return json({
+          error: config.reach === 'public' && !canBePublic ? 'public reach needs mirrors' : null,
+          restart: config.storage.quotaGib !== admin.config.storage.quotaGib,
+          canBePublic,
+        })
+      }
+      return new Response(null, { status: 404 })
+    })
+  )
+
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
@@ -49,17 +73,8 @@ afterEach(() => {
 })
 
 describe('Studio save bar', () => {
-  it('shows only with edits, and warns of a restart only for restart fields', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) =>
-        url === '/api/admin/config'
-          ? new Response(JSON.stringify(state))
-          : url === '/api/admin/signer'
-            ? new Response(JSON.stringify({ mode: 'managed', pubkey: PK }))
-            : new Response(null, { status: 404 })
-      )
-    )
+  it('shows only with edits, and warns of a restart when the server says so', async () => {
+    serve(state)
     location.hash = '#/appearance'
     render(<App />)
 
@@ -71,80 +86,12 @@ describe('Studio save bar', () => {
 
     location.hash = '#/storage'
     fireEvent.change(await screen.findByLabelText('Quota (GiB)'), { target: { value: '10' } })
-    expect(screen.getByText('Saving restarts the server for a few seconds.')).toBeTruthy()
-  })
-
-  it.each([
-    ['enabling S3', false],
-    ['a new S3 secret alone', true],
-  ])('warns of a restart for %s', async (_name, enabled) => {
-    const s3 = enabled
-      ? {
-          endpoint: 'https://acc.r2.cloudflarestorage.com',
-          bucket: 'videos',
-          region: 'auto',
-          forcePathStyle: false,
-          accessKeyId: 'AKID',
-          secretSet: true,
-        }
-      : null
-    const saved = {
-      ...state,
-      config: { ...state.config, storage: { ...state.config.storage, s3 } },
-    }
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) =>
-        url === '/api/admin/config'
-          ? new Response(JSON.stringify(saved))
-          : url === '/api/admin/signer'
-            ? new Response(JSON.stringify({ mode: 'managed', pubkey: PK }))
-            : new Response(null, { status: 404 })
-      )
-    )
-    location.hash = '#/storage'
-    render(<App />)
-    await screen.findByLabelText('Quota (GiB)')
-    const type = (label: string, value: string) =>
-      fireEvent.change(screen.getByLabelText(label), { target: { value } })
-    if (!enabled) {
-      fireEvent.click(screen.getByRole('button', { name: /^S3-compatible storage/ }))
-      type('Endpoint', 'https://s3.example')
-      type('Bucket', 'videos')
-      type('Access key ID', 'AKID')
-    }
-    expect(screen.queryByText(/restarts the server/)).toBeNull()
-    type('Secret access key', 'shh')
-    expect(screen.getByText('Saving restarts the server for a few seconds.')).toBeTruthy()
+    expect(await screen.findByText('Saving restarts the server for a few seconds.')).toBeTruthy()
   })
 
   it('allows public S2 reach from unsaved mirror lists and blocks removing the last mirror', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        if (url === '/api/admin/config')
-          return new Response(
-            JSON.stringify({ ...state, originIsPublic: false, canBePublic: false })
-          )
-        if (url === '/api/admin/signer')
-          return new Response(JSON.stringify({ mode: 'managed', pubkey: PK }))
-        if (url === '/api/admin/nsite')
-          return new Response(
-            JSON.stringify({
-              status: 'disabled',
-              url: null,
-              aggregate: null,
-              publishedAt: null,
-              error: null,
-              retained: false,
-              relays: [],
-              servers: [],
-            })
-          )
-        return new Response(null, { status: 404 })
-      })
-    )
+    serve({ ...state, originIsPublic: false, canBePublic: false })
     location.hash = '#/distribution'
     render(<App />)
     fireEvent.click(await screen.findByRole('switch', { name: 'Mirror to other servers' }))
@@ -155,20 +102,16 @@ describe('Studio save bar', () => {
       target: { value: 'https://blossom.example' },
     })
     const publicTile = screen.getByRole('button', { name: /^Public/ }) as HTMLButtonElement
-    expect(publicTile.disabled).toBe(false)
+    await waitFor(() => expect(publicTile.disabled).toBe(false))
     fireEvent.click(publicTile)
-    await waitFor(() =>
-      expect(
-        (screen.getByRole('switch', { name: 'Publish as nsite' }) as HTMLButtonElement).disabled
-      ).toBe(false)
-    )
     fireEvent.change(screen.getByLabelText('Mirror Blossom servers'), {
       target: { value: '' },
     })
+    // The server's refusal reaches the save bar and blocks saving; the reach card says why.
+    expect(await screen.findByText('public reach needs mirrors')).toBeTruthy()
     expect(
       (screen.getByRole('button', { name: 'Save and apply' }) as HTMLButtonElement).disabled
     ).toBe(true)
-    // The reach card and the save bar both give the reason.
-    expect(screen.getAllByText(/^Public needs a public origin, or mirroring/)).toHaveLength(2)
+    expect(screen.getByText(/^Public needs a public origin, or mirroring/)).toBeTruthy()
   })
 })

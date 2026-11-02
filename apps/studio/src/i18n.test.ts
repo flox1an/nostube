@@ -81,7 +81,6 @@ describe('studio translations', () => {
       'studio.nsite.version',
       'studio.nsite.publishedAt',
       'studio.nsite.retained',
-      'studio.nsite.invalidHost',
       'studio.nsite.deleteTitle',
       'studio.nsite.deleteHint',
       'studio.nsite.delete',

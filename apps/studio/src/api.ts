@@ -178,6 +178,18 @@ export async function saveConfig(
   return (await res.json()) as { revision: number; restart: boolean }
 }
 
+/** What saving `config` would do, answered by the server's own rules; saves nothing. */
+export interface ConfigCheck {
+  /** The server's refusal, or null when it would save. */
+  error: string | null
+  restart: boolean
+  /** The mirror lists of `config` allow public reach (or the origin is public). */
+  canBePublic: boolean
+}
+
+export const checkConfig = (config: AdminConfig) =>
+  postJson<ConfigCheck>('/api/admin/config/check', config)
+
 /** The site as an nsite (`GET /api/admin/nsite`): the last published version and its delivery. */
 export interface NsiteStatus {
   url: string | null

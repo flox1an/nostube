@@ -54,7 +54,13 @@ const page = (
   dirty = false
 ) => (
   <SignerProvider creatorKey={null}>
-    <DistributionPage draft={draft} update={update} state={s} dirty={dirty} />
+    <DistributionPage
+      draft={draft}
+      update={update}
+      state={s}
+      dirty={dirty}
+      canBePublic={s.canBePublic}
+    />
   </SignerProvider>
 )
 
@@ -129,20 +135,6 @@ describe('Reach', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Private/ }))
     expect(confirm).not.toHaveBeenCalled()
     expect(update).toHaveBeenCalledWith({ reach: 'private' })
-  })
-
-  it('uses draft mirrors instead of saved eligibility and rejects local-only targets', () => {
-    const s = state(false)
-    const draft = {
-      ...toDraft(s.config),
-      mirrorRelaysText: 'wss://relay.example',
-      mirrorBlossomText: 'https://blossom.example',
-    }
-    const { rerender } = render(page(s, draft))
-    expect(publicTile().disabled).toBe(false)
-    expect(screen.getByText(/Videos live on those servers/)).toBeTruthy()
-    rerender(page(s, { ...draft, mirrorBlossomText: 'https://192.168.1.2' }))
-    expect(publicTile().disabled).toBe(true)
   })
 })
 

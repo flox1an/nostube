@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
 import { applyConfig, createConfigSession } from './config-session'
@@ -29,27 +29,57 @@ const config: AdminConfig = {
   },
 }
 
-/** A session over `saved` whose server answers `restart` and comes back as `restarts` says. */
+/**
+ * A session over `saved` whose server answers `restart` and comes back as `restarts` says. Its
+ * check restarts for a new quota and allows public reach with a mirror Blossom server.
+ */
 const session = (saved: AdminConfig = config, { restart = false, restarts = [true] } = {}) => {
   const deps = {
     saveConfig: vi.fn(async () => ({ restart })),
     waitForRestart: vi.fn(async () => restarts.shift() ?? true),
+    checkConfig: vi.fn(async (c: AdminConfig) => ({
+      error: c.title === 'Refused' ? 'title refused' : null,
+      restart: c.storage.quotaGib !== saved.storage.quotaGib,
+      canBePublic: c.mirror.blossom.length > 0,
+    })),
     reload: vi.fn(),
   }
-  const s = createConfigSession({ config: saved, bootId: 'b1', originIsPublic: true }, deps)
+  const s = createConfigSession({ config: saved, bootId: 'b1', canBePublic: false }, deps)
   return { s, deps, view: () => s.getSnapshot() }
 }
 
 describe('config edit session', () => {
-  it('is dirty only with edits and warns of a restart only for restart fields', () => {
-    const { s, view } = session()
-    expect(view().dirty).toBe(false)
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+  /** Lets the typing pause pass and the server answer. */
+  const answered = () => vi.advanceTimersByTimeAsync(300)
+
+  it('takes restart and public eligibility from the server, for the latest draft only', async () => {
+    const { s, deps, view } = session()
     s.update({ tagline: 'Hello' })
-    expect(view()).toMatchObject({ dirty: true, restart: false })
+    await answered()
+    expect(view()).toMatchObject({ dirty: true, restart: false, canBePublic: false })
     s.update({ quota: '10' })
-    expect(view().restart).toBe(true)
+    s.update({ mirrorBlossomText: 'https://blossom.example' })
+    await answered()
+    // Typing in a row asks once, for what was typed last.
+    expect(deps.checkConfig).toHaveBeenCalledTimes(2)
+    expect(view()).toMatchObject({ restart: true, canBePublic: true })
     s.discard()
-    expect(view().dirty).toBe(false)
+    expect(view()).toMatchObject({ dirty: false, restart: false, canBePublic: false })
+  })
+
+  it("adds the server's refusal to the form's errors, and asks nothing while the form has its own", async () => {
+    const { s, deps, view } = session()
+    s.update({ title: 'Refused' })
+    await answered()
+    expect(view().errors).toEqual(['title refused'])
+    deps.checkConfig.mockClear()
+    s.update({ quota: 'many' })
+    await answered()
+    expect(deps.checkConfig).not.toHaveBeenCalled()
+    expect(view().errors).toContain('title refused')
+    expect(view().errors.length).toBe(2)
   })
 
   it.each([
@@ -98,7 +128,7 @@ describe('config edit session', () => {
 
   it('waits through a stalled restart and reloads once the server is back', async () => {
     const { s, deps, view } = session(config, { restart: true, restarts: [false, true] })
-    s.update({ quota: '10' })
+    s.update({ tagline: 'Hello' })
     const phases: (string | null)[] = []
     s.subscribe(() => phases.push(view().saving))
     await s.save()

@@ -9,6 +9,8 @@ Saving in the studio used to end the process every time, so a supervisor started
 
 Both ways validate first, run the preflight and keep `config.prev`. `PUT /api/admin/config` answers `restart: true|false`; the studio reloads at once, or waits for the new boot id as before. `revision` still bumps on every save, so a running site and the studio see the new revision on their next load.
 
+While the owner edits, the studio sends the draft to `POST /api/admin/config/check`, which saves nothing and answers `{ error, restart, canBePublic }` from the same rules (`with_edits`, `needs_restart` plus a newly typed S3 secret, `can_be_public` over the draft's mirror lists). The studio keeps no copy of these rules; it only parses its form fields for instant feedback.
+
 ## Considered Options
 
 - **Rebuild the whole instance in process and swap it**: general, but Almond's state reads the blob folder on build, background tasks must be stopped, and open relay sessions keep the old writers until they disconnect.

@@ -11,6 +11,7 @@ import type { AdminState, StorageStatus, StorageTestResult } from './api'
 import { toDraft } from './draft'
 import i18n from './i18n'
 import { StoragePage } from './StoragePage'
+import { fakeAdminApi } from './test-admin-api'
 
 const state = (canBePublic: boolean): AdminState => ({
   revision: 1,
@@ -89,31 +90,18 @@ describe('S3 storage', () => {
     return s
   }
 
+  /** The JSON bodies sent to a route of the instance `serve` set up last. */
+  let sent: (key: string) => unknown[]
   const serve = (
     storage: () => StorageStatus,
     probe: () => StorageTestResult = () => ({ ok: true })
-  ) =>
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async (url: string) =>
-          new Response(
-            JSON.stringify(
-              url === '/api/admin/storage'
-                ? storage()
-                : url === '/api/admin/storage/test'
-                  ? probe()
-                  : {}
-            )
-          )
-      )
-    )
-  /** The JSON bodies POSTed to `path`. */
-  const sent = (path: string) =>
-    vi
-      .mocked(fetch)
-      .mock.calls.filter(([url, init]) => url === path && init?.method === 'POST')
-      .map(([, init]) => JSON.parse(init!.body as string))
+  ) => {
+    sent = fakeAdminApi({
+      'GET /api/admin/storage': storage,
+      'POST /api/admin/storage/test': probe,
+      'POST /api/admin/storage/move': {},
+    }).sent
+  }
 
   /** The page with a draft that follows its edits, as the studio holds it. */
   function Harness({ s }: { s: AdminState }) {
@@ -158,7 +146,7 @@ describe('S3 storage', () => {
     ]) {
       expect(screen.getByText(message), message).toBeTruthy()
     }
-    expect(sent('/api/admin/storage/test')).toEqual([])
+    expect(sent('POST /api/admin/storage/test')).toEqual([])
   })
 
   it('tests the typed settings and shows success, or the failing step with the provider error', async () => {
@@ -176,7 +164,7 @@ describe('S3 storage', () => {
     fireEvent.click(input('Path-style addressing'))
     fireEvent.click(screen.getByRole('button', { name: 'Test connection' }))
     expect(await screen.findByText(/^Connection works/)).toBeTruthy()
-    expect(sent('/api/admin/storage/test')).toEqual([
+    expect(sent('POST /api/admin/storage/test')).toEqual([
       {
         endpoint: 'http://minio.lan:9000',
         bucket: 'videos',
@@ -212,7 +200,7 @@ describe('S3 storage', () => {
     expect(screen.getByText(/cannot be turned off/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Test connection' }))
     expect(await screen.findByText(/^Connection works/)).toBeTruthy()
-    expect(sent('/api/admin/storage/test')).toEqual([s3])
+    expect(sent('POST /api/admin/storage/test')).toEqual([s3])
   })
 
   it('warns while the bucket is unavailable, with the error and a link to the settings', async () => {
@@ -257,7 +245,7 @@ describe('S3 storage', () => {
       fireEvent.click(moveButton()!)
       await vi.advanceTimersByTimeAsync(0)
     })
-    expect(sent('/api/admin/storage/move')).toEqual([{}])
+    expect(sent('POST /api/admin/storage/move')).toEqual([{}])
     expect(screen.getByText(/^Moving to S3: 1 of 3 files/)).toBeTruthy()
     expect(moveButton()).toBeNull()
 
@@ -279,9 +267,7 @@ describe('S3 storage', () => {
   it('does not offer the move while S3 is off', async () => {
     serve(() => status(null, { localFiles: 5, localBytes: 5000 }))
     render(<Harness s={state(true)} />)
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.some(([url]) => url === '/api/admin/storage')).toBe(true)
-    )
+    await waitFor(() => expect(sent('GET /api/admin/storage')).not.toHaveLength(0))
     await act(async () => {})
     expect(moveButton()).toBeNull()
     expect(screen.queryByText(/Still stored here/)).toBeNull()

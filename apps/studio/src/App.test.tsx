@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
 import { App } from './App'
+import { fakeAdminApi } from './test-admin-api'
 
 const PK = 'a'.repeat(64)
 
@@ -46,24 +47,19 @@ const state: AdminState = {
  * with a mirror relay and a mirror Blossom server; without them it refuses public reach.
  */
 const serve = (admin: AdminState) =>
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string, options?: RequestInit) => {
-      const json = (body: unknown) => new Response(JSON.stringify(body))
-      if (url === '/api/admin/config') return json(admin)
-      if (url === '/api/admin/signer') return json({ mode: 'managed', pubkey: PK })
-      if (url === '/api/admin/config/check') {
-        const config = JSON.parse(options!.body as string) as AdminState['config']
-        const canBePublic = config.mirror.relays.length > 0 && config.mirror.blossom.length > 0
-        return json({
-          error: config.reach === 'public' && !canBePublic ? 'public reach needs mirrors' : null,
-          restart: config.storage.quotaGib !== admin.config.storage.quotaGib,
-          canBePublic,
-        })
+  fakeAdminApi({
+    'GET /api/admin/config': admin,
+    'GET /api/admin/signer': { mode: 'managed', pubkey: PK },
+    'POST /api/admin/config/check': ({ body }) => {
+      const config = body as AdminState['config']
+      const canBePublic = config.mirror.relays.length > 0 && config.mirror.blossom.length > 0
+      return {
+        error: config.reach === 'public' && !canBePublic ? 'public reach needs mirrors' : null,
+        restart: config.storage.quotaGib !== admin.config.storage.quotaGib,
+        canBePublic,
       }
-      return new Response(null, { status: 404 })
-    })
-  )
+    },
+  })
 
 afterEach(() => {
   cleanup()

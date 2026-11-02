@@ -4,6 +4,7 @@ import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
 import './i18n'
 import { NextSteps, useChecklist } from './NextSteps'
+import { fakeAdminApi } from './test-admin-api'
 
 vi.mock('./signer-context', () => ({ useSigner: () => ({ mode: 'managed' }) }))
 
@@ -33,13 +34,9 @@ const config = (site: Partial<AdminConfig['site']> = {}): AdminConfig => ({
 })
 
 const stats = (videos: number) =>
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify({ relay: { eventsByKind: [{ kind: 34235, count: videos }] } }))
-    )
-  )
+  fakeAdminApi({
+    'GET /api/admin/stats': { relay: { eventsByKind: [{ kind: 34235, count: videos }] } },
+  })
 
 /** The checklist the sidebar and the start page share, as App wires it. */
 function Start({

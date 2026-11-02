@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { EventTemplate } from 'nostr-tools'
+import { fakeAdminApi } from '../test-admin-api'
 import { mirrorMedia } from './mirror-media'
 
 const video = 'a'.repeat(64)
@@ -41,21 +42,15 @@ describe('public event media', () => {
     const thumbnailUrl = `https://mirror.example/${thumbnail}.png`
     const subtitleUrl = `https://mirror.example/${subtitle}.vtt`
     let complete = false
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              ready: complete,
-              urls: complete
-                ? { [video]: videoUrl, [thumbnail]: thumbnailUrl, [subtitle]: subtitleUrl }
-                : { [video]: videoUrl },
-              error: null,
-            })
-          )
-      )
-    )
+    fakeAdminApi({
+      'POST /api/admin/media/mirrors': () => ({
+        ready: complete,
+        urls: complete
+          ? { [video]: videoUrl, [thumbnail]: thumbnailUrl, [subtitle]: subtitleUrl }
+          : { [video]: videoUrl },
+        error: null,
+      }),
+    })
     let published = false
     const result = mirrorMedia(template, () => {}).then(event => {
       published = true

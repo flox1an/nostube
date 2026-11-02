@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminStats } from './api'
 import i18n from './i18n'
 import { OverviewPage } from './OverviewPage'
+import { fakeAdminApi, refusal } from './test-admin-api'
 
 const stats = (events: number, storageBytes: number, quotaBytes: number): AdminStats => ({
   relay: {
@@ -25,24 +26,21 @@ const stats = (events: number, storageBytes: number, quotaBytes: number): AdminS
   },
 })
 
-const ok = (body: AdminStats) => ({ ok: true, status: 200, json: async () => body })
+/** The instance answering `GET /api/admin/stats` with `answers` in turn. */
+const serve = (...answers: unknown[]) =>
+  fakeAdminApi({ 'GET /api/admin/stats': () => answers.shift() })
 
 describe('OverviewPage', () => {
-  const fetch = vi.fn()
   beforeEach(async () => {
-    vi.stubGlobal('fetch', fetch)
     await i18n.changeLanguage('en')
   })
   afterEach(() => {
     vi.unstubAllGlobals()
-    fetch.mockReset()
   })
 
   it('keeps the latest answer when an older request lands after it, and caps the quota bar', async () => {
-    let late!: (value: unknown) => void
-    fetch
-      .mockReturnValueOnce(new Promise(resolve => (late = resolve)))
-      .mockResolvedValueOnce(ok(stats(1234, 150, 100)))
+    let late!: (value: AdminStats) => void
+    const { calls } = serve(new Promise(resolve => (late = resolve)), stats(1234, 150, 100))
     // StrictMode mounts twice, as in the studio: the first, abandoned request answers last.
     render(
       <StrictMode>
@@ -51,25 +49,23 @@ describe('OverviewPage', () => {
     )
     const bar = await screen.findByRole('progressbar', { name: 'Storage quota used' })
     expect(bar.getAttribute('value')).toBe('100')
-    expect(fetch).toHaveBeenCalledTimes(2)
-    expect(fetch).toHaveBeenCalledWith('/api/admin/stats', { credentials: 'same-origin' })
+    expect(calls.map(c => `${c.method} ${c.path}`)).toEqual([
+      'GET /api/admin/stats',
+      'GET /api/admin/stats',
+    ])
+    expect(calls.every(c => c.init?.credentials === 'same-origin')).toBe(true)
 
-    await act(async () => late(ok(stats(7, 0, 0))))
+    await act(async () => late(stats(7, 0, 0)))
     expect(screen.getAllByText('1,234')).toHaveLength(2) // the total and the kind 21 bar
     expect(screen.queryByText('Unlimited')).toBeNull()
   })
 
   it('shows the server error without values, then loads on refresh', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ error: 'disk on fire' }),
-    })
+    serve(refusal(500, 'disk on fire'), stats(0, 0, 0))
     render(<OverviewPage />)
     expect(await screen.findByText('disk on fire')).toBeTruthy()
     expect(screen.queryByText('Stored events')).toBeNull()
 
-    fetch.mockResolvedValueOnce(ok(stats(0, 0, 0)))
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
     expect(await screen.findByText('Unlimited')).toBeTruthy()
     expect(screen.getByText('The relay stores no events yet.')).toBeTruthy()

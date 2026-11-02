@@ -12,6 +12,7 @@ import { DistributionPage } from './DistributionPage'
 import { toDraft, type Draft } from './draft'
 import i18n from './i18n'
 import { SignerProvider } from './signer-context'
+import { fakeAdminApi } from './test-admin-api'
 
 const state = (canBePublic: boolean): AdminState => ({
   revision: 1,
@@ -78,18 +79,6 @@ function Harness({ s, initial }: { s: AdminState; initial?: Partial<Draft> }) {
   return page(s, draft, patch => setDraft(d => ({ ...d, ...patch })))
 }
 
-/** Answers the admin API with `answer(url)`, or 404 where it returns nothing. */
-const serve = (answer: (url: string) => unknown) => {
-  const fetch = vi.fn(async (url: string) => {
-    const body = answer(url)
-    return body === undefined
-      ? new Response(null, { status: 404 })
-      : new Response(JSON.stringify(body))
-  })
-  vi.stubGlobal('fetch', fetch)
-  return fetch
-}
-
 const publicTile = () => screen.getByRole('button', { name: /^Public/ }) as HTMLButtonElement
 const toggle = (name: string) => screen.getByRole('switch', { name }) as HTMLButtonElement
 const mirrorSwitch = () => toggle('Mirror to other servers')
@@ -99,7 +88,7 @@ const field = (label: string) => screen.queryByLabelText(label) as HTMLTextAreaE
 beforeEach(async () => {
   await i18n.changeLanguage('en')
   // No signer, no instance config, no outbox: the page shows without them.
-  serve(() => undefined)
+  fakeAdminApi({})
 })
 afterEach(() => {
   cleanup()
@@ -191,46 +180,41 @@ describe('Mirroring', () => {
   })
 
   it('shows and retries nsite deletion failures even without configured mirrors', async () => {
-    const fetch = serve(url =>
-      url === '/api/admin/outbox/retry'
-        ? { retried: 1 }
-        : url === '/api/admin/outbox'
-          ? {
-              relays: [],
-              blossom: [],
-              counts: [
-                {
-                  target: 'https://old-mirror.example',
-                  kind: 'blob-delete',
-                  done: 0,
-                  pending: 0,
-                  failed: 1,
-                },
-              ],
-              problems: [
-                {
-                  kind: 'blob-delete',
-                  target: 'https://old-mirror.example',
-                  ref: 'c'.repeat(64),
-                  status: 'failed',
-                  attempts: 24,
-                  lastError: 'deletion refused',
-                  nextAttemptAt: null,
-                  updatedAt: 1,
-                },
-              ],
-            }
-          : undefined
-    )
+    const { sent } = fakeAdminApi({
+      'POST /api/admin/outbox/retry': { retried: 1 },
+      'GET /api/admin/outbox': {
+        relays: [],
+        blossom: [],
+        counts: [
+          {
+            target: 'https://old-mirror.example',
+            kind: 'blob-delete',
+            done: 0,
+            pending: 0,
+            failed: 1,
+          },
+        ],
+        problems: [
+          {
+            kind: 'blob-delete',
+            target: 'https://old-mirror.example',
+            ref: 'c'.repeat(64),
+            status: 'failed',
+            attempts: 24,
+            lastError: 'deletion refused',
+            nextAttemptAt: null,
+            updatedAt: 1,
+          },
+        ],
+      },
+    })
     const s = state(true)
     s.config.mirror = { relays: [], blossom: [] }
     renderPage(s)
     expect(await screen.findByText('deletion refused')).toBeTruthy()
     expect(screen.getAllByText('File deletion').length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'Retry failed' }))
-    await waitFor(() =>
-      expect(fetch.mock.calls.some(([url]) => url === '/api/admin/outbox/retry')).toBe(true)
-    )
+    await waitFor(() => expect(sent('POST /api/admin/outbox/retry')).toHaveLength(1))
   })
 })
 
@@ -248,17 +232,12 @@ describe('Site hosting', () => {
   const emptyOutbox = { relays: [], blossom: [], counts: [], problems: [] }
 
   const serveNsite = (mode = 'managed', status: () => NsiteStatus = () => published) =>
-    serve(url =>
-      url === '/api/admin/signer'
-        ? { mode, pubkey: 'a'.repeat(64) }
-        : url === '/api/admin/nsite'
-          ? status()
-          : url === '/api/admin/outbox'
-            ? emptyOutbox
-            : url === '/api/admin/nsite/publish'
-              ? {}
-              : undefined
-    )
+    fakeAdminApi({
+      'GET /api/admin/signer': { mode, pubkey: 'a'.repeat(64) },
+      'GET /api/admin/nsite': status,
+      'GET /api/admin/outbox': emptyOutbox,
+      'POST /api/admin/nsite/publish': {},
+    })
 
   const nsiteOn = () => {
     const s = state(true)
@@ -295,7 +274,7 @@ describe('Site hosting', () => {
   })
 
   it('shows URL, CNAME, TLS, version and cache warning and publishes saved settings only', async () => {
-    const fetch = serveNsite()
+    const { sent } = serveNsite()
     const s = nsiteOn()
     const draft = toDraft(s.config)
     const { rerender } = render(page(s, draft, vi.fn(), true))
@@ -311,9 +290,7 @@ describe('Site hosting', () => {
     rerender(page(s, draft, vi.fn(), false))
     await waitFor(() => expect(publish.disabled).toBe(false))
     fireEvent.click(publish)
-    await waitFor(() =>
-      expect(fetch.mock.calls.some(([url]) => url === '/api/admin/nsite/publish')).toBe(true)
-    )
+    await waitFor(() => expect(sent('POST /api/admin/nsite/publish')).toHaveLength(1))
   })
 
   it('shows a failed delivery and retained public copies', async () => {

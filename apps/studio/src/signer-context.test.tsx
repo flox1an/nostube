@@ -7,6 +7,7 @@ import type { SignerInfo } from './api'
 import type { InstanceClient } from './instance-client'
 import { SignerProvider, useSigner, type SignerState } from './signer-context'
 import { logInWithExtension, logOut, type TestExtension } from './test-account'
+import { fakeAdminApi, refusal } from './test-admin-api'
 import { VideoActions } from './VideoActions'
 import i18n from './i18n'
 
@@ -19,23 +20,18 @@ const MANAGED = 'b'.repeat(64)
 const secret = generateSecretKey()
 const OWN = getPublicKey(secret)
 
-const json = (body: unknown) => new Response(JSON.stringify(body))
-
 /** The server's signer endpoints; `info` is what `GET /api/admin/signer` reports. */
-function serve(info: SignerInfo) {
-  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === '/api/admin/signer' && init?.method === 'POST') {
-      return json({ mode: 'managed', pubkey: MANAGED })
-    }
-    if (url === '/api/admin/signer') return json(info)
-    if (url === '/api/admin/signer/sign') {
-      return json({ ...JSON.parse(String(init?.body)), id: 'i', pubkey: MANAGED, sig: 's' })
-    }
-    return new Response(null, { status: 404 })
+const serve = (info: SignerInfo) =>
+  fakeAdminApi({
+    'POST /api/admin/signer': { mode: 'managed', pubkey: MANAGED },
+    'GET /api/admin/signer': info,
+    'POST /api/admin/signer/sign': ({ body }) => ({
+      ...(body as object),
+      id: 'i',
+      pubkey: MANAGED,
+      sig: 's',
+    }),
   })
-  vi.stubGlobal('fetch', fetch)
-  return fetch
-}
 
 let extension: TestExtension
 
@@ -57,7 +53,7 @@ describe('SignerProvider', () => {
   }
 
   it('signs on the server when it holds the managed key, not with the extension', async () => {
-    const fetch = serve({ mode: 'managed', pubkey: MANAGED })
+    const { sent } = serve({ mode: 'managed', pubkey: MANAGED })
     render(
       <SignerProvider creatorKey={null}>
         <Probe />
@@ -70,13 +66,9 @@ describe('SignerProvider', () => {
     const event = { kind: 1, created_at: 1, tags: [], content: 'hi', pubkey: 'stale' }
     const signed = await current.signer!.signEvent(event)
     expect(signed.pubkey).toBe(MANAGED)
-    const [, init] = fetch.mock.calls.find(([url]) => url === '/api/admin/signer/sign')!
-    expect(JSON.parse(String(init?.body))).toEqual({
-      kind: 1,
-      created_at: 1,
-      tags: [],
-      content: 'hi',
-    })
+    expect(sent('POST /api/admin/signer/sign')).toEqual([
+      { kind: 1, created_at: 1, tags: [], content: 'hi' },
+    ])
     expect(extension.signEvent).not.toHaveBeenCalled()
   })
 
@@ -108,10 +100,7 @@ describe('SignerProvider', () => {
   })
 
   it('shows why when the server cannot tell where the key is', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ error: 'key locked' }), { status: 500 }))
-    )
+    fakeAdminApi({ 'GET /api/admin/signer': refusal(500, 'key locked') })
     render(
       <SignerProvider creatorKey={null}>
         <Probe />

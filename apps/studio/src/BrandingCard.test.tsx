@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminState } from './api'
 import { BrandingCard } from './BrandingCard'
 import i18n from './i18n'
+import { fakeAdminApi } from './test-admin-api'
 
 vi.mock('./signer-context', () => ({ useSigner: () => ({ signer: null, pubkey: null }) }))
 
@@ -26,17 +27,15 @@ const choose = (label: string, file: File) =>
   fireEvent.change(screen.getByLabelText(label), { target: { files: [file] } })
 
 describe('BrandingCard', () => {
-  const fetch = vi.fn()
   beforeEach(async () => {
-    vi.stubGlobal('fetch', fetch)
     await i18n.changeLanguage('en')
   })
   afterEach(() => {
     vi.unstubAllGlobals()
-    fetch.mockReset()
   })
 
   it('refuses oversized originals and non-images without uploading', async () => {
+    const { calls } = fakeAdminApi({})
     render(<Harness />)
     choose(
       'Logo',
@@ -45,6 +44,6 @@ describe('BrandingCard', () => {
     expect(await screen.findByRole('alert')).toBeTruthy()
     choose('Logo', new File(['<html>'], 'page.html', { type: 'text/html' }))
     expect(screen.getByRole('alert')).toBeTruthy()
-    expect(fetch).not.toHaveBeenCalled()
+    expect(calls).toEqual([])
   })
 })

@@ -4,10 +4,10 @@ import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { DEFAULT_PROFILE_RELAYS, DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { processEvent } from '@nostube/core/video-event'
 import { finalizeEvent, generateSecretKey } from 'nostr-tools'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type * as Api from './api'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminConfig } from './api'
 import { App } from './App'
+import { fakeAdminApi, refusal } from './test-admin-api'
 import './i18n'
 
 const makeVideo = (d: string, title: string) =>
@@ -52,24 +52,24 @@ const config: AdminConfig = {
   },
 }
 
-const mocks = vi.hoisted(() => ({ saveConfig: vi.fn() }))
-vi.mock('./api', async importOriginal => ({
-  ...(await importOriginal<typeof Api>()),
-  loadAdmin: async () => ({
-    revision: 1,
-    origin: 'https://site.example',
-    tls: '',
-    tlsMode: 'proxy',
-    bootId: 'boot',
-    nostrPubkey: null,
-    canBePublic: true,
-    originIsPublic: true,
-    config,
-    branding: { logo: null, favicon: null, banner: null, icon: null },
-  }),
-  saveConfig: mocks.saveConfig,
-  loadSchedule: async () => [],
-}))
+/** The instance: this config, nothing scheduled, and `save` as the answer to saving. */
+const serve = (save: unknown = { revision: 2, restart: false }) =>
+  fakeAdminApi({
+    'GET /api/admin/config': {
+      revision: 1,
+      origin: 'https://site.example',
+      tls: '',
+      tlsMode: 'proxy',
+      bootId: 'boot',
+      nostrPubkey: null,
+      canBePublic: true,
+      originIsPublic: true,
+      config,
+      branding: { logo: null, favicon: null, banner: null, icon: null },
+    },
+    'PUT /api/admin/config': save,
+    'GET /api/admin/schedule': { items: [] },
+  })
 vi.mock('./signer-context', () => ({
   SignerProvider: ({ children }: { children: ReactNode }) => children,
   useSigner: () => ({ status: 'none', mode: 'none', signer: null, pubkey: null }),
@@ -90,12 +90,15 @@ vi.mock('@nostube/widgets/hooks/useCreatorVideos', () => ({
 
 beforeEach(() => {
   location.hash = '#/videos'
-  mocks.saveConfig.mockReset().mockResolvedValue({ revision: 2, restart: false })
   videos.list = [video]
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('studio videos page', () => {
   it('saves hiding at once, without a save bar, and keeps the other pages in step', async () => {
+    const { sent } = serve()
     render(<App />)
     const more = await screen.findByRole('button', { name: 'More actions' })
     expect(screen.getByRole('link', { name: 'Upload' }).getAttribute('href')).toBe('#/upload')
@@ -105,10 +108,9 @@ describe('studio videos page', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Hide on site' }))
     await screen.findByText('Hidden')
     const ref = `34235:${video.pubkey}:intro`
-    expect(mocks.saveConfig).toHaveBeenCalledExactlyOnceWith({
-      ...config,
-      site: { ...config.site, videos: { hidden: [ref] } },
-    })
+    expect(sent('PUT /api/admin/config')).toEqual([
+      { ...config, site: { ...config.site, videos: { hidden: [ref] } } },
+    ])
 
     // The saved hidden list is the new baseline: another page has nothing pending (no save bar).
     act(() => {
@@ -120,7 +122,7 @@ describe('studio videos page', () => {
   })
 
   it('keeps the video shown and says why when saving fails', async () => {
-    mocks.saveConfig.mockRejectedValue(new Error('server said no'))
+    serve(refusal(500, 'server said no'))
     render(<App />)
     fireEvent.keyDown(await screen.findByRole('button', { name: 'More actions' }), {
       key: 'Enter',
@@ -134,6 +136,7 @@ describe('studio videos page', () => {
     videos.list = ['Intro', 'Cats', 'Dogs', 'Cat tricks', 'Birds', 'Fish'].map((title, i) =>
       makeVideo(`v${i}`, title)
     )
+    serve()
     render(<App />)
     fireEvent.change(await screen.findByRole('searchbox', { name: 'Search by title' }), {
       target: { value: 'CAT' },
@@ -146,6 +149,7 @@ describe('studio videos page', () => {
 
   it('offers an upload when there are no videos yet', async () => {
     videos.list = []
+    serve()
     render(<App />)
     expect(await screen.findByText('No videos yet')).toBeTruthy()
     expect(screen.getAllByRole('link', { name: 'Upload' })).toHaveLength(2)

@@ -15,6 +15,7 @@ import type { AdminState } from './api'
 import ModerationPage from './ModerationPage'
 import { SignerProvider } from './signer-context'
 import { logInWithExtension, logOut } from './test-account'
+import { fakeAdminApi } from './test-admin-api'
 import './i18n'
 
 const secret = generateSecretKey()
@@ -138,10 +139,7 @@ const state = {
 } as unknown as AdminState
 
 beforeEach(() => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response(JSON.stringify({ mode: 'own', pubkey: null })))
-  )
+  fakeAdminApi({ 'GET /api/admin/signer': { mode: 'own', pubkey: null } })
   logInWithExtension(secret)
 })
 afterEach(() => {

@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ScheduledVideo } from './api'
 import { ScheduledVideos } from './ScheduledVideos'
 import { SignerProvider } from './signer-context'
+import { fakeAdminApi } from './test-admin-api'
 import './i18n'
 
 const event = (title: string) => ({
@@ -31,7 +32,7 @@ const item = (id: string, state: ScheduledVideo['state'], extra: Partial<Schedul
   }) satisfies ScheduledVideo
 
 let items: ScheduledVideo[]
-let fetchMock: Mock
+let sent: (key: string) => unknown[]
 
 beforeEach(() => {
   items = [
@@ -39,13 +40,11 @@ beforeEach(() => {
     item('Done', 'released', { releasedAt: 1_900_000_000 }),
     item('Refused', 'failed', { error: 'blocked: this event was deleted by its author' }),
   ]
-  fetchMock = vi.fn(async (url: string) => {
-    if (url === '/api/admin/schedule') return new Response(JSON.stringify({ items }))
-    if (url === '/api/admin/schedule/cancel')
-      return new Response(JSON.stringify({ cancelled: true }))
-    return new Response(JSON.stringify({ mode: 'none', pubkey: null }))
-  })
-  vi.stubGlobal('fetch', fetchMock)
+  sent = fakeAdminApi({
+    'GET /api/admin/schedule': () => ({ items }),
+    'POST /api/admin/schedule/cancel': { cancelled: true },
+    'GET /api/admin/signer': { mode: 'none', pubkey: null },
+  }).sent
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -72,22 +71,15 @@ describe('ScheduledVideos', () => {
     renderList()
     await screen.findByText('Soon')
     fireEvent.click(screen.getByRole('button', { name: 'Cancel publication' }))
-    expect(fetchMock).not.toHaveBeenCalledWith('/api/admin/schedule/cancel', expect.anything())
+    expect(sent('POST /api/admin/schedule/cancel')).toEqual([])
     fireEvent.click(screen.getByRole('button', { name: 'Cancel publication' }))
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/admin/schedule/cancel',
-        expect.objectContaining({ body: JSON.stringify({ id: 'Soon' }) })
-      )
-    )
+    await waitFor(() => expect(sent('POST /api/admin/schedule/cancel')).toEqual([{ id: 'Soon' }]))
   })
 
   it('stays out of the way when nothing is scheduled', async () => {
     items = []
     const { container } = renderList()
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/schedule', expect.anything())
-    )
+    await waitFor(() => expect(sent('GET /api/admin/schedule')).not.toHaveLength(0))
     expect(container.textContent).toBe('')
   })
 })

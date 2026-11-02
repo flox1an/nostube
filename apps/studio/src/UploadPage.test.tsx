@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { generateSecretKey, getPublicKey, verifyEvent } from 'nostr-tools'
+import { generateSecretKey, getPublicKey, verifyEvent, type NostrEvent } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
@@ -7,6 +7,7 @@ import { fromLocalInput, toLocalInput } from './datetime'
 import { bootInstanceClient } from './instance-client'
 import { SignerProvider } from './signer-context'
 import { installExtension, logInWithExtension, logOut } from './test-account'
+import { fakeAdminApi } from './test-admin-api'
 import UploadPage from './UploadPage'
 import { uploadBlob } from './upload/blossom-upload'
 import './i18n'
@@ -109,15 +110,17 @@ async function renderPage(state: AdminState) {
   await screen.findByText(/640×360/)
 }
 
+let sent: (key: string) => unknown[]
+
 beforeEach(() => {
   logInWithExtension(secret)
   URL.createObjectURL = vi.fn(() => 'blob:preview')
   URL.revokeObjectURL = vi.fn()
   // The server reports an own key, so the provider signs with the logged-in account above.
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response(JSON.stringify({ mode: 'own', pubkey: null })))
-  )
+  sent = fakeAdminApi({
+    'GET /api/admin/signer': { mode: 'own', pubkey: null },
+    'POST /api/admin/schedule': { id: 'x', dueAt: 1 },
+  }).sent
 })
 afterEach(() => {
   logOut()
@@ -239,29 +242,15 @@ describe('UploadPage', () => {
   })
 
   describe('with a publish date', () => {
-    const stubFetch = () => {
-      const fetchMock = vi.fn(
-        async (url: string, _init?: RequestInit) =>
-          new Response(
-            JSON.stringify(
-              url === '/api/admin/schedule' ? { id: 'x', dueAt: 1 } : { mode: 'own', pubkey: null }
-            )
-          )
-      )
-      vi.stubGlobal('fetch', fetchMock)
-      return fetchMock
-    }
     const inSeconds = (seconds: number) => Math.floor(Date.now() / 1000) + seconds
 
     it('hands the signed event to the server instead of publishing it', async () => {
-      const fetchMock = stubFetch()
       await renderPage(stateFor([pubkey], [pubkey]))
       const local = toLocalInput(inSeconds(86400))
       fireEvent.change(screen.getByLabelText('Publish on'), { target: { value: local } })
       fireEvent.click(screen.getByRole('button', { name: 'Upload and schedule' }))
       await screen.findByText('Scheduled', {}, { timeout: 4000 })
-      const sent = fetchMock.mock.calls.find(([url]) => url === '/api/admin/schedule')
-      const signed = JSON.parse(String(sent?.[1]?.body))
+      const [signed] = sent('POST /api/admin/schedule') as NostrEvent[]
       expect(verifyEvent(signed)).toBe(true)
       expect(signed.pubkey).toBe(pubkey)
       expect(signed.tags).toContainEqual(['published_at', String(fromLocalInput(local))])
@@ -271,7 +260,6 @@ describe('UploadPage', () => {
     })
 
     it('does not start for a date that has passed', async () => {
-      stubFetch()
       await renderPage(stateFor([pubkey], [pubkey]))
       fireEvent.change(screen.getByLabelText('Publish on'), {
         target: { value: toLocalInput(inSeconds(-3600)) },

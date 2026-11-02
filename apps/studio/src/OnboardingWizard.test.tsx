@@ -13,6 +13,7 @@ import { identityChoices, needsOnboarding, wizardConfig } from './onboarding-con
 import { Onboarding } from './OnboardingWizard'
 import { SignerProvider } from './signer-context'
 import { installExtension, logInWithExtension, logOut } from './test-account'
+import { fakeAdminApi } from './test-admin-api'
 import i18n from './i18n'
 
 vi.mock('./accounts', async importOriginal => ({
@@ -58,51 +59,39 @@ const fresh = (canBePublic = true): AdminState => ({
   },
 })
 
-const json = (body: unknown) => new Response(JSON.stringify(body))
+/** Saving the config. */
+const SAVE = 'PUT /api/admin/config'
 
 /**
- * The studio's fetches: signer state `info`, everything the finish needs to run through, and a
- * record of every saved config. The save answers `restart: false` (no restart wait).
+ * The studio's fetches: signer state `info` and everything the finish needs to run through. The
+ * save answers `restart: false` (no restart wait).
  */
-function serve(info: { mode: 'none' | 'managed' | 'own'; pubkey: string | null }) {
-  const saved: unknown[] = []
-  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === '/api/admin/config' && init?.method === 'PUT') {
-      const body = JSON.parse(String(init.body))
-      saved.push(body)
-      return json({ revision: 2, restart: false })
-    }
-    if (url === '/api/admin/signer' && init?.method === 'POST') {
-      return json({ mode: 'managed', pubkey: MANAGED })
-    }
-    if (url === '/api/admin/signer') return json(info)
-    if (url === '/api/admin/stats') {
-      return json({
-        relay: {
-          url: 'wss://videos.example.org',
-          totalEvents: 0,
-          eventsByKind: [],
-          databaseBytes: 1,
-        },
-        blossom: {
-          url: 'https://videos.example.org',
-          files: 0,
-          storageBytes: 0,
-          quotaBytes: 0,
-          freeDiskBytes: 5 * 1024 ** 3,
-          freeSpaceReserveBytes: 1,
-          uploads: 0,
-          downloads: 0,
-          servedBytes: 0,
-        },
-      })
-    }
-    if (url === '/admin/bind-nostr') return json('bound')
-    return new Response(null, { status: 404 })
+const serve = (info: { mode: 'none' | 'managed' | 'own'; pubkey: string | null }) =>
+  fakeAdminApi({
+    [SAVE]: { revision: 2, restart: false },
+    'POST /api/admin/signer': { mode: 'managed', pubkey: MANAGED },
+    'GET /api/admin/signer': info,
+    'GET /api/admin/stats': {
+      relay: {
+        url: 'wss://videos.example.org',
+        totalEvents: 0,
+        eventsByKind: [],
+        databaseBytes: 1,
+      },
+      blossom: {
+        url: 'https://videos.example.org',
+        files: 0,
+        storageBytes: 0,
+        quotaBytes: 0,
+        freeDiskBytes: 5 * 1024 ** 3,
+        freeSpaceReserveBytes: 1,
+        uploads: 0,
+        downloads: 0,
+        servedBytes: 0,
+      },
+    },
+    'POST /admin/bind-nostr': 'bound',
   })
-  vi.stubGlobal('fetch', fetch)
-  return { fetch, saved }
-}
 
 /** A pool stub: `get` answers `profile`, `publish` remembers its targets and events. */
 const pool = (profile: object | null) => {
@@ -195,7 +184,7 @@ describe('onboarding config', () => {
 
 describe('Onboarding wizard', () => {
   it('offers own and channel identity and binds the logged-in Nostr key', async () => {
-    const { saved, fetch } = serve({ mode: 'none', pubkey: null })
+    const { sent } = serve({ mode: 'none', pubkey: null })
     const profile = pool(null)
     renderWizard(fresh(), profile)
     expect(await screen.findByText('Own identity')).toBeTruthy()
@@ -207,15 +196,15 @@ describe('Onboarding wizard', () => {
     expect(screen.getByText('Private')).toBeTruthy()
     await click('Finish')
 
-    await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({
+    await waitFor(() => expect(sent(SAVE)).toHaveLength(1))
+    expect(sent(SAVE)[0]).toMatchObject({
       creators: [OWN],
       allowedWriters: [OWN],
       profileRelays: DEFAULT_PROFILE_RELAYS,
       reach: 'private',
     })
     // The extension key becomes the login key too.
-    expect(fetch.mock.calls.some(([url]) => url === '/admin/bind-nostr')).toBe(true)
+    expect(sent('POST /admin/bind-nostr')).not.toHaveLength(0)
     expect(profile.get).toHaveBeenCalledWith(
       DEFAULT_PROFILE_RELAYS,
       { kinds: [0], authors: [OWN] },
@@ -226,7 +215,7 @@ describe('Onboarding wizard', () => {
   })
 
   it('asks before it takes Public and saves the reach', async () => {
-    const { saved } = serve({ mode: 'none', pubkey: null })
+    const { sent } = serve({ mode: 'none', pubkey: null })
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderWizard(fresh())
     fireEvent.click(await findLabel('Channel identity'))
@@ -240,8 +229,8 @@ describe('Onboarding wizard', () => {
     await click('Next')
     expect(screen.getByText('Public')).toBeTruthy()
     await click('Finish')
-    await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({ reach: 'public', profileRelays: DEFAULT_PROFILE_RELAYS })
+    await waitFor(() => expect(sent(SAVE)).toHaveLength(1))
+    expect(sent(SAVE)[0]).toMatchObject({ reach: 'public', profileRelays: DEFAULT_PROFILE_RELAYS })
     confirm.mockRestore()
   })
 
@@ -275,7 +264,7 @@ describe('Onboarding wizard', () => {
   })
 
   it('creates the managed key at Finish, binds the optional Nostr login, saves once', async () => {
-    const { saved, fetch } = serve({ mode: 'none', pubkey: null })
+    const { sent } = serve({ mode: 'none', pubkey: null })
     const profile = pool(null)
     renderWizard(fresh(), profile)
     fireEvent.click(await findLabel('Channel identity'))
@@ -283,18 +272,12 @@ describe('Onboarding wizard', () => {
     await continueThrough()
     await click('Finish')
 
-    await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({ creators: [MANAGED], allowedWriters: [MANAGED] })
-    expect(
-      fetch.mock.calls.some(([url, init]) => url === '/api/admin/signer' && init?.method === 'POST')
-    ).toBe(true)
-    expect(fetch.mock.calls.some(([url]) => url === '/admin/bind-nostr')).toBe(true)
+    await waitFor(() => expect(sent(SAVE)).toHaveLength(1))
+    expect(sent(SAVE)[0]).toMatchObject({ creators: [MANAGED], allowedWriters: [MANAGED] })
+    expect(sent('POST /api/admin/signer')).not.toHaveLength(0)
+    expect(sent('POST /admin/bind-nostr')).not.toHaveLength(0)
     expect(profile.get).not.toHaveBeenCalled()
-    expect(
-      fetch.mock.calls.filter(
-        ([url, init]) => url === '/api/admin/config' && init?.method === 'PUT'
-      )
-    ).toHaveLength(1)
+    expect(sent(SAVE)).toHaveLength(1)
   })
 
   it('copies the found kind 0 unchanged to the instance relay; without one it publishes nothing', async () => {
@@ -347,7 +330,7 @@ describe('Onboarding wizard', () => {
   it('opens the login dialog for own identity without a Nostr account and takes its key', async () => {
     logOut()
     installExtension(secret)
-    const { saved, fetch } = serve({ mode: 'none', pubkey: null })
+    const { calls, sent } = serve({ mode: 'none', pubkey: null })
     renderWizard(fresh(), pool(null))
     fireEvent.click(await findLabel('Own identity'))
     const dialog = await screen.findByRole('dialog')
@@ -356,22 +339,22 @@ describe('Onboarding wizard', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     await continueThrough()
     await click('Finish')
-    await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({ creators: [OWN] })
+    await waitFor(() => expect(sent(SAVE)).toHaveLength(1))
+    expect(sent(SAVE)[0]).toMatchObject({ creators: [OWN] })
     // The key logged in through the dialog signs the binding (NIP-98).
-    const [, init] = fetch.mock.calls.find(([url]) => url === '/admin/bind-nostr')!
+    const { init } = calls.find(c => c.path === '/admin/bind-nostr')!
     const auth = String((init?.headers as Record<string, string>).Authorization)
     expect(JSON.parse(atob(auth.replace('Nostr ', '')))).toMatchObject({ kind: 27235, pubkey: OWN })
   })
 
   it('saves nothing while the owner walks through and back out of the steps', async () => {
-    const { saved } = serve({ mode: 'none', pubkey: null })
+    const { sent } = serve({ mode: 'none', pubkey: null })
     renderWizard(fresh())
     fireEvent.click(await findLabel('Channel identity'))
     await click('Next')
     await click(/^Private/)
     await click('Back')
-    expect(saved).toHaveLength(0)
+    expect(sent(SAVE)).toHaveLength(0)
     // Still only the signer status was read; the config itself was never written.
     expect(screen.getByRole('button', { name: 'Next' })).toBeTruthy()
   })

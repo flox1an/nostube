@@ -98,65 +98,110 @@ export function brandingProblem(slot: BrandingSlot, file: File): string | null {
 
 /** Replaces the slot's image; it shows on the site at once. Answers the new URL. */
 export async function uploadBranding(slot: BrandingSlot, file: File): Promise<string> {
-  const res = await fetch(`/api/admin/branding/${slot}`, {
-    method: 'PUT',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': file.type },
-    body: file,
-  })
-  // The server checks the bytes, not the name: a renamed file is refused here.
-  if (res.status === 413)
-    throw new Error(i18n.t('studio.branding.errors.tooBig', { size: BRANDING_LIMITS[slot].size }))
-  if (res.status === 415) throw new Error(i18n.t('studio.branding.errors.wrongType'))
-  // Only the app icon has a shape rule (square, at least 512×512).
-  if (res.status === 422) throw new Error(i18n.t('studio.branding.errors.iconSize'))
-  if (!res.ok) throw new Error(await errorMessage(res))
-  const body: unknown = await res.json()
-  if (body && typeof body === 'object' && 'url' in body && typeof body.url === 'string')
-    return body.url
-  throw new Error(i18n.t('studio.errors.serverStatus', { status: res.status }))
+  try {
+    const { url } = await adminRequest<{ url: string }>(`/api/admin/branding/${slot}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    })
+    return url
+  } catch (e) {
+    // The server checks the bytes, not the name: a renamed file is refused here.
+    if (!(e instanceof AdminError)) throw e
+    const message =
+      e.status === 413
+        ? i18n.t('studio.branding.errors.tooBig', { size: BRANDING_LIMITS[slot].size })
+        : e.status === 415
+          ? i18n.t('studio.branding.errors.wrongType')
+          : // Only the app icon has a shape rule (square, at least 512×512).
+            e.status === 422
+            ? i18n.t('studio.branding.errors.iconSize')
+            : null
+    if (message) throw Object.assign(new Error(message), { cause: e })
+    throw e
+  }
 }
 
 /** Activates an image already uploaded to this instance's Blossom, without sending it twice. */
 export async function setBrandingBlob(slot: BrandingSlot, sha256: string): Promise<string> {
-  const res = await fetch(`/api/admin/branding/${slot}`, {
+  const { url } = await adminRequest<{ url: string }>(`/api/admin/branding/${slot}`, {
     method: 'PUT',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sha256 }),
+    json: { sha256 },
   })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  const body: unknown = await res.json()
-  if (body && typeof body === 'object' && 'url' in body && typeof body.url === 'string')
-    return body.url
-  throw new Error(i18n.t('studio.errors.serverStatus', { status: res.status }))
+  return url
 }
 
 export async function deleteBranding(slot: BrandingSlot): Promise<void> {
-  const res = await fetch(`/api/admin/branding/${slot}`, {
+  // A JSON content type without a body: the server's guard against cross-site form posts.
+  await adminRequest(`/api/admin/branding/${slot}`, {
     method: 'DELETE',
-    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
   })
-  if (!res.ok) throw new Error(await errorMessage(res))
+}
+
+/**
+ * One request to the instance: the admin session cookie, `json` sent as JSON (or a raw `body`),
+ * and the server's `error` (else its status) thrown as an `AdminError`. Answers the JSON reply,
+ * or nothing.
+ */
+async function adminRequest<T = void>(
+  path: string,
+  {
+    method = 'GET',
+    json,
+    body,
+    headers,
+    signal,
+  }: {
+    method?: string
+    json?: unknown
+    body?: BodyInit
+    headers?: Record<string, string>
+    signal?: AbortSignal
+  } = {}
+): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    credentials: 'same-origin',
+    headers: json === undefined ? headers : { 'Content-Type': 'application/json', ...headers },
+    body: json === undefined ? body : JSON.stringify(json),
+    signal,
+  })
+  if (!res.ok) throw new AdminError(res.status, await errorMessage(res))
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
+}
+
+/** A refusal of the instance, with its HTTP status. */
+export class AdminError extends Error {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
+    super(message)
+  }
 }
 
 async function errorMessage(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '')
   try {
-    const body = (await res.json()) as { error?: string }
+    const body = JSON.parse(text) as { error?: string }
     if (body.error) return body.error
   } catch {
-    // not JSON
+    // not JSON: a plain-text refusal (the server-rendered admin routes) is the message itself
+    if (text.trim()) return text.trim()
   }
   return i18n.t('studio.errors.serverStatus', { status: res.status })
 }
 
 /** `null` means the admin is not logged in. */
 export async function loadAdmin(): Promise<AdminState | null> {
-  const res = await fetch('/api/admin/config', { credentials: 'same-origin' })
-  if (res.status === 401) return null
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as AdminState
+  try {
+    return await adminRequest<AdminState>('/api/admin/config')
+  } catch (e) {
+    if (e instanceof AdminError && e.status === 401) return null
+    throw e
+  }
 }
 
 /**
@@ -168,14 +213,10 @@ export async function saveConfig(
   config: AdminConfig,
   deleteNsite?: boolean
 ): Promise<{ revision: number; restart: boolean }> {
-  const res = await fetch('/api/admin/config', {
+  return adminRequest('/api/admin/config', {
     method: 'PUT',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(deleteNsite === undefined ? config : { ...config, deleteNsite }),
+    json: deleteNsite === undefined ? config : { ...config, deleteNsite },
   })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as { revision: number; restart: boolean }
 }
 
 /** What saving `config` would do, answered by the server's own rules; saves nothing. */
@@ -214,21 +255,11 @@ export interface NsiteDelivery {
   error: string | null
 }
 
-export async function loadNsite(): Promise<NsiteStatus> {
-  const res = await fetch('/api/admin/nsite', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as NsiteStatus
-}
+export const loadNsite = () => adminRequest<NsiteStatus>('/api/admin/nsite')
 
 /** Has the server build and publish the nsite from the saved settings; its status follows. */
 export async function publishNsite(): Promise<void> {
-  const res = await fetch('/api/admin/nsite/publish', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  })
-  if (!res.ok) throw new Error(await errorMessage(res))
+  await postJson('/api/admin/nsite/publish', {})
 }
 
 /** The connection test: Almond's probe (put, get, list, delete) or the step that failed. */
@@ -255,11 +286,7 @@ export interface StorageStatus {
   }
 }
 
-export async function loadStorageStatus(): Promise<StorageStatus> {
-  const res = await fetch('/api/admin/storage', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as StorageStatus
-}
+export const loadStorageStatus = () => adminRequest<StorageStatus>('/api/admin/storage')
 
 /** Starts (or resumes) moving local uploads into the bucket in the background. */
 export async function startStorageMove(): Promise<void> {
@@ -285,15 +312,11 @@ export async function confirmMediaMirrors(
   hashes: string[],
   signal?: AbortSignal
 ): Promise<MediaMirrorConfirmation> {
-  const res = await fetch('/api/admin/media/mirrors', {
+  return adminRequest('/api/admin/media/mirrors', {
     method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hashes: [...new Set(hashes)] }),
+    json: { hashes: [...new Set(hashes)] },
     signal,
   })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as MediaMirrorConfirmation
 }
 
 /**
@@ -340,16 +363,8 @@ export async function waitForMirrors(
 }
 
 /** A studio write the server only accepts as JSON (`POST`); answers the JSON reply. */
-export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as T
-}
+export const postJson = <T>(path: string, body: unknown) =>
+  adminRequest<T>(path, { method: 'POST', json: body })
 
 /**
  * Where the creator's key lives (`/api/admin/signer`): `managed` on this server (with its
@@ -361,11 +376,7 @@ export interface SignerInfo {
   pubkey: string | null
 }
 
-export async function loadSigner(): Promise<SignerInfo> {
-  const res = await fetch('/api/admin/signer', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as SignerInfo
-}
+export const loadSigner = () => adminRequest<SignerInfo>('/api/admin/signer')
 
 /**
  * Has the server create the managed key, or answers the one it holds already (a retried
@@ -404,18 +415,11 @@ export interface AdminStats {
   }
 }
 
-export async function loadStats(): Promise<AdminStats> {
-  const res = await fetch('/api/admin/stats', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as AdminStats
-}
+export const loadStats = () => adminRequest<AdminStats>('/api/admin/stats')
 
 /** Plays per video event id in the last `days` (1–365), only videos played at least once. */
-export async function loadPlays(days: number): Promise<Record<string, number>> {
-  const res = await fetch(`/api/admin/plays?days=${days}`, { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as Record<string, number>
-}
+export const loadPlays = (days: number) =>
+  adminRequest<Record<string, number>>(`/api/admin/plays?days=${days}`)
 
 /** What the outbox holds per target and kind (`GET /api/admin/outbox`). */
 export interface OutboxStatus {
@@ -442,11 +446,7 @@ export interface OutboxStatus {
   }[]
 }
 
-export async function loadOutbox(): Promise<OutboxStatus> {
-  const res = await fetch('/api/admin/outbox', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  return (await res.json()) as OutboxStatus
-}
+export const loadOutbox = () => adminRequest<OutboxStatus>('/api/admin/outbox')
 
 /** Gives failed jobs (of one target, one event and its media, or all) a fresh set of attempts. Answers how many. */
 export async function retryOutbox(target?: string, eventId?: string): Promise<number> {
@@ -470,12 +470,8 @@ export interface OutboxJob {
   active: boolean
 }
 
-export async function loadEventOutbox(eventId: string): Promise<OutboxJob[]> {
-  const res = await fetch(`/api/admin/outbox/event/${eventId}`, { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  const body = (await res.json()) as { jobs: OutboxJob[] }
-  return body.jobs
-}
+export const loadEventOutbox = async (eventId: string) =>
+  (await adminRequest<{ jobs: OutboxJob[] }>(`/api/admin/outbox/event/${eventId}`)).jobs
 
 /** A video held by the server until its due date (`GET /api/admin/schedule`). */
 export interface ScheduledVideo {
@@ -492,12 +488,8 @@ export interface ScheduledVideo {
   event: NostrEvent
 }
 
-export async function loadSchedule(): Promise<ScheduledVideo[]> {
-  const res = await fetch('/api/admin/schedule', { credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await errorMessage(res))
-  const body: { items: ScheduledVideo[] } = await res.json()
-  return body.items
-}
+export const loadSchedule = async () =>
+  (await adminRequest<{ items: ScheduledVideo[] }>('/api/admin/schedule')).items
 
 /** Hands a signed video event to the server, which publishes it on its `published_at`. */
 export const scheduleVideo = (signed: object) =>
@@ -567,17 +559,14 @@ export async function nostrPost(path: string, signer: Signer): Promise<void> {
     ],
     content: '',
   })
-  const res = await fetch(path, {
+  await adminRequest(path, {
     method: 'POST',
-    credentials: 'same-origin',
     headers: { Authorization: 'Nostr ' + btoa(JSON.stringify(event)) },
   })
-  if (!res.ok) throw new Error(await res.text())
 }
 
 export async function unbindNostr(): Promise<void> {
-  const res = await fetch('/admin/unbind-nostr', { method: 'POST', credentials: 'same-origin' })
-  if (!res.ok) throw new Error(await res.text())
+  await adminRequest('/admin/unbind-nostr', { method: 'POST' })
 }
 
 export async function logout(): Promise<void> {

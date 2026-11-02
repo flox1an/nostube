@@ -7,6 +7,7 @@ import { toDraft, type Draft } from './draft'
 import { FeaturesPage } from './FeaturesPage'
 import i18n from './i18n'
 import { SignerProvider } from './signer-context'
+import { fakeAdminApi } from './test-admin-api'
 
 const config: AdminState['config'] = {
   title: 'My videos',
@@ -45,14 +46,7 @@ function Harness() {
 }
 
 const serveSigner = (mode: string) =>
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string) =>
-      url === '/api/admin/signer'
-        ? new Response(JSON.stringify({ mode, pubkey: 'a'.repeat(64) }))
-        : new Response(null, { status: 404 })
-    )
-  )
+  fakeAdminApi({ 'GET /api/admin/signer': { mode, pubkey: 'a'.repeat(64) } })
 const toggle = (name: string) => screen.getByRole('switch', { name })
 const lightning = () => screen.queryByLabelText('Lightning address') as HTMLInputElement | null
 

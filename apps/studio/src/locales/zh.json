@@ -59,11 +59,15 @@
         "upload": "上传",
         "moderation": "审核",
         "appearance": "外观",
+        "homepage": "主页",
         "sitePages": "页面",
-        "instance": "通用",
-        "account": "账户",
+        "features": "功能",
+        "distribution": "分发",
+        "storage": "存储",
+        "access": "访问权限",
+        "relays": "中继",
         "overview": "统计",
-        "advanced": "高级"
+        "account": "账户"
       },
       "menu": "菜单",
       "close": "关闭菜单"
@@ -98,7 +102,7 @@
       "tagline": "标语",
       "optional": "可选。",
       "lightning": "Lightning 地址",
-      "lightningHint": "可选。观众可以通过 Nostr 应用向你发送打赏（zap，比特币小费），例如 name@getalby.com。它会写入频道身份的资料。",
+      "lightningHint": "Zap 的接收地址，例如 name@getalby.com。它会写入频道身份的资料。",
       "lightningInvalid": "Lightning 地址必须形如 name@domain.tld。",
       "lookTitle": "样式",
       "lookDescription": "访客会根据其系统看到浅色或深色模式；颜色和字体由你决定。",
@@ -194,7 +198,7 @@
       "size": "{{count}} / {{max}} 个字符。纯文本：换行和网址可正常使用。",
       "useStandard": "插入标准文本",
       "useStandardAll": "为所有空白语言插入标准文本",
-      "standardHint": "标准文本说明 Nostube 站点和服务器如何处理访客数据，并通过法律声明指向运营者。它采用插入时的可见范围（“实例”页面）和个人资料中继（“高级”页面）；更改后请重新插入。请核对它是否符合您的运营情况。它不构成法律意见。",
+      "standardHint": "标准文本说明 Nostube 站点和服务器如何处理访客数据，并通过法律声明指向运营者。它采用插入时的播放计数（“功能”页面）和个人资料中继（“中继”页面）设置；更改后请重新插入。请核对它是否符合您的运营情况。它不构成法律意见。",
       "replaceConfirm": "用标准文本替换此语言的当前文本？",
       "plays": {
         "title": "播放计数",
@@ -299,7 +303,6 @@
     },
     "instance": {
       "startPage": "首页",
-      "searchHint": "关闭：网站没有搜索。本地：网站显示搜索框，可按标题、描述和标签查找已显示的视频；搜索在访问者的浏览器中进行。",
       "keys": {
         "placeholder": "npub、hex 密钥或 name@domain",
         "add": "添加",
@@ -319,7 +322,7 @@
       "videoSources": "视频来源",
       "videoSourcesHint": "每行一个 ws:// 或 wss:// 中继。",
       "interactionRelays": "互动中继",
-      "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料，以后也用于评论和打闪（zap）。",
+      "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料、评论、点赞和 Zap。",
       "profileRelaysTitle": "个人资料中继",
       "profileRelaysDescription": "访客登录时，会在互动中继、这些中继、公共默认中继 wss://purplepag.es、wss://nos.lol 和 wss://relay.damus.io 以及访客的 NIP-65 outbox 中继上查找其名称、头像和中继列表。使用频道身份并处于公开模式时，服务器还会在这里发布自己的个人资料和中继列表。",
       "profileRelays": "个人资料中继",
@@ -329,16 +332,11 @@
       "signerRelays": "额外的签名器中继",
       "signerRelaysHint": "每行一个 ws:// 或 wss:// 中继，不带路径。NIP-46 至少需要保留一个：实例内置中继会拒绝签名器消息。",
       "mirrorTitle": "镜像到其他服务器",
-      "mirrorDescription": "在后台把本实例自己的事件和视频复制到你列出的服务器。目标不可用时会持续重试。两个列表都留空则所有内容只保留在本实例上。",
+      "mirrorDescription": "在后台把本实例自己的事件和视频复制到你列出的服务器。服务器不可用时会持续重试。",
       "mirrorRelays": "镜像中继",
       "mirrorRelaysHint": "每行一个 ws:// 或 wss:// 中继。创作者的每个新事件都会发送到那里。",
       "mirrorBlossom": "镜像 Blossom 服务器",
       "mirrorBlossomHint": "每行一个 https:// 服务器。上传的视频会复制到那里。这需要托管的签名密钥，因为镜像请求由服务器签名。",
-      "search": "搜索",
-      "searchModes": {
-        "off": "关闭",
-        "local": "本地"
-      },
       "storage": "存储",
       "quota": "配额（GiB）",
       "quotaHint": "本机和 S3 中的文件合并计算。0 表示不限。",
@@ -391,17 +389,10 @@
       "moveDone": "移动完成：{{files}} 个文件（{{bytes}}）现已在 S3 中。",
       "moveFailed": "移动已停止。再次启动即可继续。错误：{{error}}"
     },
-    "advanced": {
-      "privateNote": "你的实例为私密：视频来源和互动中继不起作用，站点只使用本服务器的中继。这些列表会保留内容，只在公开模式下生效。个人资料中继仍用于查找已登录访客的个人资料；签名器中继和镜像列表在两种模式下都有效。"
-    },
     "nsite": {
-      "title": "站点托管",
-      "description": "由实例提供站点，或通过 nsite 网关发布。中继、Blossom 和 Studio 仍留在实例上。",
       "managedRequired": "nsite 需要托管的频道密钥。使用自己的身份时，服务器无法发布或更新站点。",
       "publicRequired": "切换为公开以发布 nsite 并自动更新。",
-      "instance": "此实例上的网站",
-      "instanceBody": "访客通过你的实例地址打开网站。不会在其他地方发布任何内容。",
-      "nsite": "公开 nsite",
+      "nsite": "发布为 nsite",
       "nsiteBody": "公开 Blossom 服务器上的静态副本，由 nsite 网关提供。更改后会自动更新。",
       "gateway": "网关",
       "gatewayHint": "仅填写 DNS 主机名，例如 nsite.lol。不要填写协议、端口或路径。",
@@ -446,7 +437,7 @@
       "publicTitle": "公开",
       "publicBody": "你的个人资料和中继列表会发布到 Nostr 网络。其他 Nostr 应用可以在此实例上找到你的频道和视频；评论和 Zap 会到达这里。此操作无法完全撤回。",
       "confirmPublic": "切换为公开？此操作无法完全撤回：即使你以后切换回来，个人资料和中继列表也会留在 Nostr 网络中。你填写的镜像中继会出现在发布的中继列表中。",
-      "unavailable": "公开模式需要公共实例地址，或至少一个公共镜像中继和一个公共镜像 Blossom 服务器。请在高级设置中配置两者。",
+      "unavailable": "公开模式需要公共实例地址，或镜像到至少一个公共中继和一个公共 Blossom 服务器。",
       "mirrorRequired": "此实例无法从公网访问。公开模式需要镜像中继和 Blossom 服务器。视频存储在这些服务器上并受其限制；公开互动不会返回此实例。",
       "publicBodyMirror": "频道资料和公共镜像中继列表会发布到 Nostr。视频由镜像提供，而不是此实例。此操作无法完全撤回。"
     },
@@ -694,17 +685,45 @@
     },
     "page": {
       "appearance": {
-        "description": "网站的外观：标题、品牌形象、主页和链接打开方式。"
+        "description": "网站的标题、徽标和外观。"
       },
-      "instance": {
-        "description": "可见范围、托管、展示的创作者、搜索和存储。"
+      "features": {
+        "description": "除视频外网站还提供的功能。每个功能都有自己的开关；开启后会显示其设置。"
+      },
+      "distribution": {
+        "description": "谁能找到你的视频：可见范围、其他服务器上的副本以及 nsite。"
+      },
+      "storage": {
+        "description": "上传内容存放在哪里，以及可以占用多少空间。"
+      },
+      "access": {
+        "description": "站点显示谁的视频，以及谁可以向此服务器发布和上传。"
+      },
+      "relays": {
+        "description": "站点从哪里读取内容，以及登录使用的中继。"
       },
       "account": {
         "description": "为视频签名的身份，以及登录方式。"
-      },
-      "advanced": {
-        "description": "发布者、中继和镜像：几乎无人改动的列表。"
       }
+    },
+    "features": {
+      "searchTitle": "搜索",
+      "searchDescription": "网站上的搜索框，可按标题、描述和标签查找你的视频。搜索在访问者的浏览器中进行。",
+      "zapsTitle": "Zap 打赏",
+      "zapsDescription": "观众可以从网站和 Nostr 应用向你发送比特币小费（zap）。",
+      "zapsOwn": "Zap 会发送到你自己 Nostr 资料中的 Lightning 地址。请在你的 Nostr 应用中设置。"
+    },
+    "distribution": {
+      "mirrorRequired": "你的实例为公开但没有公共地址，因此视频存放在镜像上。关闭镜像之前请先切换为私密。"
+    },
+    "relays": {
+      "privateNote": "你的实例为私密：站点只从本服务器的中继读取视频、个人资料、评论和 Zap。在公开模式下，可在此处选择中继。",
+      "signInTitle": "登录中继",
+      "signInDescription": "用于查找已登录访客的个人资料并连接签名器应用的中继。默认值适用于大多数实例。",
+      "signInEdit": "编辑登录中继"
+    },
+    "access": {
+      "writersDescription": "可以向本服务器的中继发布并上传到其存储的密钥。更改列表会重启服务器。"
     }
   }
 }

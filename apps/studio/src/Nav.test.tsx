@@ -11,10 +11,14 @@ const LABELS: Record<PageId, string> = {
   upload: 'Upload',
   moderation: 'Moderation',
   appearance: 'Appearance',
+  homepage: 'Homepage',
   sitePages: 'Pages',
-  instance: 'General',
+  features: 'Features',
+  distribution: 'Distribution',
+  storage: 'Storage',
+  access: 'Access',
+  relays: 'Relays',
   overview: 'Statistics',
-  advanced: 'Advanced',
   account: 'Account',
 }
 const GROUP_LABELS = {

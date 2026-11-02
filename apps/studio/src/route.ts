@@ -3,13 +3,17 @@ import {
   BarChart3,
   FileText,
   Film,
+  HardDrive,
+  House,
+  KeyRound,
   ListChecks,
   Palette,
-  Settings,
+  RadioTower,
+  Share2,
+  SlidersHorizontal,
   Upload,
   User,
   ShieldCheck,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -19,11 +23,15 @@ export type PageId =
   | 'upload'
   | 'moderation'
   | 'appearance'
+  | 'homepage'
   | 'sitePages'
-  | 'instance'
-  | 'account'
+  | 'features'
+  | 'distribution'
+  | 'storage'
+  | 'access'
+  | 'relays'
   | 'overview'
-  | 'advanced'
+  | 'account'
 export type GroupId = 'start' | 'content' | 'site' | 'server'
 
 /** Stable ids only: the names shown are translated at render (`studio.nav.*`). */
@@ -48,10 +56,14 @@ export const PAGES: PageDef[] = [
   { id: 'videos', group: 'content', editsConfig: false, icon: Film },
   { id: 'moderation', group: 'content', editsConfig: false, icon: ShieldCheck },
   { id: 'appearance', group: 'site', editsConfig: true, icon: Palette },
+  { id: 'homepage', group: 'site', editsConfig: true, icon: House },
   { id: 'sitePages', group: 'site', editsConfig: true, icon: FileText },
-  { id: 'instance', group: 'server', editsConfig: true, icon: Settings },
+  { id: 'features', group: 'site', editsConfig: true, icon: SlidersHorizontal },
+  { id: 'distribution', group: 'server', editsConfig: true, icon: Share2 },
+  { id: 'storage', group: 'server', editsConfig: true, icon: HardDrive },
+  { id: 'access', group: 'server', editsConfig: true, icon: KeyRound },
+  { id: 'relays', group: 'server', editsConfig: true, icon: RadioTower },
   { id: 'overview', group: 'server', editsConfig: false, icon: BarChart3 },
-  { id: 'advanced', group: 'server', editsConfig: true, icon: Wrench },
   { id: 'account', group: 'server', editsConfig: false, icon: User },
 ]
 

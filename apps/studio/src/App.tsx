@@ -14,17 +14,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@nostube/widgets/components/alert-dialog'
+import { AccessPage } from './AccessPage'
 import { AccountPage } from './AccountPage'
-import { AdvancedPage } from './AdvancedPage'
 import { AppearancePage } from './AppearancePage'
+import { DistributionPage } from './DistributionPage'
+import { FeaturesPage } from './FeaturesPage'
+import { HomepagePage } from './HomepagePage'
 import { Onboarding } from './OnboardingWizard'
 import { needsOnboarding } from './onboarding-config'
-import { InstancePage } from './InstancePage'
 import { Login } from './Login'
 import { MobileBar, Sidebar } from './Nav'
 import { NextSteps, useChecklist } from './NextSteps'
 import { OverviewPage } from './OverviewPage'
 import { PagesPage } from './PagesPage'
+import { RelaysPage } from './RelaysPage'
+import { StoragePage } from './StoragePage'
 import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
@@ -309,11 +313,17 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
                 onBranding={(slot, url) => setBranding(b => ({ ...b, [slot]: url }))}
               />
             )}
-            {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
-            {page === 'instance' && (
-              <InstancePage draft={draft} update={update} state={state} dirty={dirty} />
+            {page === 'homepage' && (
+              <HomepagePage draft={draft} update={update} branding={branding} />
             )}
-            {page === 'advanced' && <AdvancedPage draft={draft} update={update} />}
+            {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
+            {page === 'features' && <FeaturesPage draft={draft} update={update} />}
+            {page === 'distribution' && (
+              <DistributionPage draft={draft} update={update} state={state} dirty={dirty} />
+            )}
+            {page === 'storage' && <StoragePage draft={draft} update={update} state={state} />}
+            {page === 'access' && <AccessPage draft={draft} update={update} />}
+            {page === 'relays' && <RelaysPage draft={draft} update={update} />}
             {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
             {page === 'overview' && <OverviewPage />}
             {page === 'moderation' && (

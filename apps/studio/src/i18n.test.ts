@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import i18n from './i18n'
+import { GROUPS, PAGES } from './route'
 
 describe('studio translations', () => {
   it('follows a supported browser language and falls back to English', async () => {
@@ -63,12 +64,8 @@ describe('studio translations', () => {
   })
   it('provides hosting, deletion and public mirror status texts in every Studio locale', () => {
     const keys = [
-      'studio.nsite.title',
-      'studio.nsite.description',
       'studio.nsite.managedRequired',
       'studio.nsite.publicRequired',
-      'studio.nsite.instance',
-      'studio.nsite.instanceBody',
       'studio.nsite.nsite',
       'studio.nsite.nsiteBody',
       'studio.nsite.gateway',
@@ -134,22 +131,12 @@ describe('studio translations', () => {
   it('names every sidebar page, its groups and the page descriptions in every Studio locale', () => {
     const languages = ['en', 'de', 'fr', 'es', 'ru', 'zh', 'ja']
     for (const language of languages) {
-      for (const id of [
-        'videos',
-        'upload',
-        'moderation',
-        'appearance',
-        'sitePages',
-        'instance',
-        'overview',
-        'advanced',
-        'account',
-      ]) {
+      for (const { id } of PAGES) {
         expect(i18n.getResource(language, 'translation', `studio.nav.pages.${id}`)).toBeTypeOf(
           'string'
         )
       }
-      for (const id of ['content', 'site', 'server']) {
+      for (const { id } of GROUPS) {
         expect(i18n.getResource(language, 'translation', `studio.nav.groups.${id}`)).toBeTypeOf(
           'string'
         )
@@ -157,7 +144,15 @@ describe('studio translations', () => {
       for (const key of ['studio.nav.menu', 'studio.nav.close', 'studio.nav.sections']) {
         expect(i18n.getResource(language, 'translation', key)).toBeTypeOf('string')
       }
-      for (const id of ['appearance', 'instance', 'account', 'advanced']) {
+      for (const id of [
+        'appearance',
+        'features',
+        'distribution',
+        'storage',
+        'access',
+        'relays',
+        'account',
+      ]) {
         expect(
           i18n.getResource(language, 'translation', `studio.page.${id}.description`)
         ).toBeTypeOf('string')

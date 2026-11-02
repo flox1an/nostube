@@ -59,11 +59,15 @@
         "upload": "Hochladen",
         "moderation": "Moderation",
         "appearance": "Aussehen",
+        "homepage": "Startseite",
         "sitePages": "Seiten",
-        "instance": "Allgemein",
-        "account": "Konto",
+        "features": "Funktionen",
+        "distribution": "Verbreitung",
+        "storage": "Speicher",
+        "access": "Zugriff",
+        "relays": "Relays",
         "overview": "Statistiken",
-        "advanced": "Erweitert"
+        "account": "Konto"
       },
       "menu": "Menü",
       "close": "Menü schließen"
@@ -98,7 +102,7 @@
       "tagline": "Untertitel",
       "optional": "Optional.",
       "lightning": "Lightning-Adresse",
-      "lightningHint": "Optional. Damit können dir Zuschauer aus Nostr-Apps Zaps (Bitcoin-Trinkgeld) senden, z. B. name@getalby.com. Sie kommt ins Profil der Kanal-Identität.",
+      "lightningHint": "Wohin Zaps gehen, z. B. name@getalby.com. Sie kommt ins Profil der Kanal-Identität.",
       "lightningInvalid": "Die Lightning-Adresse muss wie name@domain.tld aussehen.",
       "lookTitle": "Gestaltung",
       "lookDescription": "Besucher sehen den hellen oder dunklen Modus passend zu ihrem System; Farbe und Schrift bestimmst du.",
@@ -194,7 +198,7 @@
       "size": "{{count}} / {{max}} Zeichen. Reiner Text: Zeilenumbrüche und Webadressen funktionieren.",
       "useStandard": "Standardtext einfügen",
       "useStandardAll": "Standardtext für alle leeren Sprachen",
-      "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er richtet sich nach der Reichweite (Seite Instanz) und den Profil-Relays (Seite Erweitert) zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
+      "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er richtet sich nach dem Abrufzähler (Seite Funktionen) und den Profil-Relays (Seite Relays) zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
       "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?",
       "plays": {
         "title": "Abrufzähler",
@@ -301,7 +305,6 @@
     },
     "instance": {
       "startPage": "Startseite",
-      "searchHint": "Aus: Die Website hat keine Suche. Lokal: Die Website bekommt ein Suchfeld, das die gezeigten Videos nach Titel, Beschreibung und Tags findet; gesucht wird im Browser der Besucher.",
       "keys": {
         "placeholder": "npub, Hex-Schlüssel oder name@domain",
         "add": "Hinzufügen",
@@ -321,7 +324,7 @@
       "videoSources": "Videoquellen",
       "videoSourcesHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "interactionRelays": "Interaktions-Relays",
-      "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile und später für Kommentare und Zaps verwendet.",
+      "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile, Kommentare, Likes und Zaps verwendet.",
       "profileRelaysTitle": "Profil-Relays",
       "profileRelaysDescription": "Meldet sich jemand an, werden Name, Bild und Relay-Liste auf den Interaktions-Relays, auf diesen Relays, auf den öffentlichen Standard-Relays wss://purplepag.es, wss://nos.lol und wss://relay.damus.io sowie auf den NIP-65-Outbox-Relays der Person gesucht. Mit der Kanal-Identität und bei Öffentlich veröffentlicht der Server hier außerdem sein Profil und seine Relay-Liste.",
       "profileRelays": "Profil-Relays",
@@ -331,16 +334,11 @@
       "signerRelays": "Zusätzliche Signer-Relays",
       "signerRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile, ohne Pfad. Für NIP-46 mindestens eines beibehalten: Das eingebaute Instanz-Relay weist Signer-Nachrichten ab.",
       "mirrorTitle": "Auf andere Server spiegeln",
-      "mirrorDescription": "Kopiert die eigenen Events und Videos dieser Instanz im Hintergrund auf die Server, die du hier einträgst. Ist ein Ziel nicht erreichbar, wird es immer wieder versucht. Bleiben beide Listen leer, bleibt alles auf dieser Instanz.",
+      "mirrorDescription": "Kopiert die eigenen Events und Videos dieser Instanz im Hintergrund auf die Server, die du hier einträgst. Ist ein Server nicht erreichbar, wird es immer wieder versucht.",
       "mirrorRelays": "Spiegel-Relays",
       "mirrorRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Jedes neue Event deiner Creators wird dorthin gesendet.",
       "mirrorBlossom": "Spiegel-Blossom-Server",
       "mirrorBlossomHint": "Ein https://-Server pro Zeile. Hochgeladene Videos werden dorthin kopiert. Dafür braucht es den verwalteten Signierschlüssel, weil der Server die Spiegelanfragen signiert.",
-      "search": "Suche",
-      "searchModes": {
-        "off": "Aus",
-        "local": "Lokal"
-      },
       "storage": "Speicher",
       "quota": "Kontingent (GiB)",
       "quotaHint": "Zählt Dateien auf diesem Rechner und in S3 zusammen. 0 bedeutet unbegrenzt.",
@@ -393,17 +391,10 @@
       "moveDone": "Verschieben abgeschlossen: {{files}} Dateien ({{bytes}}) liegen jetzt in S3.",
       "moveFailed": "Das Verschieben wurde angehalten. Starte es erneut, um fortzusetzen. Fehler: {{error}}"
     },
-    "advanced": {
-      "privateNote": "Deine Instanz ist privat: Videoquellen und Interaktions-Relays wirken nicht, die Website nutzt dafür nur das Relay dieses Servers. Die Einträge bleiben erhalten und wirken nur bei Öffentlich. Die Profil-Relays dienen weiter der Profilsuche angemeldeter Besucher; die Signer-Relays und die Spiegel-Listen wirken in beiden Fällen."
-    },
     "nsite": {
-      "title": "Site-Hosting",
-      "description": "Die Seite über deine Instanz oder ein nsite-Gateway bereitstellen. Relay, Blossom und Studio bleiben auf der Instanz.",
       "managedRequired": "nsite benötigt einen verwalteten Kanalschlüssel. Bei eigener Identität kann der Server die Seite nicht veröffentlichen oder aktualisieren.",
       "publicRequired": "Stelle auf Öffentlich um, um ein nsite zu veröffentlichen und automatisch aktuell zu halten.",
-      "instance": "Website auf dieser Instanz",
-      "instanceBody": "Besucher öffnen die Seite unter der Adresse deiner Instanz. Nichts wird anderswo veröffentlicht.",
-      "nsite": "nsite-Hosting (öffentlich)",
+      "nsite": "Als nsite veröffentlichen",
       "nsiteBody": "Eine statische Kopie auf öffentlichen Blossom-Servern, ausgeliefert über ein nsite-Gateway. Sie aktualisiert sich nach Änderungen selbst.",
       "gateway": "Gateway",
       "gatewayHint": "Ein reiner DNS-Hostname, etwa nsite.lol. Ohne Protokoll, Port oder Pfad.",
@@ -448,7 +439,7 @@
       "publicTitle": "Öffentlich",
       "publicBody": "Dein Profil und deine Relay-Liste werden im Nostr-Netz veröffentlicht. Andere Nostr-Apps finden deinen Kanal und deine Videos auf dieser Instanz, Kommentare und Zaps kommen hier an. Das lässt sich nicht vollständig zurücknehmen.",
       "confirmPublic": "Auf Öffentlich umstellen? Das lässt sich nicht vollständig zurücknehmen: Profil und Relay-Liste bleiben im Nostr-Netz, auch wenn du später zurückschaltest. Die eingetragenen Spiegel-Relays stehen in der veröffentlichten Relay-Liste.",
-      "unavailable": "Öffentlich benötigt eine öffentliche Instanzadresse oder mindestens ein öffentliches Spiegel-Relay und einen öffentlichen Spiegel-Blossom-Server. Trage beide unter Erweitert ein.",
+      "unavailable": "Öffentlich benötigt eine öffentliche Instanzadresse oder das Spiegeln auf mindestens ein öffentliches Relay und einen öffentlichen Blossom-Server.",
       "mirrorRequired": "Diese Instanz ist nicht öffentlich erreichbar. Öffentlich benötigt Spiegel-Relays und Blossom-Server. Videos liegen dort unter deren Beschränkungen; öffentliche Interaktionen kommen nicht zu dieser Instanz zurück.",
       "publicBodyMirror": "Dein Kanalprofil und die öffentlichen Spiegel-Relays werden im Nostr-Netz veröffentlicht. Videos werden über die Spiegel bereitgestellt, nicht über diese Instanz. Das lässt sich nicht vollständig zurücknehmen."
     },
@@ -698,17 +689,45 @@
     },
     "page": {
       "appearance": {
-        "description": "Wie die Seite aussieht: Titel, Branding, Startseite und Verlinkungen."
+        "description": "Titel, Logo und das Aussehen deiner Website."
       },
-      "instance": {
-        "description": "Reichweite, Hosting, wessen Videos die Seite zeigt, Suche und Speicher."
+      "features": {
+        "description": "Was deine Website neben den Videos bietet. Jede Funktion hat einen eigenen Schalter; ihre Einstellungen erscheinen, wenn sie eingeschaltet ist."
+      },
+      "distribution": {
+        "description": "Wer deine Videos finden kann: die Reichweite, Kopien auf anderen Servern und die nsite."
+      },
+      "storage": {
+        "description": "Wo Uploads gespeichert werden und wie viel Platz sie belegen dürfen."
+      },
+      "access": {
+        "description": "Wessen Videos die Website zeigt und wer auf diesem Server veröffentlichen und hochladen darf."
+      },
+      "relays": {
+        "description": "Woher die Website liest und welche Relays für die Anmeldung genutzt werden."
       },
       "account": {
         "description": "Die Identität, die deine Videos signiert, und wie du dich anmeldest."
-      },
-      "advanced": {
-        "description": "Schreiber, Relays und Mirrors: die Listen, die selten jemand anfasst."
       }
+    },
+    "features": {
+      "searchTitle": "Suche",
+      "searchDescription": "Ein Suchfeld auf der Website, das deine Videos nach Titel, Beschreibung und Tags findet. Gesucht wird im Browser der Besucher.",
+      "zapsTitle": "Zaps",
+      "zapsDescription": "Zuschauer können dir von der Website und aus Nostr-Apps Bitcoin-Trinkgeld (Zaps) senden.",
+      "zapsOwn": "Zaps gehen an die Lightning-Adresse in deinem eigenen Nostr-Profil. Trage sie in deiner Nostr-App ein."
+    },
+    "distribution": {
+      "mirrorRequired": "Deine Instanz ist öffentlich, hat aber keine öffentliche Adresse, deshalb liegen deine Videos auf den Spiegeln. Wechsle zu Privat, bevor du das Spiegeln abschaltest."
+    },
+    "relays": {
+      "privateNote": "Deine Instanz ist privat: Die Website liest Videos, Profile, Kommentare und Zaps nur vom Relay dieses Servers. Bei Öffentlich wählst du die Relays hier.",
+      "signInTitle": "Anmelde-Relays",
+      "signInDescription": "Die Relays, auf denen die Profile angemeldeter Besucher gesucht und Signer-Apps verbunden werden. Die Standardwerte passen für die meisten Instanzen.",
+      "signInEdit": "Anmelde-Relays bearbeiten"
+    },
+    "access": {
+      "writersDescription": "Schlüssel, die auf das Relay dieses Servers veröffentlichen und in seinen Speicher hochladen dürfen. Eine Änderung der Liste startet den Server neu."
     }
   }
 }

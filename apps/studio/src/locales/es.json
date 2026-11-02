@@ -59,11 +59,15 @@
         "upload": "Subir",
         "moderation": "Moderación",
         "appearance": "Apariencia",
+        "homepage": "Página de inicio",
         "sitePages": "Páginas",
-        "instance": "General",
-        "account": "Cuenta",
+        "features": "Funciones",
+        "distribution": "Distribución",
+        "storage": "Almacenamiento",
+        "access": "Acceso",
+        "relays": "Relays",
         "overview": "Estadísticas",
-        "advanced": "Avanzado"
+        "account": "Cuenta"
       },
       "menu": "Menú",
       "close": "Cerrar menú"
@@ -98,7 +102,7 @@
       "tagline": "Lema",
       "optional": "Opcional.",
       "lightning": "Dirección Lightning",
-      "lightningHint": "Opcional. Permite que los espectadores te envíen zaps (propinas en bitcoin) desde apps de Nostr, p. ej. nombre@getalby.com. Se añade al perfil de la identidad de canal.",
+      "lightningHint": "Adonde llegan los zaps, p. ej. nombre@getalby.com. Se añade al perfil de la identidad de canal.",
       "lightningInvalid": "La dirección Lightning debe tener la forma nombre@dominio.tld.",
       "lookTitle": "Aspecto",
       "lookDescription": "Los visitantes ven el modo claro u oscuro según su sistema; el color y la fuente los eliges tú.",
@@ -194,7 +198,7 @@
       "size": "{{count}} / {{max}} caracteres. Texto sin formato: los saltos de línea y las direcciones web funcionan.",
       "useStandard": "Insertar el texto estándar",
       "useStandardAll": "Texto estándar para todos los idiomas vacíos",
-      "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Sigue el alcance (página Instancia) y los relays de perfiles (página Avanzado) en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
+      "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Sigue el contador de reproducciones (página Funciones) y los relays de perfiles (página Relays) en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
       "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?",
       "plays": {
         "title": "Contador de reproducciones",
@@ -303,7 +307,6 @@
     },
     "instance": {
       "startPage": "Página de inicio",
-      "searchHint": "Desactivada: el sitio no tiene búsqueda. Local: el sitio muestra un cuadro de búsqueda que encuentra los vídeos visibles por título, descripción y etiquetas; la búsqueda se hace en el navegador del visitante.",
       "keys": {
         "placeholder": "npub, clave hex o nombre@dominio",
         "add": "Añadir",
@@ -323,7 +326,7 @@
       "videoSources": "Fuentes de video",
       "videoSourcesHint": "Un relay ws:// o wss:// por línea.",
       "interactionRelays": "Relays de interacción",
-      "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles y, más adelante, comentarios y zaps.",
+      "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles, comentarios, «me gusta» y zaps.",
       "profileRelaysTitle": "Relays de perfiles",
       "profileRelaysDescription": "Cuando un visitante inicia sesión, su nombre, su imagen y su lista de relays se buscan en los relays de interacción, en estos relays, en los relays públicos por defecto wss://purplepag.es, wss://nos.lol y wss://relay.damus.io y en los relays outbox NIP-65 del visitante. Con la identidad de canal y en Público, el servidor también publica aquí su perfil y su lista de relays.",
       "profileRelays": "Relays de perfiles",
@@ -333,16 +336,11 @@
       "signerRelays": "Relays de firmante adicionales",
       "signerRelaysHint": "Un relay ws:// o wss:// por línea, sin ruta. Conserva al menos uno para NIP-46: el relay integrado de la instancia rechaza los mensajes del firmante.",
       "mirrorTitle": "Replicar en otros servidores",
-      "mirrorDescription": "Copia en segundo plano los eventos y vídeos propios de esta instancia a los servidores que indiques. Sigue reintentando mientras un destino no responda. Deja ambas listas vacías para que todo quede en esta instancia.",
+      "mirrorDescription": "Copia en segundo plano los eventos y vídeos propios de esta instancia a los servidores que indiques. Sigue reintentando mientras un servidor no responda.",
       "mirrorRelays": "Relays de réplica",
       "mirrorRelaysHint": "Un relay ws:// o wss:// por línea. Cada evento nuevo de tus creadores se envía allí.",
       "mirrorBlossom": "Servidores Blossom de réplica",
       "mirrorBlossomHint": "Un servidor https:// por línea. Los vídeos subidos se copian allí. Requiere la clave de firma gestionada, porque el servidor firma las solicitudes de réplica.",
-      "search": "Búsqueda",
-      "searchModes": {
-        "off": "Desactivada",
-        "local": "Local"
-      },
       "storage": "Almacenamiento",
       "quota": "Cuota (GiB)",
       "quotaHint": "Cuenta juntos los archivos de esta máquina y de S3. 0 significa ilimitado.",
@@ -395,17 +393,10 @@
       "moveDone": "Traslado terminado: {{files}} archivos ({{bytes}}) están ahora en S3.",
       "moveFailed": "El traslado se detuvo. Vuelve a iniciarlo para continuar. Error: {{error}}"
     },
-    "advanced": {
-      "privateNote": "Tu instancia es privada: las fuentes de vídeo y los relays de interacción no tienen efecto, el sitio solo usa para ello el relay de este servidor. Las listas conservan sus valores y solo funcionan en Público. Los relays de perfiles siguen sirviendo para buscar el perfil de los visitantes que inician sesión; los relays de firmante y las listas de réplica funcionan en ambos casos."
-    },
     "nsite": {
-      "title": "Alojamiento del sitio",
-      "description": "Sirve el sitio desde tu instancia o publícalo mediante una pasarela nsite. El relay, Blossom y Studio permanecen en la instancia.",
       "managedRequired": "nsite requiere una clave de canal gestionada. Con tu propia identidad, el servidor no puede publicar ni actualizar el sitio.",
       "publicRequired": "Cambia a Público para publicar un nsite y actualizarlo automáticamente.",
-      "instance": "Sitio en esta instancia",
-      "instanceBody": "Los visitantes abren el sitio en la dirección de tu instancia. No se publica nada en otro lugar.",
-      "nsite": "nsite público",
+      "nsite": "Publicar como nsite",
       "nsiteBody": "Una copia estática en servidores Blossom públicos, servida por una pasarela nsite. Se actualiza sola tras los cambios.",
       "gateway": "Pasarela",
       "gatewayHint": "Solo un nombre de host DNS, por ejemplo nsite.lol. Sin protocolo, puerto ni ruta.",
@@ -450,7 +441,7 @@
       "publicTitle": "Público",
       "publicBody": "Tu perfil y tu lista de relays se publican en la red Nostr. Otras apps de Nostr encuentran tu canal y tus vídeos en esta instancia; los comentarios y los zaps llegan aquí. Esto no se puede deshacer por completo.",
       "confirmPublic": "¿Cambiar a Público? Esto no se puede deshacer por completo: tu perfil y tu lista de relays siguen en la red Nostr aunque más tarde vuelvas atrás. Los relays de réplica que has introducido aparecen en la lista de relays publicada.",
-      "unavailable": "Público requiere un origen público o al menos un relay de réplica público y un servidor Blossom de réplica público. Configura ambos en Avanzado.",
+      "unavailable": "Público requiere un origen público o la réplica en al menos un relay público y un servidor Blossom público.",
       "mirrorRequired": "Esta instancia no es accesible públicamente. Público requiere relays y servidores Blossom de réplica. Los videos viven en esos servidores bajo sus límites; las interacciones públicas no vuelven a esta instancia.",
       "publicBodyMirror": "El perfil del canal y la lista de relays de réplica públicos se publican en Nostr. Los videos se sirven desde las réplicas, no desde esta instancia. Esto no se puede deshacer por completo."
     },
@@ -702,17 +693,45 @@
     },
     "page": {
       "appearance": {
-        "description": "El aspecto del sitio: título, marca, portada y destino de los enlaces."
+        "description": "Título, logotipo y el aspecto de tu sitio."
       },
-      "instance": {
-        "description": "Alcance, alojamiento, creadores mostrados, búsqueda y almacenamiento."
+      "features": {
+        "description": "Lo que ofrece tu sitio además de los vídeos. Cada función tiene su propio interruptor; sus ajustes aparecen cuando está activada."
+      },
+      "distribution": {
+        "description": "Quién puede encontrar tus vídeos: el alcance, las copias en otros servidores y el nsite."
+      },
+      "storage": {
+        "description": "Dónde se guardan las subidas y cuánto espacio pueden ocupar."
+      },
+      "access": {
+        "description": "De quién son los vídeos que muestra el sitio y quién puede publicar y subir a este servidor."
+      },
+      "relays": {
+        "description": "De dónde lee el sitio y qué relays se usan para iniciar sesión."
       },
       "account": {
         "description": "La identidad que firma tus vídeos y cómo inicias sesión."
-      },
-      "advanced": {
-        "description": "Autores, relés y réplicas: las listas que casi nadie toca."
       }
+    },
+    "features": {
+      "searchTitle": "Búsqueda",
+      "searchDescription": "Un cuadro de búsqueda en el sitio que encuentra tus vídeos por título, descripción y etiquetas. La búsqueda se hace en el navegador del visitante.",
+      "zapsTitle": "Zaps",
+      "zapsDescription": "Los espectadores pueden enviarte propinas en bitcoin (zaps) desde el sitio y desde apps de Nostr.",
+      "zapsOwn": "Los zaps llegan a la dirección Lightning de tu propio perfil de Nostr. Configúrala en tu app de Nostr."
+    },
+    "distribution": {
+      "mirrorRequired": "Tu instancia es pública sin una dirección pública, así que tus vídeos están en las réplicas. Cambia a Privado antes de desactivar la réplica."
+    },
+    "relays": {
+      "privateNote": "Tu instancia es privada: el sitio lee vídeos, perfiles, comentarios y zaps solo del relay de este servidor. En Público eliges aquí los relays.",
+      "signInTitle": "Relays de inicio de sesión",
+      "signInDescription": "Los relays que buscan los perfiles de los visitantes que inician sesión y conectan las apps de firmante. Los valores predeterminados sirven para la mayoría de instancias.",
+      "signInEdit": "Editar los relays de inicio de sesión"
+    },
+    "access": {
+      "writersDescription": "Claves que pueden publicar en el relay de este servidor y subir a su almacenamiento. Cambiar la lista reinicia el servidor."
     }
   }
 }

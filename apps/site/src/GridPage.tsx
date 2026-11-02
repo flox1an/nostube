@@ -95,7 +95,7 @@ const gridSkeleton = (
 export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
   const { t } = useTranslation()
   const { tag } = useParams()
-  const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config, tag)
+  const { videos, loading, error, hasMore, paging, loadMore } = useCreatorVideos(config, tag)
 
   return (
     <>
@@ -106,7 +106,7 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
       ) : (
         <>
           <VideoLinks videos={videos} gate={gate} />
-          {hasMore && (
+          {hasMore && !paging && (
             <div className="text-center">
               <Button type="button" variant="outline" onClick={loadMore}>
                 {t('site.grid.loadMore')}

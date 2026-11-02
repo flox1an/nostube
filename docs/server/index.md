@@ -117,8 +117,8 @@ As long as the instance has no displayed creator, Studio shows a setup wizard th
 ![The Studio onboarding wizard](/screenshots/studio-onboarding.webp)
 
 Next: upload a video under **Content → Upload**, add a logo under **Website → Appearance**, and fill in
-the About, Imprint and Privacy pages under **Website → Pages**. The [Studio](/server/studio) page covers
-every section.
+the About, Imprint and Privacy pages under **Website → Pages**. The [Studio](/server/studio)
+documentation describes every page.
 
 ## Coolify
 

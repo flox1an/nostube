@@ -26,7 +26,7 @@ const key = (url: string) => url.replace(/\/+$/, '')
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /** Where the server's delivery of one event and its files can be read again after a reload. */
-export const deliveryHref = (eventId: string) => `${hashFor('advanced')}?event=${eventId}`
+export const deliveryHref = (eventId: string) => `${hashFor('distribution')}?event=${eventId}`
 
 /** The event id a delivery link names, or null. */
 export const deliveryEventId = (hash: string) =>
@@ -214,7 +214,7 @@ export async function publishNsiteTracked(label: string, onStatus: (status: Nsit
     label,
     phase: 'publishing',
     lifetime: 'server',
-    href: hashFor('instance'),
+    href: hashFor('distribution'),
   })
   let timer: ReturnType<typeof setTimeout> | undefined
   const poll = async (): Promise<void> => {

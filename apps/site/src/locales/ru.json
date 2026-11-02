@@ -70,6 +70,9 @@
     "feed": {
       "label": "RSS-лента"
     },
+    "admin": {
+      "label": "Админка"
+    },
     "search": {
       "label": "Поиск видео",
       "placeholder": "Поиск видео…",

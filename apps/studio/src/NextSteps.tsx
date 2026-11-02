@@ -83,7 +83,7 @@ export function useChecklist(
     },
     // The address goes into the profile of the managed key only.
     ...(mode === 'managed'
-      ? [{ id: 'lightning', done: Boolean(config.site.lightning), href: hashFor('appearance') }]
+      ? [{ id: 'lightning', done: Boolean(config.site.lightning), href: hashFor('features') }]
       : []),
     { id: 'viewSite', done: siteViewed, href: '/' },
   ]

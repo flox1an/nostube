@@ -132,7 +132,7 @@ function PageCard({
  * play counter the privacy page has to mention. */
 export function PagesPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
-  // The standard text names mandatory public defaults plus the Advanced page's profile relays.
+  // The standard text names mandatory public defaults plus the Relays page's profile relays.
   const profileRelays = draft.profileRelaysText
     .split('\n')
     .map(line => line.trim())

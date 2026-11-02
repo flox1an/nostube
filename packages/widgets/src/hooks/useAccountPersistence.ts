@@ -237,14 +237,10 @@ export async function restoreAccount(
           console.warn('Extension not available, cannot restore extension account')
           return null
         }
-        const signer = new ExtensionSigner()
-        const pubkey = await signer.getPublicKey()
-        // Verify pubkey matches stored pubkey
-        if (pubkey !== accountData.pubkey) {
-          console.warn('Extension pubkey does not match stored pubkey')
-          return null
-        }
-        return new ExtensionAccount(pubkey, signer)
+        // Trust the stored pubkey: asking the extension here would read the key (often behind a
+        // permission prompt) on page load, before the visitor did anything. The account rejects
+        // events signed by another key (SignerMismatchError), so a switched key fails at signing.
+        return new ExtensionAccount(accountData.pubkey, new ExtensionSigner())
       }
 
       case 'nsec': {

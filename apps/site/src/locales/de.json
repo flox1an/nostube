@@ -70,6 +70,9 @@
     "feed": {
       "label": "RSS-Feed"
     },
+    "admin": {
+      "label": "Admin"
+    },
     "search": {
       "label": "Videos durchsuchen",
       "placeholder": "Videos durchsuchen…",

@@ -14,7 +14,7 @@ describe('route', () => {
 
   it('ignores a query or a sub path after the page', () => {
     expect(pageFromHash('#/appearance?x=1')).toBe('appearance')
-    expect(pageFromHash('#/instance/more')).toBe('instance')
+    expect(pageFromHash('#/storage/more')).toBe('storage')
   })
 
   it('puts every page into a known group', () => {

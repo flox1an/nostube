@@ -41,6 +41,8 @@ const state: AdminState = {
   },
 }
 
+const emptyOutbox = { relays: [], blossom: [], counts: [], problems: [] }
+
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
@@ -69,7 +71,7 @@ describe('Studio save bar', () => {
     expect(screen.getByText('Unsaved changes')).toBeTruthy()
     expect(screen.queryByText(/restarts the server/)).toBeNull()
 
-    location.hash = '#/instance'
+    location.hash = '#/storage'
     fireEvent.change(await screen.findByLabelText('Quota (GiB)'), { target: { value: '10' } })
     expect(screen.getByText('Saving restarts the server for a few seconds.')).toBeTruthy()
   })
@@ -102,7 +104,7 @@ describe('Studio save bar', () => {
             : new Response(null, { status: 404 })
       )
     )
-    location.hash = '#/instance'
+    location.hash = '#/storage'
     render(<App />)
     await screen.findByLabelText('Quota (GiB)')
     const type = (label: string, value: string) =>
@@ -133,34 +135,34 @@ describe('Studio save bar', () => {
                 ? published
                 : url === '/api/admin/signer'
                   ? { mode: 'managed', pubkey: PK }
-                  : {
-                      status: 'published',
-                      url: 'https://channel.nsite.lol',
-                      aggregate: 'f'.repeat(64),
-                      publishedAt: 1,
-                      error: null,
-                      retained: false,
-                      relays: [],
-                      servers: [],
-                    }
+                  : url === '/api/admin/outbox'
+                    ? emptyOutbox
+                    : {
+                        status: 'published',
+                        url: 'https://channel.nsite.lol',
+                        aggregate: 'f'.repeat(64),
+                        publishedAt: 1,
+                        error: null,
+                        retained: false,
+                        relays: [],
+                        servers: [],
+                      }
             )
           )
       )
       vi.stubGlobal('fetch', fetch)
-      location.hash = '#/instance'
+      location.hash = '#/distribution'
       render(<App />)
-      await screen.findByRole('button', { name: /^nsite hosting/ })
+      const nsite = await screen.findByRole('switch', { name: 'Publish as nsite' })
       if (target === 'instance') {
-        fireEvent.click(screen.getByRole('button', { name: /^Website on this instance/ }))
+        fireEvent.click(nsite)
       } else {
         fireEvent.click(screen.getByRole('button', { name: /^Private/ }))
       }
       expect(await screen.findByRole('alertdialog')).toBeTruthy()
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(screen.queryByRole('alertdialog')).toBeNull()
-      expect(
-        screen.getByRole('button', { name: /^nsite hosting/ }).getAttribute('aria-pressed')
-      ).toBe('true')
+      expect(nsite.getAttribute('aria-checked')).toBe('true')
       expect(screen.queryByText('Unsaved changes')).toBeNull()
       expect(
         fetch.mock.calls.filter(
@@ -191,25 +193,27 @@ describe('Studio save bar', () => {
               ? { ...state, config: { ...state.config, reach: 'public', siteHosting: 'nsite' } }
               : url === '/api/admin/signer'
                 ? { mode: 'managed', pubkey: PK }
-                : {
-                    status: 'published',
-                    url: null,
-                    aggregate: null,
-                    publishedAt: null,
-                    error: null,
-                    retained: false,
-                    relays: [],
-                    servers: [],
-                  }
+                : url === '/api/admin/outbox'
+                  ? emptyOutbox
+                  : {
+                      status: 'published',
+                      url: null,
+                      aggregate: null,
+                      publishedAt: null,
+                      error: null,
+                      retained: false,
+                      relays: [],
+                      servers: [],
+                    }
           )
         )
       })
     )
-    location.hash = '#/instance'
+    location.hash = '#/distribution'
     render(<App />)
-    await screen.findByRole('button', { name: /^nsite hosting/ })
+    const nsite = await screen.findByRole('switch', { name: 'Publish as nsite' })
     if (target === 'private') fireEvent.click(screen.getByRole('button', { name: /^Private/ }))
-    else fireEvent.click(screen.getByRole('button', { name: /^Website on this instance/ }))
+    else fireEvent.click(nsite)
     fireEvent.click(await screen.findByRole('button', { name: label }))
     fireEvent.click(screen.getByRole('button', { name: 'Save and apply' }))
     await waitFor(() =>
@@ -248,32 +252,30 @@ describe('Studio save bar', () => {
         return new Response(null, { status: 404 })
       })
     )
-    location.hash = '#/advanced'
+    location.hash = '#/distribution'
     render(<App />)
-    fireEvent.change(await screen.findByLabelText('Mirror relays'), {
+    fireEvent.click(await screen.findByRole('switch', { name: 'Mirror to other servers' }))
+    fireEvent.change(screen.getByLabelText('Mirror relays'), {
       target: { value: 'wss://relay.example' },
     })
     fireEvent.change(screen.getByLabelText('Mirror Blossom servers'), {
       target: { value: 'https://blossom.example' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'General' }))
-    const publicTile = await screen.findByRole('button', { name: /^Public/ })
-    expect((publicTile as HTMLButtonElement).disabled).toBe(false)
+    const publicTile = screen.getByRole('button', { name: /^Public/ }) as HTMLButtonElement
+    expect(publicTile.disabled).toBe(false)
     fireEvent.click(publicTile)
     await waitFor(() =>
       expect(
-        (screen.getByRole('button', { name: /^nsite hosting/ }) as HTMLButtonElement).disabled
+        (screen.getByRole('switch', { name: 'Publish as nsite' }) as HTMLButtonElement).disabled
       ).toBe(false)
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
-    fireEvent.change(await screen.findByLabelText('Mirror Blossom servers'), {
+    fireEvent.change(screen.getByLabelText('Mirror Blossom servers'), {
       target: { value: '' },
     })
     expect(
       (screen.getByRole('button', { name: 'Save and apply' }) as HTMLButtonElement).disabled
     ).toBe(true)
-    expect(
-      screen.getByText(/Public needs a public origin or at least one public mirror relay/)
-    ).toBeTruthy()
+    // The reach card and the save bar both give the reason.
+    expect(screen.getAllByText(/^Public needs a public origin, or mirroring/)).toHaveLength(2)
   })
 })

@@ -17,7 +17,7 @@ import { deliveryEventId, jobStatus } from './delivery'
 type Load =
   | { name: 'loading' }
   | { name: 'failed'; message: string }
-  /** `jobs`: the outbox jobs of the event the address names (`#/advanced?event=<id>`). */
+  /** `jobs`: the outbox jobs of the event the address names (`#/distribution?event=<id>`). */
   | { name: 'ready'; status: OutboxStatus; jobs: OutboxJob[] | null }
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -90,6 +90,16 @@ export function MirrorCard() {
   }
 
   const date = (seconds: number) => new Date(seconds * 1000).toLocaleString(i18n.resolvedLanguage)
+
+  // Nothing ever queued and no delivery asked for: an instance without mirrors sees no card.
+  if (
+    !eventId &&
+    (load.name === 'loading' ||
+      (load.name === 'ready' &&
+        load.status.counts.length === 0 &&
+        load.status.problems.length === 0))
+  )
+    return null
 
   return (
     <Card>

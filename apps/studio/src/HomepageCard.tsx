@@ -5,13 +5,7 @@ import { toHiddenVideoRef, videoRef } from '@nostube/core/hidden-videos'
 import { noSiteHomepage, type SiteHomepage } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { Button } from '@nostube/widgets/components/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@nostube/widgets/components/card'
+import { Card, CardContent } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { Textarea } from '@nostube/widgets/components/textarea'
@@ -68,11 +62,7 @@ export function HomepageCard({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t('studio.homepage.title')}</CardTitle>
-        <CardDescription>{t('studio.homepage.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         <Field
           id="home-intro"
           label={t('studio.homepage.intro')}

@@ -59,11 +59,15 @@
         "upload": "Upload",
         "moderation": "Moderation",
         "appearance": "Appearance",
+        "homepage": "Homepage",
         "sitePages": "Pages",
-        "instance": "General",
-        "account": "Account",
+        "features": "Features",
+        "distribution": "Distribution",
+        "storage": "Storage",
+        "access": "Access",
+        "relays": "Relays",
         "overview": "Statistics",
-        "advanced": "Advanced"
+        "account": "Account"
       },
       "menu": "Menu",
       "close": "Close menu"
@@ -98,7 +102,7 @@
       "tagline": "Tagline",
       "optional": "Optional.",
       "lightning": "Lightning address",
-      "lightningHint": "Optional. Lets viewers send you zaps (Bitcoin tips) from Nostr apps, e.g. name@getalby.com. It goes into the profile of the channel identity.",
+      "lightningHint": "Where zaps arrive, e.g. name@getalby.com. It goes into the profile of the channel identity.",
       "lightningInvalid": "The Lightning address must look like name@domain.tld.",
       "lookTitle": "Look",
       "lookDescription": "Visitors see light or dark mode following their system; the colour and font are yours.",
@@ -194,7 +198,7 @@
       "size": "{{count}} / {{max}} characters. Plain text: line breaks and web addresses work.",
       "useStandard": "Insert the standard text",
       "useStandardAll": "Standard text for all empty languages",
-      "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It follows the reach (Instance page) and the profile relays (Advanced page) at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
+      "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It follows the play counter (Features page) and the profile relays (Relays page) at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
       "replaceConfirm": "Replace the current text of this language with the standard text?",
       "plays": {
         "title": "Play counter",
@@ -301,7 +305,6 @@
     },
     "instance": {
       "startPage": "Start page",
-      "searchHint": "Off: the site has no search. Local: the site gets a search box that finds the shown videos by title, description and tags; it searches in the visitor's browser.",
       "keys": {
         "placeholder": "npub, hex key or name@domain",
         "add": "Add",
@@ -321,7 +324,7 @@
       "videoSources": "Video sources",
       "videoSourcesHint": "One ws:// or wss:// relay per line.",
       "interactionRelays": "Interaction relays",
-      "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps.",
+      "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles, comments, likes and zaps.",
       "profileRelaysTitle": "Profile relays",
       "profileRelaysDescription": "When a visitor signs in, their name, picture and relay list are looked up on the interaction relays, on these relays, on the public defaults wss://purplepag.es, wss://nos.lol and wss://relay.damus.io and on the visitor's NIP-65 outbox relays. With the channel identity and Public reach the server also publishes its profile and relay list here.",
       "profileRelays": "Profile relays",
@@ -331,16 +334,11 @@
       "signerRelays": "Additional signer relays",
       "signerRelaysHint": "One ws:// or wss:// relay per line, without a path. Keep at least one for NIP-46: the built-in instance relay rejects signer messages.",
       "mirrorTitle": "Mirror to other servers",
-      "mirrorDescription": "Copies this instance's own events and videos to servers you list, in the background. It keeps retrying while a target is down. Leave both lists empty to keep everything on this instance.",
+      "mirrorDescription": "Copies this instance's own events and videos to the servers you list, in the background. It keeps retrying while a server is down.",
       "mirrorRelays": "Mirror relays",
       "mirrorRelaysHint": "One ws:// or wss:// relay per line. Every new event of your creators is sent there.",
       "mirrorBlossom": "Mirror Blossom servers",
       "mirrorBlossomHint": "One https:// server per line. Uploaded videos are copied there. This needs the managed signing key, because the server signs the mirror requests.",
-      "search": "Search",
-      "searchModes": {
-        "off": "Off",
-        "local": "Local"
-      },
       "storage": "Storage",
       "quota": "Quota (GiB)",
       "quotaHint": "Counts files on this machine and in S3 together. 0 means unlimited.",
@@ -393,17 +391,10 @@
       "moveDone": "Move finished: {{files}} files ({{bytes}}) are now in S3.",
       "moveFailed": "The move stopped. Start it again to resume. Error: {{error}}"
     },
-    "advanced": {
-      "privateNote": "Your instance is Private: video sources and interaction relays have no effect, the site uses only this server's relay for them. The lists keep their values and work only in Public. Profile relays still serve the lookup of signed-in visitors; remote signer relays and the mirror lists work in both."
-    },
     "nsite": {
-      "title": "Site hosting",
-      "description": "Serve the site from your instance or publish it through an nsite gateway. Relay, Blossom and Studio stay on the instance.",
       "managedRequired": "nsite requires a managed channel key. With own identity the server cannot publish or update the site.",
       "publicRequired": "Switch to Public to publish and automatically update an nsite.",
-      "instance": "Website on this instance",
-      "instanceBody": "Visitors open the site at your instance's address. Nothing is published elsewhere.",
-      "nsite": "nsite hosting (public)",
+      "nsite": "Publish as nsite",
       "nsiteBody": "A static copy on public Blossom servers, served by an nsite gateway. It updates itself after changes.",
       "gateway": "Gateway",
       "gatewayHint": "A bare DNS hostname, for example nsite.lol. No scheme, port or path.",
@@ -448,7 +439,7 @@
       "publicTitle": "Public",
       "publicBody": "Your profile and your relay list are published on the Nostr network. Other Nostr apps find your channel and your videos on this instance; comments and zaps arrive here. This cannot be fully undone.",
       "confirmPublic": "Switch to Public? This cannot be fully undone: your profile and relay list stay on the Nostr network even if you switch back later. The mirror relays you entered appear in the published relay list.",
-      "unavailable": "Public needs a public origin or at least one public mirror relay and one public mirror Blossom server. Configure both on the Advanced page.",
+      "unavailable": "Public needs a public origin, or mirroring to at least one public relay and one public Blossom server.",
       "mirrorRequired": "This instance is not publicly reachable. Public requires mirror relays and Blossom servers. Videos live on those servers under their limits; public interactions do not return to this instance.",
       "publicBodyMirror": "Your channel profile and public mirror relay list are published on Nostr. Videos are served by your mirrors, not by this instance. This cannot be fully undone."
     },
@@ -698,17 +689,45 @@
     },
     "page": {
       "appearance": {
-        "description": "How the site looks: title, branding, the homepage and where links open."
+        "description": "Title, logo and the look of your site."
       },
-      "instance": {
-        "description": "Reach, site hosting, whose videos the site shows, search and storage."
+      "features": {
+        "description": "What your site offers besides the videos. Each feature has its own switch; its settings appear when it is on."
+      },
+      "distribution": {
+        "description": "Who can find your videos: the reach, copies on other servers and the nsite."
+      },
+      "storage": {
+        "description": "Where uploads are stored and how much space they may take."
+      },
+      "access": {
+        "description": "Whose videos the site shows, and who may publish and upload to this server."
+      },
+      "relays": {
+        "description": "Where the site reads from, and the relays used to sign in."
       },
       "account": {
         "description": "The identity that signs your videos, and how you log in."
-      },
-      "advanced": {
-        "description": "Writers, relays and mirrors: the lists most owners never touch."
       }
+    },
+    "features": {
+      "searchTitle": "Search",
+      "searchDescription": "A search box on the site that finds your videos by title, description and tags. It searches in the visitor's browser.",
+      "zapsTitle": "Zaps",
+      "zapsDescription": "Viewers can send you Bitcoin tips (zaps) from the site and from Nostr apps.",
+      "zapsOwn": "Zaps go to the Lightning address in your own Nostr profile. Set it in your Nostr app."
+    },
+    "distribution": {
+      "mirrorRequired": "Your instance is Public without a public address, so your videos live on the mirrors. Switch to Private before turning mirroring off."
+    },
+    "relays": {
+      "privateNote": "Your instance is Private: the site reads videos, profiles, comments and zaps only from this server's relay. In Public you choose the relays here.",
+      "signInTitle": "Sign-in relays",
+      "signInDescription": "The relays that look up the profiles of signed-in visitors and connect signer apps. The defaults work for most instances.",
+      "signInEdit": "Edit the sign-in relays"
+    },
+    "access": {
+      "writersDescription": "Keys that may publish to the relay of this server and upload to its storage. Changing the list restarts the server."
     }
   }
 }

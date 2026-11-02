@@ -147,7 +147,7 @@ domain = ""
 | `origin`             | from `--origin`                             | file only | The [canonical origin](/server/tls#canonical-origin), `http(s)://host[:port]`                                                                  |
 | `title`              | `"My videos"`                               |           | Site title and relay name; must not be empty                                                                                                   |
 | `reach`              | `"private"`                                 |           | `private` or `public`, see [Reach](/server/studio#reach)                                                                                       |
-| `site_hosting`       | `"instance"`                                |           | `instance` or `nsite`; `nsite` needs `reach = "public"` and the managed key, see [nsite hosting](/server/studio#nsite-hosting)                 |
+| `site_hosting`       | `"instance"`                                |           | `instance` or `nsite`; `nsite` needs `reach = "public"` and the managed key, see [Publish as nsite](/server/studio#publish-as-nsite)           |
 | `creators`           | `[]`                                        |           | **Displayed creators**: public keys (hex or npub) whose videos the site shows. The first one is the start page                                 |
 | `allowed_writers`    | `[]`                                        | yes       | **Allowed writers**: keys that may write to the relay and upload to Blossom. Empty means nobody can upload                                     |
 | `video_sources`      | the instance's `ws://` or `wss://` relay    |           | **Video sources**: relays for the video catalog (public reach only)                                                                            |
@@ -165,7 +165,7 @@ Signer relays must be root WebSocket URLs, with no credentials, path (except `/`
 Old config files without `signer_relays` keep the defaults; an explicit empty list stays empty.
 The public config exposes this list as `signerRelays`; pairing uses it alongside the interaction
 relays. At least one must accept NIP-46 messages from fresh client keys: the built-in instance
-relay's writer policy does not. See [Remote signer relays](/server/studio#remote-signer-relays).
+relay's writer policy does not. See [Additional signer relays](/server/studio#additional-signer-relays).
 
 ### `[search]`
 
@@ -215,7 +215,7 @@ The secret access key is not in `config.toml`; it is `s3_secret_access_key` in `
 | `font`          | `"sans"`    | `sans`, `serif` or `mono`                                                     |
 | `hidden_videos` | `[]`        | Videos the site does not show: `<kind>:<pubkey hex>:<d>` or a 64-hex event id |
 | `lightning`     | `""`        | Lightning address (`name@domain.tld`) for zaps to the channel identity        |
-| `count_plays`   | `false`     | Opt-in [play counting](/server/studio#play-counting)                          |
+| `count_plays`   | `false`     | Opt-in [play counter](/server/studio#play-counter)                            |
 
 `[site.links]`: where links to Nostr content outside the site go. Each is an `https://` URL template
 containing `{nip19}`.

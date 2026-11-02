@@ -70,6 +70,9 @@
     "feed": {
       "label": "RSSフィード"
     },
+    "admin": {
+      "label": "管理"
+    },
     "search": {
       "label": "動画を検索",
       "placeholder": "動画を検索…",

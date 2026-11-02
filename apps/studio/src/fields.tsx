@@ -1,6 +1,14 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@nostube/widgets/components/card'
 import { Label } from '@nostube/widgets/components/label'
+import { Switch } from '@nostube/widgets/components/switch'
 
 /** A labelled form field with an optional hint line. */
 export function Field({
@@ -20,6 +28,54 @@ export function Field({
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
+  )
+}
+
+/**
+ * A feature with its own switch: its settings show only while it is on. `note` says why the
+ * switch is locked, or anything the owner must know while the feature is off.
+ */
+export function FeatureCard({
+  title,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+  note,
+  children,
+}: {
+  title: string
+  description: ReactNode
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+  disabled?: boolean
+  note?: ReactNode
+  children?: ReactNode
+}) {
+  const id = useId()
+  return (
+    <Card>
+      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle id={`${id}-title`}>{title}</CardTitle>
+          <CardDescription id={`${id}-description`}>{description}</CardDescription>
+        </div>
+        <Switch
+          aria-labelledby={`${id}-title`}
+          aria-describedby={`${id}-description`}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          disabled={disabled}
+          className="mt-1"
+        />
+      </CardHeader>
+      {(note || (checked && children)) && (
+        <CardContent className="space-y-4">
+          {note && <p className="text-sm text-muted-foreground">{note}</p>}
+          {checked && children}
+        </CardContent>
+      )}
+    </Card>
   )
 }
 

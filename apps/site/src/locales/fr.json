@@ -70,6 +70,9 @@
     "feed": {
       "label": "Flux RSS"
     },
+    "admin": {
+      "label": "Administration"
+    },
     "search": {
       "label": "Rechercher des vidéos",
       "placeholder": "Rechercher des vidéos…",

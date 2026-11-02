@@ -3,9 +3,10 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { matchFilters, nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { Subject, filter } from 'rxjs'
-import { NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
+import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
 import { AccountManager } from 'applesauce-accounts'
 import {
+  ExtensionSigner,
   NostrConnectProvider,
   NostrConnectSigner,
   PrivateKeySigner,
@@ -43,6 +44,34 @@ describe('account persistence', () => {
 
     expect(manager.getActive()?.pubkey).toBe(pubkey)
     expect(loadActiveAccount()).toBe(pubkey)
+  })
+
+  it('restores an extension account without asking the extension for the key', async () => {
+    const user = new PrivateKeySigner(privateKey)
+    const pubkey = await user.getPublicKey()
+    let keyReads = 0
+    const nostr = {
+      getPublicKey: async () => (++keyReads, pubkey),
+      signEvent: (template: Parameters<typeof user.signEvent>[0]) => user.signEvent(template),
+    }
+    const g = globalThis as { window?: unknown }
+    g.window = { nostr }
+    try {
+      saveAccountToStorage(new ExtensionAccount(pubkey, new ExtensionSigner()), 'extension')
+      saveActiveAccount(pubkey)
+
+      const manager = new AccountManager()
+      await restoreAccountsToManager(manager)
+
+      const active = manager.getActive()
+      expect(active?.pubkey).toBe(pubkey)
+      expect(keyReads).toBe(0)
+      // The extension is first used when the visitor acts, e.g. signs.
+      const signed = await active!.signEvent({ kind: 1, content: 'hi', tags: [], created_at: 0 })
+      expect(signed.pubkey).toBe(pubkey)
+    } finally {
+      delete g.window
+    }
   })
 
   describe('bunker accounts', () => {

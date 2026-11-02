@@ -53,7 +53,7 @@ describe('PagesPage', () => {
       expect(screen.getAllByRole('button', { name: 'Insert the standard text' })).toHaveLength(1)
     })
 
-    it('fills the current language, with the profile relays of the Advanced page', () => {
+    it('fills the current language, with the profile relays of the Relays page', () => {
       const update = vi.fn()
       render(<PagesPage draft={privacyDraft({}, 'wss://profiles.example\n')} update={update} />)
       fireEvent.click(standardButton())

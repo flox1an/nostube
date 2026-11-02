@@ -70,6 +70,9 @@
     "feed": {
       "label": "RSS 订阅"
     },
+    "admin": {
+      "label": "管理"
+    },
     "search": {
       "label": "搜索视频",
       "placeholder": "搜索视频…",

@@ -59,11 +59,15 @@
         "upload": "Mise en ligne",
         "moderation": "Modération",
         "appearance": "Apparence",
+        "homepage": "Page d’accueil",
         "sitePages": "Pages",
-        "instance": "Général",
-        "account": "Compte",
+        "features": "Fonctionnalités",
+        "distribution": "Diffusion",
+        "storage": "Stockage",
+        "access": "Accès",
+        "relays": "Relais",
         "overview": "Statistiques",
-        "advanced": "Avancé"
+        "account": "Compte"
       },
       "menu": "Menu",
       "close": "Fermer le menu"
@@ -98,7 +102,7 @@
       "tagline": "Slogan",
       "optional": "Facultatif.",
       "lightning": "Adresse Lightning",
-      "lightningHint": "Facultatif. Permet aux spectateurs de vous envoyer des zaps (pourboires en bitcoin) depuis les applications Nostr, par ex. nom@getalby.com. Elle est ajoutée au profil de l'identité de chaîne.",
+      "lightningHint": "Où arrivent les zaps, par ex. nom@getalby.com. Elle est ajoutée au profil de l'identité de chaîne.",
       "lightningInvalid": "L'adresse Lightning doit être de la forme nom@domaine.tld.",
       "lookTitle": "Style",
       "lookDescription": "Les visiteurs voient le mode clair ou sombre selon leur système ; la couleur et la police sont à vous.",
@@ -194,7 +198,7 @@
       "size": "{{count}} / {{max}} caractères. Texte brut : les sauts de ligne et les adresses web fonctionnent.",
       "useStandard": "Insérer le texte standard",
       "useStandardAll": "Texte standard pour toutes les langues vides",
-      "standardHint": "Le texte standard décrit ce que le site et le serveur Nostube font des données des visiteurs et renvoie aux mentions légales pour l'exploitant. Il suit la portée (page Instance) et les relais de profils (page Avancé) au moment de l'insertion ; insérez-le à nouveau après les avoir modifiés. Vérifiez qu'il correspond à votre exploitation. Il ne constitue pas un conseil juridique.",
+      "standardHint": "Le texte standard décrit ce que le site et le serveur Nostube font des données des visiteurs et renvoie aux mentions légales pour l'exploitant. Il suit le compteur de lectures (page Fonctionnalités) et les relais de profils (page Relais) au moment de l'insertion ; insérez-le à nouveau après les avoir modifiés. Vérifiez qu'il correspond à votre exploitation. Il ne constitue pas un conseil juridique.",
       "replaceConfirm": "Remplacer le texte actuel de cette langue par le texte standard ?",
       "plays": {
         "title": "Compteur de lectures",
@@ -303,7 +307,6 @@
     },
     "instance": {
       "startPage": "Page d'accueil",
-      "searchHint": "Désactivée : le site n'a pas de recherche. Locale : le site affiche un champ de recherche qui trouve les vidéos visibles par titre, description et tags ; la recherche se fait dans le navigateur du visiteur.",
       "keys": {
         "placeholder": "npub, clé hex ou nom@domaine",
         "add": "Ajouter",
@@ -323,7 +326,7 @@
       "videoSources": "Sources vidéo",
       "videoSourcesHint": "Un relais ws:// ou wss:// par ligne.",
       "interactionRelays": "Relais d'interaction",
-      "interactionRelaysHint": "Un relais ws:// ou wss:// par ligne. Utilisé pour les profils et, plus tard, les commentaires et les zaps.",
+      "interactionRelaysHint": "Un relais ws:// ou wss:// par ligne. Utilisé pour les profils, les commentaires, les likes et les zaps.",
       "profileRelaysTitle": "Relais de profils",
       "profileRelaysDescription": "Quand un visiteur se connecte, son nom, son image et sa liste de relais sont recherchés sur les relais d'interaction, sur ces relais, sur les relais publics par défaut wss://purplepag.es, wss://nos.lol et wss://relay.damus.io et sur les relais outbox NIP-65 du visiteur. Avec l'identité de chaîne et en mode Public, le serveur y publie aussi son profil et sa liste de relais.",
       "profileRelays": "Relais de profils",
@@ -333,16 +336,11 @@
       "signerRelays": "Relais de signature supplémentaires",
       "signerRelaysHint": "Un relais ws:// ou wss:// par ligne, sans chemin. Gardez-en au moins un pour NIP-46 : le relais intégré de l'instance refuse les messages de signature.",
       "mirrorTitle": "Répliquer vers d'autres serveurs",
-      "mirrorDescription": "Copie en arrière-plan les événements et vidéos propres à cette instance vers les serveurs que vous indiquez. Les tentatives reprennent tant qu'une cible est hors service. Laissez les deux listes vides pour tout garder sur cette instance.",
+      "mirrorDescription": "Copie en arrière-plan les événements et vidéos propres à cette instance vers les serveurs que vous indiquez. Les tentatives reprennent tant qu'un serveur est hors service.",
       "mirrorRelays": "Relais miroirs",
       "mirrorRelaysHint": "Un relais ws:// ou wss:// par ligne. Chaque nouvel événement de vos créateurs y est envoyé.",
       "mirrorBlossom": "Serveurs Blossom miroirs",
       "mirrorBlossomHint": "Un serveur https:// par ligne. Les vidéos téléversées y sont copiées. Cela nécessite la clé de signature gérée, car le serveur signe les requêtes de réplication.",
-      "search": "Recherche",
-      "searchModes": {
-        "off": "Désactivée",
-        "local": "Locale"
-      },
       "storage": "Stockage",
       "quota": "Quota (Gio)",
       "quotaHint": "Compte ensemble les fichiers de cette machine et ceux de S3. 0 signifie illimité.",
@@ -395,17 +393,10 @@
       "moveDone": "Déplacement terminé : {{files}} fichiers ({{bytes}}) sont maintenant dans S3.",
       "moveFailed": "Le déplacement s'est arrêté. Relancez-le pour reprendre. Erreur : {{error}}"
     },
-    "advanced": {
-      "privateNote": "Votre instance est privée : les sources vidéo et les relais d'interaction n'ont aucun effet, le site n'utilise pour cela que le relais de ce serveur. Les listes gardent leurs valeurs et ne s'appliquent qu'en mode Public. Les relais de profils servent toujours à rechercher le profil des visiteurs connectés ; les relais de signature et les listes de miroirs fonctionnent dans les deux cas."
-    },
     "nsite": {
-      "title": "Hébergement du site",
-      "description": "Hébergez le site sur votre instance ou publiez-le via une passerelle nsite. Le relais, Blossom et Studio restent sur l'instance.",
       "managedRequired": "nsite exige une clé de chaîne gérée. Avec votre propre identité, le serveur ne peut ni publier ni actualiser le site.",
       "publicRequired": "Passez en Public pour publier un nsite et le mettre à jour automatiquement.",
-      "instance": "Site sur cette instance",
-      "instanceBody": "Les visiteurs ouvrent le site à l'adresse de votre instance. Rien n'est publié ailleurs.",
-      "nsite": "nsite public",
+      "nsite": "Publier comme nsite",
       "nsiteBody": "Une copie statique sur des serveurs Blossom publics, servie par une passerelle nsite. Elle se met à jour d'elle-même après chaque modification.",
       "gateway": "Passerelle",
       "gatewayHint": "Un nom d'hôte DNS seul, par exemple nsite.lol. Sans protocole, port ni chemin.",
@@ -450,7 +441,7 @@
       "publicTitle": "Public",
       "publicBody": "Votre profil et votre liste de relais sont publiés sur le réseau Nostr. D'autres applications Nostr trouvent votre chaîne et vos vidéos sur cette instance ; les commentaires et les zaps arrivent ici. Cela ne peut pas être entièrement annulé.",
       "confirmPublic": "Passer en Public ? Cela ne peut pas être entièrement annulé : votre profil et votre liste de relais restent sur le réseau Nostr même si vous revenez en arrière plus tard. Les relais miroirs saisis figurent dans la liste de relais publiée.",
-      "unavailable": "Public exige une origine publique ou au moins un relais miroir et un serveur Blossom miroir publics. Configurez les deux dans Avancé.",
+      "unavailable": "Public exige une origine publique, ou une réplication vers au moins un relais public et un serveur Blossom public.",
       "mirrorRequired": "Cette instance n'est pas accessible publiquement. Public exige des relais et serveurs Blossom miroirs. Les vidéos y sont hébergées selon leurs limites ; les interactions publiques ne reviennent pas à cette instance.",
       "publicBodyMirror": "Le profil de votre chaîne et la liste des relais miroirs publics sont publiés sur Nostr. Les vidéos sont servies par les miroirs, pas par cette instance. Cela ne peut pas être entièrement annulé."
     },
@@ -702,17 +693,45 @@
     },
     "page": {
       "appearance": {
-        "description": "L’apparence du site : titre, image de marque, page d’accueil et destination des liens."
+        "description": "Titre, logo et apparence de votre site."
       },
-      "instance": {
-        "description": "Portée, hébergement, créateurs affichés, recherche et stockage."
+      "features": {
+        "description": "Ce que votre site propose en plus des vidéos. Chaque fonctionnalité a son propre interrupteur ; ses réglages apparaissent quand elle est activée."
+      },
+      "distribution": {
+        "description": "Qui peut trouver vos vidéos : la portée, les copies sur d'autres serveurs et le nsite."
+      },
+      "storage": {
+        "description": "Où les fichiers mis en ligne sont stockés et combien d'espace ils peuvent occuper."
+      },
+      "access": {
+        "description": "Les vidéos de qui le site affiche, et qui peut publier et mettre en ligne sur ce serveur."
+      },
+      "relays": {
+        "description": "Où le site lit ses données, et les relais utilisés pour la connexion."
       },
       "account": {
         "description": "L’identité qui signe vos vidéos, et votre façon de vous connecter."
-      },
-      "advanced": {
-        "description": "Auteurs autorisés, relais et miroirs : les listes que presque personne ne modifie."
       }
+    },
+    "features": {
+      "searchTitle": "Recherche",
+      "searchDescription": "Un champ de recherche sur le site qui trouve vos vidéos par titre, description et tags. La recherche se fait dans le navigateur du visiteur.",
+      "zapsTitle": "Zaps",
+      "zapsDescription": "Les spectateurs peuvent vous envoyer des pourboires en bitcoin (zaps) depuis le site et depuis les applications Nostr.",
+      "zapsOwn": "Les zaps arrivent à l'adresse Lightning de votre propre profil Nostr. Définissez-la dans votre application Nostr."
+    },
+    "distribution": {
+      "mirrorRequired": "Votre instance est publique sans adresse publique, vos vidéos sont donc sur les miroirs. Passez en Privé avant de désactiver la réplication."
+    },
+    "relays": {
+      "privateNote": "Votre instance est privée : le site lit les vidéos, les profils, les commentaires et les zaps uniquement depuis le relais de ce serveur. En Public, vous choisissez les relais ici.",
+      "signInTitle": "Relais de connexion",
+      "signInDescription": "Les relais qui recherchent les profils des visiteurs connectés et relient les applications de signature. Les valeurs par défaut conviennent à la plupart des instances.",
+      "signInEdit": "Modifier les relais de connexion"
+    },
+    "access": {
+      "writersDescription": "Clés autorisées à publier sur le relais de ce serveur et à mettre en ligne dans son stockage. Modifier la liste redémarre le serveur."
     }
   }
 }

@@ -14,7 +14,7 @@ which keeps the instance fully usable offline.
 | Limit | Default | Where | Meaning |
 | --- | --- | --- | --- |
 | Per-file maximum | 4 GiB | fixed | The size ceiling for any single file: a video, an HLS segment, a thumbnail |
-| Storage quota | `0` (unlimited) | Studio **Server → General → Storage**, `quota_gib` | Ceiling on the total size of stored media, local and S3 together |
+| Storage quota | `0` (unlimited) | Studio **Server → Storage**, `quota_gib` | Ceiling on the total size of stored media, local and S3 together |
 | Free-space reserve | 5 GiB | Studio, `free_space_reserve_gib` | Disk space always left free on the host; uploads that would cut into it are refused |
 
 The local disk stages every upload, also with S3, so the free-space reserve always applies to it.
@@ -23,7 +23,7 @@ quota and free disk space.
 
 ## S3-compatible storage
 
-Under **Server → General → Storage**, select **S3-compatible storage (advanced)** to send new uploads
+Under **Server → Storage**, select **S3-compatible storage (advanced)** to send new uploads
 to a bucket at Cloudflare R2, AWS S3, MinIO, Garage or another provider instead of this machine. The
 default **This machine** option remains the simple, offline-capable setup.
 
@@ -96,7 +96,7 @@ before starting.
 
 The outbox can copy uploaded media to other Blossom servers, and events to other relays, as soon as
 they are stored ([ADR 0009](https://github.com/flox1an/nostube/blob/main/apps/server/docs/adr/0009-outbox-and-mirror.md)).
-Configure the targets under **Server → Advanced → Mirror to other servers**:
+Turn on **Server → Distribution → Mirror to other servers** and enter the targets:
 
 | List | Format | Copies |
 | --- | --- | --- |

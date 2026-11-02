@@ -67,7 +67,7 @@ export function StorageWarning({ status }: { status: StorageStatus | null }) {
           </p>
         )}
         <a
-          href="#/instance/storage"
+          href="#/storage"
           className="underline"
           onClick={() => document.getElementById('s3-endpoint')?.focus()}
         >

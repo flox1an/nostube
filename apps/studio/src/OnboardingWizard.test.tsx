@@ -255,9 +255,7 @@ describe('Onboarding wizard', () => {
     expect(screen.getByRole('button', { name: /^Private/ }).getAttribute('aria-pressed')).toBe(
       'true'
     )
-    expect(
-      screen.getByText(/Public needs a public origin or at least one public mirror relay/)
-    ).toBeTruthy()
+    expect(screen.getByText(/^Public needs a public origin, or mirroring/)).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(false)
   })
 

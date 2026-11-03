@@ -43,11 +43,26 @@ This changes the earlier rule that the theme stays with the viewer: the creator 
 
 **Addendum: search (still version 1).** `search.mode` is `off` or `local`. `off`: the site shows no search box and has no search page. `local`: the site shows a search box and a `/search?q=` page that finds the videos the grid shows (the start page creator's videos from `videoSources`, without `site.videos.hidden`) whose title, description or tags contain every word of the query, case and diacritics ignored (`@nostube/core/video-search`). It runs in the visitor's browser over the whole catalog, paged in from the instance relays; the relay itself still ignores NIP-50 `search`. A video behind the age gate matches on its title only, the one thing its card shows. The former `{ "mode": "external", "url": "https://…" }` is removed: no contract for that URL was ever specified (the hosted nostu.be search API is not scoped to `creators` and takes nostu.be's preset and NSFW parameters), so nothing could honour it. A `config.toml` that still says `external` starts with search off and is written back as `off` on the next save; the admin API and the public-config readers reject it.
 
-**Addendum: curated homepage (still version 1).** `site.homepage` configures the start page only: `intro` (plain text, at most 2000 Unicode characters), `featured` (empty or one video reference), `featuredText` (at most 500 characters), `selected` (at most 12 distinct references, in display order), `links` (at most five `{label,url}` objects) and `action` (`null` or one such object). A reference is a 64-lowercase-hex event id or `34235:<pubkey>:<d>` / `34236:<pubkey>:<d>`, at most 1024 characters with no control characters; colons in `d` are preserved. Link labels are non-blank and at most 80 characters. URLs are absolute `https://` URLs with a host, no credentials, whitespace or control characters, and at most 2048 characters.
+**Addendum: homepage presentation and Nostr pins.** `site.homepage` carries presentation only:
+`intro` (at most 2000 Unicode characters), `featuredText` (at most 500 characters, attached to the
+first visible pin), `links` (at most five named HTTPS links) and nullable `action`. Link labels are
+nonblank and at most 80 characters; URLs have a host, no credentials, whitespace or controls and
+at most 2048 characters. All four fields are required when the homepage object is supplied.
+TOML uses `featured_text`; presentation saves use the normal revision/atomic hot-apply path.
 
-The server sends all six fields, with empty values and `action: null` when there is no curation. Readers accept an absent `homepage` from an older instance as no curation, but validate all six fields when present. Admin PUT accepts an absent homepage as no curation; an explicitly supplied object requires all six fields, including nullable `action`. The stored `[site.homepage]` uses `featured_text`; TOML omits an unset action. Saves use the existing revision, atomic persistence and hot-apply path without restarting for presentation-only changes.
+Video curation is the start-page creator's latest replaceable kind `10001`, using Nostube's
+existing `e` and video `a` tag convention. Site resolves pins from `videoSources`, keeps tag order,
+deduplicates resolved videos and applies creator ownership, hidden/deleted video and age-gate rules.
+The first visible video is a large poster/link, never autoplay; remaining pins are the selection.
+Studio publishes its ordered list separately from config saves, through the creator's signer to
+the instance relay; the existing outbox mirrors it. It preserves unrelated/unresolved pins and
+content and refuses to overwrite a list changed since editing began. Shared core helpers and
+widget hooks serve web, site and Studio. Writer admission already supports kind 10001, including
+replaceable-event semantics. No relay kind allowlist change is needed.
 
-Studio's Appearance page selects videos from the paged creator catalog or accepts a pasted video link, reorders/removes selections and previews the draft. The public site resolves older choices directly from `videoSources`, restricts them to the start-page creator, and applies the existing hidden-video, deletion and age-gate behavior. Missing choices disappear rather than exposing references or an empty selection section. A featured video is a poster/link, never a second autoplay player. Search, tag and video pages keep their existing layouts.
+The former `featured` and `selected` fields are removed without migration (pre-user cutover).
+Operators must remove these obsolete TOML keys before starting the new server and re-pin videos.
+This cutover requires the matching bundled site/Studio; cached older clients are not supported.
 
 **Missing, off and empty stay apart.** A missing required field rejects the whole config; additive fields have only the explicit absence behavior documented above. Off is written explicitly. An empty list means "none on purpose". No value, missing or empty, ever selects an app default. The client ignores unknown fields, and a breaking change bumps `version`.
 

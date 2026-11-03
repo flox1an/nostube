@@ -207,6 +207,20 @@ describe('SiteHome', () => {
     const curatedClient = {
       ...client,
       eventStore: makeStore(),
+      relayPool: {
+        ...client.relayPool,
+        request: () =>
+          of({
+            ...profile,
+            id: '1'.repeat(64),
+            kind: 10001,
+            tags: [
+              ['a', `34235:${creator}:debut:cut`],
+              ['a', `34235:${creator}:backstage`],
+              ['a', `34235:${creator}:debut:cut`],
+            ],
+          }),
+      },
       getTimelineLoader: (_key: string, filters: Filter) => () =>
         of(...(filters['#d'] ? [debut, backstage] : [video])),
     } as unknown as NostubeClient
@@ -216,9 +230,7 @@ describe('SiteHome', () => {
         ...config.site,
         homepage: {
           intro: 'Independent films by Alice.',
-          featured: `34235:${creator}:debut:cut`,
           featuredText: 'My first story.',
-          selected: [`34235:${creator}:backstage`, `34235:${creator}:debut:cut`],
           links: [{ label: 'Concerts', url: 'https://alice.example/concerts' }],
           action: { label: 'Book a screening', url: 'https://alice.example/contact' },
         },
@@ -228,7 +240,7 @@ describe('SiteHome', () => {
     const selected = await screen.findByRole('region', { name: 'Selected works' })
     const recommendations = within(selected).getAllByRole('link')
     expect(recommendations[0].textContent).toContain('Behind the scenes')
-    expect(recommendations[1].textContent).toContain('The debut film')
+    expect(recommendations).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Book a screening' }).getAttribute('href')).toBe(
       'https://alice.example/contact'
     )
@@ -275,6 +287,20 @@ describe('SiteHome', () => {
       {
         ...client,
         eventStore: makeStore(),
+        relayPool: {
+          ...client.relayPool,
+          request: () =>
+            of({
+              ...profile,
+              id: '2'.repeat(64),
+              kind: 10001,
+              tags: [
+                ['e', hidden.id],
+                ['e', foreign.id],
+                ['e', warned.id],
+              ],
+            }),
+        },
         getTimelineLoader: () => () => of(hidden, foreign, warned),
       } as unknown as NostubeClient,
       '/',
@@ -285,9 +311,7 @@ describe('SiteHome', () => {
           videos: { hidden: [hidden.id] },
           homepage: {
             intro: '',
-            featured: warned.id,
             featuredText: 'Sensitive editorial note',
-            selected: [hidden.id, foreign.id],
             links: [],
             action: null,
           },

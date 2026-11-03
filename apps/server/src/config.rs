@@ -351,15 +351,12 @@ pub struct Site {
     pub count_plays: bool,
 }
 
-/// What the start page features (public JSON `site.homepage`, camelCase there). Videos are
-/// referenced like `hidden_videos`, restricted to kinds 34235/34236; empty `featured`: none.
+/// Homepage presentation. Video choices live in the creator's kind-10001 pin list.
 #[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields, default)]
 pub struct SiteHomepage {
     pub intro: String,
-    pub featured: String,
     pub featured_text: String,
-    pub selected: Vec<String>,
     pub links: Vec<HomepageLink>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub action: Option<HomepageLink>,
@@ -374,31 +371,11 @@ pub struct HomepageLink {
 }
 
 fn check_homepage(h: &SiteHomepage) -> Result<(), BoxError> {
-    let is_ref = |r: &str| {
-        is_hex64(r)
-            || (r.chars().count() <= 1024
-                && matches!(r.splitn(3, ':').collect::<Vec<_>>().as_slice(),
-                    [kind, pubkey, d] if matches!(*kind, "34235" | "34236")
-                        && is_hex64(pubkey)
-                        && !d.is_empty()
-                        && !d.chars().any(char::is_control)))
-    };
     if h.intro.chars().count() > 2000 {
         return Err("site.homepage.intro must be at most 2000 characters".into());
     }
     if h.featured_text.chars().count() > 500 {
         return Err("site.homepage.featuredText must be at most 500 characters".into());
-    }
-    if !h.featured.is_empty() && !is_ref(&h.featured) {
-        return Err(format!("site.homepage.featured must be an event id or 34235/34236:<pubkey>:<d>: {}", h.featured).into());
-    }
-    if h.selected.len() > 12 {
-        return Err("site.homepage.selected holds at most 12 videos".into());
-    }
-    for (i, r) in h.selected.iter().enumerate() {
-        if !is_ref(r) || h.selected[..i].contains(r) {
-            return Err(format!("site.homepage.selected entries must be distinct event ids or 34235/34236:<pubkey>:<d>: {r}").into());
-        }
     }
     if h.links.len() > 5 {
         return Err("site.homepage.links holds at most 5 links".into());
@@ -914,9 +891,7 @@ impl Config {
                 },
                 "homepage": {
                     "intro": self.site.homepage.intro,
-                    "featured": self.site.homepage.featured,
                     "featuredText": self.site.homepage.featured_text,
-                    "selected": self.site.homepage.selected,
                     "links": self.site.homepage.links,
                     "action": self.site.homepage.action,
                 },
@@ -1277,7 +1252,7 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(cfg.site.homepage, SiteHomepage::default(), "an old file starts without curation");
         assert_eq!(
             cfg.public_json()["site"]["homepage"],
-            serde_json::json!({ "intro": "", "featured": "", "featuredText": "", "selected": [], "links": [], "action": null })
+            serde_json::json!({ "intro": "", "featuredText": "", "links": [], "action": null })
         );
         let edit = |homepage: SiteHomepage| Edited {
             title: "Flox".into(),
@@ -1298,9 +1273,7 @@ tls = {{ mode = "local-ca" }}
         let link = |label: &str, url: &str| HomepageLink { label: label.into(), url: url.into() };
         let valid = SiteHomepage {
             intro: "Hallo — ".repeat(250),
-            featured: format!("34235:{PK}:a:b"),
             featured_text: "Start here".into(),
-            selected: vec!["a".repeat(64), format!("34236:{PK}:short")],
             links: vec![link("Shop", "https://shop.example/x?y=1")],
             action: Some(link("Contact", "https://example.org/contact")),
         };
@@ -1309,19 +1282,11 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.site.homepage, valid);
         let json = reloaded.public_json();
         assert_eq!(json["site"]["homepage"]["featuredText"], "Start here");
-        assert_eq!(json["site"]["homepage"]["featured"], format!("34235:{PK}:a:b"), "colons in d stay");
         assert_eq!(json["site"]["homepage"]["action"], serde_json::json!({ "label": "Contact", "url": "https://example.org/contact" }));
 
         let bad: Vec<SiteHomepage> = vec![
             SiteHomepage { intro: "x".repeat(2001), ..valid.clone() },
             SiteHomepage { featured_text: "x".repeat(501), ..valid.clone() },
-            SiteHomepage { featured: format!("1:{PK}:d"), ..valid.clone() },
-            SiteHomepage { featured: format!("34235:{PK}:"), ..valid.clone() },
-            SiteHomepage { featured: format!("34235:{PK}:a\nb"), ..valid.clone() },
-            SiteHomepage { featured: format!("34235:{PK}:{}", "d".repeat(1024)), ..valid.clone() },
-            SiteHomepage { featured: "A".repeat(64), ..valid.clone() },
-            SiteHomepage { selected: vec!["a".repeat(64), "a".repeat(64)], ..valid.clone() },
-            SiteHomepage { selected: (0..13).map(|i| format!("34235:{PK}:{i}")).collect(), ..valid.clone() },
             SiteHomepage { links: vec![link("x", "https://a.example"); 6], ..valid.clone() },
             SiteHomepage { links: vec![link("  ", "https://a.example")], ..valid.clone() },
             SiteHomepage { links: vec![link(&"x".repeat(81), "https://a.example")], ..valid.clone() },

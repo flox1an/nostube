@@ -6,9 +6,14 @@ import { processEvent, type VideoEvent } from '@nostube/core/video-event'
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from 'nostr-tools'
 import { describe, expect, it, vi } from 'vitest'
 import { HomepageCard } from './HomepageCard'
+import type { InstanceClient } from './instance-client'
 import './i18n'
 
-const loaded = vi.hoisted(() => ({ videos: [] as unknown[] }))
+const loaded = vi.hoisted(() => ({
+  videos: [] as unknown[],
+  refs: [] as string[],
+  pins: [] as unknown[],
+}))
 vi.mock('./instance-client', () => ({
   bootInstanceClient: async () => ({ config: { startPage: { creator: 'c' } }, client: {} }),
 }))
@@ -18,6 +23,19 @@ vi.mock('@nostube/widgets/instance-providers', () => ({
 vi.mock('@nostube/widgets/hooks/useCreatorVideos', () => ({
   useCreatorVideos: () => ({ videos: loaded.videos, loading: false, error: null, hasMore: false }),
 }))
+vi.mock('@nostube/widgets/hooks/usePinnedVideos', () => ({
+  usePinnedVideos: () => ({
+    refs: loaded.refs,
+    videos: loaded.pins,
+    ready: true,
+    error: '',
+    event: undefined,
+  }),
+}))
+vi.mock('./signer-context', () => ({
+  useSigner: () => ({ signer: null, pubkey: null }),
+}))
+vi.mock('@nostube/widgets/hooks/useVideosByRef', () => ({ useVideosByRef: () => new Map() }))
 
 const key = generateSecretKey()
 const makeVideo = (d: string, title: string) =>
@@ -43,15 +61,21 @@ loaded.videos = [a, b, c]
 function Editor({ onSaved }: { onSaved: (homepage: SiteHomepage | undefined) => void }) {
   const [homepage, setHomepage] = useState<SiteHomepage>()
   const [videos, setVideos] = useState<VideoEvent[]>([])
+  const [pins, setPins] = useState<string[]>([])
   onSaved(homepage)
   return (
-    <HomepageCard
-      homepage={homepage}
-      hiddenText={videoRef(c)}
-      onChange={setHomepage}
-      videos={videos}
-      onVideos={setVideos}
-    />
+    <>
+      <HomepageCard
+        homepage={homepage}
+        hiddenText={videoRef(c)}
+        onChange={setHomepage}
+        videos={videos}
+        onVideos={setVideos}
+        instance={{ config: { startPage: { creator: a.pubkey } } } as InstanceClient}
+        onPins={setPins}
+      />
+      <output>{pins.join(',')}</output>
+    </>
   )
 }
 
@@ -63,16 +87,13 @@ describe('homepage editor', () => {
     // An older config: nothing configured, nothing changed until the creator edits.
     expect((screen.getByLabelText('Introduction') as HTMLTextAreaElement).value).toBe('')
     fireEvent.click(await screen.findByRole('button', { name: 'Add “Alpha”' }))
-    expect(homepage).toBeDefined()
     fireEvent.click(screen.getByRole('button', { name: 'Add “Beta”' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Feature “Beta”' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move “Beta” up' }))
 
     // A hidden video is no choice.
     const disabled = (name: string) =>
       (screen.getByRole('button', { name }) as HTMLButtonElement).disabled
     expect(disabled('Add “Gamma”')).toBe(true)
-    expect(disabled('Feature “Gamma”')).toBe(true)
 
     const paste = screen.getByLabelText('Or paste a video link')
     fireEvent.change(paste, { target: { value: 'nope' } })
@@ -104,11 +125,12 @@ describe('homepage editor', () => {
 
     expect(homepage).toEqual({
       intro: '',
-      featured: videoRef(b),
       featuredText: '',
-      selected: [videoRef(b), `34236:${older.pubkey}:old:clip`, videoRef(a)],
       links: [{ label: 'Shop', url: 'https://shop.example/' }],
       action: { label: 'Support me', url: 'https://support.example/' },
     })
+    expect(screen.getByRole('status').textContent).toBe(
+      [videoRef(b), `34236:${older.pubkey}:old:clip`, videoRef(a)].join(',')
+    )
   })
 })

@@ -135,9 +135,16 @@ light or dark mode from their system.
 
 ### Homepage
 
-**Website → Homepage** sets what visitors see first: an introduction, a featured video, up to 12
-selected videos, up to 5 links and one main button, with a preview beside the form. Everything is
-optional; left empty, the homepage shows the latest videos.
+**Website → Homepage** edits one ordered list of profile pins: the first visible video is featured,
+the rest appear below. Add, reorder or remove videos and use **Publish pins** to sign the creator's
+kind `10001` list and publish it to the instance relay. Configured mirror relays receive copies
+through the outbox. These are the same profile pins used by nostu.be; it must query a relay that
+holds the list. A creator signer is required (managed key or the creator's browser account).
+Unrelated notes, unresolved pins and list content are preserved. Up to 12 videos can be selected.
+
+The introduction, optional note on the first pin, up to 5 links and main button remain website
+settings saved with **Save and apply**. The preview reflects the pin order. No pins means no
+featured/selected section; latest videos still appear. Previous config selections are not migrated.
 
 ### Pages
 

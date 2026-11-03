@@ -1858,6 +1858,20 @@ mod tests {
         assert!(get(&relay, &[filter("{}")], 0).iter().all(|e| e.pubkey == writer.public_key()));
     }
 
+    #[tokio::test]
+    async fn writer_pin_list_is_replaceable_and_readable() {
+        let writer = Keys::generate();
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let old = ev(&writer, 10001, now - 1, "", &[&["a", "34235:author:old"]]);
+        let new = ev(&writer, 10001, now, "", &[&["a", "34235:author:new"]]);
+        assert!(ok_status(relay.ingest(old).await).0);
+        assert!(ok_status(relay.ingest(new.clone()).await).0);
+        let stored = get(&relay, &[filter(r#"{"kinds":[10001]}"#)], 0);
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].id, new.id);
+    }
+
     async fn queried(relay: &Relay) -> Vec<Event> {
         let mut rx = relay.query(&SubscriptionId::new("test"), vec![Filter::new()]);
         let mut events = Vec::new();

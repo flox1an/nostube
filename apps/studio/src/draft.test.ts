@@ -237,9 +237,7 @@ describe('S3 storage draft', () => {
 describe('homepage', () => {
   const homepage: SiteHomepage = {
     intro: 'Hello',
-    featured: `34235:${PK}:intro:with:colons`,
     featuredText: 'Start here',
-    selected: ['b'.repeat(64), `34236:${PK}:short`],
     links: [{ label: 'Shop', url: 'https://shop.example/' }],
     action: { label: 'Support me', url: 'https://support.example/' },
   }
@@ -252,10 +250,6 @@ describe('homepage', () => {
 
   it('saves a curated homepage unchanged, in its order', () => {
     expect(fromDraft(toDraft(curated)).config?.site.homepage).toEqual(homepage)
-    const reordered = { ...homepage, selected: [...homepage.selected].reverse() }
-    expect(fromDraft({ ...toDraft(curated), homepage: reordered }).config?.site.homepage).toEqual(
-      reordered
-    )
   })
 
   it('trims the texts and drops link rows and a main button left empty', () => {
@@ -286,7 +280,6 @@ describe('homepage', () => {
     ['link without a name', { links: [{ label: '', url: 'https://shop.example/' }] }, 'link'],
     ['main button with a relative address', { action: { label: 'Go', url: '/go' } }, 'link'],
     ['intro over the limit', { intro: 'x'.repeat(2001) }, 'intro'],
-    ['video that is no reference', { selected: ['not a video'] }, 'videos'],
   ])('reports a %s in words and builds nothing', (_name, patch, message) => {
     const result = fromDraft({ ...toDraft(config), homepage: { ...noSiteHomepage(), ...patch } })
     expect(result.config).toBeNull()

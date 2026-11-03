@@ -9,7 +9,8 @@ import { GridPage, VideoLinks } from './GridPage'
 import { previousVisit } from './last-visit'
 import type { AgeGate } from './use-age-gate'
 import { useCreatorVideos } from './use-creator-videos'
-import { useVideosByRef } from './use-videos-by-ref'
+import { useVideosByRef } from '@nostube/widgets/hooks/useVideosByRef'
+import { usePinnedVideos } from '@nostube/widgets/hooks/usePinnedVideos'
 import { useWatchProgressList } from './use-watch-progress'
 import { videoPath } from './video-path'
 
@@ -21,6 +22,7 @@ const NEW_LIMIT = 4
 export function HomePage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
   const { t } = useTranslation()
   const home = config.site.homepage
+  const pins = usePinnedVideos(config)
   const { list: progress, clear } = useWatchProgressList()
   const [since] = useState(previousVisit)
   // Same filter as the grid below, so the same timeline loader: no second request.
@@ -30,11 +32,7 @@ export function HomePage({ config, gate }: { config: InstanceConfig; gate: AgeGa
       since === undefined ? [] : videos.filter(v => getPublishDate(v) > since).slice(0, NEW_LIMIT),
     [videos, since]
   )
-  const found = useVideosByRef(config, [
-    home?.featured ?? '',
-    ...(home?.selected ?? []),
-    ...progress.map(entry => entry.ref),
-  ])
+  const found = useVideosByRef(config, [...progress.map(entry => entry.ref)])
   const continuing = useMemo(() => {
     const seen = new Set<string>()
     return progress.flatMap(entry => {
@@ -44,16 +42,7 @@ export function HomePage({ config, gate }: { config: InstanceConfig; gate: AgeGa
       return [video]
     })
   }, [found, progress]).slice(0, CONTINUE_LIMIT)
-  const featured = home?.featured ? found.get(home.featured) : undefined
-  const selected = useMemo(() => {
-    const seen = new Set<string>()
-    return (home?.selected ?? []).flatMap(ref => {
-      const video = found.get(ref)
-      if (!video || seen.has(video.id)) return []
-      seen.add(video.id)
-      return [video]
-    })
-  }, [found, home?.selected])
+  const [featured, ...selected] = pins.videos
   const curated = !!(
     home?.intro ||
     home?.action ||

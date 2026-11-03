@@ -763,9 +763,7 @@ struct SiteBody {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct HomepageBody {
     intro: String,
-    featured: String,
     featured_text: String,
-    selected: Vec<String>,
     links: Vec<config::HomepageLink>,
     /// Required (may be null), not implied by omission.
     #[serde(deserialize_with = "Option::deserialize")]
@@ -950,9 +948,7 @@ impl ConfigPut {
                 count_plays: self.site.count_plays,
                 homepage: config::SiteHomepage {
                     intro: self.site.homepage.intro,
-                    featured: self.site.homepage.featured,
                     featured_text: self.site.homepage.featured_text,
-                    selected: self.site.homepage.selected,
                     links: self.site.homepage.links,
                     action: self.site.homepage.action,
                 },
@@ -2171,7 +2167,7 @@ mod tests {
             "search": { "mode": "local" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
             "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} },
-                "homepage": { "intro": "Welcome", "featured": format!("34235:{PK}:clip"), "featuredText": "Start here", "selected": [format!("34236:{PK}:short")], "links": [{ "label": "Shop", "url": "https://shop.example/" }], "action": { "label": "Support", "url": "https://support.example/" } } },
+                "homepage": { "intro": "Welcome", "featuredText": "Start here", "links": [{ "label": "Shop", "url": "https://shop.example/" }], "action": { "label": "Support", "url": "https://support.example/" } } },
             "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
         })
     }
@@ -2515,7 +2511,6 @@ mod tests {
             (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
             (json, put_body("#112233").replace("https://shop.example/", "javascript:alert(1)")),
             (json, put_body("#112233").replace("https://support.example/", "https://user:pw@support.example/")),
-            (json, put_body("#112233").replace(&format!("34236:{PK}:short"), "not-a-video")),
             (json, put_body("#112233").replace("\"featuredText\"", "\"featured_text\"")),
             (json, {
                 let mut v = put_value("#112233");
@@ -2556,8 +2551,6 @@ mod tests {
         assert_eq!(after.site.pages.about.get("de").map(String::as_str), Some("Über uns"));
         assert_eq!(after.site.pages.imprint.get("en").map(String::as_str), Some("Imprint"));
         assert!(after.site.pages.privacy.is_empty());
-        assert_eq!(after.site.homepage.featured, format!("34235:{PK}:clip"));
-        assert_eq!(after.site.homepage.selected, vec![format!("34236:{PK}:short")]);
         assert_eq!(after.site.homepage.action.as_ref().map(|a| a.url.as_str()), Some("https://support.example/"));
         let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
         assert_eq!(read["config"]["site"]["homepage"], put_value("#112233")["site"]["homepage"], "the studio reads back what it saved");

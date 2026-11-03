@@ -3,7 +3,7 @@ import type { Filter } from 'nostr-tools'
 import { isHiddenVideo, videoRef } from '@nostube/core/hidden-videos'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
-import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
+import { useTimeline } from './useTimeline'
 
 /**
  * Resolves video references (`videoRef`: an event id or `<kind>:<pubkey>:<d>`) directly, so

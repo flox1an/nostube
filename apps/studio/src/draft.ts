@@ -212,9 +212,7 @@ function savedHomepage(h: SiteHomepage): SiteHomepage {
   )
   return {
     intro: h.intro.trim(),
-    featured: h.featured,
     featuredText: h.featuredText.trim(),
-    selected: h.selected,
     links: links.filter(l => l !== null && (l.label || l.url)) as SiteHomepage['links'],
     action: action && (action.label || action.url) ? action : null,
   }
@@ -224,8 +222,6 @@ function savedHomepage(h: SiteHomepage): SiteHomepage {
 const HOMEPAGE_ERRORS: Record<keyof SiteHomepage, string> = {
   intro: 'intro',
   featuredText: 'featuredText',
-  featured: 'videos',
-  selected: 'videos',
   links: 'link',
   action: 'link',
 }
@@ -287,9 +283,8 @@ export function fromDraft(d: Draft): DraftResult {
             max: SITE_PAGE_MAX_CHARS,
           })
         }
-        const home = /^site\.homepage\.(intro|featuredText|featured|selected|links|action)\b/.exec(
-          e
-        )?.[1] as keyof SiteHomepage | undefined
+        const home = /^site\.homepage\.(intro|featuredText|links|action)\b/.exec(e)?.[1] as
+          keyof SiteHomepage | undefined
         if (home) return i18n.t(`studio.errors.homepage.${HOMEPAGE_ERRORS[home]}`, HOMEPAGE_LIMITS)
         return e.startsWith('site.theme.accent') ? i18n.t('studio.errors.accent') : e
       })

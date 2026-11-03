@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import { toHiddenVideoRef, videoRef } from '@nostube/core/hidden-videos'
@@ -14,6 +14,11 @@ import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { HOMEPAGE_LIMITS, isRefHidden } from './draft'
 import { Field } from './fields'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
+import { usePinnedVideos } from '@nostube/widgets/hooks/usePinnedVideos'
+import { replaceVideoPins, loadPinList } from '@nostube/core/pin-list'
+import { useSigner } from './signer-context'
+import { signAndPublish } from './upload/sign'
+import { useVideosByRef } from '@nostube/widgets/hooks/useVideosByRef'
 
 /** Fewer videos than this fit on a screen; more get a search box. */
 const SEARCH_FROM = 6
@@ -34,6 +39,8 @@ interface HomepageCardProps {
   /** The creator's videos loaded so far: titles and thumbnails for the choices and the preview. */
   videos: VideoEvent[]
   onVideos: (videos: VideoEvent[]) => void
+  instance: InstanceClient
+  onPins: (refs: string[]) => void
 }
 
 /** Intro, featured video and note, ordered selection, named links and the main button. */
@@ -43,64 +50,115 @@ export function HomepageCard({
   onChange,
   videos,
   onVideos,
+  instance,
+  onPins,
 }: HomepageCardProps) {
   const { t } = useTranslation()
-  const h = homepage ?? noSiteHomepage()
-  const set = (patch: Partial<SiteHomepage>) => onChange({ ...h, ...patch })
-  const hidden = (ref: string) => isRefHidden(hiddenText, ref)
-  const full = h.selected.length >= HOMEPAGE_LIMITS.selected
-  const choose = (ref: string, featured: boolean) =>
-    set(featured ? { featured: ref } : { selected: [...h.selected, ref] })
-  const move = (from: number, to: number) => {
-    const selected = [...h.selected]
-    ;[selected[from], selected[to]] = [selected[to], selected[from]]
-    set({ selected })
+  const pins = usePinnedVideos(instance.config)
+  const { signer, pubkey } = useSigner()
+  const [edited, setEdited] = useState<string[] | null>(null)
+  const baseId = useRef<string | undefined>(undefined)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState('')
+  const resolvedRefs = useMemo(() => pins.videos.map(videoRef), [pins.videos])
+  const selected = edited ?? resolvedRefs
+  const chosen = useVideosByRef(instance.config, selected)
+  const editPins = (refs: string[]) => {
+    if (edited === null) baseId.current = pins.event?.id
+    setEdited(refs)
   }
-  const titleOf = (ref: string) => findVideo(videos, ref)?.title || ref
+  const h = { ...(homepage ?? noSiteHomepage()), selected }
+  const set = (patch: Partial<SiteHomepage> & { selected?: string[] }) => {
+    const { selected: refs, ...presentation } = patch
+    if (refs) editPins(refs)
+    if (Object.keys(presentation).length)
+      onChange({ ...(homepage ?? noSiteHomepage()), ...presentation })
+  }
+  useEffect(() => {
+    onPins(selected)
+  }, [selected, onPins])
+  const hidden = (ref: string) => isRefHidden(hiddenText, ref)
+  const full = selected.length >= HOMEPAGE_LIMITS.selected
+  const choose = (ref: string) => editPins([...selected, ref])
+  const move = (from: number, to: number) => {
+    const next = [...selected]
+    ;[next[from], next[to]] = [next[to], next[from]]
+    editPins(next)
+  }
+  const savePins = async () => {
+    if (!signer || pubkey !== instance.config.startPage?.creator || busy || !pins.ready) return
+    setBusy(true)
+    setProblem('')
+    try {
+      if (
+        selected.length > HOMEPAGE_LIMITS.selected ||
+        selected.some(ref => {
+          const video = chosen.get(ref) ?? findVideo(pins.videos, ref) ?? findVideo(videos, ref)
+          return (
+            !video ||
+            video.pubkey !== pubkey ||
+            hidden(ref) ||
+            hidden(video.id) ||
+            hidden(videoRef(video))
+          )
+        })
+      )
+        throw new Error(t('studio.homepage.pinInvalid'))
+      const latest = await loadPinList(
+        instance.client.relayPool,
+        instance.config.videoSources,
+        pubkey
+      )
+      if (latest?.id !== baseId.current) throw new Error(t('studio.homepage.pinsChanged'))
+      const controlled = pins.videos.flatMap(v => [v.id, videoRef(v)])
+      const { signed } = await signAndPublish(
+        instance.client,
+        instance.config.videoSources,
+        signer,
+        {
+          kind: 10001,
+          created_at: Math.max(Math.floor(Date.now() / 1000), (latest?.created_at ?? 0) + 1),
+          content: latest?.content ?? '',
+          tags: replaceVideoPins(
+            latest?.tags ?? [],
+            controlled,
+            selected,
+            instance.config.videoSources[0]
+          ),
+        },
+        pubkey,
+        'studio.errors.listNotAccepted',
+        t('studio.homepage.savePins')
+      )
+      instance.client.eventStore.add(signed)
+      setEdited(null)
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const titleOf = (ref: string) => chosen.get(ref)?.title || findVideo(videos, ref)?.title || ref
   const setLink = (i: number, patch: Partial<SiteHomepage['links'][number]>) =>
     set({ links: h.links.map((l, n) => (n === i ? { ...l, ...patch } : l)) })
 
   return (
     <Card>
       <CardContent className="space-y-6 pt-6">
-        <Field
-          id="home-intro"
-          label={t('studio.homepage.intro')}
-          hint={<Count text={h.intro} max={HOMEPAGE_LIMITS.intro} />}
-        >
-          <Textarea
+        <fieldset disabled={busy} className="min-w-0 space-y-6">
+          <Field
             id="home-intro"
-            rows={4}
-            value={h.intro}
-            onChange={e => set({ intro: e.target.value })}
-          />
-        </Field>
+            label={t('studio.homepage.intro')}
+            hint={<Count text={h.intro} max={HOMEPAGE_LIMITS.intro} />}
+          >
+            <Textarea
+              id="home-intro"
+              rows={4}
+              value={h.intro}
+              onChange={e => set({ intro: e.target.value })}
+            />
+          </Field>
 
-        <section className="space-y-2" aria-labelledby="home-featured">
-          <h3 id="home-featured" className="text-sm font-medium">
-            {t('studio.homepage.featured')}
-          </h3>
-          {h.featured ? (
-            <ul className="rounded-md border border-border">
-              <ChoiceRow
-                video={findVideo(videos, h.featured)}
-                choice={h.featured}
-                hidden={hidden(h.featured)}
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('studio.homepage.remove', { title: titleOf(h.featured) })}
-                  onClick={() => set({ featured: '' })}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </ChoiceRow>
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t('studio.homepage.featuredNone')}</p>
-          )}
           <Field
             id="home-featured-text"
             label={t('studio.homepage.featuredText')}
@@ -113,159 +171,181 @@ export function HomepageCard({
               onChange={e => set({ featuredText: e.target.value })}
             />
           </Field>
-        </section>
 
-        <section className="space-y-2" aria-labelledby="home-selected">
-          <h3 id="home-selected" className="text-sm font-medium">
-            {t('studio.homepage.selected')}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {t('studio.homepage.selectedHint', { max: HOMEPAGE_LIMITS.selected })}
-          </p>
-          {h.selected.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('studio.homepage.selectedNone')}</p>
-          ) : (
-            <ol className="divide-y divide-border rounded-md border border-border">
-              {h.selected.map((ref, i) => {
-                const title = titleOf(ref)
-                return (
-                  <ChoiceRow
-                    key={ref}
-                    video={findVideo(videos, ref)}
-                    choice={ref}
-                    hidden={hidden(ref)}
-                  >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={i === 0}
-                      aria-label={t('studio.homepage.moveUp', { title })}
-                      onClick={() => move(i, i - 1)}
+          <section className="space-y-2" aria-labelledby="home-selected">
+            <h3 id="home-selected" className="text-sm font-medium">
+              {t('studio.homepage.selected')}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t('studio.homepage.selectedHint', { max: HOMEPAGE_LIMITS.selected })}{' '}
+              {t('studio.homepage.pinHint')}
+            </p>
+            {h.selected.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('studio.homepage.selectedNone')}</p>
+            ) : (
+              <ol className="divide-y divide-border rounded-md border border-border">
+                {h.selected.map((ref, i) => {
+                  const title = titleOf(ref)
+                  return (
+                    <ChoiceRow
+                      key={ref}
+                      video={chosen.get(ref) ?? findVideo(videos, ref)}
+                      choice={ref}
+                      hidden={hidden(ref)}
                     >
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={i === h.selected.length - 1}
-                      aria-label={t('studio.homepage.moveDown', { title })}
-                      onClick={() => move(i, i + 1)}
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t('studio.homepage.remove', { title })}
-                      onClick={() => set({ selected: h.selected.filter(r => r !== ref) })}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </ChoiceRow>
-                )
-              })}
-            </ol>
-          )}
-        </section>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={i === 0}
+                        aria-label={t('studio.homepage.moveUp', { title })}
+                        onClick={() => move(i, i - 1)}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={i === h.selected.length - 1}
+                        aria-label={t('studio.homepage.moveDown', { title })}
+                        onClick={() => move(i, i + 1)}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t('studio.homepage.remove', { title })}
+                        onClick={() => set({ selected: h.selected.filter(r => r !== ref) })}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </ChoiceRow>
+                  )
+                })}
+              </ol>
+            )}
+            <Button
+              type="button"
+              disabled={
+                busy ||
+                !pins.ready ||
+                !signer ||
+                pubkey !== instance.config.startPage?.creator ||
+                edited === null
+              }
+              onClick={savePins}
+            >
+              {t('studio.homepage.savePins')}
+            </Button>
+            {(!signer || pubkey !== instance.config.startPage?.creator) && (
+              <p>{t('studio.homepage.pinSigner')}</p>
+            )}
+            {(problem || pins.error) && (
+              <p role="alert" className="text-destructive">
+                {problem || pins.error}
+              </p>
+            )}
+          </section>
 
-        <section className="space-y-2" aria-labelledby="home-choose">
-          <h3 id="home-choose" className="text-sm font-medium">
-            {t('studio.homepage.choose')}
-          </h3>
-          <VideoChoices
-            homepage={h}
-            hidden={hidden}
-            full={full}
-            onChoose={choose}
-            onVideos={onVideos}
-          />
-          <PasteChoice homepage={h} hidden={hidden} full={full} onChoose={choose} />
-        </section>
-
-        <section className="space-y-2" aria-labelledby="home-links">
-          <h3 id="home-links" className="text-sm font-medium">
-            {t('studio.homepage.links')}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {t('studio.homepage.linksHint', { max: HOMEPAGE_LIMITS.links })}
-          </p>
-          {h.links.map((link, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-              <Input
-                aria-label={t('studio.homepage.linkLabel', { n: i + 1 })}
-                placeholder={t('studio.homepage.labelPlaceholder')}
-                value={link.label}
-                onChange={e => setLink(i, { label: e.target.value })}
-                className="sm:w-48"
-              />
-              <Input
-                type="url"
-                inputMode="url"
-                spellCheck={false}
-                aria-label={t('studio.homepage.linkUrl', { n: i + 1 })}
-                placeholder="https://"
-                value={link.url}
-                onChange={e => setLink(i, { url: e.target.value })}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={t('studio.homepage.removeLink', { n: i + 1 })}
-                onClick={() => set({ links: h.links.filter((_, n) => n !== i) })}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={h.links.length >= HOMEPAGE_LIMITS.links}
-            onClick={() => set({ links: [...h.links, { label: '', url: '' }] })}
-          >
-            {t('studio.homepage.addLink')}
-          </Button>
-        </section>
-
-        <section className="space-y-2" aria-labelledby="home-action">
-          <h3 id="home-action" className="text-sm font-medium">
-            {t('studio.homepage.action')}
-          </h3>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={h.action !== null}
-              onChange={e => set({ action: e.target.checked ? { label: '', url: '' } : null })}
+          <section className="space-y-2" aria-labelledby="home-choose">
+            <h3 id="home-choose" className="text-sm font-medium">
+              {t('studio.homepage.choose')}
+            </h3>
+            <VideoChoices
+              homepage={h}
+              hidden={hidden}
+              full={full}
+              onChoose={choose}
+              onVideos={onVideos}
             />
-            {t('studio.homepage.actionToggle')}
-          </label>
-          <p className="text-xs text-muted-foreground">{t('studio.homepage.actionHint')}</p>
-          {h.action && (
-            <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-              <Input
-                aria-label={t('studio.homepage.actionLabel')}
-                placeholder={t('studio.homepage.labelPlaceholder')}
-                value={h.action.label}
-                onChange={e => set({ action: { ...h.action!, label: e.target.value } })}
-                className="sm:w-48"
+            <PasteChoice homepage={h} hidden={hidden} full={full} onChoose={choose} />
+          </section>
+
+          <section className="space-y-2" aria-labelledby="home-links">
+            <h3 id="home-links" className="text-sm font-medium">
+              {t('studio.homepage.links')}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t('studio.homepage.linksHint', { max: HOMEPAGE_LIMITS.links })}
+            </p>
+            {h.links.map((link, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                <Input
+                  aria-label={t('studio.homepage.linkLabel', { n: i + 1 })}
+                  placeholder={t('studio.homepage.labelPlaceholder')}
+                  value={link.label}
+                  onChange={e => setLink(i, { label: e.target.value })}
+                  className="sm:w-48"
+                />
+                <Input
+                  type="url"
+                  inputMode="url"
+                  spellCheck={false}
+                  aria-label={t('studio.homepage.linkUrl', { n: i + 1 })}
+                  placeholder="https://"
+                  value={link.url}
+                  onChange={e => setLink(i, { url: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('studio.homepage.removeLink', { n: i + 1 })}
+                  onClick={() => set({ links: h.links.filter((_, n) => n !== i) })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={h.links.length >= HOMEPAGE_LIMITS.links}
+              onClick={() => set({ links: [...h.links, { label: '', url: '' }] })}
+            >
+              {t('studio.homepage.addLink')}
+            </Button>
+          </section>
+
+          <section className="space-y-2" aria-labelledby="home-action">
+            <h3 id="home-action" className="text-sm font-medium">
+              {t('studio.homepage.action')}
+            </h3>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={h.action !== null}
+                onChange={e => set({ action: e.target.checked ? { label: '', url: '' } : null })}
               />
-              <Input
-                type="url"
-                inputMode="url"
-                spellCheck={false}
-                aria-label={t('studio.homepage.actionUrl')}
-                placeholder="https://"
-                value={h.action.url}
-                onChange={e => set({ action: { ...h.action!, url: e.target.value } })}
-              />
-            </div>
-          )}
-        </section>
+              {t('studio.homepage.actionToggle')}
+            </label>
+            <p className="text-xs text-muted-foreground">{t('studio.homepage.actionHint')}</p>
+            {h.action && (
+              <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                <Input
+                  aria-label={t('studio.homepage.actionLabel')}
+                  placeholder={t('studio.homepage.labelPlaceholder')}
+                  value={h.action.label}
+                  onChange={e => set({ action: { ...h.action!, label: e.target.value } })}
+                  className="sm:w-48"
+                />
+                <Input
+                  type="url"
+                  inputMode="url"
+                  spellCheck={false}
+                  aria-label={t('studio.homepage.actionUrl')}
+                  placeholder="https://"
+                  value={h.action.url}
+                  onChange={e => set({ action: { ...h.action!, url: e.target.value } })}
+                />
+              </div>
+            )}
+          </section>
+        </fieldset>
       </CardContent>
     </Card>
   )
@@ -319,10 +399,10 @@ function ChoiceRow({
 }
 
 interface ChoiceProps {
-  homepage: SiteHomepage
+  homepage: { selected: string[] }
   hidden: (ref: string) => boolean
   full: boolean
-  onChoose: (ref: string, featured: boolean) => void
+  onChoose: (ref: string) => void
 }
 
 /** The creator's videos, a page at a time, to feature or add; hidden ones cannot be picked. */
@@ -392,7 +472,6 @@ function ChoiceList({
           {shown.map(video => {
             const ref = videoRef(video)
             const isHidden = hidden(ref) || hidden(video.id)
-            const featured = homepage.featured === ref || homepage.featured === video.id
             const added = homepage.selected.includes(ref) || homepage.selected.includes(video.id)
             return (
               <ChoiceRow key={ref} video={video} choice={ref} hidden={isHidden}>
@@ -400,20 +479,10 @@ function ChoiceList({
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={isHidden || featured}
-                  aria-label={t('studio.homepage.featureVideo', { title: video.title })}
-                  onClick={() => onChoose(ref, true)}
-                >
-                  {featured ? t('studio.homepage.isFeatured') : t('studio.homepage.feature')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
                   className="ml-2"
                   disabled={isHidden || added || full}
                   aria-label={t('studio.homepage.addVideo', { title: video.title })}
-                  onClick={() => onChoose(ref, false)}
+                  onClick={() => onChoose(ref)}
                 >
                   {added ? t('studio.homepage.isAdded') : t('studio.homepage.add')}
                 </Button>
@@ -441,20 +510,20 @@ function PasteChoice({ homepage, hidden, full, onChoose }: ChoiceProps) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
-  const pick = (featured: boolean) => {
+  const pick = () => {
     const ref = toHiddenVideoRef(text)
     const reason = !ref
       ? 'pasteInvalid'
       : hidden(ref)
         ? 'pasteHidden'
-        : !featured && homepage.selected.includes(ref)
+        : homepage.selected.includes(ref)
           ? 'pasteAdded'
-          : !featured && full
+          : full
             ? 'full'
             : null
     setProblem(reason && t(`studio.homepage.${reason}`, { max: HOMEPAGE_LIMITS.selected }))
     if (reason || !ref) return
-    onChoose(ref, featured)
+    onChoose(ref)
     setText('')
   }
   return (
@@ -481,10 +550,7 @@ function PasteChoice({ homepage, hidden, full, onChoose }: ChoiceProps) {
             setProblem(null)
           }}
         />
-        <Button type="button" variant="outline" disabled={!text.trim()} onClick={() => pick(true)}>
-          {t('studio.homepage.feature')}
-        </Button>
-        <Button type="button" variant="outline" disabled={!text.trim()} onClick={() => pick(false)}>
+        <Button type="button" variant="outline" disabled={!text.trim()} onClick={pick}>
           {t('studio.homepage.add')}
         </Button>
       </div>

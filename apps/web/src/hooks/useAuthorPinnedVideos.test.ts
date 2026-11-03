@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parsePinRefs } from './useAuthorPinnedVideos'
+import { parsePinRefs } from '@nostube/core/pin-list'
 
 describe('parsePinRefs', () => {
   it('extracts event ids from e tags', () => {

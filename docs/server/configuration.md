@@ -129,9 +129,7 @@ note = "https://njump.me/{nip19}"
 
 [site.homepage]
 intro = ""
-featured = ""
 featured_text = ""
-selected = []
 links = []
 
 [nsite]
@@ -237,14 +235,18 @@ de = "Videos über Holzarbeiten."
 
 `[site.homepage]`: the curated start page; all optional.
 
-| Key             | Limit            | Meaning                                                                        |
-| --------------- | ---------------- | ------------------------------------------------------------------------------ |
-| `intro`         | 2,000 characters | Introduction text                                                              |
-| `featured`      |                  | One featured video: an event id or `34235:<pubkey>:<d>` / `34236:<pubkey>:<d>` |
-| `featured_text` | 500 characters   | Note on the featured video                                                     |
-| `selected`      | 12 videos        | Selected videos, same format as `featured`                                     |
-| `links`         | 5 links          | `{ label, url }` tables; label 1–80 characters, `https://` URL                 |
-| `action`        |                  | One main button, `{ label, url }`                                              |
+| Key             | Limit            | Meaning                                                        |
+| --------------- | ---------------- | -------------------------------------------------------------- |
+| `intro`         | 2,000 characters | Introduction text                                              |
+| `featured_text` | 500 characters   | Note on the first pinned video                                 |
+| `links`         | 5 links          | `{ label, url }` tables; label 1–80 characters, `https://` URL |
+| `action`        |                  | One main button, `{ label, url }`                              |
+
+Homepage videos are the start-page creator's Nostr pin list (kind `10001`), not config fields.
+The first resolvable, visible video is featured; remaining videos appear below in pin order.
+Studio publishes up to 12 video pins with the creator's signer. Text notes and unrelated pins are preserved.
+The former `featured` and `selected` config keys are removed without migration: remove them from
+existing TOML before upgrading and pin the desired videos again in Studio.
 
 ### `[mirror]`
 

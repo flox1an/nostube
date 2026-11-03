@@ -58,21 +58,17 @@ export const isPageText = (v: unknown): v is string =>
 export const pageText = (texts: Record<string, string>, language: string): string | undefined =>
   texts[language] ?? texts.en ?? texts[Object.keys(texts).sort()[0]]
 
-/** The creator's curated homepage; video choices use stable addresses or event ids. */
+/** Homepage presentation; video choices live in the creator's kind-10001 pin list. */
 export interface SiteHomepage {
   intro: string
-  featured: string
   featuredText: string
-  selected: string[]
   links: { label: string; url: string }[]
   action: { label: string; url: string } | null
 }
 
 export const noSiteHomepage = (): SiteHomepage => ({
   intro: '',
-  featured: '',
   featuredText: '',
-  selected: [],
   links: [],
   action: null,
 })
@@ -214,12 +210,6 @@ const isSignerRelay = (value: unknown): boolean => {
   }
 }
 
-const isHomepageVideoRef = (value: unknown): value is string =>
-  typeof value === 'string' &&
-  [...value].length <= 1024 &&
-  !/\p{Cc}/u.test(value) &&
-  (HEX64.test(value) || /^3423[56]:[0-9a-f]{64}:.+$/.test(value))
-
 function isHomepageLink(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const link = value as { label?: unknown; url?: unknown }
@@ -298,19 +288,8 @@ export function validateSite(value: unknown): string[] {
     else {
       if (typeof home.intro !== 'string' || [...home.intro].length > 2000)
         e.push('site.homepage.intro must be a text of at most 2000 characters')
-      if (home.featured !== '' && !isHomepageVideoRef(home.featured))
-        e.push('site.homepage.featured must be empty or a video address or event id')
       if (typeof home.featuredText !== 'string' || [...home.featuredText].length > 500)
         e.push('site.homepage.featuredText must be a text of at most 500 characters')
-      if (
-        !Array.isArray(home.selected) ||
-        home.selected.length > 12 ||
-        !home.selected.every(isHomepageVideoRef) ||
-        new Set(home.selected).size !== home.selected.length
-      )
-        e.push(
-          'site.homepage.selected must contain at most 12 distinct video addresses or event ids'
-        )
       if (!Array.isArray(home.links) || home.links.length > 5 || !home.links.every(isHomepageLink))
         e.push('site.homepage.links must contain at most 5 named HTTPS links without credentials')
       if (home.action !== null && !isHomepageLink(home.action))
@@ -423,7 +402,6 @@ export function parseInstanceConfig(json: unknown): ParseResult {
         ...(site.homepage && {
           homepage: {
             ...site.homepage,
-            selected: [...site.homepage.selected],
             links: site.homepage.links.map(link => ({ ...link })),
             action: site.homepage.action ? { ...site.homepage.action } : null,
           },

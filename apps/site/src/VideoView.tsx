@@ -1,3 +1,4 @@
+import { usePinnedVideos } from '@nostube/widgets/hooks/usePinnedVideos'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -390,9 +391,10 @@ function UpNext({
 }) {
   const { t } = useTranslation()
   const { videos } = useCreatorVideos(config)
+  const pins = usePinnedVideos(config)
   const next = useMemo(
-    () => chooseNextVideo(videos, current, config.site.homepage?.selected ?? []),
-    [videos, current, config.site.homepage?.selected]
+    () => chooseNextVideo([...pins.videos, ...videos], current, pins.refs),
+    [videos, current, pins.refs, pins.videos]
   )
   return (
     <section className="space-y-3 rounded-lg border p-4" aria-labelledby="up-next">

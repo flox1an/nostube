@@ -15,16 +15,18 @@ export function SitePreview({
   draft,
   branding,
   videos,
+  pins = [],
 }: {
   draft: Draft
   branding: BrandingProps['branding']
   /** The creator's loaded videos, for the titles and thumbnails of the homepage choices. */
   videos: VideoEvent[]
+  pins?: string[]
 }) {
   const { t } = useTranslation()
   const preview = useRef<HTMLDivElement>(null)
   const home = draft.homepage
-  const featured = home?.featured ? findVideo(videos, home.featured) : undefined
+  const featured = pins[0] ? findVideo(videos, pins[0]) : undefined
   const featuredThumbnail = safeThumbnail(featured)
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function SitePreview({
           {home?.intro.trim() && (
             <p className="line-clamp-4 whitespace-pre-line text-sm">{home.intro.trim()}</p>
           )}
-          {home?.featured && (
+          {pins.length > 0 && (
             <div className="space-y-1">
               {featuredThumbnail ? (
                 <img
@@ -77,7 +79,7 @@ export function SitePreview({
               <p className="line-clamp-2 text-sm font-medium">
                 {featured?.title ?? t('studio.homepage.featured')}
               </p>
-              {home.featuredText.trim() && (
+              {home?.featuredText.trim() && (
                 <p className="line-clamp-3 text-xs text-muted-foreground">
                   {home.featuredText.trim()}
                 </p>
@@ -85,8 +87,8 @@ export function SitePreview({
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
-            {home?.selected.length
-              ? home.selected.map(ref => {
+            {pins.length > 1
+              ? pins.slice(1).map(ref => {
                   const video = findVideo(videos, ref)
                   const thumbnail = safeThumbnail(video)
                   return (

@@ -128,9 +128,7 @@ describe('homepage configuration', () => {
   const homepage = {
     ...noSiteHomepage(),
     intro: 'Films by Alice',
-    featured: `34235:${CREATOR}:debut:director-cut`,
     featuredText: 'Start with my first film.',
-    selected: ['c'.repeat(64), `34236:${CREATOR}:backstage`],
     links: [{ label: 'Concerts', url: 'https://alice.example/concerts' }],
     action: { label: 'Book a screening', url: 'https://alice.example/contact' },
   }
@@ -149,9 +147,6 @@ describe('homepage configuration', () => {
       'credentials in a link',
       { links: [{ label: 'Shop', url: 'https://user:secret@shop.example' }] },
     ],
-    ['foreign event kind', { featured: `30023:${CREATOR}:article` }],
-    ['control character in a reference', { selected: [`34235:${CREATOR}:film\u0085cut`] }],
-    ['duplicate selections', { selected: ['c'.repeat(64), 'c'.repeat(64)] }],
     ['oversized introduction', { intro: '🎬'.repeat(2001) }],
     ['incomplete object', { action: undefined }],
   ])('rejects %s before the site renders it', (_name, patch) => {

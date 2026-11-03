@@ -240,7 +240,7 @@ function Row({
           )}
         </div>
       </div>
-      <div className="col-span-2 flex justify-end sm:col-span-1">
+      <div className="col-span-2 flex min-w-0 max-w-64 flex-col items-end gap-1 justify-self-end text-right sm:col-span-1">
         <VideoActions
           video={video}
           instance={instance}

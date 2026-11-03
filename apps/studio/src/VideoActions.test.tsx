@@ -58,7 +58,7 @@ function setup(replies = [{ ok: true, from: 'wss://relay', message: '' }], hidde
   const onHiddenChange = vi.fn()
   const instance = {
     client: { eventStore, relayPool: { publish } },
-    config: { videoSources: ['wss://relay'] },
+    config: { origin: 'https://videos.example', videoSources: ['wss://relay'] },
   } as unknown as InstanceClient
   render(
     <TooltipProvider>
@@ -74,10 +74,9 @@ function setup(replies = [{ ok: true, from: 'wss://relay', message: '' }], hidde
   return { publish, eventStore, onHiddenChange }
 }
 
-/** Opens the row's `⋯` menu with the keyboard and answers its item names. */
+/** Opens the row's `⋯` menu with the keyboard. */
 function openMenu() {
   fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' })
-  return screen.getAllByRole('menuitem').map(item => item.textContent)
 }
 // Its frame slider renders `calc(NaN%)` before video metadata, which jsdom's CSS parser rejects.
 // Thumbnail and subtitle handling are covered in run-video-edit.test.ts.
@@ -111,9 +110,9 @@ describe('studio video actions', () => {
     expect(mocks.probe).not.toHaveBeenCalled()
   })
 
-  it('offers replace, hide and delete in the menu and confirms deletion in an alert dialog', () => {
+  it('confirms deletion in an alert dialog before publishing', () => {
     const { publish } = setup()
-    expect(openMenu()).toEqual(['Replace video file', 'Hide on site', 'Delete video'])
+    openMenu()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete video' }))
     expect(screen.getByRole('alertdialog')).toBeTruthy()
     expect(publish).not.toHaveBeenCalled()
@@ -166,11 +165,34 @@ describe('studio video actions', () => {
     expect(shown.onHiddenChange).toHaveBeenCalledWith(false)
   })
 
-  it('offers only hiding to an administrator signing as another author', () => {
+  it('reports denied clipboard access and clears the error after a successful retry without a signer', async () => {
+    const writeText = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Permission denied'))
+      .mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    mocks.signerState = { signer: null, pubkey: null }
+    setup()
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy embed code' }))
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Could not copy the embed code'
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy embed code' }))
+    await screen.findByRole('status')
+    expect(screen.queryByRole('alert')).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not offer editing or deletion to an administrator signing as another author', () => {
     mocks.signerState = { ...mocks.signerState, pubkey: 'f'.repeat(64) }
     setup()
     expect(screen.queryByRole('button', { name: 'Edit metadata' })).toBeNull()
-    expect(openMenu()).toEqual(['Hide on site'])
+    openMenu()
+    expect(screen.queryByRole('menuitem', { name: 'Replace video file' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Delete video' })).toBeNull()
     expect(screen.getByRole('link', { name: 'View on site' }).getAttribute('href')).toBe(
       `/v/${video.link}`
     )

@@ -19,6 +19,10 @@ The embed player plays a Nostr video inside an `<iframe>` on any website. It is 
 
 To get this code, open the video on nostu.be, click the share button and switch to the **Embed** tab of **Share this video**. Tick **Include current timestamp** to start the embed where you paused.
 
+On a Nostube Server, open **Studio → Content → Videos**, then the video's **⋯ → Copy embed code**.
+This copies responsive iframe HTML using that server's own `/embed.html`, ready to paste into an
+HTML block on your website.
+
 `v` takes the identifier from the video's address: `https://nostu.be/v/<id>` or `https://nostu.be/short/<id>`. It must be a `nevent1…`, `naddr1…` or `note1…` identifier of a video event. Prefer `naddr1…` for addressable videos (kinds 34235 and 34236): the embed then always shows the latest version of the event.
 
 ::: warning Use `/embed.html`

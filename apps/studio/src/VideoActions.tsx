@@ -1,6 +1,15 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Eye, EyeOff, FileVideo, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import {
+  CodeXml,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileVideo,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { buildVideoDeletion } from '@nostube/core/video-lifecycle'
@@ -30,9 +39,9 @@ import { publishVideoChange } from './upload/publish-video-change'
 import { signAndPublish } from './upload/sign'
 
 /**
- * A video row's actions: View on site, an Edit button and a menu (replace, hide/show on the site,
+ * A video row's actions: View on site, an Edit button and a menu (embed, replace, hide/show,
  * delete). Edit, replace and delete are offered to the video's author only; hiding is a site
- * setting.
+ * setting and copying the embed needs no signer.
  */
 export function VideoActions({
   video,
@@ -53,6 +62,7 @@ export function VideoActions({
   const [confirming, setConfirming] = useState(false)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [embedCopied, setEmbedCopied] = useState(false)
   const busy = useRef(false)
   // The video's author only; anyone else may still hide it from the site.
   const author =
@@ -92,6 +102,23 @@ export function VideoActions({
       setEditing({ event: getCurrent(), replace })
     } catch (e) {
       showError(e)
+    }
+  }
+  const copyEmbed = async () => {
+    setEmbedCopied(false)
+    setError(null)
+    try {
+      const url = new URL('/embed.html', instance.config.origin)
+      url.searchParams.set('v', video.link)
+      await navigator.clipboard.writeText(`<iframe
+  src="${url.href}"
+  style="width: 100%; aspect-ratio: 16 / 9; border: 0"
+  allowfullscreen
+  allow="autoplay; fullscreen"
+></iframe>`)
+      setEmbedCopied(true)
+    } catch {
+      setError(t('studio.videos.copyEmbedFailed'))
     }
   }
   const remove = async () => {
@@ -177,6 +204,10 @@ export function VideoActions({
             <TooltipContent>{t('studio.videos.moreActions')}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => void copyEmbed()}>
+              <CodeXml className="mr-2 h-4 w-4" />
+              {t('studio.videos.copyEmbed')}
+            </DropdownMenuItem>
             {canEdit && (
               <DropdownMenuItem onSelect={() => edit(true)}>
                 <FileVideo className="mr-2 h-4 w-4" />
@@ -205,6 +236,11 @@ export function VideoActions({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {embedCopied && (
+        <p role="status" className="w-full text-sm text-muted-foreground">
+          {t('studio.videos.embedCopied')}
+        </p>
+      )}
       {!confirming && errorText}
       {/* Closed only by the editor itself: a stray click or Escape must not drop a running upload. */}
       <Dialog open={editing !== null}>

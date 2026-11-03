@@ -96,6 +96,9 @@ not on the site. Scheduled videos are listed on the Videos page, where they can 
 **Content → Videos** lists the displayed creators' videos. The site shows all of them except the ones
 hidden here. Per video:
 
+- **Copy embed code** in the **⋯** menu: copies ready-to-paste, responsive iframe HTML using this
+  instance's own player. Paste it into an HTML block on another website. No Nostr signer is needed.
+  See the [embedded player guide](/embed/) for playback and appearance options.
 - **Hide on site** / **Show on site**: applies at once, without a restart.
 - **Edit metadata** and **Replace video file**: the video keeps its address and original publish date.
 - **Delete video**: publishes a Nostr deletion request; the server removes the video and its unused

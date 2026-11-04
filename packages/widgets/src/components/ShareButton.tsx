@@ -231,42 +231,44 @@ const ShareButton: React.FC<ShareButtonProps> = ({
             ))}
           </ul>
 
-          <Collapsible open={embedOpen} onOpenChange={setEmbedOpen} className="border-t pt-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="h-11 w-full justify-between px-2 sm:h-10">
-                <span className="flex items-center gap-2">
-                  <Code aria-hidden="true" />
-                  {t('video.share.embedTab')}
-                </span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className={cn('transition-transform', embedOpen && 'rotate-180')}
+          {embedCode && (
+            <Collapsible open={embedOpen} onOpenChange={setEmbedOpen} className="border-t pt-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="h-11 w-full justify-between px-2 sm:h-10">
+                  <span className="flex items-center gap-2">
+                    <Code aria-hidden="true" />
+                    {t('video.share.embedTab')}
+                  </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn('transition-transform', embedOpen && 'rotate-180')}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 pt-2">
+                <label htmlFor="share-embed-code" className="text-sm font-medium">
+                  {t('video.share.embedCode')}
+                </label>
+                <Textarea
+                  id="share-embed-code"
+                  value={embedCode}
+                  readOnly
+                  rows={5}
+                  className="font-mono text-xs"
+                  onFocus={e => e.target.select()}
                 />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 pt-2">
-              <label htmlFor="share-embed-code" className="text-sm font-medium">
-                {t('video.share.embedCode')}
-              </label>
-              <Textarea
-                id="share-embed-code"
-                value={embedCode}
-                readOnly
-                rows={5}
-                className="font-mono text-xs"
-                onFocus={e => e.target.select()}
-              />
-              <Button
-                variant="secondary"
-                className="h-11 w-full sm:h-10"
-                onClick={() => copy('embed', embedCode)}
-              >
-                {embedCopied && <Check aria-hidden="true" />}
-                {embedCopied ? t('common.copied') : t('video.share.copyEmbed')}
-              </Button>
-              <p className="text-xs text-muted-foreground">{t('video.share.embedDescription')}</p>
-            </CollapsibleContent>
-          </Collapsible>
+                <Button
+                  variant="secondary"
+                  className="h-11 w-full sm:h-10"
+                  onClick={() => copy('embed', embedCode)}
+                >
+                  {embedCopied && <Check aria-hidden="true" />}
+                  {embedCopied ? t('common.copied') : t('video.share.copyEmbed')}
+                </Button>
+                <p className="text-xs text-muted-foreground">{t('video.share.embedDescription')}</p>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           <p role="status" aria-live="polite" className="text-sm empty:hidden">
             {copyResult &&

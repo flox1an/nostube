@@ -5,12 +5,17 @@ import { Radio, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { pageTitle } from '@nostube/core/instance-config'
+import { buildShareLinks } from '@nostube/core/share-links'
+import { hasLightningAddress } from '@nostube/core/zap-utils'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
+import ShareButton from '@nostube/widgets/components/ShareButton'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { useLiveStream, useLiveStreamPlayback } from '@/hooks/useLiveStreams'
 import { ContentSafetyGate } from '@/components/ContentSafetyGate'
 import { RichTextContent } from '@/components/RichTextContent'
+import { FollowButton } from '@/components/FollowButton'
+import { ZapButton } from '@/components/ZapButton'
 import { LiveChat } from '@/components/live/LiveChat'
 import { LiveBadge } from '@/components/live/LiveBadge'
 
@@ -37,6 +42,12 @@ function StreamViewer({
   const profile = useProfile({ pubkey: stream.hostPubkey })
   const name = profile?.display_name || profile?.name || stream.hostPubkey.slice(0, 12)
   const [playbackFailed, setPlaybackFailed] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareUrl = `${window.location.origin}/live/${stream.naddr}`
+  const shareLinks = useMemo(
+    () => buildShareLinks(shareUrl, shareUrl, stream.title, stream.image ?? ''),
+    [shareUrl, stream.title, stream.image]
+  )
   const urls = useMemo(
     () =>
       stream.status === 'ended'
@@ -131,18 +142,42 @@ function StreamViewer({
                 )}
               </div>
             </div>
-            <Link
-              to={`/p/${nip19.npubEncode(stream.hostPubkey)}`}
-              className="inline-flex min-h-11 items-center gap-3 rounded-lg pr-3 hover:bg-accent"
-            >
-              <UserAvatar
-                pubkey={stream.hostPubkey}
-                picture={profile?.picture}
-                name={name}
-                className="h-10 w-10"
-              />
-              <span className="font-medium">{name}</span>
-            </Link>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link
+                to={`/p/${nip19.npubEncode(stream.hostPubkey)}`}
+                className="inline-flex min-h-11 min-w-0 items-center gap-3 rounded-lg pr-3 hover:bg-accent"
+              >
+                <UserAvatar
+                  pubkey={stream.hostPubkey}
+                  picture={profile?.picture}
+                  name={name}
+                  className="h-10 w-10"
+                />
+                <span className="truncate font-medium">{name}</span>
+              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <FollowButton pubkey={stream.hostPubkey} className="h-11" />
+                {hasLightningAddress(profile) && (
+                  <ZapButton
+                    eventId={stream.event.id}
+                    kind={kinds.LiveEvent}
+                    authorPubkey={stream.authorPubkey}
+                    recipientPubkey={stream.hostPubkey}
+                    identifier={stream.identifier}
+                    layout="inline"
+                    className="h-11"
+                  />
+                )}
+                <ShareButton
+                  shareOpen={shareOpen}
+                  setShareOpen={setShareOpen}
+                  shareUrl={shareUrl}
+                  shareTitle={stream.title}
+                  shareLinks={shareLinks}
+                  className="h-11 w-11 px-0 bg-transparent hover:bg-accent hover:text-accent-foreground"
+                />
+              </div>
+            </div>
             {stream.summary && (
               <div className="max-w-prose rounded-xl bg-muted/40 p-4 text-sm leading-relaxed wrap-anywhere">
                 <RichTextContent content={stream.summary} authorPubkey={stream.hostPubkey} />

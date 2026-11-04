@@ -18,6 +18,8 @@ interface ZapButtonProps {
   eventId?: string // Optional - not provided when zapping a profile directly
   kind?: number
   authorPubkey: string
+  /** Who gets paid when it is not the event's publisher (a livestream's host). */
+  recipientPubkey?: string
   layout?: 'vertical' | 'inline'
   className?: string
   currentTime?: number // Current video playback position (for timestamped zaps)
@@ -32,6 +34,7 @@ export const ZapButton = memo(function ZapButton({
   eventId,
   kind = 1,
   authorPubkey,
+  recipientPubkey = authorPubkey,
   layout = 'vertical',
   className = '',
   currentTime,
@@ -47,7 +50,7 @@ export const ZapButton = memo(function ZapButton({
   const { user } = useCurrentUser()
   const { zap, generateInvoice, isZapping, isConnected } = useZap({
     eventId,
-    authorPubkey,
+    authorPubkey: recipientPubkey,
   })
   const { defaultZapAmount } = useWallet()
   // Only fetch zap stats if we have an eventId (not for profile zaps)
@@ -59,7 +62,7 @@ export const ZapButton = memo(function ZapButton({
   })
   const displaySats = eventId ? totalSats : 0
 
-  const isOwnContent = user?.pubkey === authorPubkey
+  const isOwnContent = user?.pubkey === recipientPubkey
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -186,6 +189,9 @@ export const ZapButton = memo(function ZapButton({
           onOpenChange={setShowZapDialog}
           eventId={eventId}
           authorPubkey={authorPubkey}
+          recipientPubkey={recipientPubkey}
+          kind={kind}
+          identifier={identifier}
           onZap={handleZapFromDialog}
           isZapping={isZapping}
           isWalletConnected={isConnected}
@@ -253,6 +259,9 @@ export const ZapButton = memo(function ZapButton({
         onOpenChange={setShowZapDialog}
         eventId={eventId}
         authorPubkey={authorPubkey}
+        recipientPubkey={recipientPubkey}
+        kind={kind}
+        identifier={identifier}
         onZap={handleZapFromDialog}
         isZapping={isZapping}
         isWalletConnected={isConnected}

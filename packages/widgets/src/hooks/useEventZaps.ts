@@ -67,7 +67,7 @@ interface UseEventZapsOptions {
   eventId: string
   authorPubkey: string
   kind: number
-  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+  identifier?: string // d-tag for addressable events (videos, livestreams)
 }
 
 interface UseEventZapsReturn {
@@ -86,8 +86,8 @@ export function useEventZaps({
   const eventStore = useEventStore()
   const { pool, relays: hostRelays } = useNostubeHost()
 
-  // Build address for addressable events (kinds 34235, 34236)
-  const isAddressable = kind === 34235 || kind === 34236
+  // Addressable events (NIP-01 30000-39999: videos, livestreams) are zapped by address too
+  const isAddressable = kind >= 30000 && kind < 40000
   const videoAddress = useMemo(() => {
     if (isAddressable && identifier) {
       return `${kind}:${authorPubkey}:${identifier}`

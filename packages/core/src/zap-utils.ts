@@ -12,6 +12,7 @@ export function hasLightningAddress(
 }
 
 export interface ZapRequestParams {
+  /** Who gets paid; with `event`, may differ from its publisher (a livestream's host). */
   recipientPubkey: string
   amount: number // in sats
   comment?: string
@@ -44,6 +45,8 @@ export function createZapRequest(params: ZapRequestParams): EventTemplate {
       comment,
       relays,
     })
+    // makeZapRequest pays the publisher; a livestream pays its host instead.
+    template.tags = template.tags.map(tag => (tag[0] === 'p' ? ['p', recipientPubkey] : tag))
   } else {
     // Zapping a profile
     template = makeZapRequest({

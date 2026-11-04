@@ -27,8 +27,10 @@ interface ZapDialogProps {
   onOpenChange: (open: boolean) => void
   eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
+  /** Who gets paid when it is not the event's publisher (a livestream's host). */
+  recipientPubkey?: string
   kind?: number
-  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+  identifier?: string // d-tag for addressable events (videos, livestreams)
   onZap: (amount: number, comment?: string, timestamp?: number) => Promise<boolean>
   isZapping: boolean
   isWalletConnected: boolean
@@ -41,6 +43,7 @@ export const ZapDialog = memo(function ZapDialog({
   onOpenChange,
   eventId,
   authorPubkey,
+  recipientPubkey = authorPubkey,
   kind = 1,
   identifier,
   onZap,
@@ -57,7 +60,7 @@ export const ZapDialog = memo(function ZapDialog({
   const [copied, setCopied] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(true)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
-  const profile = useProfile({ pubkey: authorPubkey })
+  const profile = useProfile({ pubkey: recipientPubkey })
 
   // Track if we've already handled this invoice's payment
   const handledInvoiceRef = useRef<string | null>(null)
@@ -70,7 +73,7 @@ export const ZapDialog = memo(function ZapDialog({
     identifier,
   })
 
-  const displayName = profile?.display_name || profile?.name || authorPubkey.slice(0, 8)
+  const displayName = profile?.display_name || profile?.name || recipientPubkey.slice(0, 8)
   const avatar = profile?.picture
 
   const effectiveAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount
@@ -278,7 +281,7 @@ export const ZapDialog = memo(function ZapDialog({
           <DialogDescription className="flex items-center gap-2 pt-2">
             <UserAvatar
               picture={avatar}
-              pubkey={authorPubkey}
+              pubkey={recipientPubkey}
               name={displayName}
               className="h-6 w-6"
             />

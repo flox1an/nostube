@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Livestreams (NIP-53): **Live** at `/live` lists streams live across Nostr; `/live/<naddr>` plays a stream (public HTTPS HLS/MP4) beside an always-visible chat. Signed-in accounts send kind 1311 messages, guests read. Zaps appear as highlighted messages only after NIP-57 verification, each invoice once. Chat settings: pop-out window, font size, name colours, timestamps, hiding your and the streamer's muted accounts, Web of Trust badges and a minimum-trust filter. Creators who are live get a LIVE tag and a "Live now" section on their profile, a LIVE badge in header search, and their stream at the top of their videos' suggestions. Blocklists, mutes and NSFW settings apply. Server-instance builds do not include it. No hosting, zap payments or presence.
+- Livestreams (NIP-53): **Live** at `/live` lists streams live across Nostr; `/live/<naddr>` plays a stream (public HTTPS HLS/MP4) beside an always-visible chat. Signed-in accounts send kind 1311 messages, guests read. Below the title: follow the host, zap the stream (paid to the host) and share. Zaps appear as highlighted messages only after NIP-57 verification, each invoice once. Chat settings: pop-out window, font size, name colours, timestamps, hiding your and the streamer's muted accounts, Web of Trust badges and a minimum-trust filter. Creators who are live get a LIVE tag and a "Live now" section on their profile, a LIVE badge in header search, and their stream at the top of their videos' suggestions. Blocklists, mutes and NSFW settings apply. Server-instance builds do not include it. No hosting, zap payments or presence.
 
 ### Changed
 

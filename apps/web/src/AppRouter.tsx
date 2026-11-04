@@ -42,6 +42,10 @@ const LikedVideosPage = lazy(() =>
   import('./pages/LikedVideosPage').then(m => ({ default: m.LikedVideosPage }))
 )
 const VideoPage = lazy(() => import('./pages/VideoPage').then(m => ({ default: m.VideoPage })))
+const LivePage = lazy(() => import('./pages/LivePage').then(m => ({ default: m.LivePage })))
+const LiveStreamPage = lazy(() =>
+  import('./pages/LiveStreamPage').then(m => ({ default: m.LiveStreamPage }))
+)
 const DesktopPlayerPage = lazy(() =>
   import('./pages/DesktopPlayerPage').then(m => ({ default: m.DesktopPlayerPage }))
 )
@@ -190,6 +194,30 @@ export function AppRouter() {
             }
           />
           <Route path="/explore" element={<Navigate to="/" replace />} />
+          <Route
+            path="/live"
+            element={
+              instance ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Suspense fallback={<PageLoader />}>
+                  <LivePage />
+                </Suspense>
+              )
+            }
+          />
+          <Route
+            path="/live/:naddr"
+            element={
+              instance ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Suspense fallback={<VideoPageLoader />}>
+                  <LiveStreamPage />
+                </Suspense>
+              )
+            }
+          />
           <Route
             path="/shorts"
             element={

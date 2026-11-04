@@ -1,9 +1,10 @@
 import type { LucideIcon } from 'lucide-react'
-import { Cog, FileText, Home, Library, Play, Users } from 'lucide-react'
+import { Cog, FileText, Home, Library, Play, Radio, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 export type NavigationSection = 'navigation' | 'library' | 'configuration'
 
@@ -41,6 +42,17 @@ export function useNavigationMenu(): NavigationMenu {
         href: '/shorts',
         section: 'navigation',
       },
+      ...(!getInstanceConfig()
+        ? [
+            {
+              id: 'live',
+              label: t('live.title', 'Live'),
+              icon: Radio,
+              href: '/live',
+              section: 'navigation' as const,
+            },
+          ]
+        : []),
       ...(user
         ? [
             {
@@ -85,7 +97,10 @@ export function useNavigationMenu(): NavigationMenu {
       },
     ]
     const compactItems = [...navigationItems, ...libraryItems, ...configurationItems]
-    const mobilePrimaryItems = [...navigationItems, libraryItems[0]]
+    const mobilePrimaryItems = [
+      ...navigationItems.filter(item => item.id !== 'live'),
+      libraryItems[0],
+    ]
     const mobileMoreItems = compactItems.filter(
       item => !mobilePrimaryItems.some(primaryItem => primaryItem.id === item.id)
     )

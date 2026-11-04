@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Branch-only livestream viewing spike: `/live` discovers NIP-53 streams and `/live/<naddr>` combines landscape playback with a collapsible, read-only live chat and validated, invoice-deduplicated zap highlights. Reuses the app's player, profiles and moderation; no hosting, outgoing chat, presence or payments. Server-instance builds remain isolated from public discovery.
+
 ### Changed
 
 - Publishing feedback across web, creator site and Studio now reports real per-target relay confirmations, refusals and timeouts. Long operations reveal a compact status after two seconds and details after eight seconds without progress; retry reuses the signed event and targets failures only. Blossom uploads distinguish byte transfer from server confirmation and expose mirror outcomes. Studio links video publication to event/media-scoped durable outbox status and retry. Upload footer buttons retain consistent desktop height and 44px touch targets.

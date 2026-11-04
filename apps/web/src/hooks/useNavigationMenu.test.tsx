@@ -27,6 +27,7 @@ describe('useNavigationMenu', () => {
     expect(result.current.compactItems.map(item => item.id)).toEqual([
       'home',
       'shorts',
+      'live',
       'subscriptions',
       'library',
       'settings',
@@ -44,7 +45,7 @@ describe('useNavigationMenu', () => {
 
     expect(guestMenu.compactItems.map(i => i.id)).not.toContain('subscriptions')
     expect(guestMenu.mobilePrimaryItems.map(i => i.id)).toEqual(['home', 'shorts', 'library'])
-    expect(guestMenu.mobileMoreItems.map(i => i.id)).toEqual(['settings'])
+    expect(guestMenu.mobileMoreItems.map(i => i.id)).toEqual(['live', 'settings'])
     expect(userMenu.compactItems.map(i => i.id)).toContain('subscriptions')
   })
 
@@ -67,6 +68,6 @@ describe('useNavigationMenu', () => {
       'subscriptions',
       'library',
     ])
-    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual(['settings'])
+    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual(['live', 'settings'])
   })
 })

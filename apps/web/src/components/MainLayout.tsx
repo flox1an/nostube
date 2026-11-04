@@ -22,7 +22,8 @@ export function MainLayout() {
   const isVideoPage =
     location.pathname.startsWith('/v/') ||
     location.pathname.startsWith('/video/') ||
-    location.pathname.startsWith('/short/')
+    location.pathname.startsWith('/short/') ||
+    location.pathname.startsWith('/live/')
 
   // Auto-close sidebar when navigating to a video page
   const isSidebarOpenRef = useRef(isSidebarOpen)

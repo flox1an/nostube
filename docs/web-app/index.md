@@ -8,6 +8,18 @@ Do you want a website for your own videos? The [Nostube Server](/server/) alread
 
 ![The Nostube web app home page](/screenshots/web-home.webp)
 
+## Livestream viewing spike
+
+On the `spike/livestream-viewer` branch, **Live** opens `/live`; a stream opens at `/live/<naddr>` (NIP-53 kind `30311`). Run `npm run dev --workspace nostube` from the repository root. This is a read-only experiment, not deployed functionality: there is no stream hosting, chat composer, zap payment flow or presence publishing.
+
+The landscape player uses the existing HLS player. The hideable right-hand pane reads kind `1311` chat and kind `9735` zap receipts; below the player are only the title, creator and description, not VOD comments or suggestions. Chat keeps following new messages until you scroll up; **Jump to latest** resumes following. Collapsing the chat does not remount the player. Zaps appear as amber bubbles only after signature, stream binding, invoice amount and recipient LNURL-provider verification; duplicate invoices appear once. Unverifiable receipts are not shown as payments.
+
+Discovery listens to recent announcements on configured read relays plus `relay.damus.io`, `nos.lol`, `relay.primal.net` and `relay.zap.stream`, retaining the latest state per address before filtering live streams. Detail links use their secure public relay hints too. The initial discovery window is 24 hours (150 announcements); chat shows at most the newest 300 entries. A live announcement older than an hour is treated as ended when the feed next updates. Hosting-provider `Host` tags are display metadata, not a verified identity badge. Existing blocklists, mutes and NSFW preferences apply. Server-instance builds do not expose these routes or add public live relays.
+
+Playback is limited to public HTTPS HLS/MP4 URLs; MOQ, RTMP, spaces and external chat bridges are outside this spike. Planned streams and ended streams are shown honestly; an ended stream plays its recording only when one is supplied. Provider CORS, codec and availability restrictions can still prevent playback. The UI uses English fallback strings pending translation.
+
+Protocol references: [NIP-53](https://github.com/nostr-protocol/nips/blob/master/53.md), [NIP-57](https://github.com/nostr-protocol/nips/blob/master/57.md) and [zap.stream live chat](https://github.com/v0l/zap.stream/blob/master/src/element/chat/live-chat.tsx). Design follows the [Apple design skill](https://github.com/dickwu/apple-design-skill): content-first [live viewing](https://developer.apple.com/design/human-interface-guidelines/live-viewing-apps), hideable [split views](https://developer.apple.com/design/human-interface-guidelines/split-views), keyboard access, sufficient hit targets, semantic colors and no distracting chat animations. Native Apple window conventions are not imposed on this web view.
+
 ## Options
 
 | Option | What you get | Link previews and oEmbed |

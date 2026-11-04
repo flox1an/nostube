@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.53] - 2026-11-04
+
+### Fixed
+
+- Video-grid hover backgrounds have their top inset back: desktop thumbnails have the same 8px border above and on both sides, including Shorts. Loading placeholders use matching spacing; mobile full-bleed grids remain edge-to-edge.
+
+### Changed
+
+- The official moderation preset now belongs to the Nostube admin account. Saved selections and cached copies of the retired personal preset migrate to the admin default. The web app and embed fall back to the official preset when a selected preset is unavailable and has no matching cache, without overwriting other explicit selections; the admin moderation menu follows the new owner.
+
 ## [0.2.52] - 2026-11-01
 
 ### Fixed
@@ -15,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The official moderation preset now belongs to the Nostube admin account. Saved selections and cached copies of the retired personal preset migrate to the admin default. The web app and embed fall back to the official preset when a selected preset is unavailable and has no matching cache, without overwriting other explicit selections; the admin moderation menu follows the new owner.
 - Publishing feedback across web, creator site and Studio now reports real per-target relay confirmations, refusals and timeouts. Long operations reveal a compact status after two seconds and details after eight seconds without progress; retry reuses the signed event and targets failures only. Blossom uploads distinguish byte transfer from server confirmation and expose mirror outcomes. Studio links video publication to event/media-scoped durable outbox status and retry. Upload footer buttons retain consistent desktop height and 44px touch targets.
 - Server: in Public reach, the channel profile of the managed key carries `website`: the public instance origin with instance hosting, the nsite URL (custom domain first, otherwise `https://<npub>.<gateway>`) with nsite hosting. Private reach and LAN-only instance hosting advertise none; own-identity profiles stay unchanged.
 - `wss://index.hzrd149.com` is offline and no longer queried: defaults and shared loaders omit it; the server also removes it from saved relay lists on load/save and discards its old outbox jobs.

@@ -151,10 +151,10 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'group rounded-xl px-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2',
-        fullBleed && 'rounded-none sm:rounded-xl',
+        'group rounded-xl px-1 pt-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2 sm:pt-2',
+        fullBleed && 'rounded-none pt-0 sm:rounded-xl sm:pt-2',
         fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
-        overlayMeta && 'p-0 sm:pb-6'
+        overlayMeta && 'p-0 sm:pt-2 sm:pb-6'
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -349,9 +349,10 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   return (
     <div
       className={cn(
-        'px-1 pb-6 sm:px-2',
+        'px-1 pt-1 pb-6 sm:px-2 sm:pt-2',
+        fullBleed && 'pt-0 sm:pt-2',
         fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
-        fullBleed && format === 'vertical' && 'p-0 sm:pb-6'
+        fullBleed && format === 'vertical' && 'p-0 sm:pt-2 sm:pb-6'
       )}
     >
       <Skeleton

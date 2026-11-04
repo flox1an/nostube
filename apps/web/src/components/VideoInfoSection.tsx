@@ -235,14 +235,18 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     return () => sub.unsubscribe()
   }, [userPubkey, pool, relaysToUse, pinFilters, eventStore])
 
-  // Detect whether the mobile-clamped title actually overflows two lines,
-  // so the "show full title" affordance only appears when it's needed.
-  // ponytail: checked once per title, not on window resize — add a resize
-  // listener if users report stale state after rotating/resizing mid-view.
+  // Measure while collapsed, keeping the collapse control available after expansion.
   useEffect(() => {
-    if (!titleRef.current) return
-    setTitleTruncated(titleRef.current.scrollHeight > titleRef.current.clientHeight)
-  }, [video?.title])
+    const title = titleRef.current
+    if (!title || titleExpanded) return
+    const measure = () => setTitleTruncated(title.scrollHeight > title.clientHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(title)
+    return () => observer.disconnect()
+  }, [video?.title, titleExpanded])
+
+  useEffect(() => setTitleExpanded(false), [video?.id])
 
   // Extract expiration timestamp from video event (NIP-40)
   // Calculate once - expiration status won't change during component lifetime
@@ -375,9 +379,10 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               {!hideTitle && video?.title && (
                 <h1
                   ref={titleRef}
+                  id="video-page-title"
                   className={cn(
-                    'text-lg md:text-xl font-semibold leading-snug',
-                    !titleExpanded && 'line-clamp-2 md:line-clamp-none'
+                    'text-lg md:text-xl font-semibold leading-snug min-w-0 max-w-full wrap-anywhere',
+                    !titleExpanded && 'line-clamp-2'
                   )}
                 >
                   {video.title}
@@ -406,6 +411,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 type="button"
                 onClick={() => setTitleExpanded(prev => !prev)}
                 aria-expanded={titleExpanded}
+                aria-controls="video-page-title"
                 className="self-start -my-3 py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
                 {titleExpanded

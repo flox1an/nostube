@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.54] - 2026-11-04
+
+### Added
+
+- Livestreams (NIP-53): **Live** at `/live` lists streams live across Nostr; `/live/<naddr>` plays a stream (public HTTPS HLS/MP4) beside an always-visible chat. Signed-in accounts send kind 1311 messages, guests read. Below the title: follow the host, zap the stream (paid to the host) and share. Zaps appear as highlighted messages only after NIP-57 verification, each invoice once. Chat settings: pop-out window, font size, name colours, timestamps, hiding your and the streamer's muted accounts, Web of Trust badges and a minimum-trust filter. Creators who are live get a LIVE tag and a "Live now" section on their profile, a LIVE badge in header search, and their stream at the top of their videos' suggestions. Blocklists, mutes and NSFW settings apply. Server-instance builds do not include it. No hosting or presence.
+
+### Changed
+
+- Video-page titles now collapse to two lines on desktop as well as mobile, with an accessible expand/collapse control. Long unbroken identifiers wrap within the page, and overflow detection follows resizing; switching videos resets expansion without modifying the original title.
+
 ## [0.2.53] - 2026-11-04
 
 ### Fixed
@@ -23,13 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Livestreams (NIP-53): **Live** at `/live` lists streams live across Nostr; `/live/<naddr>` plays a stream (public HTTPS HLS/MP4) beside an always-visible chat. Signed-in accounts send kind 1311 messages, guests read. Below the title: follow the host, zap the stream (paid to the host) and share. Zaps appear as highlighted messages only after NIP-57 verification, each invoice once. Chat settings: pop-out window, font size, name colours, timestamps, hiding your and the streamer's muted accounts, Web of Trust badges and a minimum-trust filter. Creators who are live get a LIVE tag and a "Live now" section on their profile, a LIVE badge in header search, and their stream at the top of their videos' suggestions. Blocklists, mutes and NSFW settings apply. Server-instance builds do not include it. No hosting, zap payments or presence.
-
 ### Changed
 
-- Video-page titles now collapse to two lines on desktop as well as mobile, with an accessible expand/collapse control. Long unbroken identifiers wrap within the page, and overflow detection follows resizing; switching videos resets expansion without modifying the original title.
 - Publishing feedback across web, creator site and Studio now reports real per-target relay confirmations, refusals and timeouts. Long operations reveal a compact status after two seconds and details after eight seconds without progress; retry reuses the signed event and targets failures only. Blossom uploads distinguish byte transfer from server confirmation and expose mirror outcomes. Studio links video publication to event/media-scoped durable outbox status and retry. Upload footer buttons retain consistent desktop height and 44px touch targets.
 - Server: in Public reach, the channel profile of the managed key carries `website`: the public instance origin with instance hosting, the nsite URL (custom domain first, otherwise `https://<npub>.<gateway>`) with nsite hosting. Private reach and LAN-only instance hosting advertise none; own-identity profiles stay unchanged.
 - `wss://index.hzrd149.com` is offline and no longer queried: defaults and shared loaders omit it; the server also removes it from saved relay lists on load/save and discards its old outbox jobs.

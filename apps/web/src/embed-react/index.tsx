@@ -27,6 +27,7 @@ import {
   PRESET_EVENT_KIND,
   type NostubePreset,
 } from '@nostube/core'
+import { getPresetPubkey } from '@nostube/core/preset'
 import '@/i18n/config'
 import './embed.css'
 
@@ -58,31 +59,51 @@ function readViewerSettings(): { nsfwFilter: NsfwFilter; presetPubkey: string } 
     // Storage blocked or corrupt: treat as a viewer without settings
   }
   const selected = stored?.selectedPresetPubkey
-  return {
-    nsfwFilter: getEffectiveNsfwFilter(stored),
-    presetPubkey:
-      typeof selected === 'string' && /^[0-9a-f]{64}$/.test(selected)
-        ? selected
-        : DEFAULT_PRESET_PUBKEY,
+  const valid = typeof selected === 'string' && /^[0-9a-f]{64}$/.test(selected)
+  const presetPubkey = getPresetPubkey(valid ? selected : null)
+  if (valid && presetPubkey !== selected) {
+    // Retired default: persist "no selection" so the app agrees, keeping other settings
+    try {
+      localStorage.setItem(
+        APP_CONFIG_STORAGE_KEY,
+        JSON.stringify({ ...stored, selectedPresetPubkey: null })
+      )
+    } catch {
+      // Storage blocked: the resolved default still applies for this load
+    }
   }
+  return { nsfwFilter: getEffectiveNsfwFilter(stored), presetPubkey }
 }
 
-/** Moderation preset (NSFW + blocked lists); null when it can't be loaded. */
+/**
+ * Moderation preset (NSFW + blocked lists); null when it can't be loaded.
+ * A missing/failed selected preset falls back to the admin default once
+ * (not persisted, so the saved selection survives a temporary outage).
+ */
 async function loadPreset(pubkey: string): Promise<NostubePreset | null> {
-  const cached = getCachedPreset(pubkey)
-  if (cached && !cached.stale) return cached.preset
-
-  const client = new NostrClient([
-    ...new Set([...presetRelays.map(r => r.url), ...METADATA_RELAYS]),
-  ])
+  let client: NostrClient | undefined
   try {
-    const event = await client.fetchLatest(
-      { kinds: [PRESET_EVENT_KIND], authors: [pubkey], '#d': [PRESET_D_TAG] },
-      LOAD_TIMEOUT
-    )
-    return (event && parsePresetEvent(event)) || cached?.preset || null
+    // Selected first, then admin once; the Set skips a repeat when they match.
+    for (const author of new Set([pubkey, DEFAULT_PRESET_PUBKEY])) {
+      const cached = getCachedPreset(author)
+      if (cached && !cached.stale) return cached.preset
+      client ??= new NostrClient([
+        ...new Set([...presetRelays.map(r => r.url), ...METADATA_RELAYS]),
+      ])
+      try {
+        const event = await client.fetchLatest(
+          { kinds: [PRESET_EVENT_KIND], authors: [author], '#d': [PRESET_D_TAG] },
+          LOAD_TIMEOUT
+        )
+        const preset = (event && parsePresetEvent(event)) || cached?.preset
+        if (preset) return preset
+      } catch {
+        if (cached) return cached.preset
+      }
+    }
+    return null
   } finally {
-    client.closeAll()
+    client?.closeAll()
   }
 }
 

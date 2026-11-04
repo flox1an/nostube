@@ -40,6 +40,8 @@ A preset is a moderation list that someone publishes as a Nostr event (kind `300
 | Blocked videos | Left out of playlists and refused by the embed player. |
 | Default relays, default Blossom proxy | What the **Reset** buttons under **Settings → Network** restore. |
 
+The official default is published by the Nostube admin account (`nostube@nostu.be`). Saved selections of the retired personal official preset migrate to this default, and its old cached copy is discarded. In the web app and embed player, an unavailable selected preset falls back to the official default if no matching cached copy is available. Temporary fallback does not overwrite your saved choice; if the default also cannot be loaded, the web app shows a configuration error.
+
 The preset is a safety net for creators who don't label their content: one entry covers the whole account, including videos published later.
 
 Accounts you reported as illegal are blocked like preset-blocked accounts (see [Your own filters](#your-own-filters)). Reports by other people never block anything.

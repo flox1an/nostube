@@ -27,10 +27,19 @@ export interface NostubePreset extends NostubePresetContent {
 }
 
 /**
- * Default preset pubkey - used when no preset is selected
+ * Default preset pubkey (Nostube admin) - used when no preset is selected
  */
 export const DEFAULT_PRESET_PUBKEY =
+  '7e3decf0396b7b2e35fe26bbf46306f19a3ae34f73726f306f45390c96dd0c94'
+
+/** Former default (a personal key); saved selections of it migrate to the default. */
+const LEGACY_DEFAULT_PRESET_PUBKEY =
   'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81'
+
+/** Effective preset pubkey for a saved selection: unset or legacy default → default. */
+export function getPresetPubkey(selected?: string | null): string {
+  return !selected || selected === LEGACY_DEFAULT_PRESET_PUBKEY ? DEFAULT_PRESET_PUBKEY : selected
+}
 
 /**
  * Event kind for app-specific data (NIP-78)

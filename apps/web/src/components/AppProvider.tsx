@@ -6,6 +6,7 @@ import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 import { getEffectiveNsfwFilter } from '@nostube/core/content-safety'
 import { getInstanceConfig, instanceRelays } from '@nostube/core/instance-config'
+import { getPresetPubkey } from '@nostube/core/preset'
 
 const instance = getInstanceConfig()
 
@@ -49,6 +50,14 @@ export function AppProvider(props: AppProviderProps) {
 
   // App configuration state with localStorage persistence
   const [storedConfig, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
+
+  // Retired personal official preset: follow the admin default, even while offline.
+  useEffect(() => {
+    const selected = storedConfig.selectedPresetPubkey
+    if (selected && getPresetPubkey(selected) !== selected) {
+      setConfig(current => ({ ...current, selectedPresetPubkey: null }))
+    }
+  }, [storedConfig.selectedPresetPubkey, setConfig])
 
   // Consumers only ever see the effective NSFW mode: an opt-in without the 18+
   // confirmation (older configs, hand-edited storage) counts as 'hide'.

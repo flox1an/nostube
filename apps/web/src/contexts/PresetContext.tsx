@@ -28,11 +28,9 @@ import {
   setCachedPreset,
   removeCachedPreset,
   LOAD_TIMEOUT,
-  type CacheResult,
 } from '@/lib/preset-storage'
 import { getInstanceConfig } from '@nostube/core/instance-config'
-
-type PresetStatus = 'loading' | 'loaded' | 'error'
+import { getPresetPubkey } from '@nostube/core/preset'
 
 interface PresetContextValue {
   preset: NostubePreset | null
@@ -66,15 +64,14 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
   const eventStore = useEventStore()
   const { pool, config, updateConfig } = useAppContext()
 
-  // Get selected pubkey from config, fall back to default
-  const selectedPubkey = config.selectedPresetPubkey ?? DEFAULT_PRESET_PUBKEY
-
-  // Check for cached preset immediately (stale-while-revalidate)
-  const [cacheResult] = useState<CacheResult | null>(() => getCachedPreset(selectedPubkey))
-  const cachedPreset = cacheResult?.preset ?? null
-
-  // Track loading state - start as 'loaded' if we have a cached preset (even if stale)
-  const [status, setStatus] = useState<PresetStatus>(() => (cachedPreset ? 'loaded' : 'loading'))
+  const requestedPubkey = getPresetPubkey(config.selectedPresetPubkey)
+  const [fallbackFor, setFallbackFor] = useState<string | null>(null)
+  const selectedPubkey = fallbackFor === requestedPubkey ? DEFAULT_PRESET_PUBKEY : requestedPubkey
+  const cachedPreset = useMemo(
+    () => getCachedPreset(selectedPubkey)?.preset ?? null,
+    [selectedPubkey]
+  )
+  const [failedPubkey, setFailedPubkey] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
 
   // Query event store for the selected preset
@@ -95,17 +92,15 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
     return Array.from(urls)
   }, [config.relays])
 
-  // Fetch the preset from relays
+  // Keep an explicit choice saved: a missing relay response is not proof of deletion.
   useEffect(() => {
-    if (!selectedPubkey || discoveryRelays.length === 0) return
-
-    // Track if we received a valid event in this effect run
-    let receivedEvent = false
-
-    const loader = createAddressLoader(pool, {
-      eventStore,
-      bufferTime: 0, // Don't batch - emit first result immediately
-    })
+    let receivedEvent = presetEvent?.pubkey === selectedPubkey && !!parsePresetEvent(presetEvent)
+    const fail = () => {
+      if (receivedEvent || cachedPreset) return
+      if (selectedPubkey !== DEFAULT_PRESET_PUBKEY) setFallbackFor(requestedPubkey)
+      else setFailedPubkey(selectedPubkey)
+    }
+    const loader = createAddressLoader(pool, { eventStore, bufferTime: 0 })
     const subscription = loader({
       kind: PRESET_EVENT_KIND,
       pubkey: selectedPubkey,
@@ -113,34 +108,36 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
       relays: discoveryRelays,
     }).subscribe({
       next: event => {
-        if (event) {
+        if (event && parsePresetEvent(event)) {
           receivedEvent = true
           eventStore.add(event)
-          setStatus('loaded')
         }
       },
       error: err => {
         console.warn('[PresetProvider] Failed to load preset:', err)
+        fail()
       },
+      complete: fail,
     })
-
-    // Timeout - only fail if no cached preset and no event received
-    const timeout = setTimeout(() => {
-      if (!receivedEvent && !cachedPreset) {
-        console.warn('[PresetProvider] Preset load timeout')
-        setStatus('error')
-      }
-    }, LOAD_TIMEOUT)
-
+    const timeout = setTimeout(fail, LOAD_TIMEOUT)
     return () => {
       subscription.unsubscribe()
       clearTimeout(timeout)
     }
-  }, [selectedPubkey, discoveryRelays, pool, eventStore, retryCount, cachedPreset])
+  }, [
+    selectedPubkey,
+    requestedPubkey,
+    discoveryRelays,
+    pool,
+    eventStore,
+    retryCount,
+    cachedPreset,
+    presetEvent,
+  ])
 
   // Parse the preset event
   const preset = useMemo(() => {
-    if (presetEvent) {
+    if (presetEvent?.pubkey === selectedPubkey) {
       const parsed = parsePresetEvent(presetEvent)
       if (parsed) {
         // Update cache when we get fresh data
@@ -164,14 +161,16 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
       }))
       // Clear cache when changing preset
       removeCachedPreset()
-      setStatus('loading')
+      setFallbackFor(null)
+      setFailedPubkey(null)
     },
     [updateConfig]
   )
 
   // Retry handler
   const handleRetry = useCallback(() => {
-    setStatus('loading')
+    setFallbackFor(null)
+    setFailedPubkey(null)
     setRetryCount(c => c + 1)
   }, [])
 
@@ -189,7 +188,7 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
   )
 
   // Show loading state
-  if (status === 'loading' && !cachedPreset) {
+  if (!preset && failedPubkey !== selectedPubkey) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -199,7 +198,7 @@ function RemotePresetProvider({ children }: PresetProviderProps) {
   }
 
   // Show error state
-  if (status === 'error' && !preset) {
+  if (!preset) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
         <AlertCircle className="h-12 w-12 text-destructive" />

@@ -5,6 +5,7 @@ import { Button } from '@nostube/widgets/components/button'
 import { Search, X, User, Loader2, Clock } from 'lucide-react'
 import { useSearchVideoAuthors } from '@/hooks/useSearchVideoAuthors'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
+import { AuthorLiveBadge } from '@/components/live/AuthorLiveBadge'
 import { buildProfileUrlFromPubkey, buildProfilePath } from '@/lib/nprofile'
 import { decodeProfilePointer } from '@nostube/core/nip19'
 import { cn } from '@/lib/utils'
@@ -376,8 +377,11 @@ export function GlobalSearchBar({
                       className="h-8 w-8"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">
-                        {result.profile.display_name || result.profile.name || 'Anonymous'}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="font-medium truncate">
+                          {result.profile.display_name || result.profile.name || 'Anonymous'}
+                        </span>
+                        <AuthorLiveBadge pubkey={result.pubkey} />
                       </div>
                       {result.profile.nip05 && (
                         <div className="text-xs text-muted-foreground truncate">

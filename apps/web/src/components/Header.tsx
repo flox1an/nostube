@@ -34,7 +34,8 @@ export function Header({ transparent = false }: HeaderProps) {
   const isVideoPage =
     location.pathname.startsWith('/v/') ||
     location.pathname.startsWith('/video/') ||
-    location.pathname.startsWith('/short/')
+    location.pathname.startsWith('/short/') ||
+    location.pathname.startsWith('/live/')
 
   // Only real in-app history (idx > 0) can be popped back into; a
   // direct-linked/refreshed video has none, so fall back to Home.

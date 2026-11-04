@@ -1,102 +1,135 @@
+import { TrustBadgeDisplay } from '@/components/TrustBadge'
+import { useTrustScores } from '@/hooks/useTrustScore'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { nip19, type NostrEvent } from 'nostr-tools'
 import { ArrowDown, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEventStore } from 'applesauce-react/hooks'
-import { getDisplayName } from 'applesauce-core/helpers/profile'
+import { use$, useEventStore } from 'applesauce-react/hooks'
+import { kinds, nip19, type NostrEvent } from 'nostr-tools'
+import { getDisplayName, getProfileContent } from 'applesauce-core/helpers/profile'
 import type { LiveStream } from '@nostube/core/live-stream'
-import { fetchZapProviderPubkey, formatSats } from '@nostube/core/zap-utils'
+import { buildChatRows, zapRecipients } from '@nostube/core/live-zaps'
+import {
+  lnurlFromProfile,
+  resolveZapEndpoint,
+  type ZapEndpoint,
+  type ZapReceipt,
+} from '@nostube/core/lnurl-pay'
+import { formatSats } from '@nostube/core/zap-utils'
 import { genUserName } from '@nostube/core/gen-user-name'
 import { Button } from '@nostube/widgets/components/button'
-import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
+import { useBlockedPubkeys } from '@/hooks/useReportedPubkeys'
+import { useMutedPubkeys, resolveMutedPubkeys } from '@/hooks/useMutedPubkeys'
 import { buildProfilePath } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
-import { buildChatRows, zapRecipients, zapRequestRecipient, type LiveZap } from './live-zaps'
+import { useLiveChat } from '@/hooks/useLiveChat'
+import { LiveChatComposer } from './LiveChatComposer'
+import { LiveChatSettings } from './LiveChatSettings'
+import {
+  normalizeChatAppearance,
+  DEFAULT_CHAT_APPEARANCE,
+  type ChatAppearance,
+} from './chat-appearance'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+import { RichTextContent } from '@/components/RichTextContent'
+import { formatChatTime } from './chat-time'
 
 const LARGE_ZAP_SATS = 5000
 
-/** Recipient pubkey -> receipt-signing nostrPubkey of their own LNURL provider (null: none). */
-function useZapProviders(pubkeysKey: string): ReadonlyMap<string, string | null> {
+/** Recipient pubkey -> LNURL endpoint from their own profile, for zaps that can be verified. */
+function useZapEndpoints(recipients: string[]): ReadonlyMap<string, ZapEndpoint> {
   const eventStore = useEventStore()
-  const [providers, setProviders] = useState<ReadonlyMap<string, string | null>>(() => new Map())
+  const [endpoints, setEndpoints] = useState<ReadonlyMap<string, ZapEndpoint>>(() => new Map())
+  const key = recipients.join(',')
 
   useEffect(() => {
-    if (!pubkeysKey) return
     const controller = new AbortController()
-    const subscriptions = pubkeysKey.split(',').map(pubkey => {
+    const subscriptions = (key ? key.split(',') : []).map(pubkey => {
       requestProfile(pubkey)
-      return eventStore.replaceable(0, pubkey).subscribe(profile => {
-        if (!profile) return
-        fetchZapProviderPubkey(profile, controller.signal)
-          .catch(() => null)
-          .then(provider => {
-            if (!controller.signal.aborted) {
-              setProviders(prev => new Map(prev).set(pubkey, provider))
-            }
+      return eventStore.replaceable(kinds.Metadata, pubkey).subscribe(profile => {
+        const lnurl = profile && lnurlFromProfile(getProfileContent(profile) ?? {})
+        if (!lnurl) return
+        resolveZapEndpoint(lnurl, controller.signal)
+          .then(endpoint => {
+            if (endpoint.nostrPubkey && !controller.signal.aborted)
+              setEndpoints(prev => new Map(prev).set(pubkey, endpoint))
           })
+          .catch(() => {})
       })
     })
     return () => {
       controller.abort()
       subscriptions.forEach(subscription => subscription.unsubscribe())
     }
-  }, [eventStore, pubkeysKey])
+  }, [eventStore, key])
 
-  return providers
+  return endpoints
 }
 
-function formatTime(seconds: number, language: string) {
-  return new Date(seconds * 1000).toLocaleTimeString(language, {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
-
-function ChatMessage({ event }: { event: NostrEvent }) {
-  const { i18n } = useTranslation()
+function ChatMessage({
+  event,
+  appearance,
+  trust,
+}: {
+  event: NostrEvent
+  appearance: ChatAppearance
+  trust: number | null | undefined
+}) {
   const profile = useProfile({ pubkey: event.pubkey })
   const name = getDisplayName(profile, genUserName(event.pubkey))
   const profilePath = buildProfilePath(nip19.npubEncode(event.pubkey))
 
   return (
-    <li className="flex gap-2 py-1.5" data-live-chat-row="chat" data-event-id={event.id}>
-      <Link to={profilePath} tabIndex={-1} aria-hidden className="mt-0.5 shrink-0">
-        <UserAvatar
-          picture={profile?.picture}
-          pubkey={event.pubkey}
-          name={name}
-          className="h-6 w-6"
-        />
+    <li
+      className="px-2 py-1 leading-relaxed wrap-anywhere hover:bg-accent/40"
+      data-live-chat-row="chat"
+      data-event-id={event.id}
+    >
+      {appearance.timestamps && (
+        <time
+          dateTime={new Date(event.created_at * 1000).toISOString()}
+          className="mr-2 text-[0.8em] text-muted-foreground"
+        >
+          {formatChatTime(event.created_at)}
+        </time>
+      )}
+      {appearance.showTrust && (
+        <TrustBadgeDisplay pubkey={event.pubkey} score={trust} className="mr-1 align-[-1px]" />
+      )}
+      <Link
+        to={profilePath}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          'font-semibold hover:underline',
+          appearance.coloredNames &&
+            [
+              'text-violet-700 dark:text-violet-300',
+              'text-emerald-700 dark:text-emerald-300',
+              'text-sky-700 dark:text-sky-300',
+              'text-rose-700 dark:text-rose-300',
+              'text-orange-700 dark:text-orange-300',
+              'text-fuchsia-700 dark:text-fuchsia-300',
+            ][parseInt(event.pubkey.slice(0, 2), 16) % 6]
+        )}
+      >
+        {name}
       </Link>
-      <div className="min-w-0 flex-1 text-sm">
-        <div className="flex items-baseline gap-2">
-          <Link
-            to={profilePath}
-            className="truncate font-medium text-muted-foreground hover:underline"
-          >
-            {name}
-          </Link>
-          <time
-            dateTime={new Date(event.created_at * 1000).toISOString()}
-            className="shrink-0 text-xs text-muted-foreground/70"
-          >
-            {formatTime(event.created_at, i18n.language)}
-          </time>
-        </div>
-        <p className="whitespace-pre-wrap wrap-anywhere">{event.content}</p>
-      </div>
+      <span aria-hidden="true" className="text-muted-foreground">
+        :{' '}
+      </span>
+      <RichTextContent content={event.content} authorPubkey={event.pubkey} inline />
     </li>
   )
 }
 
-function ZapMessage({ zap }: { zap: LiveZap }) {
-  const { t, i18n } = useTranslation()
+function ZapMessage({ zap, appearance }: { zap: ZapReceipt; appearance: ChatAppearance }) {
+  const { t } = useTranslation()
   const profile = useProfile(zap.sender ? { pubkey: zap.sender } : undefined)
-  const sats = Math.round(zap.msats / 1000)
+  const sats = zap.sats
   const large = sats >= LARGE_ZAP_SATS
   const name = zap.sender
     ? getDisplayName(profile, genUserName(zap.sender))
@@ -106,22 +139,18 @@ function ZapMessage({ zap }: { zap: LiveZap }) {
     <li className="py-1.5" data-live-chat-row="zap" data-event-id={zap.id} data-zap-sats={sats}>
       <div
         className={cn(
-          'rounded-xl border px-3 py-2 text-sm',
+          'rounded-xl border px-3 py-2',
           large ? 'border-amber-500/70 bg-amber-500/20' : 'border-amber-500/30 bg-amber-500/10'
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {zap.sender ? (
             <Link
               to={buildProfilePath(nip19.npubEncode(zap.sender))}
-              className="flex min-w-0 items-center gap-2 font-medium hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-w-0 font-semibold wrap-anywhere hover:underline"
             >
-              <UserAvatar
-                picture={profile?.picture}
-                pubkey={zap.sender}
-                name={name}
-                className="h-6 w-6 shrink-0"
-              />
               <span className="truncate">{name}</span>
             </Link>
           ) : (
@@ -139,54 +168,79 @@ function ZapMessage({ zap }: { zap: LiveZap }) {
               amount: formatSats(sats),
             })}
           </span>
+        </div>
+        {appearance.timestamps && (
           <time
             dateTime={new Date(zap.createdAt * 1000).toISOString()}
-            className="ml-auto shrink-0 text-xs text-muted-foreground"
+            className="text-[0.8em] text-muted-foreground"
           >
-            {formatTime(zap.createdAt, i18n.language)}
+            {formatChatTime(zap.createdAt)}
           </time>
-        </div>
-        {zap.comment && <p className="mt-1 whitespace-pre-wrap wrap-anywhere">{zap.comment}</p>}
+        )}
+        {zap.comment && (
+          <div className="mt-1">
+            <RichTextContent content={zap.comment} authorPubkey={zap.sender} inline />
+          </div>
+        )}
       </div>
     </li>
   )
 }
 
-/** Read-only NIP-53 chat: kind 1311 messages plus NIP-57-verified zaps. Never publishes. */
-export function LiveChat({
-  stream,
-  events,
-  isLoading,
-  error,
-}: {
-  stream: LiveStream
-  events: NostrEvent[]
-  isLoading: boolean
-  error: string | null
-}) {
+/** NIP-53 chat: kind 1311 messages plus NIP-57-verified zaps, with a composer for signed-in users. */
+export function LiveChat({ stream }: { stream: LiveStream }) {
+  const { events, isLoading, error, relays } = useLiveChat(stream)
+  const [storedAppearance, setAppearance] = useLocalStorage(
+    'nostube:live-chat-appearance',
+    DEFAULT_CHAT_APPEARANCE
+  )
+  const appearance = normalizeChatAppearance(storedAppearance)
   const { t } = useTranslation()
-  const reported = useReportedPubkeys()
-  const recipients = useMemo(() => zapRecipients(stream), [stream])
-
-  // Only resolve LNURL providers for recipients that zaps actually target.
-  const pubkeysKey = useMemo(() => {
-    const keys = new Set<string>()
-    for (const event of events) {
-      const recipient = event.kind === 9735 ? zapRequestRecipient(event, recipients) : undefined
-      if (recipient) keys.add(recipient)
+  const blocked = useBlockedPubkeys()
+  const { mutedPubkeys } = useMutedPubkeys()
+  const eventStore = useEventStore()
+  // The streamer's NIP-51 mute list; the store's loader fetches it when missing.
+  const hostMuteList = use$(
+    () => eventStore.replaceable(kinds.Mutelist, stream.hostPubkey),
+    [eventStore, stream.hostPubkey]
+  )
+  const { user } = useCurrentUser()
+  const hidden = useMemo(() => {
+    const set = new Set(Object.keys(blocked ?? {}))
+    if (appearance.hideMuted) {
+      for (const pubkey of mutedPubkeys) set.add(pubkey)
+      for (const pubkey of resolveMutedPubkeys(hostMuteList, [])) set.add(pubkey)
     }
-    return [...keys].sort().join(',')
-  }, [events, recipients])
-  const providers = useZapProviders(pubkeysKey)
+    return set
+  }, [blocked, mutedPubkeys, hostMuteList, appearance.hideMuted])
+  const chatAuthors = useMemo(
+    () => [...new Set(events.filter(e => e.kind === 1311).map(e => e.pubkey))],
+    [events]
+  )
+  const trustScores = useTrustScores(
+    appearance.showTrust || appearance.minTrust > 0 ? chatAuthors : []
+  )
+  // Unscored accounts stay visible; the streamer and the viewer are never filtered by trust.
+  const trustHidden = (pubkey: string) => {
+    if (appearance.minTrust === 0 || pubkey === stream.hostPubkey || pubkey === user?.pubkey)
+      return false
+    const score = trustScores.get(pubkey)
+    return typeof score === 'number' && score < appearance.minTrust
+  }
+  // Resolve recipients' LNURL endpoints only once a zap receipt shows up.
+  const hasZaps = useMemo(() => events.some(event => event.kind === kinds.Zap), [events])
+  const recipients = useMemo(() => (hasZaps ? zapRecipients(stream) : []), [hasZaps, stream])
+  const endpoints = useZapEndpoints(recipients)
 
   const rows = useMemo(
     () =>
-      buildChatRows(events, stream, recipients, providers).filter(row =>
+      buildChatRows(events, stream, endpoints).filter(row =>
         row.type === 'chat'
-          ? !reported?.[row.event.pubkey]
-          : !row.zap.sender || !reported?.[row.zap.sender]
+          ? !hidden.has(row.event.pubkey) && !trustHidden(row.event.pubkey)
+          : !row.zap.sender || !hidden.has(row.zap.sender)
       ),
-    [events, stream, recipients, providers, reported]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- trustHidden reads trustScores/minTrust
+    [events, stream, endpoints, hidden, trustScores, appearance.minTrust, user?.pubkey]
   )
 
   // Follow new messages only while the reader is at the bottom.
@@ -196,23 +250,27 @@ export function LiveChat({
     const list = listRef.current
     if (pinned && list) list.scrollTop = list.scrollHeight
   }, [rows, pinned])
+  // The list shrinks when the composer grows (or the viewport changes); stay on the latest.
+  useEffect(() => {
+    const list = listRef.current
+    if (!pinned || !list) return
+    const observer = new ResizeObserver(() => {
+      list.scrollTop = list.scrollHeight
+    })
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [pinned])
 
   return (
     <section className="flex h-full min-h-0 flex-col" data-live-chat>
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
-        <h2 className="text-sm font-semibold">{t('liveChat.title', 'Live chat')}</h2>
-        <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-          {t('liveChat.readOnly', 'Read only')}
-        </span>
-      </header>
-
       <div className="relative min-h-0 flex-1">
         <div
           ref={listRef}
           role="log"
           aria-label={t('liveChat.messages', 'Chat messages')}
           tabIndex={0}
-          className="h-full overflow-y-auto px-3 py-2"
+          className="h-full overflow-y-auto py-1"
+          style={{ fontSize: appearance.fontSize }}
           onScroll={event => {
             const list = event.currentTarget
             setPinned(list.scrollHeight - list.scrollTop - list.clientHeight < 32)
@@ -238,9 +296,14 @@ export function LiveChat({
             <ol>
               {rows.map(row =>
                 row.type === 'chat' ? (
-                  <ChatMessage key={row.event.id} event={row.event} />
+                  <ChatMessage
+                    key={row.event.id}
+                    event={row.event}
+                    appearance={appearance}
+                    trust={trustScores.get(row.event.pubkey)}
+                  />
                 ) : (
-                  <ZapMessage key={row.zap.invoice} zap={row.zap} />
+                  <ZapMessage key={row.zap.bolt11} zap={row.zap} appearance={appearance} />
                 )
               )}
             </ol>
@@ -258,6 +321,14 @@ export function LiveChat({
           </Button>
         )}
       </div>
+      <LiveChatComposer
+        stream={stream}
+        relays={relays}
+        onSent={() => setPinned(true)}
+        settings={
+          <LiveChatSettings naddr={stream.naddr} appearance={appearance} onChange={setAppearance} />
+        }
+      />
     </section>
   )
 }

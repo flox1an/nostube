@@ -7,8 +7,9 @@ import { nip19 } from 'nostr-tools'
 import { useProfile } from '../hooks/useProfile'
 import { genUserName } from '@nostube/core/gen-user-name'
 import { useImageCascade } from '../hooks/useImageCascade'
-import { useEventStore } from 'applesauce-react/hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { of } from 'rxjs'
 
 /** Where a link inside rich text points: a route of the app (`to`) or another site (`href`). */
 export type LinkTarget = { to: string } | { href: string }
@@ -45,16 +46,26 @@ function TargetLink({
   children,
   title,
   onClick,
+  newTab,
 }: {
   target: LinkTarget
   className?: string
   children: React.ReactNode
   title?: string
   onClick?: React.MouseEventHandler<HTMLAnchorElement>
+  /** Open app routes in a new tab too (chat: keep the stream playing). */
+  newTab?: boolean
 }) {
   if ('to' in target) {
     return (
-      <Link to={target.to} className={className} title={title} onClick={onClick}>
+      <Link
+        to={target.to}
+        className={className}
+        title={title}
+        onClick={onClick}
+        target={newTab ? '_blank' : undefined}
+        rel={newTab ? 'noopener noreferrer' : undefined}
+      >
         {children}
       </Link>
     )
@@ -74,14 +85,54 @@ function TargetLink({
 }
 
 const VIDEO_KINDS = new Set([21, 22, 34235, 34236])
+const LIVE_KIND = 30311
 
-function EventLink({ reference, target }: { reference: EventReference; target: LinkTarget }) {
+function EventLink({
+  reference,
+  target,
+  newTab,
+}: {
+  reference: EventReference
+  target: LinkTarget
+  newTab?: boolean
+}) {
   const { t } = useTranslation()
   const isVideo = reference.kind !== undefined && VIDEO_KINDS.has(reference.kind)
   return (
-    <TargetLink target={target} className="font-medium text-accent-foreground hover:underline">
-      {isVideo ? t('richText.video', 'Video') : t('richText.note', 'Note')}
+    <TargetLink
+      target={target}
+      newTab={newTab}
+      className="font-medium text-accent-foreground hover:underline"
+    >
+      {isVideo
+        ? t('richText.video', 'Video')
+        : reference.kind === LIVE_KIND
+          ? t('richText.live', 'Live')
+          : t('richText.note', 'Note')}
     </TargetLink>
+  )
+}
+
+/** Inline (chat) reference: a kindless `note`/`nevent` takes its kind from the store once known. */
+function StoreEventLink({ reference, links }: { reference: EventReference; links: RichTextLinks }) {
+  const eventStore = useEventStore()
+  const { id, kind } = reference
+  const relayKey = reference.relays.join(',')
+  const event = use$(
+    () =>
+      kind === undefined && id
+        ? eventStore.event({ id, relays: relayKey ? relayKey.split(',') : undefined })
+        : of(undefined),
+    [eventStore, id, kind, relayKey]
+  )
+  const resolved = event
+    ? { ...reference, kind: event.kind, pubkey: reference.pubkey ?? event.pubkey }
+    : reference
+  const target = links.event?.(resolved) ?? null
+  return target ? (
+    <EventLink reference={resolved} target={target} newTab />
+  ) : (
+    <>{`nostr:${reference.nip19}`}</>
   )
 }
 
@@ -222,9 +273,11 @@ const trimTrailingUrlPunctuation = (url: string): string => url.replace(/[.,!?;:
 function NostrMention({
   profilePointer,
   links,
+  newTab,
 }: {
   profilePointer: { pubkey: string; relays?: string[] }
   links: RichTextLinks
+  newTab?: boolean
 }) {
   // Stabilize the pointer by value so useProfile's use$() doesn't restart on
   // every parent render (RichTextContent creates a new object each render).
@@ -249,7 +302,11 @@ function NostrMention({
   }, [eventStore, stablePointer, links])
 
   return (
-    <TargetLink target={target} className="font-medium hover:underline text-accent-foreground">
+    <TargetLink
+      target={target}
+      newTab={newTab}
+      className="font-medium hover:underline text-accent-foreground"
+    >
       @{displayName}
     </TargetLink>
   )
@@ -296,6 +353,11 @@ export interface RichTextContentProps {
    * for any inline image URLs found in the content.
    */
   authorPubkey?: string
+  /**
+   * Compact chat mode: renders a `<span>`, URLs as plain links (no image or brand previews),
+   * resolves kindless event references from the store and opens every link in a new tab.
+   */
+  inline?: boolean
 }
 
 /**
@@ -312,6 +374,7 @@ export function RichTextContent({
   className,
   videoLink,
   authorPubkey,
+  inline = false,
 }: RichTextContentProps) {
   const renderContent = () => {
     const parts: React.ReactNode[] = []
@@ -417,7 +480,7 @@ export function RichTextContent({
 
         // If videoLink is provided, look for timestamps in this segment
         if (videoLink) {
-          const timestampParts = renderTimestamps(segment, videoLink, segmentStart, links)
+          const timestampParts = renderTimestamps(segment, videoLink, segmentStart, links, inline)
           parts.push(...timestampParts)
         } else {
           // Split by newlines and add <br> tags
@@ -437,7 +500,7 @@ export function RichTextContent({
 
         if (item.type === 'url') {
           const url = item.data as string
-          const platform = detectSocialMedia(url)
+          const platform = inline ? null : detectSocialMedia(url)
 
           if (platform) {
             const Icon = platform.icon
@@ -461,7 +524,7 @@ export function RichTextContent({
                 </Badge>
               </a>
             )
-          } else if (isImageUrl(url)) {
+          } else if (!inline && isImageUrl(url)) {
             parts.push(
               <a
                 key={`url-${item.start}`}
@@ -493,10 +556,17 @@ export function RichTextContent({
               key={`mention-${item.start}`}
               profilePointer={item.data as { pubkey: string; relays?: string[] }}
               links={links}
+              newTab={inline}
             />
           )
         } else if (item.type === 'event') {
           const reference = item.data as EventReference
+          if (inline) {
+            parts.push(
+              <StoreEventLink key={`event-${item.start}`} reference={reference} links={links} />
+            )
+            continue
+          }
           const target = links.event?.(reference) ?? null
           // Without a place to send it, the reference stays the text it was.
           parts.push(
@@ -514,6 +584,7 @@ export function RichTextContent({
               <TargetLink
                 key={`hashtag-${item.start}`}
                 target={target}
+                newTab={inline}
                 className="text-accent-foreground hover:underline"
               >
                 #{tag}
@@ -529,7 +600,11 @@ export function RichTextContent({
     return parts
   }
 
-  return <div className={className}>{renderContent()}</div>
+  return inline ? (
+    <span className={className}>{renderContent()}</span>
+  ) : (
+    <div className={className}>{renderContent()}</div>
+  )
 }
 
 // Helper to render timestamps as clickable links
@@ -537,7 +612,8 @@ function renderTimestamps(
   text: string,
   videoLink: string,
   baseOffset: number,
-  links: RichTextLinks
+  links: RichTextLinks,
+  newTab: boolean
 ): React.ReactNode[] {
   const parts: React.ReactNode[] = []
   const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g
@@ -574,6 +650,7 @@ function renderTimestamps(
       <TargetLink
         key={`ts-${baseOffset + start}`}
         target={target}
+        newTab={newTab}
         className="text-accent-foreground hover:underline cursor-pointer"
         onClick={event => {
           if (typeof window === 'undefined') return

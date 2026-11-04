@@ -180,6 +180,17 @@ export function AppRouter() {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
+        {/* Live viewing is public-Nostr discovery; server instances never register it. */}
+        {!instance && (
+          <Route
+            path="/live/:naddr/chat"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <LiveStreamPage chatOnly />
+              </Suspense>
+            }
+          />
+        )}
         <Route path="/" element={<MainLayout />}>
           <Route
             index
@@ -194,30 +205,26 @@ export function AppRouter() {
             }
           />
           <Route path="/explore" element={<Navigate to="/" replace />} />
-          <Route
-            path="/live"
-            element={
-              instance ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Suspense fallback={<PageLoader />}>
-                  <LivePage />
-                </Suspense>
-              )
-            }
-          />
-          <Route
-            path="/live/:naddr"
-            element={
-              instance ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Suspense fallback={<VideoPageLoader />}>
-                  <LiveStreamPage />
-                </Suspense>
-              )
-            }
-          />
+          {!instance && (
+            <>
+              <Route
+                path="/live"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <LivePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/live/:naddr"
+                element={
+                  <Suspense fallback={<VideoPageLoader />}>
+                    <LiveStreamPage />
+                  </Suspense>
+                }
+              />
+            </>
+          )}
           <Route
             path="/shorts"
             element={

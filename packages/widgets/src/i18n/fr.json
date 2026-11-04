@@ -117,7 +117,8 @@
   },
   "richText": {
     "video": "Vidéo",
-    "note": "Note"
+    "note": "Note",
+    "live": "Direct"
   },
   "upload": {
     "dropzone": {

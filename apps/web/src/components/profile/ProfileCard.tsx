@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BadgeCheck, Camera, Minus, Plus, Loader2, Upload } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { LiveBadge } from '@/components/live/LiveBadge'
 import { cn } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -86,7 +88,15 @@ export function AuthorBanner({
   )
 }
 
-export function AuthorBannerDisplay({ banner, pubkey }: { banner: string; pubkey: string }) {
+export function AuthorBannerDisplay({
+  banner,
+  pubkey,
+  live,
+}: {
+  banner: string
+  pubkey: string
+  live?: string
+}) {
   const cascade = useImageCascade({ src: banner, variant: 'preview', authorPubkey: pubkey })
   if (!cascade.src) return null
 
@@ -102,17 +112,28 @@ export function AuthorBannerDisplay({ banner, pubkey }: { banner: string; pubkey
       />
       {/* Gradient fade to background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-background" />
+      {live && <LiveTag naddr={live} className="absolute top-3 right-3" />}
     </div>
+  )
+}
+
+function LiveTag({ naddr, className }: { naddr: string; className?: string }) {
+  return (
+    <Link to={`/live/${naddr}`} className={cn('inline-flex hover:opacity-90', className)}>
+      <LiveBadge className="px-2 py-1 text-xs" />
+    </Link>
   )
 }
 
 export function ProfileCard({
   pubkey,
   hasBanner,
+  live,
   className = '',
 }: {
   pubkey: string
   hasBanner: boolean
+  live?: string
   className?: string
 }) {
   const { t } = useTranslation()
@@ -199,6 +220,7 @@ export function ProfileCard({
               {displayName}
             </h1>
             <TrustBadgeDisplay pubkey={pubkey} score={trustScore?.score} />
+            {live && <LiveTag naddr={live} />}
             {verifiedLabel && (
               <Tooltip>
                 <TooltipTrigger asChild>

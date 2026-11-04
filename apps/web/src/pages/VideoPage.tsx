@@ -7,6 +7,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { YouTubePlayer } from '@/components/YouTubePlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
+import { AuthorLiveSuggestion } from '@/components/live/AuthorLiveSuggestion'
 import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
@@ -615,6 +616,7 @@ function VideoPageContent() {
     return (
       <>
         <HlsFailoverDebugPanel videoId={video?.id} />
+        <AuthorLiveSuggestion pubkey={video?.pubkey} relays={relaysToUse} />
         <VideoSuggestions
           currentVideoId={video?.id}
           authorPubkey={video?.pubkey}

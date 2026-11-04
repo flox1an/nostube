@@ -117,7 +117,8 @@
   },
   "richText": {
     "video": "视频",
-    "note": "笔记"
+    "note": "笔记",
+    "live": "直播"
   },
   "upload": {
     "dropzone": {

@@ -50,6 +50,8 @@ import { AuthorTabs, type AuthorTab } from '@/components/author/AuthorTabs'
 import type { Tabs } from '@/components/author/shared'
 import { isAuthorTab, TAP_TARGET, SHELF_SCROLLER } from '@/components/author/shared'
 import { useAuthorPinnedVideos } from '@/hooks/useAuthorPinnedVideos'
+import { useAuthorLiveStreams } from '@/hooks/useLiveStreams'
+import { LiveCard } from '@/components/live/LiveCard'
 
 function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null }) {
   const { t } = useTranslation()
@@ -116,6 +118,9 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
 
   // Pinned videos (kind 10001, NIP-51): subscription, resolution and processing.
   const pinnedVideos = useAuthorPinnedVideos({ pubkey, relays })
+  // Live NIP-53 streams this author hosts; shown above pinned videos.
+  const liveStreams = useAuthorLiveStreams(pubkey, relays)
+  const liveNaddr = liveStreams[0]?.stream.naddr
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -425,8 +430,13 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
   return (
     <div className="max-w-560 mx-auto sm:p-4">
       <AuthorBanner pubkey={pubkey} onLoad={handleBannerLoad} onError={handleBannerError} />
-      {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} pubkey={pubkey} />}
-      <ProfileCard className="px-4 py-2 sm:p-2" pubkey={pubkey} hasBanner={!!bannerUrl} />
+      {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} pubkey={pubkey} live={liveNaddr} />}
+      <ProfileCard
+        className="px-4 py-2 sm:p-2"
+        pubkey={pubkey}
+        hasBanner={!!bannerUrl}
+        live={!bannerUrl ? liveNaddr : undefined}
+      />
 
       <div className="px-4 py-2 sm:p-2">
         <AuthorTabs basePath={profileBasePath} activeTab={activeTab} tabs={tabs} />
@@ -434,6 +444,18 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
         {/* Tab content */}
         {activeTab === 'overview' && (
           <div className="mt-4 space-y-6">
+            {liveStreams.length > 0 && (
+              <section>
+                <div className="mb-3 flex min-h-9 items-center justify-between">
+                  <h2 className="text-lg font-semibold">{t('live.now', 'Live now')}</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {liveStreams.map(({ stream, playback }) => (
+                    <LiveCard key={stream.address} stream={stream} warning={playback === 'warn'} />
+                  ))}
+                </div>
+              </section>
+            )}
             {pinnedVideos.length > 0 && (
               <section>
                 <div className="mb-3 flex min-h-9 items-center justify-between">

@@ -10,7 +10,7 @@ import {
   validZapReceipts,
   ZapError,
   type ZapTarget,
-} from './zap'
+} from './lnurl-pay'
 
 const LNURL = 'https://pay.example/.well-known/lnurlp/creator'
 const providerKey = generateSecretKey()

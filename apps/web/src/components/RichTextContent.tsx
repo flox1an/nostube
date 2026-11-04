@@ -28,9 +28,19 @@ const nostubeLinks: RichTextLinks = {
       : null,
 }
 
+/** Chat links every reference: videos and live streams here, any other note out to njump. */
+const chatLinks: RichTextLinks = {
+  ...nostubeLinks,
+  event: reference =>
+    nostubeLinks.event?.(reference) ??
+    (reference.kind === 30311 && reference.nip19.startsWith('naddr1')
+      ? { to: `/live/${reference.nip19}` }
+      : { href: `https://njump.me/${reference.nip19}` }),
+}
+
 export type RichTextContentProps = Omit<SharedProps, 'links'>
 
 /** Rich text for nostube: the shared renderer with nostube's routes as link targets. */
 export function RichTextContent(props: RichTextContentProps) {
-  return <SharedRichTextContent {...props} links={nostubeLinks} />
+  return <SharedRichTextContent {...props} links={props.inline ? chatLinks : nostubeLinks} />
 }

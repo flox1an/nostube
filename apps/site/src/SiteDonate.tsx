@@ -23,7 +23,7 @@ import {
   type PaymentTarget,
 } from './payment-targets'
 import { useZapProvider, ZapPanel } from './SiteZap'
-import { lnurlFromProfile, validZapReceipts, type ZapEndpoint, type ZapReceipt } from './zap'
+import { lnurlFromProfile, validZapReceipts, type ZapEndpoint, type ZapReceipt } from '@nostube/core/lnurl-pay'
 
 /** The creator's payment targets (NIP-A3), from their newest kind 10133 that verifies. */
 function usePaymentTargets(pubkey: string, relays: string[]): PaymentTarget[] {

@@ -59,6 +59,11 @@ export const ZAP_RELAYS: string[] = instance
   ? instance.interactionRelays
   : ['wss://relay.primal.net', 'wss://nos.lol']
 
+/** Relays that carry NIP-53 live activity; queried alongside the read relays. None in instances. */
+export const LIVE_RELAYS: string[] = instance
+  ? []
+  : ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.zap.stream']
+
 /**
  * Default relays for publishing kind 22236 view-tracking events.
  * Users can override this in Settings → Network → View Tracking.

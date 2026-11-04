@@ -1,8 +1,8 @@
 import { bech32 } from '@scure/base'
 import { verifyEvent, type NostrEvent } from 'nostr-tools'
-import { getInvoiceAmount } from '@nostube/core/zap-utils'
+import { getInvoiceAmount } from './zap-utils'
 
-/** A zap failure the UI shows as `site.zap.errors.<code>` with `params`. */
+/** A zap failure the UI shows as a translated error `code` with `params`. */
 export class ZapError extends Error {
   constructor(
     readonly code:
@@ -42,9 +42,17 @@ export interface ZapTarget {
 }
 
 export interface ZapReceipt {
+  /** Receipt event id. */
+  id: string
   sats: number
+  /** Lowercased: one paid invoice, one zap. */
   bolt11: string
   requestId: string
+  /** Zap request signer; undefined for anonymous zaps. */
+  sender?: string
+  /** The zapper's message (zap request content). */
+  comment: string
+  createdAt: number
 }
 
 const HEX64 = /^[0-9a-f]{64}$/
@@ -255,7 +263,15 @@ export function validZapReceipt(receipt: NostrEvent, target: ZapTarget): ZapRece
     const lnurl = tag(request, 'lnurl')
     if (lnurl !== undefined && (decodeLnurl(lnurl) ?? lnurl) !== target.endpoint.lnurl) return null
 
-    return { sats, bolt11: bolt11.toLowerCase(), requestId: request.id }
+    return {
+      id: receipt.id,
+      sats,
+      bolt11: bolt11.toLowerCase(),
+      requestId: request.id,
+      sender: request.tags.some(t => t[0] === 'anon') ? undefined : request.pubkey,
+      comment: request.content,
+      createdAt: receipt.created_at,
+    }
   } catch {
     return null
   }

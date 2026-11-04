@@ -8,24 +8,28 @@ Do you want a website for your own videos? The [Nostube Server](/server/) alread
 
 ![The Nostube web app home page](/screenshots/web-home.webp)
 
-## Livestream viewing spike
+## Livestreams
 
-On the `spike/livestream-viewer` branch, **Live** opens `/live`; a stream opens at `/live/<naddr>` (NIP-53 kind `30311`). Run `npm run dev --workspace nostube` from the repository root. This is a read-only experiment, not deployed functionality: there is no stream hosting, chat composer, zap payment flow or presence publishing.
+**Live** opens `/live`, the streams currently live across Nostr ([NIP-53](https://github.com/nostr-protocol/nips/blob/master/53.md) kind `30311`); a stream opens at `/live/<naddr>`. Nostube only plays streams: there is no stream hosting, zap payment or presence publishing. Guests can watch and read; signed-in accounts send kind `1311` chat through their existing signer.
 
-The landscape player uses the existing HLS player. The hideable right-hand pane reads kind `1311` chat and kind `9735` zap receipts; below the player are only the title, creator and description, not VOD comments or suggestions. Chat keeps following new messages until you scroll up; **Jump to latest** resumes following. Collapsing the chat does not remount the player. Zaps appear as amber bubbles only after signature, stream binding, invoice amount and recipient LNURL-provider verification; duplicate invoices appear once. Unverifiable receipts are not shown as payments.
+The player attempts autoplay; browser policy may require a click for sound. Chat sits beside the player (below it on narrow screens) with its own scroll area and follows new messages until you scroll up; **Jump to latest** resumes. Enter adds a line; Ctrl/Cmd+Enter or **Send chat** publishes. A rejected message keeps its draft. All chat links open a new tab so playback continues.
 
-Discovery listens to recent announcements on configured read relays plus `relay.damus.io`, `nos.lol`, `relay.primal.net` and `relay.zap.stream`, retaining the latest state per address before filtering live streams. Detail links use their secure public relay hints too. The initial discovery window is 24 hours (150 announcements); chat shows at most the newest 300 entries. A live announcement older than an hour is treated as ended when the feed next updates. Hosting-provider `Host` tags are display metadata, not a verified identity badge. Existing blocklists, mutes and NSFW preferences apply. Server-instance builds do not expose these routes or add public live relays.
+**Chat settings** offer **Pop-out chat** (`/live/<naddr>/chat`, a chat-only window) and **Chat appearance**: font size, coloured names, timestamps, hiding accounts on your own and the streamer's mute list (on by default), Web of Trust badges and a minimum trust score. Unscored accounts, the streamer and you are never hidden by the trust filter. Settings are stored on this device.
 
-Playback is limited to public HTTPS HLS/MP4 URLs; MOQ, RTMP, spaces and external chat bridges are outside this spike. Planned streams and ended streams are shown honestly; an ended stream plays its recording only when one is supplied. Provider CORS, codec and availability restrictions can still prevent playback. The UI uses English fallback strings pending translation.
+Kind `9735` zap receipts appear as highlighted messages only when they pass [NIP-57](https://github.com/nostr-protocol/nips/blob/master/57.md) Appendix F checks against the LNURL provider in the recipient's own profile (host, publisher or `zap` split target); each invoice appears once. Unverifiable receipts are not shown.
 
-Protocol references: [NIP-53](https://github.com/nostr-protocol/nips/blob/master/53.md), [NIP-57](https://github.com/nostr-protocol/nips/blob/master/57.md) and [zap.stream live chat](https://github.com/v0l/zap.stream/blob/master/src/element/chat/live-chat.tsx). Design follows the [Apple design skill](https://github.com/dickwu/apple-design-skill): content-first [live viewing](https://developer.apple.com/design/human-interface-guidelines/live-viewing-apps), hideable [split views](https://developer.apple.com/design/human-interface-guidelines/split-views), keyboard access, sufficient hit targets, semantic colors and no distracting chat animations. Native Apple window conventions are not imposed on this web view.
+Creators who are live show a LIVE tag and a **Live now** section on their profile, a LIVE badge in header search results, and their stream at the top of the suggestions on their video pages.
+
+Streams are read from the configured read relays plus `relay.damus.io`, `nos.lol`, `relay.primal.net` and `relay.zap.stream`, and from the public `wss://` relay hints of a stream link. Discovery covers the last 24 hours (150 announcements); chat shows the newest 300 entries. An announcement still marked live after an hour without update counts as ended. `Host` tags are shown, not verified. Blocklists, mutes and NSFW settings apply. Server-instance builds have no live routes and query no public live relays.
+
+Playback is limited to public HTTPS HLS/MP4 URLs; MoQ, RTMP and audio spaces are not supported. An ended stream plays its recording when it has one. Provider CORS, codec and availability restrictions can still prevent playback.
 
 ## Options
 
-| Option | What you get | Link previews and oEmbed |
-| --- | --- | --- |
-| [Static hosting](#static-hosting) | `dist/` on any static host or CDN | No |
-| [Docker image](#docker) | `dist/` plus a Hono server on port 8080 | Yes |
+| Option                            | What you get                            | Link previews and oEmbed |
+| --------------------------------- | --------------------------------------- | ------------------------ |
+| [Static hosting](#static-hosting) | `dist/` on any static host or CDN       | No                       |
+| [Docker image](#docker)           | `dist/` plus a Hono server on port 8080 | Yes                      |
 
 Videos, profiles and comments work the same in both options. Only the Docker image answers `/oembed` and puts the title, thumbnail and player card of a video into the HTML of `/v/…` pages, so link previews in chat apps and social networks show the video instead of a generic Nostube card.
 
@@ -45,11 +49,11 @@ npm run build
 
 The app uses client-side routes (`/v/…`, `/short/…`, `/p/…`), so the host must answer unknown paths with `index.html`:
 
-| Host | What handles it |
-| --- | --- |
+| Host                      | What handles it                          |
+| ------------------------- | ---------------------------------------- |
 | Netlify, Cloudflare Pages | `dist/_redirects` (`/* /index.html 200`) |
-| GitHub Pages, surge.sh | `dist/404.html` |
-| nginx | `try_files $uri $uri/ /index.html;` |
+| GitHub Pages, surge.sh    | `dist/404.html`                          |
+| nginx                     | `try_files $uri $uri/ /index.html;`      |
 
 Serve the files under `/assets/` with a long cache lifetime; their names contain a content hash. Do not cache `index.html` and `sw.js` for long: the service worker precaches the app shell and picks up a new deploy when the browser fetches a changed `sw.js`.
 
@@ -71,13 +75,13 @@ curl http://localhost:8080/health   # healthy
 
 The server answers:
 
-| Route | Response |
-| --- | --- |
+| Route                                          | Response                                                                                                                                                                           |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /v/<id>`, `/short/<id>`, `/playlist/<id>` | The app, with the event's title, description and thumbnail as Open Graph and Twitter card tags in the `<head>`; videos also get a Twitter player card and an oEmbed discovery link |
-| `GET /oembed?url=<page-url>` | oEmbed JSON, see [oEmbed](/embed/oembed) |
-| `GET /health` | `healthy` |
-| `GET /assets/*` | Build files, `Cache-Control: public, max-age=31536000, immutable`; a missing file is a 404, never the app |
-| Any other path | The file from `dist/` if it exists, else `index.html` |
+| `GET /oembed?url=<page-url>`                   | oEmbed JSON, see [oEmbed](/embed/oembed)                                                                                                                                           |
+| `GET /health`                                  | `healthy`                                                                                                                                                                          |
+| `GET /assets/*`                                | Build files, `Cache-Control: public, max-age=31536000, immutable`; a missing file is a 404, never the app                                                                          |
+| Any other path                                 | The file from `dist/` if it exists, else `index.html`                                                                                                                              |
 
 `<id>` is a `nevent1…`, `naddr1…` or `note1…` identifier. For `/v/`, `/short/` and `/playlist/` the server looks up the event on the relays in the identifier plus `wss://relay.nostu.be`, `wss://relay.divine.video`, `wss://relay.primal.net` and `wss://nos.lol` (4 s timeout). If it finds nothing, it serves the plain app.
 
@@ -100,10 +104,10 @@ The proxy must **overwrite** `X-Forwarded-Proto`, not pass a client-supplied val
 
 ## Configuration
 
-| Variable | When | Default | Effect |
-| --- | --- | --- | --- |
-| `PORT` | Runtime (Docker server) | `8080` | Port the Hono server listens on. |
-| `VITE_NSFW_SAFETY` | Build time | `on` | Any value except `off` keeps NSFW safety on: viewers confirm they are 18+ before they can opt in to sensitive content, and the embed player refuses flagged videos to viewers without that opt-in. `off` disables both; only use it if you take responsibility for the content that then plays. |
+| Variable           | When                    | Default | Effect                                                                                                                                                                                                                                                                                          |
+| ------------------ | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`             | Runtime (Docker server) | `8080`  | Port the Hono server listens on.                                                                                                                                                                                                                                                                |
+| `VITE_NSFW_SAFETY` | Build time              | `on`    | Any value except `off` keeps NSFW safety on: viewers confirm they are 18+ before they can opt in to sensitive content, and the embed player refuses flagged videos to viewers without that opt-in. `off` disables both; only use it if you take responsibility for the content that then plays. |
 
 Pass the build-time value to Docker as a build argument, or set it in the environment of a static build:
 
@@ -118,17 +122,17 @@ There is no runtime configuration for relays or servers. The defaults below are 
 
 New visitors start with these defaults. Visitors change the bold ones under **Settings → Network**; the settings are stored in their browser. The others are fixed in the code.
 
-| Setting | Default | Source file |
-| --- | --- | --- |
-| **Relays** (read) | `wss://relay.nostu.be`, `wss://relay.divine.video`, `wss://relay.primal.net`, `wss://nos.lol`, `wss://offchain.pub`, `wss://nostr.wine` | `apps/web/src/constants/relays.ts` |
-| Profile metadata relays | `wss://purplepag.es` | same |
-| Indexer relays | `wss://relay.noswhere.com`, `wss://relay.snort.social` | same |
-| Zap receipt relays | `wss://relay.primal.net`, `wss://nos.lol` | same |
-| **View-sharing relays** | `wss://relay.divine.video` | same |
-| **Video Hosting** (Blossom upload servers) | `https://blossom.primal.net`, `https://nostr.download`, `https://almond.slidestr.net` | `packages/core/src/instance-config.ts` (`DEFAULT_BLOSSOM_SERVERS`) |
-| **Streaming Servers** (caching servers) | none | `apps/web/src/constants/relays.ts` |
-| **Image Proxy URL** (Service endpoints) | `https://imgproxy.nostu.be` | `packages/core/src/imgproxy-config.ts` |
-| **Search Service URL** (Service endpoints) | `https://search.nostu.be` | `apps/web/src/lib/search-client.ts` |
+| Setting                                    | Default                                                                                                                                 | Source file                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Relays** (read)                          | `wss://relay.nostu.be`, `wss://relay.divine.video`, `wss://relay.primal.net`, `wss://nos.lol`, `wss://offchain.pub`, `wss://nostr.wine` | `apps/web/src/constants/relays.ts`                                 |
+| Profile metadata relays                    | `wss://purplepag.es`                                                                                                                    | same                                                               |
+| Indexer relays                             | `wss://relay.noswhere.com`, `wss://relay.snort.social`                                                                                  | same                                                               |
+| Zap receipt relays                         | `wss://relay.primal.net`, `wss://nos.lol`                                                                                               | same                                                               |
+| **View-sharing relays**                    | `wss://relay.divine.video`                                                                                                              | same                                                               |
+| **Video Hosting** (Blossom upload servers) | `https://blossom.primal.net`, `https://nostr.download`, `https://almond.slidestr.net`                                                   | `packages/core/src/instance-config.ts` (`DEFAULT_BLOSSOM_SERVERS`) |
+| **Streaming Servers** (caching servers)    | none                                                                                                                                    | `apps/web/src/constants/relays.ts`                                 |
+| **Image Proxy URL** (Service endpoints)    | `https://imgproxy.nostu.be`                                                                                                             | `packages/core/src/imgproxy-config.ts`                             |
+| **Search Service URL** (Service endpoints) | `https://search.nostu.be`                                                                                                               | `apps/web/src/lib/search-client.ts`                                |
 
 The **Reset** buttons in **Settings → Network** take their values from the moderation preset selected under **Settings → Presets**: its default relays and its default Blossom proxy. Signed-in users who published a Blossom server list (kind 10063) get that list when they reset **Video Hosting**.
 

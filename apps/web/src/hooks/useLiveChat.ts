@@ -50,5 +50,10 @@ export function useLiveChat(stream: LiveStream) {
       .slice(-CHAT_LIMIT)
   }, [timeline])
 
-  return { events, isLoading: chat.isLoading, error: chat.error ?? receipts.error }
+  return {
+    events,
+    isLoading: chat.isLoading,
+    error: chat.error ?? receipts.error,
+    relays: chat.relays,
+  }
 }

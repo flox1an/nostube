@@ -32,7 +32,7 @@ import {
   ZapError,
   type ZapEndpoint,
   type ZapReceipt,
-} from './zap'
+} from '@nostube/core/lnurl-pay'
 
 declare global {
   interface Window {

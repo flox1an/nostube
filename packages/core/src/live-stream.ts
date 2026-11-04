@@ -1,4 +1,6 @@
 import { nip19, type NostrEvent } from 'nostr-tools'
+import type { NsfwFilter } from './app-config'
+import { getVideoPlayback, type VideoPlayback } from './content-safety'
 
 /** NIP-53 live activity (kind 30311), sanitized for read-only viewing. */
 export interface LiveStream {
@@ -145,4 +147,28 @@ export function parseLiveStream(
     relays,
     contentWarning: warning ? warning[1]?.trim() || 'NSFW' : undefined,
   }
+}
+
+export interface LiveStreamModeration {
+  nsfwFilter: NsfwFilter | undefined
+  nsfwPubkeys: string[]
+  blockedPubkeys?: Record<string, unknown>
+  blockedEvents: string[]
+}
+
+/**
+ * Whether a stream may play, and the content warning to show with it: its own
+ * `content-warning`, else `NSFW` for a preset NSFW host or publisher. Blocked host,
+ * publisher or announcement hides it.
+ */
+export function getLiveStreamPlayback(
+  stream: LiveStream,
+  { nsfwFilter, nsfwPubkeys, blockedPubkeys, blockedEvents }: LiveStreamModeration
+): { playback: VideoPlayback; warning?: string } {
+  const keys = [stream.hostPubkey, stream.authorPubkey]
+  if (keys.some(key => blockedPubkeys?.[key]) || blockedEvents.includes(stream.event.id))
+    return { playback: 'hidden' }
+  const warning =
+    stream.contentWarning || (keys.some(key => nsfwPubkeys.includes(key)) ? 'NSFW' : undefined)
+  return { playback: getVideoPlayback(warning, nsfwFilter), warning }
 }

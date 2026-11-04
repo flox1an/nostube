@@ -1,6 +1,5 @@
 import { getZapEndpoint, makeZapRequest, getSatoshisAmountFromBolt11 } from 'nostr-tools/nip57'
 import type { NostrEvent, EventTemplate } from 'nostr-tools'
-import { bech32 } from '@scure/base'
 
 /**
  * Check if a profile metadata object has a lightning address (lud16 or lud06)
@@ -26,39 +25,6 @@ export interface ZapRequestParams {
  */
 export async function getRecipientZapEndpoint(profile: NostrEvent): Promise<string | null> {
   return getZapEndpoint(profile)
-}
-
-/**
- * Fetch the NIP-57 `nostrPubkey` that signs zap receipts for a profile's LNURL
- * provider (lud16 preferred, else lud06). Null when zaps are unsupported.
- * Only the recipient's own profile is trusted, never a zap request's `lnurl` tag.
- */
-export async function fetchZapProviderPubkey(
-  profile: NostrEvent,
-  signal: AbortSignal
-): Promise<string | null> {
-  let url: URL
-  try {
-    const { lud16, lud06 } = JSON.parse(profile.content)
-    if (typeof lud16 === 'string' && lud16.includes('@')) {
-      const [name, domain] = lud16.split('@')
-      url = new URL(`/.well-known/lnurlp/${name}`, `https://${domain}`)
-    } else if (typeof lud06 === 'string' && lud06) {
-      url = new URL(new TextDecoder().decode(bech32.decodeToBytes(lud06, 1000).bytes))
-    } else return null
-  } catch {
-    return null
-  }
-  if (url.protocol !== 'https:') return null
-
-  const res = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) })
-  if (!res.ok) return null
-  const body = await res.json()
-  return body?.allowsNostr === true &&
-    typeof body.nostrPubkey === 'string' &&
-    /^[0-9a-f]{64}$/.test(body.nostrPubkey)
-    ? body.nostrPubkey
-    : null
 }
 
 /**

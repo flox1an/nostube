@@ -16,6 +16,7 @@ export function MainLayout() {
   const { isSidebarOpen, toggleSidebar } = useAppContext()
   const location = useLocation()
   const isDesktop = isTauri()
+  const isLivePage = location.pathname.startsWith('/live/')
 
   // Hide sidebar and mobile bottom nav on individual video pages to save space
   // Note: /shorts feed page should show sidebar like homepage, only /short/:id hides it
@@ -37,13 +38,20 @@ export function MainLayout() {
   }, [isVideoPage, toggleSidebar])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {isDesktop ? <DesktopMainHeader /> : <Header />}
+    <div className={cn('flex flex-col', isLivePage ? 'h-dvh overflow-hidden' : 'min-h-screen')}>
+      {isLivePage ? (
+        <div className="shrink-0">{isDesktop ? <DesktopMainHeader /> : <Header />}</div>
+      ) : isDesktop ? (
+        <DesktopMainHeader />
+      ) : (
+        <Header />
+      )}
       <OfflineBanner />
       {!isDesktop && !isVideoPage && <InstallBanner />}
       <div
         className={cn(
           'flex flex-1 relative w-full lg:mb-0',
+          isLivePage && 'min-h-0 overflow-hidden',
           !isVideoPage && 'mb-[calc(4rem+env(safe-area-inset-bottom,0px))]'
         )}
       >
@@ -79,7 +87,11 @@ export function MainLayout() {
         <main
           className={cn(
             'flex-1 bg-background w-full',
-            isVideoPage ? 'overflow-x-clip' : 'overflow-x-hidden'
+            isLivePage
+              ? 'min-h-0 overflow-hidden'
+              : isVideoPage
+                ? 'overflow-x-clip'
+                : 'overflow-x-hidden'
           )}
         >
           <RouteErrorBoundary resetKey={location.pathname}>
@@ -87,16 +99,18 @@ export function MainLayout() {
           </RouteErrorBoundary>
         </main>
       </div>
-      <footer className="py-4 text-center text-xs text-muted-foreground">
-        <a
-          href="https://github.com/flox1an/nostube"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-foreground transition-colors"
-        >
-          made with 💜 and vibes
-        </a>
-      </footer>
+      {!isLivePage && (
+        <footer className="py-4 text-center text-xs text-muted-foreground">
+          <a
+            href="https://github.com/flox1an/nostube"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            made with 💜 and vibes
+          </a>
+        </footer>
+      )}
       {!isDesktop && !isVideoPage && <MobileBottomNav />}
     </div>
   )

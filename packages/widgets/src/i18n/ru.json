@@ -117,7 +117,8 @@
   },
   "richText": {
     "video": "Видео",
-    "note": "Заметка"
+    "note": "Заметка",
+    "live": "Эфир"
   },
   "upload": {
     "dropzone": {

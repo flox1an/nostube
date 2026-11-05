@@ -13,6 +13,7 @@
     "deploy": "npm run build && npx -y surge@latest dist",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
+    "trust:refresh-snapshot": "tsx scripts/refresh-trust-snapshot.ts",
     "format:staged": "npx prettier --write --ignore-unknown",
     "server:dev": "npx tsx --watch server/standalone.ts",
     "tauri": "tauri",

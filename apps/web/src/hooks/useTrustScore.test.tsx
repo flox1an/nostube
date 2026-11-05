@@ -7,15 +7,18 @@ const service = vi.hoisted(() => ({
   calculate: vi.fn(),
   cache: new Map<string, TrustScoreResult>(),
   instance: false,
+  snapshot: [] as TrustScoreResult[],
+  connect: vi.fn(),
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: undefined }) }))
 vi.mock('@nostube/core/instance-config', () => ({
   getInstanceConfig: () => (service.instance ? {} : null),
 }))
+vi.mock('@/data/trust-scores.json', () => ({ default: { scores: service.snapshot } }))
 vi.mock('@/nostr/contextvm', async importOriginal => ({
   ...(await importOriginal<typeof ContextVM>()),
-  connectContextVM: vi.fn().mockResolvedValue({}),
+  connectContextVM: service.connect,
   disconnectContextVM: vi.fn(),
   calculateTrustScores: service.calculate,
 }))
@@ -52,6 +55,8 @@ beforeEach(() => {
   service.cache.set(pubkey, score(0.2))
   service.calculate.mockReset()
   service.instance = false
+  service.snapshot.length = 0
+  service.connect.mockReset().mockResolvedValue({})
 })
 
 afterEach(() => {
@@ -143,11 +148,78 @@ describe('trust score refresh on activation', () => {
 
   it('does not contact ContextVM for server instances', async () => {
     service.instance = true
+    service.snapshot.push(score(0.8))
     // Re-import after resetModules to isolate the singleton cache and pending retry timers.
     const hooks = await import('./useTrustScore')
     const { result } = renderHook(() => hooks.useTrustScoreDetail(pubkey))
     await tick()
     expect(service.calculate).not.toHaveBeenCalled()
     expect(result.current.result).toBeNull()
+  })
+})
+
+describe('bundled stale trust scores', () => {
+  it('shows bundled scores immediately and refreshes after connection failure without losing them', async () => {
+    service.cache.clear()
+    service.snapshot.push(score(0.8))
+    service.connect.mockRejectedValueOnce(new Error('relay unavailable'))
+    // Re-import after resetModules: static imports would retain singleton state between tests.
+    const hooks = await import('./useTrustScore')
+    const { result } = renderHook(() => {
+      hooks.useTrustScoreProvider()
+      return hooks.useTrustScore(pubkey)
+    })
+    expect(result.current).toEqual({ score: 0.8, globalScore: 0.8, isLoading: false })
+    await tick()
+    expect(result.current.score).toBe(0.8)
+    expect(service.cache.has(pubkey)).toBe(false)
+    service.calculate.mockResolvedValue([score(0.1)])
+    await tick(10000)
+    expect(result.current.score).toBe(0.1)
+    expect(service.cache.get(pubkey)?.score).toBe(0.1)
+  })
+
+  it('prefers a newer fresh persistent result without refreshing it', async () => {
+    service.snapshot.push(score(0.8))
+    service.cache.set(pubkey, { ...score(0.1), computedAt: 1793880000 })
+    // Re-import after resetModules: static imports would retain singleton state between tests.
+    const hooks = await import('./useTrustScore')
+    const { result } = renderHook(() => {
+      hooks.useTrustScoreProvider()
+      return hooks.useTrustScore(pubkey)
+    })
+    await tick()
+    expect(result.current.score).toBe(0.1)
+    expect(service.calculate).not.toHaveBeenCalled()
+  })
+
+  it('keeps the newer snapshot over an older persistent result and revalidates it', async () => {
+    service.snapshot.push(score(0.8))
+    service.cache.set(pubkey, { ...score(0.1), computedAt: '2026-10-01T12:00:00Z' })
+    service.calculate.mockResolvedValue([score(0.6)])
+    // Re-import after resetModules: static imports would retain singleton state between tests.
+    const hooks = await import('./useTrustScore')
+    const { result } = renderHook(() => {
+      hooks.useTrustScoreProvider()
+      return hooks.useTrustScore(pubkey)
+    })
+    expect(result.current.score).toBe(0.8)
+    await tick()
+    expect(result.current.score).toBe(0.6)
+  })
+
+  it('settles unknown authors after repeated connection failures instead of loading forever', async () => {
+    service.cache.clear()
+    service.connect.mockRejectedValue(new Error('relay unavailable'))
+    // Re-import after resetModules: static imports would retain singleton state between tests.
+    const hooks = await import('./useTrustScore')
+    const { result } = renderHook(() => {
+      hooks.useTrustScoreProvider()
+      return hooks.useTrustScore(pubkey)
+    })
+    await tick()
+    await tick(20000)
+    expect(result.current).toEqual({ score: null, globalScore: null, isLoading: false })
+    expect(hooks.hasPendingTrustScores([pubkey])).toBe(false)
   })
 })

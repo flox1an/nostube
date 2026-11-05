@@ -37,7 +37,7 @@ export interface TrustScoreResult {
     normalizedDistance: number
     validators: Record<string, ValidatorScore>
   }
-  computedAt: string
+  computedAt: string | number
 }
 
 /**

@@ -69,6 +69,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        // App chunk includes the stale trust snapshot (~4.3 MB raw, ~300 KB gzip).
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         globIgnores: [
           'embed.html',

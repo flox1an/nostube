@@ -34,15 +34,27 @@ import {
   pruneExpired,
 } from '@/lib/trust-score-db'
 import { getInstanceConfig } from '@nostube/core/instance-config'
+import trustSnapshot from '@/data/trust-scores.json'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (fast synchronous reads, backed by IndexedDB)
 // ---------------------------------------------------------------------------
 
 const memCache = new Map<string, TrustScoreResult>()
+// Bundled baseline is never written to IDB or considered fresh.
+const bundledScores = new Map<string, TrustScoreResult>(
+  trustSnapshot.scores.map(result => [result.targetPubkey, result])
+)
 
 function getMemCached(pubkey: string): TrustScoreResult | null {
-  return memCache.get(pubkey) ?? null
+  if (getInstanceConfig()) return null
+  return memCache.get(pubkey) ?? bundledScores.get(pubkey) ?? null
+}
+
+function computedTime(result: TrustScoreResult): number {
+  return typeof result.computedAt === 'number'
+    ? result.computedAt * 1000
+    : Date.parse(result.computedAt)
 }
 
 function setMemCached(results: TrustScoreResult[]) {
@@ -130,7 +142,7 @@ function requestTrustScore(pubkey: string, refresh = false) {
     refreshPubkeys.add(pubkey)
     fetchAttempts.delete(pubkey)
     confirmedMissing.delete(pubkey)
-  } else if (getMemCached(pubkey)) return
+  } else if (memCache.has(pubkey)) return
   if (pendingPubkeys.has(pubkey)) return
 
   pendingPubkeys.add(pubkey)
@@ -163,7 +175,10 @@ async function checkCacheAndFetch() {
 
     for (const [pk, result] of cached) {
       if (result) {
-        if (!getMemCached(pk)) memCache.set(pk, result)
+        const current = getMemCached(pk)
+        if (!current || computedTime(result) >= computedTime(current)) {
+          memCache.set(pk, result)
+        }
       } else {
         missing.push(pk)
       }
@@ -177,7 +192,8 @@ async function checkCacheAndFetch() {
     // Explicit visits revalidate even fresh entries; all other callers retain the cache TTL.
     const toFetch = pubkeys.filter(
       pk =>
-        !inFlightPubkeys.has(pk) && (refreshPubkeys.delete(pk) || !cached.get(pk) || stale.has(pk))
+        !inFlightPubkeys.has(pk) &&
+        (refreshPubkeys.delete(pk) || !memCache.has(pk) || stale.has(pk))
     )
     if (toFetch.length > 0) {
       for (const pk of toFetch) pendingPubkeys.add(pk)
@@ -272,6 +288,7 @@ async function processBatches() {
     }
   } catch (error) {
     console.error('[TrustScore] Connection error:', error)
+    retryPubkeys(Array.from(inFlightPubkeys))
   } finally {
     inFlightPubkeys.clear()
     isProcessingBatches = false
@@ -455,7 +472,7 @@ export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
 
 /** True while any of these pubkeys still has neither a score nor a final "no score" verdict. */
 export function hasPendingTrustScores(pubkeys: string[]): boolean {
-  return pubkeys.some(pk => !memCache.has(pk) && !confirmedMissing.has(pk))
+  return pubkeys.some(pk => !getMemCached(pk) && !confirmedMissing.has(pk))
 }
 
 /**

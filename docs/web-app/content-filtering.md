@@ -50,7 +50,7 @@ Accounts you reported as illegal are blocked like preset-blocked accounts (see [
 
 Trust scores come from Relatr, a trust service that the app queries over Nostr ([ContextVM](https://contextvm.org)). Each account gets two scores between 0 and 1:
 
-- **Personal score**: how close the account is to you in the follow graph, plus public activity signals. Signed in with a private key, the app asks from your key's point of view. Logged out or with a browser extension or remote signer, it uses a random key for the browser session, so the score is not personalised.
+- **Personal score**: Relatr's follow-graph and public-activity score. The deployed service currently uses its configured default source account for all requests, including anonymous sessions; it is not personalised to the visitor's signing key.
 - **Global score**: the average of Nostube's video indicators (creator activity, viewer engagement, creator comments).
 
 An author passes the filter when the personal score is at least **40 %** and the global score at least **20 %**. You and the authors you follow (your media follow list, kind `10020`) always pass. Authors without scores yet are hidden; that is why new accounts may not show up at first.
@@ -58,6 +58,14 @@ An author passes the filter when the personal score is at least **40 %** and the
 The filter is on by default on the home page, Shorts, category and tag pages; the shield button next to the feed switches it. Turning it off shows a warning the first time. Suggestions next to a video are always filtered, whether they come from the search service or from relays. Search, Subscriptions, profile pages and direct links are not filtered by trust.
 
 The shield next to an author's name shows their trust level; click it for the scores.
+
+### First launch and background refresh
+
+The app bundles a JSON snapshot of real Relatr results for recent video authors. A fresh anonymous browser or installed PWA can use those scores immediately, without waiting for the trust service. The same thresholds still apply; unscored authors do not become trusted by default.
+
+Bundled scores are always stale. As authors appear in the feed, the app checks its persistent cache and requests missing or stale scores in the background. A newer cached result takes precedence over the snapshot. Successful live results replace the old scores, including lower scores that hide an author again. A failed request keeps the existing scores visible and retries up to three times; unknown authors remain hidden rather than loading forever.
+
+The snapshot is a last-known baseline, not a guarantee that an account is still trustworthy. To regenerate it before releasing the web app, run `npm run trust:refresh-snapshot --workspace nostube` from the repository root (optionally append `-- 60` for the look-back window in days). This collects recent video authors and queries Relatr over Nostr with a temporary key; it needs no credentials. Results without video-validator data are not given invented default scores. The JSON records its generation time and service identity and ships with the app's cached JavaScript assets.
 
 ## Your own filters
 

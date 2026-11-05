@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.56] - 2026-11-05
+
+### Fixed
+
+- Anonymous first visits can show trust-filtered videos immediately using a bundled snapshot of 2,888 real Relatr author scores. The snapshot is always stale and refreshes in the background; newer cached results take precedence and successful live results replace it, including lower scores. Existing trust thresholds remain unchanged; missing scores never receive invented defaults.
+- Failed trust-service connections retry without losing queued authors or leaving unknown authors loading indefinitely. Cache freshness comparisons support Relatr's Unix-second timestamps as well as ISO timestamps.
+- The PWA precaches the app chunk containing the trust snapshot, keeping the baseline available after installation. The current mobile More menu includes Live for anonymous visitors.
+
+### Added
+
+- `npm run trust:refresh-snapshot --workspace nostube` regenerates the bundled JSON from recent video authors and real Relatr responses without credentials.
+
 ## [0.2.55] - 2026-11-05
 
 ### Fixed

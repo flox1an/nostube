@@ -1,39 +1,33 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { History, ListVideo, Play, Users } from 'lucide-react'
 
+vi.mock('@/hooks', () => ({ useCurrentUser: () => ({ user: undefined }) }))
+vi.mock('@nostube/core/instance-config', () => ({ getInstanceConfig: () => null }))
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => ({ 'navigation.more': 'More' })[key] ?? key }),
-}))
-
-vi.mock('@/hooks/useNavigationMenu', () => ({
-  useNavigationMenu: () => ({
-    mobilePrimaryItems: [
-      { id: 'subscriptions', label: 'Subscriptions', icon: Users, href: '/' },
-      { id: 'shorts', label: 'Shorts', icon: Play, href: '/shorts' },
-      { id: 'history', label: 'History', icon: History, href: '/history' },
-    ],
-    mobileMoreItems: [{ id: 'playlists', label: 'Playlists', icon: ListVideo, href: '/playlists' }],
+  useTranslation: () => ({
+    t: (key: string) => ({ 'navigation.more': 'More', 'live.title': 'Live' })[key] ?? key,
   }),
 }))
 
 import { MobileBottomNav } from './MobileBottomNav'
 
 describe('MobileBottomNav', () => {
-  it('keeps history in the bottom bar and exposes playlists through More', () => {
+  it('lets an anonymous visitor open Live through More and closes the menu on navigation', () => {
     render(
       <MemoryRouter>
         <MobileBottomNav />
+        <Routes>
+          <Route path="/live" element={<h1>Live streams</h1>} />
+        </Routes>
       </MemoryRouter>
     )
 
-    const navigation = screen.getByRole('navigation')
-    expect(navigation).toHaveTextContent('History')
-    expect(navigation).not.toHaveTextContent('Playlists')
-
     fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('link', { name: 'Live' }))
 
-    expect(screen.getByRole('link', { name: 'Playlists' })).toHaveAttribute('href', '/playlists')
+    expect(screen.getByRole('heading', { name: 'Live streams' })).toBeVisible()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

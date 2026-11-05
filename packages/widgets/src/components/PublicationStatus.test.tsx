@@ -6,8 +6,7 @@ import {
   updatePublication,
   usePublications,
 } from '../publication'
-import { PublicationStatusHost } from './PublicationStatus'
-import { Dialog, DialogContent, DialogTitle } from './dialog'
+import { PublicationStatusButton } from './PublicationStatus'
 
 function ResetActivities() {
   const activities = usePublications()
@@ -32,68 +31,77 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-it('reveals a slow target after unchanged polls, and resurfaces a failure after hiding the wait', () => {
+it('shows confirmations without opening automatically, including slow or failed targets', () => {
   vi.useFakeTimers()
-  render(<PublicationStatusHost />)
+  render(<PublicationStatusButton />)
   let id = ''
   act(() => {
     id = beginPublication({
       label: 'Publish video',
       phase: 'publishing',
-      targets: [{ url: 'wss://slow.example', status: 'pending' }],
+      targets: [
+        { url: 'wss://fast.example', status: 'confirmed' },
+        { url: 'wss://slow.example', status: 'pending' },
+      ],
     })
+    vi.advanceTimersByTime(10000)
   })
-  expect(screen.queryByRole('region', { name: 'Publish video' })).toBeNull()
-  act(() => {
-    vi.advanceTimersByTime(2000)
-  })
-  expect(screen.getByRole('button', { name: 'Show details' })).toHaveAttribute(
-    'aria-expanded',
-    'false'
-  )
-  act(() => {
-    vi.advanceTimersByTime(5000)
-    updatePublication(id, { targets: [{ url: 'wss://slow.example', status: 'pending' }] })
-    vi.advanceTimersByTime(1500)
-  })
-  expect(screen.getByRole('button', { name: 'Hide details' })).toHaveAttribute(
-    'aria-expanded',
-    'true'
-  )
-  expect(screen.getByText('wss://slow.example')).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Hide status (does not cancel)' }))
+  const trigger = screen.getByRole('button', { name: /Publishing activity/ })
+  expect(trigger).toHaveTextContent('1/2')
+  expect(trigger).toHaveClass('text-destructive')
   expect(screen.queryByText('Publish video')).toBeNull()
   act(() => {
     updatePublication(id, {
-      status: 'failed',
-      error: 'No confirmation',
-      targets: [{ url: 'wss://slow.example', status: 'timeout' }],
+      status: 'partial',
+      targets: [
+        { url: 'wss://fast.example', status: 'confirmed' },
+        { url: 'wss://slow.example', status: 'timeout' },
+      ],
     })
   })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  fireEvent.click(trigger)
   expect(screen.getByText('Publish video')).toBeVisible()
+  expect(screen.getByText('wss://slow.example')).toBeVisible()
   expect(screen.getByText('No confirmation in time')).toBeVisible()
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).toBeNull()
 })
 
-it('keeps a failed publication retry inside the active modal', async () => {
-  const retry = vi.fn(async () => {})
-  render(
-    <>
-      <Dialog open>
-        <DialogContent>
-          <DialogTitle>Write comment</DialogTitle>
-        </DialogContent>
-      </Dialog>
-      <PublicationStatusHost />
-    </>
-  )
-  act(() => {
-    const id = beginPublication({ label: 'Comment', phase: 'publishing' })
-    updatePublication(id, { status: 'failed', error: 'offline', retry })
+it('updates the total across publications and retries failed targets from the dropdown', async () => {
+  const retry = vi.fn(async () => {
+    updatePublication(failedId, {
+      status: 'success',
+      targets: [{ url: 'wss://retry.example', status: 'confirmed' }],
+      error: undefined,
+      retry: undefined,
+    })
   })
-  const dialog = await screen.findByRole('dialog', { name: 'Write comment' })
-  const button = await screen.findByRole('button', { name: 'Retry failed targets' })
-  expect(dialog).toContainElement(button)
-  fireEvent.click(button)
+  render(<PublicationStatusButton />)
+  let failedId = ''
+  act(() => {
+    const id = beginPublication({
+      label: 'Comment',
+      phase: 'publishing',
+      targets: [{ url: 'wss://ok.example', status: 'confirmed' }],
+    })
+    updatePublication(id, { status: 'success' })
+    failedId = beginPublication({
+      label: 'Reaction',
+      phase: 'publishing',
+      targets: [{ url: 'wss://retry.example', status: 'failed' }],
+    })
+    updatePublication(failedId, { status: 'failed', error: 'offline', retry })
+  })
+  const trigger = screen.getByRole('button', { name: /Publishing activity/ })
+  expect(trigger).toHaveTextContent('1/2')
+  fireEvent.click(trigger)
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Retry failed targets' }))
+  })
   expect(retry).toHaveBeenCalledOnce()
-  expect(screen.getByRole('dialog', { name: 'Write comment' })).toBeVisible()
+  expect(trigger).toHaveTextContent('2/2')
+  expect(trigger).not.toHaveClass('text-destructive')
+  fireEvent.click(screen.getAllByRole('button', { name: 'Hide status (does not cancel)' })[0])
+  expect(trigger).toHaveTextContent('1/1')
 })

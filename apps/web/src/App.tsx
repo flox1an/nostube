@@ -1,4 +1,3 @@
-import { PublicationStatusHost } from '@nostube/widgets/components/PublicationStatus'
 import { publishRelays } from '@nostube/widgets/publish-relays'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
@@ -207,7 +206,6 @@ export function App() {
                             {/* Toast viewports: without them every toast() call is a no-op. */}
                             <Toaster />
                             <SonnerToaster />
-                            <PublicationStatusHost />
                           </TooltipProvider>
                         </WalletProvider>
                       </UploadManagerProvider>

@@ -12,6 +12,7 @@ import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfil
 import { InstallBanner } from '@nostube/widgets/components/InstallHint'
 import { OfflineBanner } from '@nostube/widgets/components/OfflineBanner'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import { AuthArea } from './AuthArea'
 import { Breadcrumb } from './Breadcrumb'
 import { GridPage, SearchBox, SearchPage } from './GridPage'
@@ -131,6 +132,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
         <div className="flex shrink-0 items-center gap-1">
           {search && <SearchBox key={pageKey} />}
           {config.startPage && <SiteDonate pubkey={config.startPage.creator} config={config} />}
+          <PublicationStatusButton />
           <AuthArea client={client} relays={config.interactionRelays} />
         </div>
       </header>

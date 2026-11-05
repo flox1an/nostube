@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink, LogOut, Menu, X } from 'lucide-react'
 import { Button } from '@nostube/widgets/components/button'
 import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import { GROUPS, PAGES, type PageId } from './route'
 
 /** One row of the sidebar list: an icon, the page name, an accent when it is the current page. */
@@ -152,6 +153,9 @@ export function Sidebar({
           <p className="truncate text-sm font-semibold leading-tight">{t('studio.shell.title')}</p>
           <p className="truncate text-xs text-muted-foreground">{instanceTitle}</p>
         </div>
+        <div className="ml-auto hidden lg:block">
+          <PublicationStatusButton />
+        </div>
       </div>
       <SidebarNav page={page} onNavigate={onNavigate} progress={progress} />
       <SidebarFooter onLogout={onLogout} />
@@ -206,6 +210,7 @@ export function MobileBar({
         </Button>
         <img src={`${import.meta.env.BASE_URL}nostube.svg`} alt="" className="h-6 w-6 shrink-0" />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">{t('studio.shell.title')}</p>
+        <PublicationStatusButton />
         <InterfaceLanguageSelect />
       </header>
       {open && (

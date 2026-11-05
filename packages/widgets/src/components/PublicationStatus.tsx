@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, CircleAlert, Copy, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, CircleAlert, Copy, Loader2, RotateCcw, Send, X } from 'lucide-react'
 import { Button } from './button'
 import { Progress } from './progress'
+import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { cn } from '../cn'
 import { dismissPublication, usePublications, type PublicationActivity } from '../publication'
 
@@ -234,64 +234,55 @@ export function PublicationStatus({ activity }: { activity: PublicationActivity 
   )
 }
 
-function DelayedPublication({ activity }: { activity: PublicationActivity }) {
-  const [visible, setVisible] = useState(() => Date.now() - activity.startedAt >= 2000)
-  const problem =
-    activity.status === 'partial' ||
-    activity.status === 'failed' ||
-    !!activity.error ||
-    (activity.targets?.some(target => target.status === 'failed' || target.status === 'timeout') ??
-      false)
-  useEffect(() => {
-    if (visible || problem) return
-    if (activity.status !== 'pending') {
-      dismissPublication(activity.id)
-      return
-    }
-    const timer = setTimeout(
-      () => setVisible(true),
-      Math.max(0, 2000 - (Date.now() - activity.startedAt))
-    )
-    return () => clearTimeout(timer)
-  }, [activity.id, activity.startedAt, activity.status, visible, problem])
-  return visible || problem ? <PublicationStatus activity={activity} /> : null
-}
-
-export function PublicationStatusHost() {
+export function PublicationStatusButton() {
   const { t } = useTranslation()
-  const [dialog, setDialog] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    const refresh = () => {
-      const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][data-state="open"]')
-      setDialog(dialogs.length ? dialogs[dialogs.length - 1] : null)
-    }
-    refresh()
-    const observer = new MutationObserver(refresh)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-state', 'role'],
-    })
-    return () => observer.disconnect()
-  }, [])
   const activities = usePublications().filter(activity => !activity.hidden)
   if (activities.length === 0) return null
-  const surface = (
-    <aside
-      className={
-        dialog
-          ? 'col-span-full space-y-3'
-          : 'pointer-events-none fixed inset-x-3 top-[max(1rem,env(safe-area-inset-top))] z-[90] max-h-[calc(100dvh-2rem)] space-y-3 overflow-y-auto sm:left-auto sm:right-5 sm:w-[25rem]'
-      }
-      aria-label={t('publication.title')}
-    >
-      <div className="pointer-events-auto space-y-3">
-        {activities.map(activity => (
-          <DelayedPublication key={activity.id} activity={activity} />
+  const targets = activities.flatMap(activity => activity.targets ?? [])
+  const confirmed = targets.filter(target => target.status === 'confirmed').length
+  const pending = activities.some(activity => activity.status === 'pending')
+  const problem =
+    confirmed < targets.length ||
+    activities.some(
+      activity => activity.status === 'failed' || activity.status === 'partial' || !!activity.error
+    )
+  const label = `${t('publication.title')}${targets.length ? `: ${t('publication.confirmed', { done: confirmed, total: targets.length })}` : ''}`
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className={cn(
+            'h-11 shrink-0 gap-1 px-2',
+            problem && 'text-destructive hover:text-destructive'
+          )}
+          aria-label={label}
+          title={label}
+        >
+          {pending ? (
+            <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden />
+          ) : (
+            <Send className="size-4" aria-hidden />
+          )}
+          {targets.length > 0 && (
+            <span className="text-xs tabular-nums" aria-hidden>
+              {confirmed}/{targets.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="z-[70] max-h-[min(36rem,var(--radix-popover-content-available-height))] w-[min(25rem,calc(100vw-1rem))] space-y-3 overflow-y-auto p-3"
+        aria-label={t('publication.title')}
+      >
+        <h2 className="text-sm font-semibold">{t('publication.title')}</h2>
+        {[...activities].reverse().map(activity => (
+          <PublicationStatus key={activity.id} activity={activity} />
         ))}
-      </div>
-    </aside>
+      </PopoverContent>
+    </Popover>
   )
-  return dialog ? createPortal(surface, dialog) : surface
 }

@@ -5,6 +5,7 @@ import { LoginArea } from '@/components/auth/LoginArea'
 import { GlobalSearchBar } from '@/components/GlobalSearchBar'
 import { NotificationBell } from '@/components/NotificationBell'
 import { Button } from '@nostube/widgets/components/button'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import { useCurrentUser } from '@/hooks'
 import { cn } from '@/lib/utils'
 import {
@@ -147,6 +148,7 @@ export function DesktopMainHeader() {
             </Link>
           </Button>
         )}
+        <PublicationStatusButton />
         <NotificationBell />
         <LoginArea className="[&>button]:h-8" />
       </div>

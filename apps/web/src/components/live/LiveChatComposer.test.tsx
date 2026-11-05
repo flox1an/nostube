@@ -68,14 +68,53 @@ describe('LiveChatComposer', () => {
     expect(field).toHaveFocus()
   })
 
-  it('keeps the draft and shows the failure when publishing is rejected', async () => {
-    state.publish.mockRejectedValue(new Error('relay said no'))
+  it('restores the failed message and shows the failure when publishing is rejected', async () => {
+    const pending = Promise.withResolvers<unknown>()
+    state.publish.mockReturnValue(pending.promise)
     const field = renderComposer()
     fireEvent.change(field, { target: { value: 'keep me' } })
     ctrlEnter(field)
+    expect(field.value).toBe('')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('relay said no')
+    await act(async () => pending.reject(new Error('relay said no')))
+    expect(screen.getByRole('alert')).toHaveTextContent('relay said no')
     expect(field.value).toBe('keep me')
+  })
+
+  it('clears the field as soon as a message is sent, before publishing completes', () => {
+    state.publish.mockReturnValue(new Promise(() => {}))
+    const field = renderComposer()
+    fireEvent.change(field, { target: { value: 'instant' } })
+    ctrlEnter(field)
+
+    expect(state.publish).toHaveBeenCalledTimes(1)
+    expect(field.value).toBe('')
+    expect(field).toHaveFocus()
+  })
+
+  it('keeps text typed while a send is pending when it succeeds', async () => {
+    const pending = Promise.withResolvers<unknown>()
+    state.publish.mockReturnValue(pending.promise)
+    const field = renderComposer()
+    fireEvent.change(field, { target: { value: 'first' } })
+    ctrlEnter(field)
+    fireEvent.change(field, { target: { value: 'second' } })
+
+    await act(async () => pending.resolve({}))
+    expect(field.value).toBe('second')
+  })
+
+  it('keeps text typed while a send is pending when it fails', async () => {
+    const pending = Promise.withResolvers<unknown>()
+    state.publish.mockReturnValue(pending.promise)
+    const field = renderComposer()
+    fireEvent.change(field, { target: { value: 'first' } })
+    ctrlEnter(field)
+    fireEvent.change(field, { target: { value: 'second' } })
+
+    await act(async () => pending.reject(new Error('relay said no')))
+    expect(screen.getByRole('alert')).toHaveTextContent('relay said no')
+    expect(field.value).toBe('second')
   })
 
   it('sends once while a publish is pending', async () => {
@@ -84,12 +123,12 @@ describe('LiveChatComposer', () => {
     const field = renderComposer()
     fireEvent.change(field, { target: { value: 'once' } })
     ctrlEnter(field)
+    fireEvent.change(field, { target: { value: 'twice' } })
     ctrlEnter(field)
     fireEvent.click(screen.getByRole('button', { name: /send chat/i }))
 
     expect(state.publish).toHaveBeenCalledTimes(1)
     await act(async () => pending.resolve({}))
-    expect(field.value).toBe('')
   })
 
   it('treats plain Enter as a newline and Ctrl+Enter as send', async () => {

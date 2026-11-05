@@ -28,9 +28,10 @@ The upload succeeds if at least one Primary server accepts the file. Its URL bec
 
 ### Progress and relay confirmations
 
-The action shows activity immediately. Work lasting more than two seconds also opens a compact
-status card; after eight seconds without new progress its target details open automatically.
-Relay refusals and timeouts appear immediately. These display thresholds do not change network timeouts.
+The navbar's send icon shows confirmed targets as a ratio, for example **9/10**.
+It turns red while any target is unconfirmed or an operation has failed. Click the icon to open
+the status dropdown with per-operation progress and relay details; nothing opens automatically,
+even for slow relays, refusals or timeouts. This display does not change network timeouts.
 
 - Upload progress counts bytes; once all bytes are sent, the phase changes to waiting for the
   server's file confirmation. Mirroring counts confirmed copies, not elapsed time.
@@ -41,9 +42,11 @@ Relay refusals and timeouts appear immediately. These display thresholds do not 
   Mirror retries are offered only where recovered copies can be added to the current upload's metadata.
 - **Hide status** does not cancel work. Browser uploads require the tab to stay open; cancellation
   stops remaining work, but cannot remove files or events already received by a server.
-- Details include each target's response and can be copied. The same feedback is used for comments,
-  reactions, profile changes and other user-initiated publications; background protocol traffic does
-  not open a status card for every message.
+- Details include each target's response and can be copied. The same navbar dropdown is used for
+  live chat, comments, reactions, profile changes and other user-initiated publications across
+  the web app, creator site and Studio. Background protocol traffic stays out of the dropdown.
+- Live-chat messages clear from the input immediately on send, without waiting for relay
+  confirmations. A failed message is restored if the field is still empty; newly typed text is kept.
 
 ## Browser transcoding
 

@@ -1,4 +1,3 @@
-import { PublicationStatusHost } from '@nostube/widgets/components/PublicationStatus'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
@@ -17,6 +16,5 @@ startInstallPromptCapture()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App boot={bootSite()} />
-    <PublicationStatusHost />
   </StrictMode>
 )

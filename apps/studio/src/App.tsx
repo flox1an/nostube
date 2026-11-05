@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components
 import { Button } from '@nostube/widgets/components/button'
 import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -124,6 +125,7 @@ export function Shell({
           {t('studio.shell.title')}
         </h1>
         <div className="flex flex-wrap items-center gap-3">
+          <PublicationStatusButton />
           <InterfaceLanguageSelect />
           <a
             href="/"

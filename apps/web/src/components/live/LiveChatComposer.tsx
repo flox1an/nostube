@@ -89,6 +89,9 @@ function SignedInComposer({ stream, relays, onSent, settings }: ComposerProps) {
     sending.current = true
     setIsSending(true)
     setError(null)
+    // Clear now; publish resolves only after relay attempts settle.
+    setDraft('')
+    fieldRef.current?.focus()
     try {
       await publish({
         event: {
@@ -100,11 +103,10 @@ function SignedInComposer({ stream, relays, onSent, settings }: ComposerProps) {
         relays,
         label: t('liveChat.publishLabel', 'Send chat message'),
       })
-      // Keep anything typed while the message was in flight.
-      setDraft(current => (current === submitted ? '' : current))
-      fieldRef.current?.focus()
       onSent?.()
     } catch (err) {
+      // Restore the failed message unless something new was typed meanwhile.
+      setDraft(current => (current === '' ? submitted : current))
       setError(
         t('liveChat.sendFailed', {
           defaultValue: 'Message not sent: {{error}}',

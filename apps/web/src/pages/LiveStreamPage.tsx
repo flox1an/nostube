@@ -9,6 +9,7 @@ import { buildShareLinks } from '@nostube/core/share-links'
 import { hasLightningAddress } from '@nostube/core/zap-utils'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import ShareButton from '@nostube/widgets/components/ShareButton'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { useLiveStream, useLiveStreamPlayback } from '@/hooks/useLiveStreams'
@@ -69,8 +70,13 @@ function StreamViewer({
   }, [playbackKey])
   if (chatOnly)
     return (
-      <div className="h-dvh overflow-hidden px-3 pt-2">
-        <LiveChat stream={stream} />
+      <div className="flex h-dvh flex-col overflow-hidden px-3 pt-2">
+        <header className="flex shrink-0 justify-end">
+          <PublicationStatusButton />
+        </header>
+        <div className="min-h-0 flex-1">
+          <LiveChat stream={stream} />
+        </div>
       </div>
     )
   return (

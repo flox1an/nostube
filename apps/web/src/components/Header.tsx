@@ -1,5 +1,6 @@
 import { LoginArea } from '@/components/auth/LoginArea'
 import { Button } from '@nostube/widgets/components/button'
+import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import { MenuIcon, Upload, Search, ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
@@ -171,6 +172,8 @@ export function Header({ transparent = false }: HeaderProps) {
               </Button>
             </Link>
           )}
+
+          <PublicationStatusButton />
 
           <NotificationBell />
 

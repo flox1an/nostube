@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.55] - 2026-11-05
+
+### Fixed
+
+- Live chat clears and focuses the message field immediately on send rather than waiting for relay confirmations. Failed messages return to an empty field without overwriting a new draft.
+
+### Changed
+
+- Publication status now sits behind a navbar send icon across web, desktop, chat pop-out, creator site and Studio. The confirmed/total target ratio turns red for incomplete delivery or errors; relay details and retries open only on click, never automatically.
+
 ## [0.2.54] - 2026-11-04
 
 ### Added
@@ -35,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Publishing feedback across web, creator site and Studio now reports real per-target relay confirmations, refusals and timeouts. Long operations reveal a compact status after two seconds and details after eight seconds without progress; retry reuses the signed event and targets failures only. Blossom uploads distinguish byte transfer from server confirmation and expose mirror outcomes. Studio links video publication to event/media-scoped durable outbox status and retry. Upload footer buttons retain consistent desktop height and 44px touch targets.
+- Publishing feedback across web, creator site and Studio reports real per-target relay confirmations, refusals and timeouts; retry reuses the signed event and targets failures only. Blossom uploads distinguish byte transfer from server confirmation and expose mirror outcomes. Studio links video publication to event/media-scoped durable outbox status and retry. Upload footer buttons retain consistent desktop height and 44px touch targets.
 - Server: in Public reach, the channel profile of the managed key carries `website`: the public instance origin with instance hosting, the nsite URL (custom domain first, otherwise `https://<npub>.<gateway>`) with nsite hosting. Private reach and LAN-only instance hosting advertise none; own-identity profiles stay unchanged.
 - `wss://index.hzrd149.com` is offline and no longer queried: defaults and shared loaders omit it; the server also removes it from saved relay lists on load/save and discards its old outbox jobs.
 - Server/Studio mirrors: profile/index targets receive only kinds 0, 10002 and 10063, including for old or explicit outbox jobs; invalid legacy jobs are removed. nsite manifests/deletions no longer go to indexers. Newly added mirror relays receive current stored writer events after restart, without resetting prior deliveries or forwarding tracked incoming mirror copies; old media files are not backfilled.

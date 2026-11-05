@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.57] - 2026-11-05
+
+### Fixed
+
+- Trust badge tooltips now substitute the percentage in translated high- and medium-trust labels instead of showing the `{{percentage}}` placeholder.
+- Live-chat author links now use `nprofile` with the message's seen relays or chat relay fallbacks; zap sender links also carry chat relay hints.
+- Malformed deletion coordinates for regular events (such as kind-7 reactions) no longer reject cache writes with `Kind 7 is not replaceable`; valid ID and address deletions in the same event still apply.
+
 ## [0.2.56] - 2026-11-05
 
 ### Fixed

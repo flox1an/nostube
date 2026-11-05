@@ -1,7 +1,7 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
 import { createEventLoaderForStore } from 'applesauce-loaders/loaders'
-import type { Filter, NostrEvent } from 'nostr-tools'
+import { kinds, type Filter, type NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents, deleteEvent, deleteReplaceable } from 'nostr-idb'
 import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
@@ -47,10 +47,12 @@ function getDeleteCoordinates(event: NostrEvent) {
     .filter(tag => tag[0] === 'a' && tag[1])
     .map(tag => {
       const [kind, pubkey, ...identifierParts] = tag[1].split(':')
-      const parsedKind = Number(kind)
+      const parsedKind = /^\d+$/.test(kind) ? Number(kind) : NaN
       const identifier = identifierParts.join(':')
 
-      if (!Number.isInteger(parsedKind) || !pubkey) return undefined
+      // `a` can only address replaceable/addressable kinds; nostr-idb throws on anything else.
+      if (!(kinds.isReplaceableKind(parsedKind) || kinds.isAddressableKind(parsedKind)) || !pubkey)
+        return undefined
 
       return { kind: parsedKind, pubkey, identifier }
     })

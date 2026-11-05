@@ -14,7 +14,12 @@ const idb = vi.hoisted(() => ({
   ),
   addEvents: vi.fn(async () => {}),
   deleteEvent: vi.fn(async () => {}),
-  deleteReplaceable: vi.fn(async () => {}),
+  // Mirrors nostr-idb, which throws for kinds that are neither replaceable nor addressable.
+  deleteReplaceable: vi.fn(async (_db: unknown, _pubkey: string, kind: number, _d?: string) => {
+    const replaceable = kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000)
+    if (!replaceable && !(kind >= 30000 && kind < 40000))
+      throw new Error(`Kind ${kind} is not replaceable`)
+  }),
 }))
 vi.mock('nostr-idb', () => idb)
 
@@ -300,6 +305,31 @@ describe('local cache', () => {
     const [, filters] = idb.getEventsForFilters.mock.calls[0]
     expect(filters[0]).toEqual({ kinds: [21], authors: ['alice', 'bob'], limit: 5 })
     expect(filters.every(filter => filter.authors?.join() === 'alice,bob')).toBe(true)
+  })
+
+  it('deletes valid targets and skips a coordinates that cannot be replaceable', async () => {
+    const author = 'a'.repeat(64)
+    idb.deleteReplaceable.mockClear()
+    const deletion = {
+      ...makeEvent('deletion', 100, 5, author),
+      tags: [
+        ['e', 'video-id'],
+        ['a', `7:${author}:`],
+        ['a', `:${author}:`],
+        ['a', `34235:${author}:my-video`],
+        ['a', `10002:${author}:`],
+      ],
+    }
+
+    await expect(client.cacheEvents([deletion])).resolves.toBeUndefined()
+    expect(idb.addEvents).toHaveBeenCalledWith(expect.anything(), [deletion])
+    expect(idb.deleteEvent).toHaveBeenCalledWith(expect.anything(), 'video-id')
+    expect(
+      idb.deleteReplaceable.mock.calls.map(([, pubkey, kind, d]) => [pubkey, kind, d])
+    ).toEqual([
+      [author, 34235, 'my-video'],
+      [author, 10002, ''],
+    ])
   })
 })
 

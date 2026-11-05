@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { ArrowDown, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { use$, useEventStore } from 'applesauce-react/hooks'
-import { kinds, nip19, type NostrEvent } from 'nostr-tools'
+import { kinds, type NostrEvent } from 'nostr-tools'
 import { getDisplayName, getProfileContent } from 'applesauce-core/helpers/profile'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { buildChatRows, zapRecipients } from '@nostube/core/live-zaps'
@@ -23,7 +23,7 @@ import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { useBlockedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useMutedPubkeys, resolveMutedPubkeys } from '@/hooks/useMutedPubkeys'
-import { buildProfilePath } from '@/lib/nprofile'
+import { buildProfileUrl, buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
 import { useLiveChat } from '@/hooks/useLiveChat'
 import { LiveChatComposer } from './LiveChatComposer'
@@ -72,15 +72,17 @@ function useZapEndpoints(recipients: string[]): ReadonlyMap<string, ZapEndpoint>
 function ChatMessage({
   event,
   appearance,
+  relays,
   trust,
 }: {
   event: NostrEvent
   appearance: ChatAppearance
+  relays: string[]
   trust: number | null | undefined
 }) {
   const profile = useProfile({ pubkey: event.pubkey })
   const name = getDisplayName(profile, genUserName(event.pubkey))
-  const profilePath = buildProfilePath(nip19.npubEncode(event.pubkey))
+  const profilePath = buildProfileUrl(event.pubkey, event, relays)
 
   return (
     <li
@@ -126,7 +128,15 @@ function ChatMessage({
   )
 }
 
-function ZapMessage({ zap, appearance }: { zap: ZapReceipt; appearance: ChatAppearance }) {
+function ZapMessage({
+  zap,
+  appearance,
+  relays,
+}: {
+  zap: ZapReceipt
+  appearance: ChatAppearance
+  relays: string[]
+}) {
   const { t } = useTranslation()
   const profile = useProfile(zap.sender ? { pubkey: zap.sender } : undefined)
   const sats = zap.sats
@@ -146,7 +156,7 @@ function ZapMessage({ zap, appearance }: { zap: ZapReceipt; appearance: ChatAppe
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {zap.sender ? (
             <Link
-              to={buildProfilePath(nip19.npubEncode(zap.sender))}
+              to={buildProfileUrlFromPubkey(zap.sender, relays)}
               target="_blank"
               rel="noopener noreferrer"
               className="min-w-0 font-semibold wrap-anywhere hover:underline"
@@ -300,10 +310,16 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
                     key={row.event.id}
                     event={row.event}
                     appearance={appearance}
+                    relays={relays}
                     trust={trustScores.get(row.event.pubkey)}
                   />
                 ) : (
-                  <ZapMessage key={row.zap.bolt11} zap={row.zap} appearance={appearance} />
+                  <ZapMessage
+                    key={row.zap.bolt11}
+                    zap={row.zap}
+                    appearance={appearance}
+                    relays={relays}
+                  />
                 )
               )}
             </ol>

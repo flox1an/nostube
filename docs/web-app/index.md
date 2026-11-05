@@ -14,6 +14,8 @@ Do you want a website for your own videos? The [Nostube Server](/server/) alread
 
 Below the title, **Follow** follows the host, the zap button zaps the stream (paid to the host, bound to the stream address, so it appears in the chat) and **Share** shares the stream link. The player attempts autoplay; browser policy may require a click for sound. Chat sits beside the player (below it on narrow screens) with its own scroll area and follows new messages until you scroll up; **Jump to latest** resumes. Enter adds a line; Ctrl/Cmd+Enter or **Send chat** publishes. A rejected message keeps its draft. All chat links open a new tab so playback continues.
 
+Chat author and zap-sender profile links use `nprofile` pointers with relay hints. Message authors carry the relays where their message was seen, falling back to the chat's relays when none are known; zap senders carry the chat's relays.
+
 **Chat settings** offer **Pop-out chat** (`/live/<naddr>/chat`, a chat-only window) and **Chat appearance**: font size, coloured names, timestamps, hiding accounts on your own and the streamer's mute list (on by default), Web of Trust badges and a minimum trust score. Unscored accounts, the streamer and you are never hidden by the trust filter. Settings are stored on this device.
 
 Kind `9735` zap receipts appear as highlighted messages only when they pass [NIP-57](https://github.com/nostr-protocol/nips/blob/master/57.md) Appendix F checks against the LNURL provider in the recipient's own profile (host, publisher or `zap` split target); each invoice appears once. Unverifiable receipts are not shown.

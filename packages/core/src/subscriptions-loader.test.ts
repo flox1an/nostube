@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { matchFilters, type Filter, type NostrEvent } from 'nostr-tools'
-import { delay, firstValueFrom, from, lastValueFrom, Subject, take, toArray } from 'rxjs'
+import {
+  delay,
+  firstValueFrom,
+  from,
+  lastValueFrom,
+  Subject,
+  take,
+  throwError,
+  toArray,
+} from 'rxjs'
 import { createNostubeClient, type PageLoader } from './client'
 import { createSubscriptionsLoader } from './subscriptions-loader'
 
@@ -180,6 +189,35 @@ describe('subscriptions outbox feed', () => {
       [fallback, 199],
       [own, 49],
     ])
+  })
+
+  it('requests an unreachable outbox once per feed instead of again on every page', async () => {
+    const dead = 'wss://dead.test/'
+    const { client, requests } = setup({
+      [discovery]: [
+        event('list', alice, 1, 10002, [
+          ['r', dead],
+          ['r', own],
+        ]),
+      ],
+      [fallback]: [event('public', bob, 200)],
+      [own]: [event('private', alice, 50)],
+    })
+    const request = vi.mocked(client.relayPool.request).getMockImplementation()!
+    vi.spyOn(client.relayPool, 'request').mockImplementation(((
+      relays: string[],
+      filters: Filter[]
+    ) => {
+      if (!relays.includes(dead)) return request(relays, filters)
+      requests.push({ relay: dead, filters })
+      return throwError(() => new Error('connection failed'))
+    }) as typeof client.relayPool.request)
+    const loader = createSubscriptionsLoader(client, [alice, bob], [fallback], [discovery])
+    expect((await page(loader)).map(event => event.id).sort()).toEqual(['private', 'public'])
+    await page(loader)
+    await page(loader)
+    expect(videoRequests(requests).filter(request => request.relay === dead)).toHaveLength(1)
+    expect(loader.exhausted?.()).toBe(true)
   })
 
   it('does not issue unfiltered requests for an empty or invalid follow list', async () => {

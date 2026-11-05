@@ -45,6 +45,7 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
         defaultValue: 'Low trust ({{percentage}}%) — tap for details',
       })
     : t('trust.badge.tooltip', {
+        percentage,
         label: t(trust.labelKey),
         defaultValue: '{{label}} trust — tap for details',
       })

@@ -178,7 +178,7 @@ function ServerAdmin() {
 
 export function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter useTransitions={false}>
       <RelayBrowsingProvider>
         <ScrollToTop />
         <Routes>

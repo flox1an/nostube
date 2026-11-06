@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.64] - 2026-11-06
+
+### Changed
+
+- Page loading placeholders appear immediately during navigation instead of leaving the previous page visible.
+- Long video and shorts grids render only the rows near the screen, so feeds stay smooth on desktop and mobile as more videos load.
+- Going back to a feed returns to the previous scroll position even when its videos appear a moment after the page.
+
 ## [0.2.63] - 2026-11-06
 
 ### Changed

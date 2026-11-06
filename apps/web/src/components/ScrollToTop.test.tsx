@@ -54,4 +54,43 @@ describe('ScrollToTop', () => {
     expect(screen.getByText('list')).toBeInTheDocument()
     expect(scrollToSpy).toHaveBeenLastCalledWith(0, 340)
   })
+
+  it('keeps restoring while the page grows back into the saved position', () => {
+    // Captures the restore observer so the test can simulate the page growing.
+    const restore: { pageGrew?: () => void } = {}
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          restore.pageGrew = callback
+        }
+        observe() {}
+        disconnect() {
+          restore.pageGrew = undefined
+        }
+      }
+    )
+    const scrollToSpy = vi.mocked(window.scrollTo)
+
+    render(<App />)
+    Object.defineProperty(window, 'scrollY', { value: 340, configurable: true })
+    fireEvent.click(screen.getByText('open video'))
+
+    // The remounted list renders short at first, so the restore gets clamped.
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+    fireEvent.click(screen.getByText('back'))
+    scrollToSpy.mockClear()
+
+    restore.pageGrew!()
+    expect(scrollToSpy).toHaveBeenLastCalledWith(0, 340)
+    expect(restore.pageGrew).toBeDefined()
+
+    // Content arrived and the position landed: restoration ends.
+    Object.defineProperty(window, 'scrollY', { value: 340, configurable: true })
+    restore.pageGrew!()
+    expect(restore.pageGrew).toBeUndefined()
+
+    vi.unstubAllGlobals()
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+  })
 })

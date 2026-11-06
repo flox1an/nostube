@@ -59,6 +59,7 @@
     "@radix-ui/react-toggle-group": "^1.1.19",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-virtual": "^3.14.26",
     "@tauri-apps/api": "^2.11.1",
     "applesauce-accounts": "^6.2.0",
     "applesauce-common": "^6.2.0",

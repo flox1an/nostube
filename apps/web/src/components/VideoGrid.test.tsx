@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { VideoGrid } from './VideoGrid'
 import { BrowserRouter } from 'react-router-dom'
 import type { VideoEvent } from '@nostube/core/video-event'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
 
 // Mock dependencies
 vi.mock('@/nostr/core', () => ({
@@ -35,11 +36,22 @@ vi.mock('@/components/VideoCard', () => ({
   VideoCard: ({
     video,
     format,
+    allVideos,
+    videoIndex,
   }: {
     video: VideoEvent
     format: 'vertical' | 'horizontal' | 'square'
+    allVideos?: VideoEvent[]
+    videoIndex?: number
   }) => (
-    <div data-testid="video-card" data-video-id={video.id} data-format={format}>
+    <div
+      data-testid="video-card"
+      data-video-id={video.id}
+      data-format={format}
+      data-all-count={allVideos?.length}
+      data-video-index={videoIndex}
+      tabIndex={0}
+    >
       {video.title}
     </div>
   ),
@@ -54,6 +66,11 @@ vi.mock('@/components/VideoCard', () => ({
 const renderWithRouter = (ui: React.ReactElement) => {
   return render(<BrowserRouter>{ui}</BrowserRouter>)
 }
+
+// jsdom has no layout; give every row a fixed height so the window
+// virtualizer (viewport: jsdom's 768px innerHeight) mounts only a window of rows.
+const mockRowHeight = (height: number) =>
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(height)
 
 // Mock video data factory
 const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({
@@ -81,6 +98,12 @@ const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({
 describe('VideoGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.mocked(useWindowWidth).mockReturnValue(1024)
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true })
   })
 
   describe('Empty State', () => {
@@ -273,14 +296,22 @@ describe('VideoGrid', () => {
     })
 
     it('should handle large number of videos', () => {
+      mockRowHeight(300)
       const videos = Array.from({ length: 100 }, (_, i) =>
         createMockVideo({ id: `video-${i}`, title: `Video ${i}` })
       )
 
       renderWithRouter(<VideoGrid videos={videos} />)
 
+      // Only rows around the viewport are mounted...
       const videoCards = screen.getAllByTestId('video-card')
-      expect(videoCards).toHaveLength(100)
+      expect(videoCards.length).toBeGreaterThan(0)
+      expect(videoCards.length).toBeLessThan(100)
+      expect(screen.getByText('Video 0')).toBeInTheDocument()
+      // ...while the list keeps the height of all 34 rows (3 columns at 1024px),
+      // so the pagination sentinel after the grid stays out of view.
+      const list = videoCards[0].closest('[data-row-key]')!.parentElement!
+      expect(parseFloat(list.style.height)).toBeGreaterThanOrEqual(34 * 300)
     })
 
     it('should handle videos with only shorts', () => {
@@ -311,6 +342,83 @@ describe('VideoGrid', () => {
       videoCards.forEach(card => {
         expect(card).toHaveAttribute('data-format', 'horizontal')
       })
+    })
+  })
+
+  describe('Virtualization', () => {
+    it('should hand the full shorts list to every mounted shorts card', () => {
+      mockRowHeight(300)
+      const shorts = Array.from({ length: 40 }, (_, i) =>
+        createMockVideo({ id: `short-${i}`, type: 'shorts' })
+      )
+
+      renderWithRouter(<VideoGrid videos={shorts} layoutMode="vertical" />)
+
+      const cards = screen.getAllByTestId('video-card')
+      expect(cards.length).toBeLessThan(40)
+      for (const card of cards) {
+        expect(card).toHaveAttribute('data-all-count', '40')
+        expect(card.dataset.videoId).toBe(`short-${card.dataset.videoIndex}`)
+      }
+    })
+
+    it('should index auto-layout shorts within the shorts list only', () => {
+      const videos = [
+        createMockVideo({ id: 'wide-0', type: 'videos' }),
+        createMockVideo({ id: 'short-0', type: 'shorts' }),
+        createMockVideo({ id: 'wide-1', type: 'videos' }),
+        createMockVideo({ id: 'short-1', type: 'shorts' }),
+      ]
+
+      renderWithRouter(<VideoGrid videos={videos} />)
+
+      for (const id of ['short-0', 'short-1']) {
+        const card = screen.getAllByTestId('video-card').find(c => c.dataset.videoId === id)!
+        expect(card).toHaveAttribute('data-all-count', '2')
+        expect(card).toHaveAttribute('data-video-index', id.slice(-1))
+      }
+    })
+
+    it('should keep the focused row mounted after it scrolls out of view', () => {
+      mockRowHeight(300)
+      const videos = Array.from({ length: 100 }, (_, i) =>
+        createMockVideo({ id: `focus-${i}`, title: `Focus ${i}` })
+      )
+      renderWithRouter(<VideoGrid videos={videos} />)
+
+      const focused = screen.getByText('Focus 0')
+      act(() => focused.focus())
+      act(() => {
+        Object.defineProperty(window, 'scrollY', {
+          value: 5000,
+          configurable: true,
+          writable: true,
+        })
+        fireEvent.scroll(window)
+      })
+
+      // Unfocused rows near the top are unmounted; the focused one stays.
+      expect(screen.queryByText('Focus 3')).not.toBeInTheDocument()
+      expect(screen.getByText('Focus 0')).toBe(focused)
+      expect(document.activeElement).toBe(focused)
+    })
+
+    it('should refocus the same card when a column change rebuilds the rows', () => {
+      const videos = Array.from({ length: 12 }, (_, i) =>
+        createMockVideo({ id: `cols-${i}`, title: `Cols ${i}` })
+      )
+      const { rerender } = renderWithRouter(<VideoGrid videos={videos} />)
+
+      act(() => screen.getByText('Cols 4').focus())
+      // 1024px → 768px: 3 → 2 columns; every row is rebuilt and its cards remount.
+      vi.mocked(useWindowWidth).mockReturnValue(768)
+      rerender(
+        <BrowserRouter>
+          <VideoGrid videos={videos} />
+        </BrowserRouter>
+      )
+
+      expect(document.activeElement).toBe(screen.getByText('Cols 4'))
     })
   })
 

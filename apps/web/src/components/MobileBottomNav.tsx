@@ -29,7 +29,7 @@ export function MobileBottomNav() {
         }}
       >
         {mobilePrimaryItems.map(item => {
-          const isActive = location.pathname === item.href
+          const isActive = location.pathname === item.href.split('?')[0]
           return (
             <Link
               key={item.id}
@@ -72,7 +72,7 @@ export function MobileBottomNav() {
           </SheetHeader>
           <nav className="space-y-1">
             {mobileMoreItems.map(item => {
-              const isActive = location.pathname === item.href
+              const isActive = location.pathname === item.href.split('?')[0]
               return (
                 <Link
                   key={item.id}

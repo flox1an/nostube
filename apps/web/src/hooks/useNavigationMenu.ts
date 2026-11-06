@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Cog, FileText, Home, Library, Play, Radio, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
 import { getInstanceConfig } from '@nostube/core/instance-config'
@@ -31,15 +32,24 @@ export interface NavigationMenu {
 export function useNavigationMenu(): NavigationMenu {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const { pathname, search } = useLocation()
+  const browseSearch =
+    pathname === '/' || pathname === '/shorts' || pathname.startsWith('/category/') ? search : ''
 
   return useMemo(() => {
     const navigationItems: NavigationMenuItem[] = [
-      { id: 'home', label: t('navigation.home'), icon: Home, href: '/', section: 'navigation' },
+      {
+        id: 'home',
+        label: t('navigation.home'),
+        icon: Home,
+        href: `/${browseSearch}`,
+        section: 'navigation',
+      },
       {
         id: 'shorts',
         label: t('navigation.shorts'),
         icon: Play,
-        href: '/shorts',
+        href: `/shorts${browseSearch}`,
         section: 'navigation',
       },
       ...(!getInstanceConfig()
@@ -113,5 +123,5 @@ export function useNavigationMenu(): NavigationMenu {
       mobilePrimaryItems,
       mobileMoreItems,
     }
-  }, [t, user])
+  }, [t, user, browseSearch])
 }

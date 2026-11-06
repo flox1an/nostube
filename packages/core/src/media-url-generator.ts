@@ -192,7 +192,7 @@ function generateProxyUrls(
 
     // Event origins are untrusted. Never make a remote cache fetch a private
     // source through an XS hint.
-    if (originalOrigin && originalOrigin !== proxyOrigin && isAllowedEventMediaUrl(originalUrl)) {
+    if (originalOrigin && originalOrigin !== proxyOrigin && isPublicMediaServerHint(originalUrl)) {
       try {
         const originalHostname = new URL(originalUrl).hostname
         if (!addedHostnames.has(originalHostname)) {

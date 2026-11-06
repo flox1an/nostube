@@ -3,6 +3,7 @@ import {
   classifyMediaUrl,
   isAllowedConfiguredServiceUrl,
   isAllowedEventMediaUrl,
+  isPublicMediaServerHint,
 } from './media-url-policy'
 
 describe('media URL policy', () => {
@@ -23,5 +24,12 @@ describe('media URL policy', () => {
     expect(isAllowedEventMediaUrl('https://cdn.example.com/video.mp4')).toBe(true)
     expect(isAllowedConfiguredServiceUrl('http://127.0.0.1:24242')).toBe(true)
     expect(classifyMediaUrl('http://127.0.0.1:24242', 'event')).toBe('blocked-loopback')
+  })
+
+  it('plays FIPS mesh URLs but never hands them to a remote proxy', () => {
+    const mesh = 'http://npub1abc.fips/video.mp4'
+    expect(isAllowedEventMediaUrl(mesh)).toBe(true)
+    expect(isPublicMediaServerHint(mesh)).toBe(false)
+    expect(isPublicMediaServerHint('https://cdn.example.com/video.mp4')).toBe(true)
   })
 })

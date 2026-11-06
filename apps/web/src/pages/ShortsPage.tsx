@@ -3,7 +3,8 @@ import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useReadRelays } from '@/hooks'
-import { useAppContext } from '@/hooks/useAppContext'
+import { useRelayBrowsing } from '@/contexts/RelayBrowsingContext'
+import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
@@ -12,7 +13,7 @@ import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function ShortsPage() {
   const { t } = useTranslation()
-  const { relayOverride, setRelayOverride } = useAppContext()
+  const { source } = useRelayBrowsing()
 
   useEffect(() => {
     document.title = pageTitle(`${t('navigation.shorts')}`)
@@ -22,17 +23,13 @@ export function ShortsPage() {
   }, [t])
   const relays = useReadRelays()
 
-  const effectiveRelays = useMemo(
-    () => (relayOverride ? [relayOverride] : relays),
-    [relayOverride, relays]
-  )
+  const effectiveRelays = source?.relays ?? relays
 
   // Memoize the loader to prevent recreation on every render
   // When relay override is active, skip EventStore cache to show only that relay's events
   const loader = useMemo(
-    () =>
-      videoTypeLoader('shorts', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
-    [effectiveRelays, relayOverride]
+    () => videoTypeLoader('shorts', effectiveRelays, source ? { skipCache: true } : undefined),
+    [effectiveRelays, source]
   )
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('shorts') }), [])
@@ -48,35 +45,34 @@ export function ShortsPage() {
     phase,
   } = useInfiniteTimeline(loader, effectiveRelays, {
     filters: timelineFilter,
-    directMode: !!relayOverride,
+    directMode: !!source,
   })
   const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
 
   return (
     <div className="max-w-560 mx-auto">
       <div className="sm:px-2">
-        <CategoryButtonBar
-          selectedRelay={relayOverride}
-          onRelayChange={setRelayOverride}
-          afterRelay={filterButton}
-        />
+        <CategoryButtonBar afterRelay={filterButton} />
       </div>
-      <VideoTimelinePage
-        videos={filteredVideos ?? []}
-        loading={loading || trustPending}
-        exhausted={exhausted}
-        prefetching={isPrefetching}
-        subscriptionActive={subscriptionActive}
-        onLoadMore={loadMore}
-        onPrefetch={prefetchMore}
-        layoutMode="vertical"
-        emptyMessage={t('pages.shorts.noShorts')}
-        loadingMessage={t('pages.shorts.loadingMore')}
-        exhaustedMessage={t('pages.shorts.noMore')}
-        error={phase === 'error'}
-        className="sm:px-2"
-        fullBleed
-      />
+      <RelayBrowseStatus />
+      {(!source || source.relays.length > 0) && (
+        <VideoTimelinePage
+          videos={filteredVideos ?? []}
+          loading={loading || trustPending}
+          exhausted={exhausted}
+          prefetching={isPrefetching}
+          subscriptionActive={subscriptionActive}
+          onLoadMore={loadMore}
+          onPrefetch={prefetchMore}
+          layoutMode="vertical"
+          emptyMessage={t('pages.shorts.noShorts')}
+          loadingMessage={t('pages.shorts.loadingMore')}
+          exhaustedMessage={t('pages.shorts.noMore')}
+          error={phase === 'error'}
+          className="sm:px-2"
+          fullBleed
+        />
+      )}
     </div>
   )
 }

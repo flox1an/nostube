@@ -3,8 +3,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CategoryButtonBar } from './CategoryButtonBar'
 
-vi.mock('@/hooks/useAppContext', () => ({
-  useAppContext: () => ({ config: { relays: [] }, updateConfig: vi.fn() }),
+vi.mock('@/components/RelaySourcePicker', () => ({
+  RelaySourcePicker: () => null,
 }))
 
 afterEach(() => vi.unstubAllGlobals())
@@ -25,7 +25,7 @@ it('fades hidden categories, reveals the final category, and updates when the li
 
   render(
     <MemoryRouter>
-      <CategoryButtonBar selectedRelay={null} onRelayChange={vi.fn()} />
+      <CategoryButtonBar />
     </MemoryRouter>
   )
   const categories = screen.getByRole('button', { name: 'All' }).parentElement!.parentElement!

@@ -86,7 +86,16 @@ export function isAllowedConfiguredServiceUrl(url: string): boolean {
   return classifyMediaUrl(url, 'configured-service') === 'allowed'
 }
 
+/** FIPS mesh names (`<npub>.fips`) resolve only on a device that runs FIPS. */
+export function isMeshMediaUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.toLowerCase().endsWith('.fips')
+  } catch {
+    return false
+  }
+}
+
 /** A hostname sent to a remote proxy must always be publicly routable. */
 export function isPublicMediaServerHint(url: string): boolean {
-  return isAllowedEventMediaUrl(url)
+  return isAllowedEventMediaUrl(url) && !isMeshMediaUrl(url)
 }

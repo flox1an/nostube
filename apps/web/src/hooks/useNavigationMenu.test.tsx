@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('@/hooks', () => ({
   useCurrentUser: vi.fn(),
@@ -17,7 +18,7 @@ const BETA_PUBKEY = 'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f3
 function renderMenu({ pubkey }: { pubkey?: string } = {}) {
   vi.mocked(useCurrentUser).mockReturnValue({ user: pubkey ? { pubkey } : undefined } as never)
 
-  return renderHook(() => useNavigationMenu())
+  return renderHook(() => useNavigationMenu(), { wrapper: MemoryRouter })
 }
 
 describe('useNavigationMenu', () => {

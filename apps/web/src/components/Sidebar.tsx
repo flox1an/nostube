@@ -61,7 +61,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
         )}
         <nav className="px-2">
           {navigationItems.map(item => {
-            const isActive = location.pathname === item.href
+            const isActive = location.pathname === item.href.split('?')[0]
             return (
               <Link
                 key={item.id}
@@ -88,7 +88,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
             </h2>
             <nav className="px-2">
               {libraryItems.map(item => {
-                const isActive = location.pathname === item.href
+                const isActive = location.pathname === item.href.split('?')[0]
                 return (
                   <Link
                     key={item.id}
@@ -115,7 +115,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
         </h2>
         <nav className="px-2">
           {configurationItems.map(item => {
-            const isActive = location.pathname === item.href
+            const isActive = location.pathname === item.href.split('?')[0]
             return (
               <Link
                 key={item.id}

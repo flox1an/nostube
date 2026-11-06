@@ -27,6 +27,8 @@ import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-se
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
+import { normalizeBrowseRelay, relaySource } from '@/lib/relay-browsing'
+import { BrowseButton, BrowseSourcesSettings } from './BrowseSourcesSettings'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -141,27 +143,41 @@ function RelaysSubSection() {
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const [newRelayUrl, setNewRelayUrl] = useState('')
+  const [addError, setAddError] = useState<string | null>(null)
 
+  // Explicit Settings action: the relay becomes a device default for reading and writing.
   const handleAddRelay = () => {
-    if (newRelayUrl.trim()) {
-      const normalizedUrl = normalizeRelayUrl(newRelayUrl.trim())
-      updateConfig(currentConfig => {
-        const relays = currentConfig.relays || []
-        if (relays.some(r => r.url === normalizedUrl)) return currentConfig
-        return {
-          ...currentConfig,
-          relays: [
-            ...relays,
-            {
-              url: normalizedUrl,
-              name: normalizedUrl.replace(/^wss:\/\//, '').replace(/\/$/, ''),
-              tags: ['read', 'write'] as RelayTag[],
-            },
-          ],
-        }
-      })
-      setNewRelayUrl('')
+    if (!newRelayUrl.trim()) return
+    let url: string
+    try {
+      url = normalizeBrowseRelay(newRelayUrl)
+    } catch (cause) {
+      setAddError(cause instanceof Error ? cause.message : String(cause))
+      return
     }
+    if (config.relays.some(r => normalizeRelayUrl(r.url) === url)) {
+      setAddError(
+        t('settings.relays.alreadyAdded', { defaultValue: 'This relay is already in the list.' })
+      )
+      return
+    }
+    updateConfig(currentConfig => {
+      const relays = currentConfig.relays || []
+      if (relays.some(r => normalizeRelayUrl(r.url) === url)) return currentConfig
+      return {
+        ...currentConfig,
+        relays: [
+          ...relays,
+          {
+            url,
+            name: url.replace(/^wss?:\/\//, ''),
+            tags: ['read', 'write'] as RelayTag[],
+          },
+        ],
+      }
+    })
+    setNewRelayUrl('')
+    setAddError(null)
   }
 
   const handleRemoveRelay = (urlToRemove: string) => {
@@ -200,6 +216,12 @@ function RelaysSubSection() {
 
   return (
     <>
+      <p className="text-sm text-muted-foreground">
+        {t('settings.relays.deviceNote', {
+          defaultValue:
+            "Nostube reads from and publishes to these relays on this device. When you're logged in, relays from your account's relay list (NIP-65) are added here automatically. Changes here aren't published to that list, and removed account relays can be added again.",
+        })}
+      </p>
       {showSizeWarning && (
         <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3">
           <p className="text-sm text-yellow-600 dark:text-yellow-400">
@@ -232,6 +254,10 @@ function RelaysSubSection() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <BrowseButton
+                    name={relay.name || relay.url}
+                    source={() => relaySource(relay.url)}
+                  />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -273,19 +299,40 @@ function RelaysSubSection() {
           </ul>
         </ScrollArea>
       )}
-      <div className="flex gap-2">
-        <Input
-          placeholder={t('settings.relays.addPlaceholder')}
-          value={newRelayUrl}
-          onChange={e => setNewRelayUrl(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleAddRelay()
-          }}
-          className="flex-1"
-        />
-        <Button onClick={handleAddRelay} size="sm">
-          {t('settings.relays.addButton')}
-        </Button>
+      <div className="space-y-1.5">
+        <Label htmlFor="add-relay-url">
+          {t('settings.relays.addLabel', { defaultValue: 'Relay URL' })}
+        </Label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            id="add-relay-url"
+            placeholder={t('settings.relays.addPlaceholder')}
+            value={newRelayUrl}
+            onChange={e => {
+              setNewRelayUrl(e.target.value)
+              setAddError(null)
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAddRelay()
+            }}
+            aria-invalid={addError ? true : undefined}
+            aria-describedby={addError ? 'add-relay-url-error' : undefined}
+            className="flex-1"
+          />
+          <Button
+            onClick={handleAddRelay}
+            size="sm"
+            className="min-h-11 sm:min-h-9"
+            disabled={!newRelayUrl.trim()}
+          >
+            {t('settings.relays.addReadWrite', { defaultValue: 'Add as Read & Write' })}
+          </Button>
+        </div>
+        {addError && (
+          <p id="add-relay-url-error" role="alert" className="text-sm text-destructive">
+            {addError}
+          </p>
+        )}
       </div>
       <Button variant="outline" size="sm" onClick={handleResetRelays}>
         {t('settings.relays.resetButton')}
@@ -868,6 +915,17 @@ export function NetworkSettingsSection() {
         defaultOpen={!activeSection || activeSection === 'relays'}
       >
         <RelaysSubSection />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="browse-sources"
+        title={t('settings.browseSources.title', { defaultValue: 'Browse sources' })}
+        description={t('settings.browseSources.description', {
+          defaultValue: 'Relays and relay sets to explore, without changing your default relays.',
+        })}
+        defaultOpen={activeSection === 'browse-sources'}
+      >
+        <BrowseSourcesSettings />
       </CollapsibleSection>
 
       <CollapsibleSection

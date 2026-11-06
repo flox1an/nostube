@@ -2,7 +2,8 @@ import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useReadRelays } from '@/hooks'
-import { useAppContext } from '@/hooks/useAppContext'
+import { useRelayBrowsing } from '@/contexts/RelayBrowsingContext'
+import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
 import { useCategoryVideos } from '@/hooks/useCategoryVideos'
 import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@nostube/core/video-types'
@@ -15,12 +16,8 @@ export function CategoryPage() {
   const { t } = useTranslation()
   const { category: categorySlug } = useParams<{ category: string }>()
   const relays = useReadRelays()
-  const { relayOverride, setRelayOverride } = useAppContext()
-
-  const effectiveRelays = useMemo(
-    () => (relayOverride ? [relayOverride] : relays),
-    [relayOverride, relays]
-  )
+  const { source } = useRelayBrowsing()
+  const effectiveRelays = source?.relays ?? relays
 
   // Memoize videoKinds to prevent infinite re-renders
   const videoKinds = useMemo(() => getKindsForType('all'), [])
@@ -37,7 +34,7 @@ export function CategoryPage() {
     tags: category?.tags || [],
     relays: effectiveRelays,
     videoKinds,
-    directMode: !!relayOverride,
+    directMode: !!source,
   })
 
   const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
@@ -58,11 +55,7 @@ export function CategoryPage() {
   if (categorySlug && !category) {
     return (
       <div className="max-w-560 mx-auto sm:px-2">
-        <CategoryButtonBar
-          activeSlug={categorySlug}
-          selectedRelay={relayOverride}
-          onRelayChange={setRelayOverride}
-        />
+        <CategoryButtonBar activeSlug={categorySlug} />
         <div className="p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Category not found</h1>
           <p className="text-muted-foreground">
@@ -79,23 +72,21 @@ export function CategoryPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:px-2">
-      <CategoryButtonBar
-        activeSlug={categorySlug}
-        selectedRelay={relayOverride}
-        onRelayChange={setRelayOverride}
-        afterRelay={filterButton}
-      />
+      <CategoryButtonBar activeSlug={categorySlug} afterRelay={filterButton} />
+      <RelayBrowseStatus />
 
-      <VideoTimelinePage
-        videos={filteredVideos ?? []}
-        loading={loading || trustPending}
-        exhausted={exhausted}
-        onLoadMore={loadMore}
-        layoutMode="auto"
-        fullBleed
-        emptyMessage={t('pages.category.noVideos', { category: category.name })}
-        className=""
-      />
+      {(!source || source.relays.length > 0) && (
+        <VideoTimelinePage
+          videos={filteredVideos ?? []}
+          loading={loading || trustPending}
+          exhausted={exhausted}
+          onLoadMore={loadMore}
+          layoutMode="auto"
+          fullBleed
+          emptyMessage={t('pages.category.noVideos', { category: category.name })}
+          className=""
+        />
+      )}
     </div>
   )
 }

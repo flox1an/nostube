@@ -277,7 +277,7 @@ export function useDvmTracker(): {
   isLoading: boolean
   dvmHandlers: Map<string, TrackedDvm>
 } {
-  const { config, relayOverride } = useAppContext()
+  const { config } = useAppContext()
 
   const dvmRelays = useMemo(() => {
     // Instance build: DVM discovery is fixed off; no relays = no tracking, no DVM offered.
@@ -285,9 +285,8 @@ export function useDvmTracker(): {
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
     const combined = new Set([...readRelays, ...writeRelays, ...DEFAULT_RELAYS])
-    if (relayOverride) combined.add(relayOverride)
     return Array.from(combined)
-  }, [config.relays, relayOverride])
+  }, [config.relays])
 
   // Start/restart tracking when relays change
   useEffect(() => {

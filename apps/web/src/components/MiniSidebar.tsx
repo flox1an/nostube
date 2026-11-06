@@ -11,7 +11,7 @@ export function MiniSidebar() {
   return (
     <aside className="flex flex-col w-20 bg-background pt-4 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
       {navItems.map(item => {
-        const isActive = location.pathname === item.href
+        const isActive = location.pathname === item.href.split('?')[0]
         return (
           <Link
             key={item.href}

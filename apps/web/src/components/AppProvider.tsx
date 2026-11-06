@@ -41,7 +41,7 @@ interface AppProviderProps {
   storageKey: string
   /** Default app configuration */
   defaultConfig: AppConfig
-  /** Optional list of preset relays to display in the RelaySelector */
+  /** Optional preset relay metadata. */
   presetRelays?: Relay[]
 }
 
@@ -89,7 +89,6 @@ export function AppProvider(props: AppProviderProps) {
   }, [config.showAudioContent, setConfig])
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [relayOverride, setRelayOverride] = useState<string | null>(null)
 
   //const { user } = useCurrentUser();
   // const userRelays = useUserRelays(user?.pubkey);
@@ -162,11 +161,9 @@ export function AppProvider(props: AppProviderProps) {
       presetRelays,
       isSidebarOpen,
       toggleSidebar,
-      relayOverride,
-      setRelayOverride,
       pool: relayPool,
     }),
-    [config, updateConfig, presetRelays, isSidebarOpen, toggleSidebar, relayOverride]
+    [config, updateConfig, presetRelays, isSidebarOpen, toggleSidebar]
   )
 
   return (

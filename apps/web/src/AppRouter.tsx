@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
+import { RelayBrowsingProvider } from '@/contexts/RelayBrowsingContext'
 import { MainLayout } from '@/components/MainLayout'
 import { PageLoader } from '@/components/PageLoader'
 import {
@@ -178,338 +179,340 @@ function ServerAdmin() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <ScrollToTop />
-      <Routes>
-        {/* Live viewing is public-Nostr discovery; server instances never register it. */}
-        {!instance && (
-          <Route
-            path="/live/:naddr/chat"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <LiveStreamPage chatOnly />
-              </Suspense>
-            }
-          />
-        )}
-        <Route path="/" element={<MainLayout />}>
-          <Route
-            index
-            element={
-              startCreator ? (
-                <Navigate to={`/p/${nip19.npubEncode(startCreator)}`} replace />
-              ) : (
-                <Suspense fallback={<PageLoader />}>
-                  <HomePage />
-                </Suspense>
-              )
-            }
-          />
-          <Route path="/explore" element={<Navigate to="/" replace />} />
+      <RelayBrowsingProvider>
+        <ScrollToTop />
+        <Routes>
+          {/* Live viewing is public-Nostr discovery; server instances never register it. */}
           {!instance && (
-            <>
-              <Route
-                path="/live"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <LivePage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/live/:naddr"
-                element={
-                  <Suspense fallback={<VideoPageLoader />}>
-                    <LiveStreamPage />
-                  </Suspense>
-                }
-              />
-            </>
+            <Route
+              path="/live/:naddr/chat"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <LiveStreamPage chatOnly />
+                </Suspense>
+              }
+            />
           )}
-          <Route
-            path="/shorts"
-            element={
-              <Suspense fallback={<ShortsFeedPageLoader />}>
-                <ShortsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/subscriptions"
-            element={
-              <Suspense fallback={<SubscriptionsPageLoader />}>
-                <SubscriptionsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/liked-videos"
-            element={
-              <Suspense fallback={<LikedVideosPageLoader />}>
-                <LikedVideosPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/v/:nevent"
-            element={
-              <Suspense fallback={<VideoPageLoader />}>
-                <VideoPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/v/:nevent"
-            element={
-              <Suspense fallback={<VideoPageLoader />}>
-                <VideoPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/author/:nprofile"
-            element={
-              <Suspense fallback={<AuthorPageLoader />}>
-                <AuthorPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/author/:nprofile/:tab"
-            element={
-              <Suspense fallback={<AuthorPageLoader />}>
-                <AuthorPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/p/:nprofile"
-            element={
-              <Suspense fallback={<AuthorPageLoader />}>
-                <AuthorPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/p/:nprofile/:tab"
-            element={
-              <Suspense fallback={<AuthorPageLoader />}>
-                <AuthorPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/tag/:tag"
-            element={
-              <Suspense fallback={<HashtagPageLoader />}>
-                <HashtagPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/category/:category"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <CategoryPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              instance ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Suspense fallback={<SearchPageLoader />}>
-                  <SearchPage />
-                </Suspense>
-              )
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <Suspense fallback={<HistoryPageLoader />}>
-                <HistoryPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/library"
-            element={
-              <Suspense fallback={<LibraryPageLoader />}>
-                <LibraryPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/video-notes"
-            element={
-              <Suspense fallback={<VideoNotesPageLoader />}>
-                <VideoNotesPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/upload"
-            element={
-              <Suspense fallback={<UploadPageLoader />}>
-                <UploadPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/playlists"
-            element={
-              <Suspense fallback={<GlobalPlaylistsPageLoader />}>
-                <PlaylistPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/playlist/:nip19"
-            element={
-              <Suspense fallback={<SinglePlaylistPageLoader />}>
-                <SinglePlaylistPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Suspense fallback={<SettingsMenuLoader />}>
-                <SettingsLayout />
-              </Suspense>
-            }
-          >
-            {/* New category routes: presets has its own component, :category is the generic handler */}
+          <Route path="/" element={<MainLayout />}>
             <Route
-              path="presets"
+              index
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <PresetsSettingsPage />
+                startCreator ? (
+                  <Navigate to={`/p/${nip19.npubEncode(startCreator)}`} replace />
+                ) : (
+                  <Suspense fallback={<PageLoader />}>
+                    <HomePage />
+                  </Suspense>
+                )
+              }
+            />
+            <Route path="/explore" element={<Navigate to="/" replace />} />
+            {!instance && (
+              <>
+                <Route
+                  path="/live"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <LivePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/live/:naddr"
+                  element={
+                    <Suspense fallback={<VideoPageLoader />}>
+                      <LiveStreamPage />
+                    </Suspense>
+                  }
+                />
+              </>
+            )}
+            <Route
+              path="/shorts"
+              element={
+                <Suspense fallback={<ShortsFeedPageLoader />}>
+                  <ShortsPage />
                 </Suspense>
               }
             />
             <Route
-              path=":category"
+              path="/subscriptions"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <CategorySettingsPage />
-                </Suspense>
-              }
-            />
-            {/* Legacy redirect routes (kept for backward compatibility) */}
-            <Route
-              path="general"
-              element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <GeneralSettingsPage />
+                <Suspense fallback={<SubscriptionsPageLoader />}>
+                  <SubscriptionsPage />
                 </Suspense>
               }
             />
             <Route
-              path="relays"
+              path="/liked-videos"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <RelaysSettingsPage />
+                <Suspense fallback={<LikedVideosPageLoader />}>
+                  <LikedVideosPage />
                 </Suspense>
               }
             />
             <Route
-              path="blossom"
+              path="/v/:nevent"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <BlossomSettingsPage />
+                <Suspense fallback={<VideoPageLoader />}>
+                  <VideoPage />
                 </Suspense>
               }
             />
             <Route
-              path="caching"
+              path="/v/:nevent"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <CachingSettingsPage />
+                <Suspense fallback={<VideoPageLoader />}>
+                  <VideoPage />
                 </Suspense>
               }
             />
             <Route
-              path="cache"
+              path="/author/:nprofile"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <CacheSettingsPage />
+                <Suspense fallback={<AuthorPageLoader />}>
+                  <AuthorPage />
                 </Suspense>
               }
             />
             <Route
-              path="missing-videos"
+              path="/author/:nprofile/:tab"
               element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <MissingVideosSettingsPage />
+                <Suspense fallback={<AuthorPageLoader />}>
+                  <AuthorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/p/:nprofile"
+              element={
+                <Suspense fallback={<AuthorPageLoader />}>
+                  <AuthorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/p/:nprofile/:tab"
+              element={
+                <Suspense fallback={<AuthorPageLoader />}>
+                  <AuthorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/tag/:tag"
+              element={
+                <Suspense fallback={<HashtagPageLoader />}>
+                  <HashtagPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/category/:category"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <CategoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                instance ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <Suspense fallback={<SearchPageLoader />}>
+                    <SearchPage />
+                  </Suspense>
+                )
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <Suspense fallback={<HistoryPageLoader />}>
+                  <HistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/library"
+              element={
+                <Suspense fallback={<LibraryPageLoader />}>
+                  <LibraryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/video-notes"
+              element={
+                <Suspense fallback={<VideoNotesPageLoader />}>
+                  <VideoNotesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/upload"
+              element={
+                <Suspense fallback={<UploadPageLoader />}>
+                  <UploadPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/playlists"
+              element={
+                <Suspense fallback={<GlobalPlaylistsPageLoader />}>
+                  <PlaylistPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/playlist/:nip19"
+              element={
+                <Suspense fallback={<SinglePlaylistPageLoader />}>
+                  <SinglePlaylistPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <Suspense fallback={<SettingsMenuLoader />}>
+                  <SettingsLayout />
+                </Suspense>
+              }
+            >
+              {/* New category routes: presets has its own component, :category is the generic handler */}
+              <Route
+                path="presets"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <PresetsSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path=":category"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <CategorySettingsPage />
+                  </Suspense>
+                }
+              />
+              {/* Legacy redirect routes (kept for backward compatibility) */}
+              <Route
+                path="general"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <GeneralSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="relays"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <RelaysSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="blossom"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <BlossomSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="caching"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <CachingSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="cache"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <CacheSettingsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="missing-videos"
+                element={
+                  <Suspense fallback={<SettingsContentLoader />}>
+                    <MissingVideosSettingsPage />
+                  </Suspense>
+                }
+              />
+            </Route>
+            <Route
+              path={instance ? '/admin/*' : '/admin'}
+              element={
+                instance ? (
+                  <ServerAdmin />
+                ) : (
+                  <Suspense fallback={<AdminPageLoader />}>
+                    <AdminPage />
+                  </Suspense>
+                )
+              }
+            />
+            <Route
+              path="/mp4-debug"
+              element={
+                <Suspense fallback={<Mp4DebugPageLoader />}>
+                  <Mp4DebugPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/nostr-handler"
+              element={
+                <Suspense fallback={null}>
+                  <NostrHandlerPage />
                 </Suspense>
               }
             />
           </Route>
           <Route
-            path={instance ? '/admin/*' : '/admin'}
+            path="/desktop/player/:nevent"
             element={
-              instance ? (
-                <ServerAdmin />
-              ) : (
-                <Suspense fallback={<AdminPageLoader />}>
-                  <AdminPage />
-                </Suspense>
-              )
-            }
-          />
-          <Route
-            path="/mp4-debug"
-            element={
-              <Suspense fallback={<Mp4DebugPageLoader />}>
-                <Mp4DebugPage />
+              <Suspense fallback={<VideoPageLoader />}>
+                <DesktopPlayerPage />
               </Suspense>
             }
           />
           <Route
-            path="/nostr-handler"
+            path="/desktop/auth"
             element={
-              <Suspense fallback={null}>
-                <NostrHandlerPage />
+              <Suspense fallback={<PageLoader />}>
+                <DesktopAuthPage />
               </Suspense>
             }
           />
-        </Route>
-        <Route
-          path="/desktop/player/:nevent"
-          element={
-            <Suspense fallback={<VideoPageLoader />}>
-              <DesktopPlayerPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/desktop/auth"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <DesktopAuthPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/short/:nevent"
-          element={
-            <Suspense fallback={<ShortsVideoPageLoader />}>
-              <ShortsVideoPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <Suspense fallback={<NotFoundLoader />}>
-              <NotFound />
-            </Suspense>
-          }
-        />
-      </Routes>
+          <Route
+            path="/short/:nevent"
+            element={
+              <Suspense fallback={<ShortsVideoPageLoader />}>
+                <ShortsVideoPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<NotFoundLoader />}>
+                <NotFound />
+              </Suspense>
+            }
+          />
+        </Routes>
+      </RelayBrowsingProvider>
     </BrowserRouter>
   )
 }

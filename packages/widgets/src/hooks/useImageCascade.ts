@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNostubeHostSafe } from '../host'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
-import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
+import { isAllowedEventMediaUrl, isMeshMediaUrl } from '@nostube/core/media-url-policy'
 import {
   presetThumbnailUrl,
   insecureThumbnailUrl,
@@ -91,10 +91,15 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const authorPubkey = input.authorPubkey ?? undefined
   const raceEnabled = input.race ?? true
 
-  // blob:/data: URLs are local-only and never reach imgproxy in either mode.
+  // blob:/data: URLs are local-only and never reach imgproxy in either mode; neither do FIPS
+  // mesh hosts, which only this browser's device can resolve.
+  // ponytail: a personal imgproxy on a FIPS node could reach them too; route them there if needed.
   // Instance build: the image proxy is fixed off, so nothing is proxyable (raw images only).
   const isProxyable = (url: string) =>
-    !getInstanceConfig() && !url.startsWith('blob:') && !url.startsWith('data:')
+    !getInstanceConfig() &&
+    !url.startsWith('blob:') &&
+    !url.startsWith('data:') &&
+    !isMeshMediaUrl(url)
 
   const proxiedImage = useMemo(() => {
     if (!rawImage || !isProxyable(rawImage)) return rawImage

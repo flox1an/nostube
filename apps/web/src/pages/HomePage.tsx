@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useReadRelays, useContinueWatching, useSubscriptionsVideos } from '@/hooks'
-import { useAppContext } from '@/hooks/useAppContext'
+import { useRelayBrowsing } from '@/contexts/RelayBrowsingContext'
+import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
 import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getPublishDate } from '@nostube/core/video-event'
@@ -62,7 +63,7 @@ function HomeShelf({
 
 export function HomePage() {
   const { t } = useTranslation()
-  const { relayOverride, setRelayOverride } = useAppContext()
+  const { source } = useRelayBrowsing()
 
   useEffect(() => {
     document.title = pageTitle(`${t('navigation.home')}`)
@@ -72,15 +73,8 @@ export function HomePage() {
   }, [t])
   const relays = useReadRelays()
 
-  const effectiveRelays = useMemo(
-    () => (relayOverride ? [relayOverride] : relays),
-    [relayOverride, relays]
-  )
+  const effectiveRelays = source?.relays ?? relays
 
-  // Keep current effectiveRelays in a ref so the loader useMemo doesn't need
-  // it as a dep. This prevents a timeline reset when the user's NIP-65 relay
-  // list loads asynchronously after mount (UserRelaySync) — which would
-  // otherwise cause a visible double-load on every hard page refresh.
   const effectiveRelaysRef = useRef(effectiveRelays)
   effectiveRelaysRef.current = effectiveRelays
 
@@ -88,12 +82,11 @@ export function HomePage() {
     () =>
       videoTypeLoader(
         'videos',
-        relayOverride ? [relayOverride] : effectiveRelaysRef.current,
-        relayOverride ? { skipCache: true } : undefined
+        source ? source.relays : effectiveRelaysRef.current,
+        source ? { skipCache: true } : undefined
       ),
-    // effectiveRelaysRef.current intentionally excluded: relay additions from
-    // NIP-65 sync after mount must not reset an in-progress timeline load.
-    [relayOverride]
+    // Keep the default feed stable while account metadata loads.
+    [source]
   )
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('videos') }), [])
@@ -109,7 +102,7 @@ export function HomePage() {
     phase,
   } = useInfiniteTimeline(loader, effectiveRelays, {
     filters: timelineFilter,
-    directMode: !!relayOverride,
+    directMode: !!source,
   })
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
@@ -144,45 +137,48 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-560 px-3 sm:px-2">
       <div className="-mx-3 sm:mx-0">
-        <CategoryButtonBar
-          selectedRelay={relayOverride}
-          onRelayChange={setRelayOverride}
-          afterRelay={filterButton}
-        />
+        <CategoryButtonBar afterRelay={filterButton} />
       </div>
-      <HomeShelf
-        title={t('pages.home.continueWatching', 'Continue watching')}
-        viewAllTo="/history"
-        videos={continueWatchingVideos}
-      />
-      <HomeShelf
-        title={t('pages.home.fromSubscriptions', 'From creators you follow')}
-        viewAllTo="/subscriptions"
-        videos={subscriptionsVideos.slice(0, 12)}
-      />
+      <RelayBrowseStatus />
+      {!source && (
+        <HomeShelf
+          title={t('pages.home.continueWatching', 'Continue watching')}
+          viewAllTo="/history"
+          videos={continueWatchingVideos}
+        />
+      )}
+      {!source && (
+        <HomeShelf
+          title={t('pages.home.fromSubscriptions', 'From creators you follow')}
+          viewAllTo="/subscriptions"
+          videos={subscriptionsVideos.slice(0, 12)}
+        />
+      )}
       <div className="mb-4 flex items-baseline justify-between px-1 sm:mb-5 sm:px-2">
         <h1 className="text-[22px] font-semibold tracking-tight sm:text-2xl">
           {t('pages.home.latestVideos')}
         </h1>
         <span className="text-sm text-muted-foreground">{t('pages.home.newestFirst')}</span>
       </div>
-      <div className="-mx-3 sm:mx-0">
-        <VideoTimelinePage
-          videos={filteredVideos}
-          loading={loading || trustPending}
-          exhausted={exhausted}
-          prefetching={isPrefetching}
-          subscriptionActive={subscriptionActive}
-          onLoadMore={loadMore}
-          onPrefetch={prefetchMore}
-          layoutMode="horizontal"
-          emptyMessage={t('pages.home.noVideos')}
-          exhaustedMessage={t('pages.home.noMore')}
-          error={phase === 'error'}
-          className=""
-          fullBleed
-        />
-      </div>
+      {(!source || source.relays.length > 0) && (
+        <div className="-mx-3 sm:mx-0">
+          <VideoTimelinePage
+            videos={filteredVideos}
+            loading={loading || trustPending}
+            exhausted={exhausted}
+            prefetching={isPrefetching}
+            subscriptionActive={subscriptionActive}
+            onLoadMore={loadMore}
+            onPrefetch={prefetchMore}
+            layoutMode="horizontal"
+            emptyMessage={t('pages.home.noVideos')}
+            exhaustedMessage={t('pages.home.noMore')}
+            error={phase === 'error'}
+            className=""
+            fullBleed
+          />
+        </div>
+      )}
     </div>
   )
 }

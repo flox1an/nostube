@@ -118,6 +118,15 @@ describe('useImageCascade', () => {
     expect(probeSrc()).toBe('blob:https://nostube.example/1234')
   })
 
+  it('loads FIPS mesh thumbnails directly because the public proxy cannot resolve them', () => {
+    const meshUrl = 'http://npub1abc.fips/thumb.jpg'
+    render(<Probe src={meshUrl} videoUrl="http://npub1abc.fips/clip.mp4" />)
+    expect(probeStage()).toBe('raw')
+    expect(probeSrc()).toBe(meshUrl)
+    triggerError()
+    expect(probeStage()).toBe('exhausted')
+  })
+
   it('shows nothing once every candidate is exhausted', () => {
     render(<Probe src={null} />)
     expect(probeStage()).toBe('exhausted')

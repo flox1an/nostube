@@ -1,40 +1,19 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@nostube/widgets/components/button'
 import { TAG_CATEGORIES } from '@/lib/tag-categories'
-import { Check, ChevronDown, Globe, Plus, Wifi } from 'lucide-react'
-import { cn, normalizeRelayUrl } from '@/lib/utils'
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
+import { cn } from '@/lib/utils'
+import { RelaySourcePicker } from '@/components/RelaySourcePicker'
 import { useEffect, useRef, useState } from 'react'
-import { useAppContext } from '@/hooks/useAppContext'
-import { useTranslation } from 'react-i18next'
 
 interface CategoryButtonBarProps {
   activeSlug?: string
-  selectedRelay: string | null
-  onRelayChange: (relay: string | null) => void
   /** Optional element rendered right after the relay dropdown */
   afterRelay?: React.ReactNode
 }
 
-export function CategoryButtonBar({
-  activeSlug,
-  selectedRelay,
-  onRelayChange,
-  afterRelay,
-}: CategoryButtonBarProps) {
+export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarProps) {
   const navigate = useNavigate()
-  const { t } = useTranslation()
-  const { config, updateConfig } = useAppContext()
-  const [open, setOpen] = useState(false)
-  const [inputValue, setInputValue] = useState('')
+  const { search } = useLocation()
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
 
@@ -57,65 +36,6 @@ export function CategoryButtonBar({
     }
   }, [])
 
-  // Get read relays from config
-  const readRelays = config.relays.filter(r => r.tags.includes('read'))
-
-  // Display label for the current selection
-  const displayLabel = selectedRelay
-    ? selectedRelay.replace(/^wss?:\/\//, '').replace(/\/$/, '')
-    : t('relaySource.global')
-
-  const isValidRelayInput = (value: string): boolean => {
-    const trimmed = value.trim()
-    if (!trimmed) return false
-    const normalized = normalizeRelayUrl(trimmed)
-    try {
-      new URL(normalized)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const handleSelectRelay = (relayUrl: string | null) => {
-    onRelayChange(relayUrl)
-    setOpen(false)
-    setInputValue('')
-  }
-
-  const handleAddCustomRelay = (url: string) => {
-    const normalized = normalizeRelayUrl(url)
-    // Persist the custom relay as a read relay in app config
-    const alreadyExists = config.relays.some(r => r.url === normalized)
-    if (!alreadyExists) {
-      const shortName = normalized.replace(/^wss?:\/\//, '').replace(/\/$/, '')
-      updateConfig(current => ({
-        ...current,
-        relays: [...current.relays, { url: normalized, name: shortName, tags: ['read'] }],
-      }))
-    }
-    onRelayChange(normalized)
-    setOpen(false)
-    setInputValue('')
-  }
-
-  // Filter relays by input value (manual filtering since we use shouldFilter={false})
-  const filteredRelays = readRelays.filter(
-    relay =>
-      !inputValue ||
-      relay.name?.toLowerCase().includes(inputValue.toLowerCase()) ||
-      relay.url.toLowerCase().includes(inputValue.toLowerCase())
-  )
-
-  // Show "Global" when no filter or when it matches
-  const showGlobal = !inputValue || 'global'.includes(inputValue.toLowerCase())
-
-  // Show custom relay option when input is a valid URL not already in the list
-  const showCustom =
-    inputValue &&
-    isValidRelayInput(inputValue) &&
-    !readRelays.some(r => r.url === normalizeRelayUrl(inputValue))
-
   return (
     <div className="sticky top-0 z-40 mb-4 flex w-full items-center bg-background/92 backdrop-blur-md supports-[backdrop-filter]:bg-background/82">
       <div
@@ -137,7 +57,7 @@ export function CategoryButtonBar({
                 ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
                 : 'border border-transparent bg-secondary/70 hover:border-border'
             )}
-            onClick={() => navigate('/')}
+            onClick={() => navigate({ pathname: '/', search })}
           >
             All
           </Button>
@@ -155,7 +75,7 @@ export function CategoryButtonBar({
                     ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
                     : 'border border-transparent bg-secondary/70 hover:border-border'
                 )}
-                onClick={() => navigate(`/category/${category.slug}`)}
+                onClick={() => navigate({ pathname: `/category/${category.slug}`, search })}
               >
                 {category.name}
               </Button>
@@ -166,116 +86,7 @@ export function CategoryButtonBar({
 
       {/* Source + safety: compact on mobile so categories stay the primary row. */}
       <div className="flex shrink-0 items-center gap-1 py-2 pr-4 pl-1 sm:gap-2 sm:pr-2">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              role="combobox"
-              aria-expanded={open}
-              aria-label={t('relaySource.selectorLabel', {
-                source: displayLabel,
-                defaultValue: 'Content source: {{source}}',
-              })}
-              className="relative h-10 shrink-0 rounded-full px-3 gap-1.5 border-border/80 bg-card shadow-none after:absolute after:inset-x-0 after:-inset-y-0.5"
-            >
-              {selectedRelay ? <Wifi className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-              {/* Default "Global" collapses to its icon on mobile; a chosen relay stays named. */}
-              <span
-                className={cn(
-                  'max-w-24 truncate sm:max-w-32',
-                  !selectedRelay && 'hidden sm:inline'
-                )}
-              >
-                {displayLabel}
-              </span>
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[280px] p-0" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder={t('relaySource.searchPlaceholder')}
-                value={inputValue}
-                onValueChange={setInputValue}
-              />
-              <CommandList>
-                {showGlobal && (
-                  <CommandGroup>
-                    <CommandItem
-                      value="global"
-                      onSelect={() => handleSelectRelay(null)}
-                      className="cursor-pointer"
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          selectedRelay === null ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      <Globe className="mr-2 h-4 w-4" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{t('relaySource.global')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {t('relaySource.globalDescription', { count: readRelays.length })}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  </CommandGroup>
-                )}
-                {(filteredRelays.length > 0 || showCustom) && (
-                  <>
-                    {showGlobal && <CommandSeparator />}
-                    <CommandGroup>
-                      {filteredRelays.map(relay => {
-                        const shortUrl = relay.url.replace(/^wss?:\/\//, '').replace(/\/$/, '')
-                        return (
-                          <CommandItem
-                            key={relay.url}
-                            value={relay.url}
-                            onSelect={() => handleSelectRelay(relay.url)}
-                            className="cursor-pointer"
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                selectedRelay === relay.url ? 'opacity-100' : 'opacity-0'
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-medium">{relay.name || shortUrl}</span>
-                              <span className="text-xs text-muted-foreground">{relay.url}</span>
-                            </div>
-                          </CommandItem>
-                        )
-                      })}
-                      {showCustom && (
-                        <CommandItem
-                          value={normalizeRelayUrl(inputValue)}
-                          onSelect={() => handleAddCustomRelay(inputValue)}
-                          className="cursor-pointer border-t"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          <div className="flex flex-col">
-                            <span className="font-medium">{t('relaySource.addCustom')}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {normalizeRelayUrl(inputValue)}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      )}
-                    </CommandGroup>
-                  </>
-                )}
-                {!showGlobal && filteredRelays.length === 0 && !showCustom && (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    {inputValue ? t('relaySource.invalidUrl') : t('relaySource.noResults')}
-                  </div>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <RelaySourcePicker />
 
         {afterRelay}
       </div>

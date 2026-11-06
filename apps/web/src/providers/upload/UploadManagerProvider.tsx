@@ -87,17 +87,16 @@ function normalizeDraftBlobPlacement(draft: UploadDraft): UploadDraft {
 
 export function UploadManagerProvider({ children }: UploadManagerProviderProps) {
   const { user } = useCurrentUser()
-  const { config, relayOverride } = useAppContext()
+  const { config } = useAppContext()
   const { addNotification } = useUploadNotifications()
 
-  // Combined relays for DVM tracking (read + write + override + defaults)
+  // Browsing a source must not widen DVM tracking or publishing destinations.
   const dvmRelays = useMemo(() => {
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
     const combined = new Set([...readRelays, ...writeRelays, ...DEFAULT_RELAYS])
-    if (relayOverride) combined.add(relayOverride)
     return Array.from(combined)
-  }, [config.relays, relayOverride])
+  }, [config.relays])
 
   // Stable ref so callbacks always use current relays without extra deps
   const dvmRelaysRef = useRef(dvmRelays)

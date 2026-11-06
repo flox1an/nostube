@@ -142,6 +142,16 @@ The search service and the image proxy are not part of this repository. To run t
 
 To ship different defaults on your own deployment, edit the files in the table and rebuild. Read more about storage servers in [Blossom storage](/media/blossom).
 
+### Browsing relays and relay sets
+
+The source control above Home, Shorts and category feeds offers **My feed** (your configured read relays), individual relays, locally saved sources and public Nostr relay lists. **Add relay…** opens a hostname or WebSocket URL without changing your default read/write relays. **Save on this device** keeps a shortcut in this browser for the current account; anonymous shortcuts remain separate. Manage these under **Settings → Network → Browse sources**.
+
+**Open relay set…** accepts a `naddr` or `nostr:naddr` address of a NIP-51 kind `30002` set. Signed-in users also see public favourite relays and referenced sets from kind `10012`, plus their own sets. A preview lists members before **Open Relay Set** connects to them. Private entries are not decrypted; sets with invalid/disallowed members, no public members or more than 12 relays are rejected explicitly. Sets and favourites are read-only: Nostube does not sign changes to these lists.
+
+Selected sources are in the page URL, survive reload, and remain selected when navigating between Home, Shorts and categories. Shared set links require confirmation before browsing member relays. Passive lookups use configured discovery relays; explicitly previewing a pasted address can additionally contact its relay hints and its author's outbox. Trust, moderation and content filters still apply. Independent Home shelves are hidden while browsing a particular source.
+
+**Settings → Network → Relays** controls device-local default reading/publishing. Account NIP-65 relays are merged into this configuration when loaded; editing this screen does not publish a new NIP-65 event. Adding a relay here is an explicit read-and-write action. The per-row **Browse** action only changes the feed. Instance relay restrictions and browser secure-connection rules continue to apply.
+
 ### Relays for subscriptions
 
 The **Subscriptions** feed and the home page's **From creators you follow** shelf also query the followed creators' NIP-65 outbox relays (kind 10002, `write` or unmarked `r` tags). Videos and shorts are fetched together. Creators sharing an outbox relay are grouped into one author-filtered request per page; each relay keeps its own pagination cursor. Configured read relays remain available for creators whose relay lists cannot be found and for mirrored videos.

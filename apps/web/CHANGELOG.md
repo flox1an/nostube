@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.58] - 2026-11-06
+
+### Changed
+
+- Relay browsing (#21): explicit relay entry, shareable/reloadable sources across Home, Shorts and categories, and public NIP-51 relay sets/favourites (kinds 30002/10012). Sets preview their members before connecting. Browse sources can be saved per account on this device and managed under Network settings without changing default read/write relays, NIP-65 or DVM tracking. Settings now explains its device-local routing and validates new relay URLs. The source card is compact: the relay count toggles the member list, and its actions sit beside the title (wrapping on narrow screens).
+- Videos and thumbnails from FIPS mesh hosts (`http://<npub>.fips`) are allowed by the web app and embed CSP. Thumbnails skip the public image proxy, and mesh hosts are never sent to remote caching servers as source hints. Playback requires a device on the FIPS mesh; HTTPS pages may block HTTP media as mixed content.
+
 ## [0.2.57] - 2026-11-05
 
 ### Fixed

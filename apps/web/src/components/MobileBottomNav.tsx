@@ -65,7 +65,7 @@ export function MobileBottomNav() {
       <Sheet open={isMoreOpen} onOpenChange={setIsMoreOpen}>
         <SheetContent
           side="bottom"
-          className="px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:hidden"
+          className="max-h-[calc(100dvh-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:hidden"
         >
           <SheetHeader className="mb-2 pr-12">
             <SheetTitle className="text-lg">{t('navigation.more')}</SheetTitle>

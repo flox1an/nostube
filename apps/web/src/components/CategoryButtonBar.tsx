@@ -58,6 +58,7 @@ export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarP
                 : 'border border-transparent bg-secondary/70 hover:border-border'
             )}
             onClick={() => navigate({ pathname: '/', search })}
+            aria-pressed={!activeSlug}
           >
             All
           </Button>
@@ -76,6 +77,7 @@ export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarP
                     : 'border border-transparent bg-secondary/70 hover:border-border'
                 )}
                 onClick={() => navigate({ pathname: `/category/${category.slug}`, search })}
+                aria-pressed={isActive}
               >
                 {category.name}
               </Button>

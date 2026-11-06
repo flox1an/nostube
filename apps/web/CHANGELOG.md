@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.59] - 2026-11-06
+
+### Changed
+
+- The mobile More menu scrolls on short screens, and category selections expose their state to assistive technologies.
+- Android install dialogs can show mobile app screenshots from the PWA manifest.
+
 ## [0.2.58] - 2026-11-06
 
 ### Changed

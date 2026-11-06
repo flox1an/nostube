@@ -28,6 +28,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/pwa-home.webp",
+      "sizes": "780x1688",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Browse videos by category"
+    },
+    {
+      "src": "/pwa-shorts.webp",
+      "sizes": "780x1688",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Watch short videos"
+    }
+  ],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

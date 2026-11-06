@@ -24,6 +24,8 @@ On a phone, the app has a bottom navigation and a vertical shorts player:
 
 </div>
 
+On supported Android browsers, the installation dialog also shows previews of the mobile app.
+
 Uploading starts from a file or a URL. The video is converted in the browser if needed, then
 uploaded to your Blossom servers ([Uploads and transcoding](/media/uploads)):
 

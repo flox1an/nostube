@@ -32,6 +32,7 @@ export function Header({ transparent = false }: HeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const isShortPlayer = location.pathname.startsWith('/short/')
   const isVideoPage =
     location.pathname.startsWith('/v/') ||
     location.pathname.startsWith('/video/') ||
@@ -93,7 +94,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`mobile-header sticky top-0 z-50 border-b transition-[translate,transform,background-color,border-color] duration-300 motion-reduce:transition-none focus-within:translate-y-0 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
+      className={`mobile-header sticky top-0 z-50 ${isShortPlayer ? 'border-b md:border-b-0' : 'border-b'} transition-[translate,transform,background-color,border-color] duration-300 motion-reduce:transition-none focus-within:translate-y-0 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
         shouldHide && !transparent ? '-translate-y-full' : 'translate-y-0'
       }`}
       style={{
@@ -148,9 +149,11 @@ export function Header({ transparent = false }: HeaderProps) {
           </Link>
         </div>
 
-        <div className="header-desktop-search flex-1 max-w-2xl mx-4 hidden md:block">
-          {!isSearchOff() && <GlobalSearchBar syncWithSearchParam />}
-        </div>
+        {!isShortPlayer && (
+          <div className="header-desktop-search flex-1 max-w-2xl mx-4 hidden md:block">
+            {!isSearchOff() && <GlobalSearchBar syncWithSearchParam />}
+          </div>
+        )}
 
         <div className="flex items-center gap-1 lg:gap-2">
           {!isSearchOff() && (
@@ -165,7 +168,7 @@ export function Header({ transparent = false }: HeaderProps) {
             </Button>
           )}
 
-          {user && (
+          {user && !isShortPlayer && (
             <Link to="/upload" className="hidden lg:block">
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />

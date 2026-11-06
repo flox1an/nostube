@@ -142,7 +142,7 @@ function SignedInComposer({ stream, relays, onSent, settings }: ComposerProps) {
           value={draft}
           aria-label={t('liveChat.messageLabel', 'Chat message')}
           placeholder={t('liveChat.placeholder', 'Send a message')}
-          className="max-h-[min(10rem,25dvh)] min-h-11 resize-none overflow-y-auto focus-visible:ring-inset focus-visible:ring-offset-0"
+          className="max-h-[min(10rem,25dvh)] min-h-11 resize-none overflow-y-auto py-[11px] focus-visible:ring-inset focus-visible:ring-offset-0"
           onChange={event => setDraft(event.target.value)}
           onKeyDown={event => {
             // Plain Enter is a newline; Ctrl/Cmd+Enter sends. Never mid-IME composition.

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The desktop shorts player hides the header divider, search box and upload button.
+- The live chat composer vertically centers single-line text while still growing for longer messages.
+- The chat appearance preview reflects the trust badge toggle.
+
 ## [0.2.64] - 2026-11-06
 
 ### Changed

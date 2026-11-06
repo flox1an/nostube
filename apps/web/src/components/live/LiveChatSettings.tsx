@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Settings2 } from 'lucide-react'
+import { ExternalLink, Settings2, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -17,6 +17,7 @@ import {
 } from '@nostube/widgets/components/dropdown-menu'
 import { Switch } from '@nostube/widgets/components/switch'
 import { DEFAULT_CHAT_APPEARANCE, type ChatAppearance } from './chat-appearance'
+import { getTrustColor } from '@/lib/trust-score-colors'
 
 export function LiveChatSettings({
   naddr,
@@ -77,6 +78,13 @@ export function LiveChatSettings({
             style={{ fontSize: appearance.fontSize }}
           >
             {appearance.timestamps && <span className="mr-2 text-muted-foreground">12:34</span>}
+            {appearance.showTrust && (
+              <Shield
+                role="img"
+                aria-label={t('liveChat.showTrust', 'Show trust badges')}
+                className={`mr-1 inline h-3 w-3 align-[-1px] ${getTrustColor(0.8).colorClass}`}
+              />
+            )}
             <span
               className={
                 appearance.coloredNames

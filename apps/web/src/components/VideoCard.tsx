@@ -43,6 +43,8 @@ interface VideoCardProps {
    * the first visible row would otherwise wait for the render storm to end.
    */
   priority?: boolean
+  /** Mounted virtual-grid neighbour: start the small preview without racing the raw source. */
+  preload?: boolean
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -55,6 +57,7 @@ export const VideoCard = React.memo(function VideoCard({
   videoIndex,
   fullBleed = false,
   priority = false,
+  preload = false,
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -223,7 +226,7 @@ export const VideoCard = React.memo(function VideoCard({
                   ))}
                 <img
                   src={cascade.src ?? ''}
-                  loading={priority ? 'eager' : 'lazy'}
+                  loading={priority || preload ? 'eager' : 'lazy'}
                   fetchPriority={priority ? 'high' : 'auto'}
                   decoding="async"
                   alt={video.title}

@@ -479,6 +479,7 @@ export function VideoGrid({
                   videoIndex={isShort ? row.start + j : undefined}
                   fullBleed={fullBleed}
                   priority={row.priority}
+                  preload
                 />
               ))}
             </div>

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The chat appearance preview reflects the trust badge toggle.
 - The startup trust baseline stores shared validator names once and expands only requested authors, preserving immediate trust filtering and complete score details.
 - Feed updates reuse parsed cards even when equivalent relay hints arrive in a new array; moderation still applies immediately.
+- Virtual grids begin loading preview-sized thumbnails for their three upcoming mounted rows, without racing off-screen images against full-size originals.
 
 ## [0.2.64] - 2026-11-06
 

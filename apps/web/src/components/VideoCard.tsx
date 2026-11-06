@@ -105,9 +105,11 @@ export const VideoCard = React.memo(function VideoCard({
 
   // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
   const blurhashPlaceholder = useMemo(() => {
-    const blurhash = video.thumbnailVariants?.[0]?.blurhash
+    const blurhash =
+      video.thumbnailVariants?.find(variant => variant.blurhash)?.blurhash ??
+      video.videoVariants?.find(variant => variant.blurhash)?.blurhash
     return blurHashToDataURL(blurhash)
-  }, [video.thumbnailVariants])
+  }, [video.thumbnailVariants, video.videoVariants])
 
   // Determine video type for URL building
   const videoType = video.type === 'shorts' ? 'shorts' : 'video'
@@ -201,9 +203,9 @@ export const VideoCard = React.memo(function VideoCard({
               )
             ) : (
               <>
-                {/* Placeholder while the current candidate loads: last loaded image, blurhash, skeleton */}
-                {!thumbnailLoaded &&
-                  (heldThumbnail ? (
+                {/* Keep the blurhash underneath the thumbnail throughout its fade-in. */}
+                {(!thumbnailLoaded || blurhashPlaceholder) &&
+                  (!thumbnailLoaded && heldThumbnail ? (
                     <img
                       src={heldThumbnail}
                       alt=""
@@ -233,7 +235,7 @@ export const VideoCard = React.memo(function VideoCard({
                   referrerPolicy="no-referrer"
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
-                    'absolute inset-0 w-full h-full transition-opacity duration-300',
+                    'absolute inset-0 w-full h-full transition-opacity duration-300 motion-reduce:transition-none',
                     containThumbnail ? 'object-contain' : 'object-cover',
                     !thumbnailLoaded && 'opacity-0'
                   )}

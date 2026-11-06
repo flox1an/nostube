@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.66] - 2026-11-06
+
+### Fixed
+
+- Portrait and landscape video cards also use video-level blurhashes while thumbnails load and keep the placeholder behind the thumbnail throughout its fade-in.
+
 ## [0.2.65] - 2026-11-06
 
 ### Changed

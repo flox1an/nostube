@@ -24,9 +24,15 @@ interface TrustBadgeDisplayProps {
   pubkey: string
   score: number | null | undefined
   className?: string
+  compact?: boolean
 }
 
-export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDisplayProps) {
+export function TrustBadgeDisplay({
+  pubkey,
+  score,
+  className,
+  compact = false,
+}: TrustBadgeDisplayProps) {
   const { t } = useTranslation()
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -36,9 +42,8 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
   const trust = getTrustColor(score)
   const isLowTrust = trust.label === 'Low'
 
-  // Routine identity rows only surface an icon; the raw number is opt-in via
-  // the dialog. Low trust is a meaningful warning, so it stays labeled — not
-  // just color-coded — to remain prominent for color-blind viewers too.
+  // Label low trust outside compact rows so the warning is not only color-coded.
+  // Compact chat badges retain the full label in their accessible name and tooltip.
   const tooltipText = isLowTrust
     ? t('trust.badge.tooltipLow', {
         percentage,
@@ -68,7 +73,7 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
             )}
           >
             <Shield className="h-3 w-3" />
-            {isLowTrust && t('trust.labels.low', { defaultValue: 'Low' })}
+            {isLowTrust && !compact && t('trust.labels.low', { defaultValue: 'Low' })}
           </button>
         </TooltipTrigger>
         <TooltipContent>{tooltipText}</TooltipContent>

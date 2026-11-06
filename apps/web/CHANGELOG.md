@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.60] - 2026-11-06
+
+### Changed
+
+- Home shelves align mixed-format videos, showing portrait thumbnails without cropping.
+- Live chat uses compact trust badges; the trust level remains available in the tooltip and to screen readers.
+
+### Fixed
+
+- Live progress uses the stream's live position instead of jumping with each new HLS segment, while retaining DVR seeking.
+
 ## [0.2.59] - 2026-11-06
 
 ### Changed

@@ -101,6 +101,7 @@ function StreamViewer({
                 urls={urls}
                 textTracks={[]}
                 mime={mime}
+                isLive={stream.status === 'live'}
                 poster={stream.image}
                 autoPlay
                 loop={false}

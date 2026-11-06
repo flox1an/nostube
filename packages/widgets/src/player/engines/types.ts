@@ -54,4 +54,6 @@ export interface PlaybackEngine {
   activeQualityLabel: string | null
   /** Select a quality by {@link QualityOption.id}. */
   selectQuality: (id: number) => void
+  getLiveSyncPosition?: () => number | null
+  getLiveEdgeTolerance?: () => number
 }

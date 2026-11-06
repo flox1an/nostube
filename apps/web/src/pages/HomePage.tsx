@@ -44,17 +44,15 @@ function HomeShelf({
       {/* Bleeds to the screen edge on mobile so the next card peeks. */}
       <div className="-mx-3 overflow-x-auto scrollbar-hide px-3 sm:mx-0 sm:px-0">
         <div className="flex gap-2 min-w-max">
-          {videos.map(video => {
-            const format = video.type === 'shorts' ? 'vertical' : 'horizontal'
-            return (
-              <div
-                key={video.id}
-                className={`video-shelf-item shrink-0 ${format === 'vertical' ? 'video-shelf-short' : ''}`}
-              >
-                <VideoCard video={video} format={format} />
-              </div>
-            )
-          })}
+          {videos.map(video => (
+            <div key={video.id} className="video-shelf-item shrink-0">
+              <VideoCard
+                video={video}
+                format="horizontal"
+                containThumbnail={video.type === 'shorts'}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </section>

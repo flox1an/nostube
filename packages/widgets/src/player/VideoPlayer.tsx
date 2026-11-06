@@ -38,6 +38,7 @@ interface VideoPlayerProps {
   textTracks: TextTrack[]
   mime: string
   mediaType?: 'video' | 'audio'
+  isLive?: boolean
   poster?: string
   posterHash?: string
   posterPreset?: PresetThumbnailPreset
@@ -71,6 +72,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
   mime,
   mediaType,
+  isLive = false,
   poster,
   posterHash,
   posterPreset = 'feed-preview-v1',
@@ -1247,6 +1249,19 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           isVisible={controlsVisibleForRender}
           isPlaying={playerState.isPlaying}
           currentTime={playerState.currentTime}
+          isLive={isLive}
+          seekableStart={
+            isLive && videoRef.current?.seekable.length ? videoRef.current.seekable.start(0) : 0
+          }
+          liveEnd={
+            isLive
+              ? (engine.getLiveSyncPosition?.() ??
+                (videoRef.current?.seekable.length
+                  ? videoRef.current.seekable.end(videoRef.current.seekable.length - 1)
+                  : undefined))
+              : undefined
+          }
+          liveEdgeTolerance={isLive ? engine.getLiveEdgeTolerance?.() : undefined}
           duration={playerState.duration}
           bufferedPercentage={playerState.bufferedPercentage}
           onPlay={handlePlay}

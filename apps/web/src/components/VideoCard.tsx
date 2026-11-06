@@ -28,6 +28,7 @@ interface VideoCardProps {
   video: VideoEvent
   hideAuthor?: boolean
   format: 'vertical' | 'horizontal' | 'square'
+  containThumbnail?: boolean
   playlistParam?: string
   allVideos?: VideoEvent[] // Full list of videos for shorts navigation
   videoIndex?: number // Index of this video in the allVideos array
@@ -48,6 +49,7 @@ export const VideoCard = React.memo(function VideoCard({
   video,
   hideAuthor,
   format = 'square',
+  containThumbnail = false,
   playlistParam,
   allVideos,
   videoIndex,
@@ -205,7 +207,8 @@ export const VideoCard = React.memo(function VideoCard({
                       aria-hidden="true"
                       className={cn(
                         showNsfwWarning ? 'blur-lg' : '',
-                        'absolute inset-0 w-full h-full object-cover'
+                        'absolute inset-0 w-full h-full',
+                        containThumbnail ? 'object-contain' : 'object-cover'
                       )}
                     />
                   ) : blurhashPlaceholder ? (
@@ -227,7 +230,8 @@ export const VideoCard = React.memo(function VideoCard({
                   referrerPolicy="no-referrer"
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
-                    'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
+                    'absolute inset-0 w-full h-full transition-opacity duration-300',
+                    containThumbnail ? 'object-contain' : 'object-cover',
                     !thumbnailLoaded && 'opacity-0'
                   )}
                   onError={cascade.onError}

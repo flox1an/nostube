@@ -17,6 +17,8 @@ vi.mock('../hooks/useHls', () => ({
     setLevel: vi.fn(),
     isLoading: false,
     error: null,
+    getLiveSyncPosition: () => null,
+    getLiveEdgeTolerance: () => 0,
   })),
 }))
 vi.mock('../hooks/useDash', () => ({
@@ -93,6 +95,8 @@ describe('usePlaybackEngine adapters', () => {
       setLevel: vi.fn(),
       isLoading: false,
       error: null,
+      getLiveSyncPosition: () => null,
+      getLiveEdgeTolerance: () => 0,
     })
   })
 
@@ -139,6 +143,8 @@ describe('usePlaybackEngine adapters', () => {
       setLevel: vi.fn(),
       isLoading: false,
       error: null,
+      getLiveSyncPosition: () => null,
+      getLiveEdgeTolerance: () => 0,
     })
     const ladder = new PlaybackUrlLadder({
       urls: ['https://cdn/x.m3u8'],

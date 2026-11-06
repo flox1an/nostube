@@ -28,6 +28,10 @@ interface ControlBarProps {
   isPlaying: boolean
   currentTime: number
   duration: number
+  isLive?: boolean
+  seekableStart?: number
+  liveEnd?: number
+  liveEdgeTolerance?: number
   bufferedPercentage: number
 
   // Playback controls
@@ -96,6 +100,10 @@ export const ControlBar = memo(function ControlBar({
   isPlaying,
   currentTime,
   duration,
+  isLive = false,
+  seekableStart = 0,
+  liveEnd,
+  liveEdgeTolerance,
   bufferedPercentage,
   onPlay,
   onPause,
@@ -165,6 +173,10 @@ export const ControlBar = memo(function ControlBar({
         <ProgressBar
           currentTime={currentTime}
           duration={duration}
+          isLive={isLive}
+          seekableStart={seekableStart}
+          liveEnd={liveEnd}
+          liveEdgeTolerance={liveEdgeTolerance}
           bufferedPercentage={bufferedPercentage}
           onSeek={onSeek}
           onSeekingChange={onSeekingChange}
@@ -193,7 +205,11 @@ export const ControlBar = memo(function ControlBar({
             onVolumeChange={onVolumeChange}
             onToggleMute={onToggleMute}
           />
-          <TimeDisplay currentTime={currentTime} duration={duration} />
+          {isLive ? (
+            <span className="px-2 text-sm font-semibold text-white">{t('richText.live')}</span>
+          ) : (
+            <TimeDisplay currentTime={currentTime} duration={duration} />
+          )}
         </div>
 
         {/* Right controls */}

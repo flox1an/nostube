@@ -99,7 +99,12 @@ function ChatMessage({
         </time>
       )}
       {appearance.showTrust && (
-        <TrustBadgeDisplay pubkey={event.pubkey} score={trust} className="mr-1 align-[-1px]" />
+        <TrustBadgeDisplay
+          pubkey={event.pubkey}
+          score={trust}
+          compact
+          className="mr-1 align-[-1px]"
+        />
       )}
       <Link
         to={profilePath}

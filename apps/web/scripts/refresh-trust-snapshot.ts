@@ -17,6 +17,7 @@ import { NostrClientTransport, PrivateKeySigner, ApplesauceRelayPool } from '@co
 import { SimplePool, generateSecretKey, nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
 import { extractTrustScoresFromPayload, type TrustScoreResult } from '../src/nostr/contextvm'
+import { packTrustSnapshot } from '../src/lib/trust-snapshot'
 
 const SERVER_NPUB = 'npub16w48u4xvtlp7ywgfsjlud74tlgdfx9s33scdlafmgl3a40n9tthsu6ty8g'
 const CONTEXTVM_RELAYS = [
@@ -158,7 +159,7 @@ async function main() {
     throw new Error('Relatr returned no full scores; keeping existing snapshot')
   writeFileSync(
     OUT,
-    JSON.stringify({ generatedAt: new Date().toISOString(), serverPubkey, scores }) + '\n'
+    JSON.stringify(packTrustSnapshot(new Date().toISOString(), serverPubkey, scores)) + '\n'
   )
   console.error(`wrote ${scores.length} scores (source ${scores[0].sourcePubkey}) to ${OUT}`)
 }

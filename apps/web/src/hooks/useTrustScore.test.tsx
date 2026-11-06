@@ -15,7 +15,14 @@ vi.mock('@/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: undefi
 vi.mock('@nostube/core/instance-config', () => ({
   getInstanceConfig: () => (service.instance ? {} : null),
 }))
-vi.mock('@/data/trust-scores.json', () => ({ default: { scores: service.snapshot } }))
+vi.mock('@/data/trust-scores.json', async () => {
+  const { packTrustSnapshot } = await import('@/lib/trust-snapshot')
+  return {
+    get default() {
+      return packTrustSnapshot('', '', service.snapshot)
+    },
+  }
+})
 vi.mock('@/nostr/contextvm', async importOriginal => ({
   ...(await importOriginal<typeof ContextVM>()),
   connectContextVM: service.connect,

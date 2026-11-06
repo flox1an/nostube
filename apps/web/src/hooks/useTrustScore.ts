@@ -35,6 +35,7 @@ import {
 } from '@/lib/trust-score-db'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import trustSnapshot from '@/data/trust-scores.json'
+import { unpackTrustScore, type TrustSnapshot } from '@/lib/trust-snapshot'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (fast synchronous reads, backed by IndexedDB)
@@ -42,13 +43,16 @@ import trustSnapshot from '@/data/trust-scores.json'
 
 const memCache = new Map<string, TrustScoreResult>()
 // Bundled baseline is never written to IDB or considered fresh.
-const bundledScores = new Map<string, TrustScoreResult>(
-  trustSnapshot.scores.map(result => [result.targetPubkey, result])
-)
+const bundledScores = new Map<string, TrustScoreResult>()
 
 function getMemCached(pubkey: string): TrustScoreResult | null {
   if (getInstanceConfig()) return null
-  return memCache.get(pubkey) ?? bundledScores.get(pubkey) ?? null
+  const cached = memCache.get(pubkey) ?? bundledScores.get(pubkey)
+  if (cached) return cached
+  // JSON imports widen tuples to arrays; refresh-trust-snapshot writes this codec's layout.
+  const baseline = unpackTrustScore(trustSnapshot as unknown as TrustSnapshot, pubkey)
+  if (baseline) bundledScores.set(pubkey, baseline)
+  return baseline
 }
 
 function computedTime(result: TrustScoreResult): number {

@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
-import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { useCurrentUser, useAppContext } from '@/hooks'
+import { useCurrentUser } from '@/hooks'
 import { useWalletContext as useWallet } from '@/contexts/WalletContext'
-import { useUserRelays } from '@/hooks/useUserRelays'
+import { useInteractionRelays } from '@/hooks/useUserRelays'
 import { getRecipientZapEndpoint, createZapRequest, requestInvoice } from '@nostube/core/zap-utils'
 import { toast } from 'sonner'
 
@@ -32,27 +31,14 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   const [needsWallet, setNeedsWallet] = useState(false)
   const { user } = useCurrentUser()
   const { isConnected, payInvoice, defaultZapAmount } = useWallet()
-  const { config } = useAppContext()
   const eventStore = useEventStore()
-
-  // Get author's inbox relays (NIP-65)
-  const authorRelays = useUserRelays(authorPubkey)
+  const interactionRelays = useInteractionRelays()
 
   // Get video event from store to access seenRelays (only if eventId is provided)
   const videoEvent = useMemo(() => {
     if (!eventId) return undefined
     return eventStore.getEvent(eventId)
   }, [eventStore, eventId])
-
-  // Compute target relays: video seenRelays + author inbox + user write relays
-  // NIP-65: Use both write and read relays for mentions (where author checks)
-  const targetRelays = useMemo(() => {
-    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-    const videoSeenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
-    const authorInboxRelays =
-      authorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
-    return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
-  }, [config.relays, videoEvent, authorRelays.data])
 
   const zap = useCallback(
     async (params?: ZapParams): Promise<boolean> => {
@@ -91,14 +77,13 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           return false
         }
 
-        // Create zap request template with target relays
-        // (includes video seenRelays + author inbox + user write relays)
+        // Zap receipt relays: video seenRelays + author inbox + user write relays.
         // Pass the actual event so d tag is preserved for addressable events
         const zapRequestTemplate = createZapRequest({
           recipientPubkey: authorPubkey,
           amount,
           comment,
-          relays: targetRelays,
+          relays: await interactionRelays(authorPubkey, videoEvent),
           event: videoEvent || undefined,
           timestamp,
         })
@@ -127,7 +112,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
       isConnected,
       eventStore,
       authorPubkey,
-      targetRelays,
+      interactionRelays,
       videoEvent,
       payInvoice,
       defaultZapAmount,
@@ -168,7 +153,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           recipientPubkey: authorPubkey,
           amount,
           comment,
-          relays: targetRelays,
+          relays: await interactionRelays(authorPubkey, videoEvent),
           event: videoEvent || undefined,
           timestamp,
         })
@@ -186,7 +171,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
         return null
       }
     },
-    [user, eventStore, authorPubkey, targetRelays, videoEvent]
+    [user, eventStore, authorPubkey, interactionRelays, videoEvent]
   )
 
   return {

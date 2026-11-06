@@ -153,7 +153,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
             <AlertDialogAction
               className={buttonVariants({
                 variant: 'outline',
-                className: 'h-auto min-h-11 whitespace-normal py-2',
+                className: 'h-auto min-h-11 whitespace-normal py-2 text-foreground',
               })}
               onClick={() => {
                 localStorage.setItem('trustFilter.warningShown', 'true')

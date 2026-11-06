@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import { AuthDialog as SharedAuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
 import i18n from '@/i18n/config'
@@ -26,7 +26,7 @@ vi.mock('@/hooks', async () => ({
   useUserReactionStatus: () => ({ hasUpvoted: false, hasDownvoted: false }),
   useProfile: () => ({}),
 }))
-vi.mock('@/hooks/useUserRelays', () => ({ useUserRelays: () => ({ data: [] }) }))
+vi.mock('@/hooks/useUserRelays', () => ({ useInteractionRelays: () => async () => [] }))
 vi.mock('@/hooks/useEventStats', () => ({ isUpvoteReaction: () => false }))
 vi.mock('applesauce-react/hooks', () => ({
   useEventStore: () => ({ getEvent: () => undefined, add: state.add }),
@@ -75,7 +75,7 @@ describe('guest reaction onboarding', () => {
 
   it.each(['inline', 'vertical'] as const)(
     'requires another deliberate upvote after signing in in the %s layout',
-    layout => {
+    async layout => {
       const { rerender } = render(wrap(<VideoReactionButtons {...props} layout={layout} />))
       fireEvent.click(screen.getByRole('button', { name: 'Sign in to upvote' }))
       expect(screen.getByRole('dialog')).toHaveTextContent('tap the thumbs-up again')
@@ -89,8 +89,10 @@ describe('guest reaction onboarding', () => {
       rerender(wrap(<VideoReactionButtons {...props} layout={layout} />))
       expect(state.publish).not.toHaveBeenCalled()
       fireEvent.click(screen.getByRole('button', { name: 'Upvote, 0 reactions' }))
-      expect(state.publish).toHaveBeenCalledWith(
-        expect.objectContaining({ event: expect.objectContaining({ kind: 7, content: '+' }) })
+      await waitFor(() =>
+        expect(state.publish).toHaveBeenCalledWith(
+          expect.objectContaining({ event: expect.objectContaining({ kind: 7, content: '+' }) })
+        )
       )
     }
   )
@@ -99,7 +101,7 @@ describe('guest reaction onboarding', () => {
     'never queues a guest payment in the %s layout',
     layout => {
       const { rerender } = render(wrap(<ZapButton {...props} layout={layout} />))
-      const zap = screen.getByRole('button', { name: 'Sign in to support this creator with a zap' })
+      const zap = screen.getByRole('button', { name: i18n.t('auth.context.signInZap') })
       fireEvent.pointerDown(zap)
       fireEvent.pointerUp(zap)
       fireEvent.click(zap)

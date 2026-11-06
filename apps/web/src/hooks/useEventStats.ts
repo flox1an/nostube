@@ -1,10 +1,10 @@
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useEventStore, use$, useEventModel } from 'applesauce-react/hooks'
 import { ReactionsModel } from 'applesauce-common/models'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { getInvoiceAmount } from '@nostube/core/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'
-import { createReactionsLoader } from 'applesauce-loaders/loaders'
+import { loadInteractions } from '@/nostr/interaction-loader'
 import { combineRelays } from '@/lib/utils'
 import { getReplacedEventIds } from '@nostube/core/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
@@ -138,7 +138,7 @@ export function useEventStats({
   const { pool, config } = useAppContext()
 
   // Get cached value immediately
-  const [cachedValue] = useState(() => getCached(eventId))
+  const cachedValue = useMemo(() => getCached(eventId), [eventId])
 
   // Build address for addressable events (kinds 34235, 34236)
   const isAddressable = kind === 34235 || kind === 34236
@@ -292,26 +292,15 @@ export function useEventStats({
   const rawReactions = useEventModel(ReactionsModel, [targetEvent])
   const reactions = useMemo(() => rawReactions || [], [rawReactions])
 
-  // Load reactions from relays
+  const reactionRelaysKey = JSON.stringify([...new Set(relaysToUse)].sort())
   useEffect(() => {
-    if (!eventId || relaysToUse.length === 0) return
-
-    const loader = createReactionsLoader(pool, {
-      eventStore,
-      useSeenRelays: true,
-    })
-
-    const subscription = loader(targetEvent, relaysToUse).subscribe({
-      next: () => {
-        // Reactions are automatically added to EventStore
-      },
-      error: err => {
-        console.error('Error loading reactions:', err)
-      },
-    })
-
-    return () => subscription.unsubscribe()
-  }, [eventId, pool, eventStore, targetEvent, relaysToUse])
+    if (!eventId) return
+    void loadInteractions(pool, eventStore, JSON.parse(reactionRelaysKey), {
+      eventIds: allEventIds,
+      address: videoAddress ?? undefined,
+      comments: false,
+    }).catch(error => console.error('Error loading reactions:', error))
+  }, [eventId, allEventIds, videoAddress, pool, eventStore, reactionRelaysKey])
 
   // Calculate reaction counts (deduplicated by user)
   const { upvoteCount, downvoteCount } = useMemo(() => {

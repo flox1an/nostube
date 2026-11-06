@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useAppContext } from './useAppContext'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import type { Filter } from 'nostr-tools'
+import { loadInteractions } from '@/nostr/interaction-loader'
 
 interface UsePreloadVideoDataOptions {
   videoId?: string
@@ -13,81 +12,21 @@ interface UsePreloadVideoDataOptions {
   enabled: boolean
 }
 
-/**
- * Hook to preload reactions and comments for a video.
- * Combines filters into a single REQ for efficiency.
- * Adds all events to EventStore for instant availability.
- */
+/** Preload comments and reactions together; nearby slides and statistics share the same read. */
 export function usePreloadVideoData({
   videoId,
   videoAddress,
-  authorPubkey,
-  kind,
   relays,
   enabled,
 }: UsePreloadVideoDataOptions) {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
-
+  const relaysKey = JSON.stringify([...new Set(relays)].sort())
   useEffect(() => {
-    if (!enabled || (!videoId && !videoAddress) || relays.length === 0) {
-      return
-    }
-
-    // Combine reactions and comments filters into one request.
-    // naddr pages can start comment preloading before the event ID is known by using #a/#A.
-    const filters: Filter[] = []
-
-    if (videoId) {
-      filters.push(
-        // Reactions (kind 7) and regular comments (kind 1) with #e tag
-        {
-          kinds: [1, 7],
-          '#e': [videoId],
-          limit: 100,
-        },
-        // Video comments (kind 1111) with #E tag
-        {
-          kinds: [1111],
-          '#E': [videoId],
-          limit: 100,
-        }
-      )
-    }
-
-    if (videoAddress) {
-      filters.push(
-        {
-          kinds: [1],
-          '#a': [videoAddress],
-          limit: 100,
-        },
-        {
-          kinds: [1111],
-          '#A': [videoAddress],
-          limit: 100,
-        }
-      )
-    }
-
-    // Load reactions and comments from relays
-    const loader = createTimelineLoader(pool, relays, filters, {
-      eventStore,
-      limit: 100,
-    })
-
-    const subscription = loader().subscribe({
-      next: event => {
-        // Events are automatically added to EventStore by the loader
-        eventStore.add(event)
-      },
-      error: err => {
-        console.error('Error preloading video data:', err)
-      },
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [videoId, videoAddress, authorPubkey, kind, relays, enabled, eventStore, pool])
+    if (!enabled || (!videoId && !videoAddress)) return
+    void loadInteractions(pool, eventStore, JSON.parse(relaysKey), {
+      eventIds: videoId ? [videoId] : [],
+      address: videoAddress,
+    }).catch(error => console.error('Error preloading video data:', error))
+  }, [videoId, videoAddress, relaysKey, enabled, eventStore, pool])
 }

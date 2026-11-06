@@ -117,7 +117,7 @@ export { useAppContext, useAppContextSafe } from './useAppContext'
 export { useNostrPublish } from './useNostrPublish'
 export { useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
 export { useReadRelays } from './useReadRelays'
-export { useUserRelays } from './useUserRelays'
+export { useUserRelays, useInteractionRelays } from './useUserRelays'
 
 // ============================================================================
 // UI UTILITIES

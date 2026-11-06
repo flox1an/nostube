@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import {
   useCurrentUser,
   useNostrPublish,
-  useAppContext,
   useEventStats,
   useUserReactionStatus,
   useProfile,
@@ -17,9 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@nostube/widgets/components/tooltip'
-import { useUserRelays } from '@/hooks/useUserRelays'
+import { useInteractionRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
-import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ThumbsUp, ThumbsDown, Zap, Loader2, Heart } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
@@ -50,7 +48,7 @@ export const CommentReactions = memo(function CommentReactions({
   const [authAction, setAuthAction] = useState<'upvote' | 'downvote' | 'zap' | null>(null)
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
-  const { config } = useAppContext()
+  const interactionRelays = useInteractionRelays()
   const { publish, isPending } = useNostrPublish()
   const videoAuthorProfile = useProfile(
     videoAuthorPubkey ? { pubkey: videoAuthorPubkey } : undefined
@@ -62,9 +60,6 @@ export const CommentReactions = memo(function CommentReactions({
 
   // Get the event from the store for seenRelays
   const storedEvent = useMemo(() => eventStore.getEvent(eventId), [eventStore, eventId])
-
-  // Get author's inbox relays (NIP-65)
-  const authorRelays = useUserRelays(authorPubkey)
 
   // Use unified event stats hook (cached + background fetch)
   const { totalSats, upvoteCount, downvoteCount, reactions } = useEventStats({
@@ -92,16 +87,6 @@ export const CommentReactions = memo(function CommentReactions({
 
   const isOwnContent = user?.pubkey === authorPubkey
 
-  // Compute target relays: comment seenRelays + author inbox + user write relays
-  // NIP-65: Use both write and read relays for mentions (where author checks)
-  const targetRelays = useMemo(() => {
-    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-    const commentSeenRelays = storedEvent ? Array.from(getSeenRelays(storedEvent) || []) : []
-    const authorInboxRelays =
-      authorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
-    return Array.from(new Set([...commentSeenRelays, ...authorInboxRelays, ...writeRelays]))
-  }, [config.relays, storedEvent, authorRelays.data])
-
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
@@ -119,6 +104,7 @@ export const CommentReactions = memo(function CommentReactions({
     if (hasReacted) return
 
     try {
+      const relays = await interactionRelays(authorPubkey, storedEvent)
       const signedEvent = await publish({
         event: {
           kind: 7,
@@ -130,14 +116,24 @@ export const CommentReactions = memo(function CommentReactions({
             ['k', `${kind}`],
           ],
         },
-        relays: targetRelays,
+        relays,
       })
 
       eventStore.add(signedEvent)
     } catch (error) {
       console.error('Failed to publish upvote:', error)
     }
-  }, [user, hasReacted, publish, eventId, authorPubkey, kind, targetRelays, eventStore])
+  }, [
+    user,
+    hasReacted,
+    publish,
+    eventId,
+    authorPubkey,
+    kind,
+    interactionRelays,
+    storedEvent,
+    eventStore,
+  ])
 
   const handleDownvote = useCallback(async () => {
     if (!user) {
@@ -147,6 +143,7 @@ export const CommentReactions = memo(function CommentReactions({
     if (hasReacted) return
 
     try {
+      const relays = await interactionRelays(authorPubkey, storedEvent)
       const signedEvent = await publish({
         event: {
           kind: 7,
@@ -158,14 +155,24 @@ export const CommentReactions = memo(function CommentReactions({
             ['k', `${kind}`],
           ],
         },
-        relays: targetRelays,
+        relays,
       })
 
       eventStore.add(signedEvent)
     } catch (error) {
       console.error('Failed to publish downvote:', error)
     }
-  }, [user, hasReacted, publish, eventId, authorPubkey, kind, targetRelays, eventStore])
+  }, [
+    user,
+    hasReacted,
+    publish,
+    eventId,
+    authorPubkey,
+    kind,
+    interactionRelays,
+    storedEvent,
+    eventStore,
+  ])
 
   const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
@@ -227,7 +234,7 @@ export const CommentReactions = memo(function CommentReactions({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-11 min-w-11 px-2 text-xs text-muted-foreground hover:text-foreground lg:h-7 lg:min-w-0"
           onClick={handleUpvote}
           disabled={isPending || hasReacted}
           aria-label={user ? 'Upvote' : t('auth.context.signInUpvote')}
@@ -240,7 +247,7 @@ export const CommentReactions = memo(function CommentReactions({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-11 min-w-11 px-2 text-xs text-muted-foreground hover:text-foreground lg:h-7 lg:min-w-0"
           onClick={handleDownvote}
           disabled={isPending || hasReacted}
           aria-label={user ? 'Downvote' : t('auth.context.signInDownvote')}
@@ -256,7 +263,7 @@ export const CommentReactions = memo(function CommentReactions({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                className="h-11 min-w-11 px-2 text-xs text-muted-foreground hover:text-foreground lg:h-7 lg:min-w-0"
                 onClick={handleQuickZap}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}

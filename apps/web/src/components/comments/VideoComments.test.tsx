@@ -32,7 +32,7 @@ vi.mock('@/hooks', () => ({
   useProfile: () => undefined,
   useNostrPublish: () => ({ publish: vi.fn() }),
   useAppContext: () => ({ pool, config: { relays: [] } }),
-  useUserRelays: () => ({}),
+  useInteractionRelays: () => async () => [],
   useReportedPubkeys: () => undefined,
 }))
 vi.mock('@/components/auth/AuthDialog', () => ({ AuthDialog: () => null }))

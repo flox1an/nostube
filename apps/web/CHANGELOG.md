@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.67] - 2026-11-06
+
 ### Fixed
 
 - Dark-mode primary controls and destructive buttons use readable foreground/background color pairs.
@@ -19,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Search filters explain that changes apply immediately, announce matching results among loaded videos, and keep a visible return-to-results action while options scroll.
 - The first trust-filter warning uses plain-language caution and recommends keeping protection on, with that choice emphasized and focused by default.
 - The default dark accent uses a deeper, more saturated violet for primary controls, links and focus rings while retaining readable dark button text.
+- Comment reactions, Shorts actions and zap controls use consistent 44px mobile touch targets; guest zap labels match across watch pages, Shorts and comments.
+- Interaction reads batch comments and reactions by relay, preserve event-ID and address references, and reuse successful results (including empty results) for 30 seconds.
+- Author relay discovery for reactions, zaps and comments runs on the publishing action instead of each viewed video; the first action waits for the author's destinations before publishing.
+- The secondary trust-filter confirmation explicitly uses the page foreground color, keeping its label readable in dark mode.
 
 ## [0.2.66] - 2026-11-06
 

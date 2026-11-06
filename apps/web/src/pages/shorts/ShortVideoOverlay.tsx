@@ -74,7 +74,10 @@ export const ShortVideoOverlay = memo(
     const [muted, setMuted] = useState(isMuted)
     useEffect(() => setMuted(isMuted), [isMuted])
     const { user } = useCurrentUser()
-    const commentCount = useCommentCount({ videoId: video.id })
+    const videoAddress = video.identifier
+      ? `${video.kind}:${video.pubkey}:${video.identifier}`
+      : undefined
+    const commentCount = useCommentCount({ videoId: video.id, videoAddress })
 
     const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
 
@@ -114,6 +117,7 @@ export const ShortVideoOverlay = memo(
     // Preload reactions and comments for the current video.
     usePreloadVideoData({
       videoId: video.id,
+      videoAddress,
       authorPubkey: video.pubkey,
       kind: video.kind,
       relays: reactionRelays,

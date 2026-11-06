@@ -158,6 +158,12 @@ Selected sources are in the page URL, survive reload, and remain selected when n
 
 **Settings → Network → Relays** controls device-local default reading/publishing. Account NIP-65 relays are merged into this configuration when loaded; editing this screen does not publish a new NIP-65 event. Adding a relay here is an explicit read-and-write action. The per-row **Browse** action only changes the feed. Instance relay restrictions and browser secure-connection rules continue to apply.
 
+### Interaction loading
+
+Nearby Shorts slides preload comments and reactions together. Concurrent reads for the same relay and event reference share a request; completed reads, including empty results, are reused for 30 seconds. Failed reads can be retried immediately. A new relay or reference is still queried, and both event-ID and address references remain supported.
+
+This can delay newly received reactions during a quick return to a recently viewed slide. Locally published events still update the event store immediately. Zap receipts keep their live subscriptions. Author NIP-65 relay lists used only for publishing are looked up when the viewer submits a reaction, comment or zap, not while browsing. The first action may wait for discovery to finish; cached author lists and the configured/seen-relay fallback remain available.
+
 ### Relays for subscriptions
 
 The **Subscriptions** feed and the home page's **From creators you follow** shelf also query the followed creators' NIP-65 outbox relays (kind 10002, `write` or unmarked `r` tags). Videos and shorts are fetched together. Creators sharing an outbox relay are grouped into one author-filtered request per page; each relay keeps its own pagination cursor. Configured read relays remain available for creators whose relay lists cannot be found and for mirrored videos.

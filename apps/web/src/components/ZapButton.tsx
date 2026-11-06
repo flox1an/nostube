@@ -166,16 +166,14 @@ export const ZapButton = memo(function ZapButton({
               <Button
                 variant="secondary"
                 size={size}
-                className={cn(className)}
+                className={cn('min-h-11 min-w-11', className)}
                 onClick={handleQuickZap}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
                 disabled={isZapping}
-                aria-label={
-                  user ? 'Support creator with a zap' : 'Sign in to support this creator with a zap'
-                }
+                aria-label={user ? 'Support creator with a zap' : t('auth.context.signInZap')}
               >
                 {isZapping ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -190,7 +188,7 @@ export const ZapButton = memo(function ZapButton({
               <span>
                 {user
                   ? `Support with ${defaultZapAmount} sats — long press for more options`
-                  : 'Sign in to support this creator with a zap'}
+                  : t('auth.context.signInZap')}
               </span>
             </TooltipContent>
           </Tooltip>
@@ -237,16 +235,14 @@ export const ZapButton = memo(function ZapButton({
               <Button
                 variant="secondary"
                 size="icon"
-                className="rounded-full"
+                className="min-h-11 min-w-11 rounded-full"
                 onClick={handleQuickZap}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
                 disabled={isZapping}
-                aria-label={
-                  user ? 'Support creator with a zap' : 'Sign in to support this creator with a zap'
-                }
+                aria-label={user ? 'Support creator with a zap' : t('auth.context.signInZap')}
               >
                 {isZapping ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -259,7 +255,7 @@ export const ZapButton = memo(function ZapButton({
               <span>
                 {user
                   ? `Support with ${defaultZapAmount} sats — long press for more options`
-                  : 'Sign in to support this creator with a zap'}
+                  : t('auth.context.signInZap')}
               </span>
             </TooltipContent>
           </Tooltip>

@@ -16,7 +16,7 @@ import {
   useNostrPublish,
   useProfile,
   useAppContext,
-  useUserRelays,
+  useInteractionRelays,
   useReportedPubkeys,
 } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
@@ -117,19 +117,15 @@ export function VideoComments({
     return () => clearTimeout(timer)
   }, [highlightedCommentId, setHighlightedCommentId])
 
-  // Get inbox relays for the video author (NIP-65)
-  const videoAuthorRelays = useUserRelays(authorPubkey)
-
-  // Get inbox relays for the comment author being replied to
-  const replyToAuthorRelays = useUserRelays(replyTo?.pubkey)
+  // Publish destinations (NIP-65 author relays load only on submit)
+  const interactionRelays = useInteractionRelays()
 
   // Get relays where the video event is hosted (from seenRelays)
-  const videoEventRelays = useMemo(() => {
-    const videoEvent = eventStore.getEvent(videoId)
-    if (!videoEvent) return []
-    const seenRelays = getSeenRelays(videoEvent)
-    return seenRelays ? Array.from(seenRelays) : []
-  }, [eventStore, videoId])
+  const videoEvent = useMemo(() => eventStore.getEvent(videoId), [eventStore, videoId])
+  const videoEventRelays = useMemo(
+    () => (videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []),
+    [videoEvent]
+  )
 
   // Use provided relays or fallback to app config read relays. Keyed by content: callers hand
   // in a new array whenever relay sources re-emit, and each new identity restarts the request
@@ -242,20 +238,11 @@ export function VideoComments({
     e.preventDefault()
     if (!user || !newComment.trim()) return
 
-    // Get user's write relays
+    // Get user's write relays (for the relay hint)
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
-    // Get video author's inbox relays (NIP-65: use both write and read relays for mentions)
-    // Write relays = where author publishes (inbox)
-    // Read relays = where author checks for mentions
-    const videoAuthorInbox =
-      videoAuthorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
-
-    // Combine relays: video event relays + video author's inbox + user's write relays
-    // Use Set to remove duplicates
-    const targetRelays = Array.from(
-      new Set([...videoEventRelays, ...videoAuthorInbox, ...writeRelays])
-    )
+    // Video event relays + video author's NIP-65 relays (read: mentions) + user's write relays
+    const targetRelays = await interactionRelays(authorPubkey, videoEvent)
 
     // Get a relay hint (use first video event relay or first write relay)
     const relayHint = videoEventRelays[0] || writeRelays[0] || readRelays[0] || ''
@@ -293,14 +280,8 @@ export function VideoComments({
     e.preventDefault()
     if (!user || !replyContent.trim() || !replyTo) return
 
-    // Get user's write relays
+    // Get user's write relays (for the relay hint)
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-
-    // Get comment author's inbox relays (NIP-65: use both write and read relays for mentions)
-    // Write relays = where author publishes (inbox)
-    // Read relays = where author checks for mentions
-    const replyToAuthorInbox =
-      replyToAuthorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
 
     // Get relays where the parent comment is hosted
     const parentCommentEvent = eventStore.getEvent(replyTo.id)
@@ -308,11 +289,8 @@ export function VideoComments({
       ? Array.from(getSeenRelays(parentCommentEvent) || [])
       : []
 
-    // Combine relays: parent comment relays + comment author's inbox + user's write relays
-    // Use Set to remove duplicates
-    const targetRelays = Array.from(
-      new Set([...parentCommentRelays, ...replyToAuthorInbox, ...writeRelays])
-    )
+    // Parent comment relays + comment author's NIP-65 relays + user's write relays
+    const targetRelays = await interactionRelays(replyTo.pubkey, parentCommentEvent)
 
     // Get a relay hint (use first parent comment relay or first write relay)
     const relayHint = parentCommentRelays[0] || writeRelays[0] || readRelays[0] || ''

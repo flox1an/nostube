@@ -3,15 +3,13 @@ import { useTranslation } from 'react-i18next'
 import {
   useCurrentUser,
   useNostrPublish,
-  useAppContext,
   useEventStats,
   useUserReactionStatus,
   useProfile,
   useDialogState,
 } from '@/hooks'
-import { useUserRelays } from '@/hooks/useUserRelays'
+import { useInteractionRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
-import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
@@ -43,7 +41,7 @@ export function VideoReactionButtons({
   const { t } = useTranslation()
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
-  const { config } = useAppContext()
+  const interactionRelays = useInteractionRelays()
   const { publish, isPending } = useNostrPublish()
 
   const isOwnContent = user?.pubkey === authorPubkey
@@ -51,9 +49,6 @@ export function VideoReactionButtons({
   // Get author's profile to check for lightning address
   const authorProfile = useProfile({ pubkey: authorPubkey })
   const hasLightningAddress = Boolean(authorProfile?.lud16 || authorProfile?.lud06)
-
-  // Get author's inbox relays (NIP-65)
-  const authorRelays = useUserRelays(authorPubkey)
 
   // Use unified event stats hook (cached + background fetch)
   const { upvoteCount, downvoteCount, reactions } = useEventStats({
@@ -88,16 +83,6 @@ export function VideoReactionButtons({
     // Fall back to regular event
     return eventStore.getEvent(eventId)
   }, [eventStore, eventId, kind, authorPubkey])
-
-  // Compute target relays: video seenRelays + author inbox + user write relays
-  // NIP-65: Use both write and read relays for mentions (where author checks)
-  const targetRelays = useMemo(() => {
-    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-    const videoSeenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
-    const authorInboxRelays =
-      authorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
-    return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
-  }, [config.relays, videoEvent, authorRelays.data])
 
   // Build address for addressable events (kinds 34235, 34236)
   const isAddressable = kind === 34235 || kind === 34236
@@ -135,6 +120,7 @@ export function VideoReactionButtons({
     if (hasReacted) return
 
     try {
+      const relays = await interactionRelays(authorPubkey, videoEvent)
       const signedEvent = await publish({
         event: {
           kind: 7,
@@ -142,7 +128,7 @@ export function VideoReactionButtons({
           content: '+',
           tags: buildReactionTags(),
         },
-        relays: targetRelays,
+        relays,
       })
 
       // Add the reaction to the event store immediately for instant feedback
@@ -160,6 +146,7 @@ export function VideoReactionButtons({
     if (hasReacted) return
 
     try {
+      const relays = await interactionRelays(authorPubkey, videoEvent)
       const signedEvent = await publish({
         event: {
           kind: 7,
@@ -167,7 +154,7 @@ export function VideoReactionButtons({
           content: '-',
           tags: buildReactionTags(),
         },
-        relays: targetRelays,
+        relays,
       })
 
       // Add the reaction to the event store immediately for instant feedback
@@ -250,7 +237,7 @@ export function VideoReactionButtons({
         <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
-            className={cn('px-4', className)}
+            className={cn('min-h-11 min-w-11 px-4', className)}
             onClick={handleUpvote}
             disabled={isPending || hasReacted}
             aria-label={user ? `Upvote, ${upvoteCount} reactions` : t('auth.context.signInUpvote')}
@@ -274,7 +261,7 @@ export function VideoReactionButtons({
         <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
-            className={cn('px-4', className)}
+            className={cn('min-h-11 min-w-11 px-4', className)}
             onClick={handleDownvote}
             disabled={isPending || hasReacted}
             aria-label={
@@ -382,7 +369,7 @@ export function VideoReactionButtons({
         <Button
           variant="secondary"
           size="icon"
-          className="rounded-full"
+          className="min-h-11 min-w-11 rounded-full"
           onClick={handleUpvote}
           disabled={isPending || hasReacted}
           aria-label={user ? `Upvote, ${upvoteCount} reactions` : t('auth.context.signInUpvote')}
@@ -409,7 +396,7 @@ export function VideoReactionButtons({
         <Button
           variant="secondary"
           size="icon"
-          className="rounded-full"
+          className="min-h-11 min-w-11 rounded-full"
           onClick={handleDownvote}
           disabled={isPending || hasReacted}
           aria-label={

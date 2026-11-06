@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.62] - 2026-11-06
+
+### Changed
+
+- The mobile bottom navigation slides away while scrolling down and returns when scrolling up.
+
 ## [0.2.61] - 2026-11-06
 
 ### Changed

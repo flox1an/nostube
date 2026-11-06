@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useNavigationMenu } from '@/hooks/useNavigationMenu'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { useInstallState } from '@nostube/widgets/hooks/useInstallState'
 import { getInstallMode, promptInstall } from '@nostube/widgets/install-prompt'
 import { IosInstallDialog } from '@nostube/widgets/components/InstallHint'
@@ -16,11 +17,16 @@ export function MobileBottomNav() {
   const { mobilePrimaryItems, mobileMoreItems } = useNavigationMenu()
   const installMode = getInstallMode(useInstallState())
   const [isIosInstallOpen, setIsIosInstallOpen] = useState(false)
+  const { scrollDirection, isAtTop } = useScrollDirection()
+  const shouldHide = scrollDirection === 'down' && !isAtTop && !isMoreOpen && !isIosInstallOpen
 
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 flex items-start justify-around border-t border-border bg-background/95 backdrop-blur-sm lg:hidden"
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-50 flex items-start justify-around border-t border-border bg-background/95 backdrop-blur-sm transition-transform duration-300 motion-reduce:transition-none focus-within:translate-y-0 lg:hidden',
+          shouldHide ? 'translate-y-full' : 'translate-y-0'
+        )}
         style={{
           height: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',

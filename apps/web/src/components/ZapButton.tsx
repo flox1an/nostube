@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
 import { Zap, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,6 +8,7 @@ import { useZap } from '@/hooks/useZap'
 import { useWalletContext as useWallet } from '@/contexts/WalletContext'
 import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
+import { AuthDialog } from './auth/AuthDialog'
 import {
   Tooltip,
   TooltipContent,
@@ -42,6 +44,8 @@ export const ZapButton = memo(function ZapButton({
   showZapText = false,
   size,
 }: ZapButtonProps) {
+  const { t } = useTranslation()
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [showZapDialog, setShowZapDialog] = useState(false)
   const [capturedTimestamp, setCapturedTimestamp] = useState<number | undefined>(undefined)
   const longPressTimer = useRef<number | null>(null)
@@ -77,10 +81,9 @@ export const ZapButton = memo(function ZapButton({
     if (isLongPress.current) return
     // Capture timestamp at the moment of click
     setCapturedTimestamp(currentTime)
-    // Logged-out tap surfaces the sign-in prompt directly — never open the
-    // payment dialog before there's an account to zap from.
+    // Authentication never queues a payment; the user chooses to zap again after signing in.
     if (!user) {
-      await zap()
+      setAuthDialogOpen(true)
       return
     }
     // If wallet is connected, do quick zap; otherwise open dialog for QR code
@@ -132,6 +135,15 @@ export const ZapButton = memo(function ZapButton({
       return zap({ amount, comment, timestamp })
     },
     [zap]
+  )
+
+  const signInDialog = (
+    <AuthDialog
+      isOpen={authDialogOpen}
+      onClose={() => setAuthDialogOpen(false)}
+      onLogin={() => setAuthDialogOpen(false)}
+      description={t('auth.context.zap')}
+    />
   )
 
   if (layout === 'inline') {
@@ -198,6 +210,7 @@ export const ZapButton = memo(function ZapButton({
           generateInvoice={generateInvoice}
           timestamp={capturedTimestamp}
         />
+        {signInDialog}
       </>
     )
   }
@@ -268,6 +281,7 @@ export const ZapButton = memo(function ZapButton({
         generateInvoice={generateInvoice}
         timestamp={capturedTimestamp}
       />
+      {signInDialog}
     </>
   )
 })

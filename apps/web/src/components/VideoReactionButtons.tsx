@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useCurrentUser,
   useNostrPublish,
@@ -16,6 +17,7 @@ import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
 import { ZapButton } from './ZapButton'
 import { ReactionsDialog } from './ReactionsDialog'
+import { AuthDialog } from './auth/AuthDialog'
 
 interface VideoReactionButtonsProps {
   eventId: string
@@ -38,6 +40,7 @@ export function VideoReactionButtons({
   currentTime,
   identifier,
 }: VideoReactionButtonsProps) {
+  const { t } = useTranslation()
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
   const { config } = useAppContext()
@@ -67,6 +70,7 @@ export function VideoReactionButtons({
 
   // Dialog state for reactions list
   const reactionsDialog = useDialogState()
+  const authDialog = useDialogState<'upvote' | 'downvote'>()
   const totalReactions = upvoteCount + downvoteCount
 
   const handleCountClick = () => {
@@ -124,7 +128,11 @@ export function VideoReactionButtons({
   }
 
   const handleUpvote = async () => {
-    if (!user || hasReacted) return
+    if (!user) {
+      authDialog.openWith('upvote')
+      return
+    }
+    if (hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -145,7 +153,11 @@ export function VideoReactionButtons({
   }
 
   const handleDownvote = async () => {
-    if (!user || hasReacted) return
+    if (!user) {
+      authDialog.openWith('downvote')
+      return
+    }
+    if (hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -165,44 +177,55 @@ export function VideoReactionButtons({
     }
   }
 
+  const signInDialog = (
+    <AuthDialog
+      isOpen={authDialog.open}
+      onClose={authDialog.closeDialog}
+      onLogin={authDialog.closeDialog}
+      description={t(`auth.context.${authDialog.data ?? 'upvote'}`)}
+    />
+  )
+
   if (layout === 'inline') {
     // VideoPage layout: count inside button
-    // Render static display for own content or when not logged in
+    // Guests sign in from the compact action; own-content counts open the reactions list.
     if (isOwnContent || !user) {
       return (
         <>
-          <div
+          <button
+            type="button"
             className={cn(
-              'inline-flex items-center gap-2 px-2 text-sm text-muted-foreground',
+              'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              (!user || totalReactions > 0) && 'cursor-pointer hover:bg-accent',
               className
             )}
+            onClick={user ? handleCountClick : handleUpvote}
+            disabled={!!user && totalReactions === 0}
+            aria-label={
+              user ? t('video.viewUpvotes', { count: upvoteCount }) : t('auth.context.signInUpvote')
+            }
           >
             <ThumbsUp className="h-5 w-5" />
-            <button
-              type="button"
-              className={cn('min-h-11', totalReactions > 0 && 'cursor-pointer hover:underline')}
-              onClick={handleCountClick}
-              disabled={totalReactions === 0}
-            >
-              {upvoteCount}
-            </button>
-          </div>
-          <div
+            <span>{upvoteCount}</span>
+          </button>
+          <button
+            type="button"
             className={cn(
-              'inline-flex items-center gap-2 px-2 text-sm text-muted-foreground',
+              'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              (!user || totalReactions > 0) && 'cursor-pointer hover:bg-accent',
               className
             )}
+            onClick={user ? handleCountClick : handleDownvote}
+            disabled={!!user && totalReactions === 0}
+            aria-label={
+              user
+                ? t('video.viewDownvotes', { count: downvoteCount })
+                : t('auth.context.signInDownvote')
+            }
           >
             <ThumbsDown className="h-5 w-5" />
-            <button
-              type="button"
-              className={cn('min-h-11', totalReactions > 0 && 'cursor-pointer hover:underline')}
-              onClick={handleCountClick}
-              disabled={totalReactions === 0}
-            >
-              {downvoteCount}
-            </button>
-          </div>
+            <span>{downvoteCount}</span>
+          </button>
           {hasLightningAddress && (
             <ZapButton
               eventId={eventId}
@@ -217,6 +240,7 @@ export function VideoReactionButtons({
             onOpenChange={reactionsDialog.setOpen}
             reactions={reactions}
           />
+          {signInDialog}
         </>
       )
     }
@@ -228,8 +252,8 @@ export function VideoReactionButtons({
             variant="ghost"
             className={cn('px-4', className)}
             onClick={handleUpvote}
-            disabled={!user || isPending || hasReacted}
-            aria-label={`Upvote, ${upvoteCount} reactions`}
+            disabled={isPending || hasReacted}
+            aria-label={user ? `Upvote, ${upvoteCount} reactions` : t('auth.context.signInUpvote')}
             aria-pressed={hasUpvoted}
           >
             <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
@@ -237,12 +261,12 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 text-sm',
+              'min-h-11 min-w-11 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
-            aria-label={`View ${upvoteCount} reactions`}
+            aria-label={t('video.viewUpvotes', { count: upvoteCount })}
           >
             {upvoteCount}
           </button>
@@ -252,8 +276,10 @@ export function VideoReactionButtons({
             variant="ghost"
             className={cn('px-4', className)}
             onClick={handleDownvote}
-            disabled={!user || isPending || hasReacted}
-            aria-label={`Downvote, ${downvoteCount} reactions`}
+            disabled={isPending || hasReacted}
+            aria-label={
+              user ? `Downvote, ${downvoteCount} reactions` : t('auth.context.signInDownvote')
+            }
             aria-pressed={hasDownvoted}
           >
             <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
@@ -261,12 +287,12 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 text-sm',
+              'min-h-11 min-w-11 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
-            aria-label={`View ${downvoteCount} downvotes`}
+            aria-label={t('video.viewDownvotes', { count: downvoteCount })}
           >
             {downvoteCount}
           </button>
@@ -286,13 +312,14 @@ export function VideoReactionButtons({
           onOpenChange={reactionsDialog.setOpen}
           reactions={reactions}
         />
+        {signInDialog}
       </>
     )
   }
 
   // ShortsPage layout: count below button (vertical)
-  // Render static display for own content or when not logged in
-  if (isOwnContent || !user) {
+  // Own-content counts still open the reactions list.
+  if (isOwnContent) {
     return (
       <>
         <div className={cn('flex flex-col items-center gap-1', className)}>
@@ -302,11 +329,12 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'text-sm font-medium',
+              'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
+            aria-label={t('video.viewUpvotes', { count: upvoteCount })}
           >
             {upvoteCount}
           </button>
@@ -318,11 +346,12 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'text-sm font-medium',
+              'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
+            aria-label={t('video.viewDownvotes', { count: downvoteCount })}
           >
             {downvoteCount}
           </button>
@@ -355,8 +384,8 @@ export function VideoReactionButtons({
           size="icon"
           className="rounded-full"
           onClick={handleUpvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label={`Upvote, ${upvoteCount} reactions`}
+          disabled={isPending || hasReacted}
+          aria-label={user ? `Upvote, ${upvoteCount} reactions` : t('auth.context.signInUpvote')}
           aria-pressed={hasUpvoted}
         >
           <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
@@ -364,12 +393,12 @@ export function VideoReactionButtons({
         <button
           type="button"
           className={cn(
-            'text-sm font-medium',
+            'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             totalReactions > 0 && 'cursor-pointer hover:underline'
           )}
           onClick={handleCountClick}
           disabled={totalReactions === 0}
-          aria-label={`View ${upvoteCount} reactions`}
+          aria-label={t('video.viewUpvotes', { count: upvoteCount })}
         >
           {upvoteCount}
         </button>
@@ -382,8 +411,10 @@ export function VideoReactionButtons({
           size="icon"
           className="rounded-full"
           onClick={handleDownvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label={`Downvote, ${downvoteCount} reactions`}
+          disabled={isPending || hasReacted}
+          aria-label={
+            user ? `Downvote, ${downvoteCount} reactions` : t('auth.context.signInDownvote')
+          }
           aria-pressed={hasDownvoted}
         >
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
@@ -391,12 +422,12 @@ export function VideoReactionButtons({
         <button
           type="button"
           className={cn(
-            'text-sm font-medium',
+            'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             totalReactions > 0 && 'cursor-pointer hover:underline'
           )}
           onClick={handleCountClick}
           disabled={totalReactions === 0}
-          aria-label={`View ${downvoteCount} downvotes`}
+          aria-label={t('video.viewDownvotes', { count: downvoteCount })}
         >
           {downvoteCount}
         </button>
@@ -415,6 +446,7 @@ export function VideoReactionButtons({
         onOpenChange={reactionsDialog.setOpen}
         reactions={reactions}
       />
+      {signInDialog}
     </>
   )
 }

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dark-mode primary controls and destructive buttons use readable foreground/background color pairs.
+- Reaction counts have descriptive, pluralized screen-reader labels, visible keyboard focus, and at least 44px touch targets.
+- Trust detail badges have 44px mobile touch targets and retain a compact 24px target on larger screens.
+- Guest upvote, downvote and zap actions open contextual sign-in on watch pages, shorts, profiles, live streams and comments instead of silent controls or dead-end toasts. Signing in never automatically publishes a reaction or sends a payment.
+- Shorts keyboard shortcuts defer to open dialogs and focused controls, so dismissing sign-in keeps the current video open.
+
 ## [0.2.66] - 2026-11-06
 
 ### Fixed

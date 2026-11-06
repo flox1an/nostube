@@ -92,8 +92,8 @@ export const nostubeTheme: Theme = {
       cardForeground: 'oklch(0.96 0.003 286)',
       popover: 'oklch(0.225 0.008 286)',
       popoverForeground: 'oklch(0.96 0.003 286)',
-      primary: 'oklch(0.48 0.2 293)', // Deep violet for white-text contrast
-      primaryForeground: 'oklch(0.969 0.016 293.756)',
+      primary: 'oklch(0.72 0.16 293)',
+      primaryForeground: 'oklch(0.16 0.006 286)',
       secondary: 'oklch(0.245 0.008 286)',
       secondaryForeground: 'oklch(0.985 0 0)',
       muted: 'oklch(0.245 0.008 286)',

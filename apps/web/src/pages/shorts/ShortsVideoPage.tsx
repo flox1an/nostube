@@ -808,8 +808,10 @@ export function ShortsVideoPage() {
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || document.querySelector('[role="dialog"][data-state="open"]'))
+        return
       const target = event.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (target.closest('input, textarea, button, a, [contenteditable="true"]')) {
         return
       }
 

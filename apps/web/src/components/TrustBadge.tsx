@@ -60,6 +60,7 @@ export function TrustBadgeDisplay({
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             onClick={e => {
               e.preventDefault()
               e.stopPropagation()
@@ -67,7 +68,7 @@ export function TrustBadgeDisplay({
             }}
             aria-label={tooltipText}
             className={cn(
-              'inline-flex items-center gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-6 sm:min-w-6',
               trust.colorClass,
               className
             )}

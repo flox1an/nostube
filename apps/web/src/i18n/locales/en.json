@@ -57,6 +57,14 @@
     "searchPlaceholder": "Search videos..."
   },
   "auth": {
+    "context": {
+      "signInUpvote": "Sign in to upvote",
+      "signInDownvote": "Sign in to downvote",
+      "signInZap": "Sign in to support with a zap",
+      "upvote": "Sign in or create an account to upvote. Then tap the thumbs-up again to share your reaction.",
+      "downvote": "Sign in or create an account to downvote. Then tap the thumbs-down again to share your reaction.",
+      "zap": "Zaps are Lightning payments. Sign in or create an account, then tap zap again when you're ready to support. No payment is sent by signing in."
+    },
     "login": {
       "title": "Log in",
       "subtitle": "Access your account securely with your preferred method",
@@ -128,6 +136,10 @@
     }
   },
   "video": {
+    "viewUpvotes_one": "View reactions, {{count}} upvote",
+    "viewUpvotes_other": "View reactions, {{count}} upvotes",
+    "viewDownvotes_one": "View reactions, {{count}} downvote",
+    "viewDownvotes_other": "View reactions, {{count}} downvotes",
     "unavailable": "Video Unavailable",
     "notFound": "Video Not Found",
     "unavailableDescription": "This video has been marked as unavailable because it could not be loaded from any source. It will be automatically retried later.",

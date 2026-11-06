@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useCurrentUser,
   useNostrPublish,
@@ -25,6 +26,7 @@ import { Button } from '@nostube/widgets/components/button'
 import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
+import { AuthDialog } from './auth/AuthDialog'
 
 interface CommentReactionsProps {
   eventId: string
@@ -44,6 +46,8 @@ export const CommentReactions = memo(function CommentReactions({
   className = '',
   videoAuthorPubkey,
 }: CommentReactionsProps) {
+  const { t } = useTranslation()
+  const [authAction, setAuthAction] = useState<'upvote' | 'downvote' | 'zap' | null>(null)
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
   const { config } = useAppContext()
@@ -108,7 +112,11 @@ export const CommentReactions = memo(function CommentReactions({
   }, [])
 
   const handleUpvote = useCallback(async () => {
-    if (!user || hasReacted) return
+    if (!user) {
+      setAuthAction('upvote')
+      return
+    }
+    if (hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -132,7 +140,11 @@ export const CommentReactions = memo(function CommentReactions({
   }, [user, hasReacted, publish, eventId, authorPubkey, kind, targetRelays, eventStore])
 
   const handleDownvote = useCallback(async () => {
-    if (!user || hasReacted) return
+    if (!user) {
+      setAuthAction('downvote')
+      return
+    }
+    if (hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -157,21 +169,26 @@ export const CommentReactions = memo(function CommentReactions({
 
   const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
+    if (!user) {
+      setAuthAction('zap')
+      return
+    }
     // If wallet is connected, do quick zap; otherwise open dialog for QR code
     if (isConnected) {
       await zap()
     } else {
       setShowZapDialog(true)
     }
-  }, [zap, isConnected])
+  }, [zap, isConnected, user])
 
   const handlePointerDown = useCallback(() => {
+    if (!user) return
     isLongPress.current = false
     longPressTimer.current = window.setTimeout(() => {
       isLongPress.current = true
       setShowZapDialog(true)
     }, LONG_PRESS_DELAY)
-  }, [])
+  }, [user])
 
   const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
@@ -187,10 +204,14 @@ export const CommentReactions = memo(function CommentReactions({
     }
   }, [])
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setShowZapDialog(true)
-  }, [])
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      if (!user) return
+      setShowZapDialog(true)
+    },
+    [user]
+  )
 
   const handleZapFromDialog = useCallback(
     async (amount: number, comment?: string) => {
@@ -208,8 +229,8 @@ export const CommentReactions = memo(function CommentReactions({
           size="sm"
           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
           onClick={handleUpvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label="Upvote"
+          disabled={isPending || hasReacted}
+          aria-label={user ? 'Upvote' : t('auth.context.signInUpvote')}
         >
           <ThumbsUp className={cn('w-3 h-3', hasUpvoted && 'fill-current')} />
           {upvoteCount > 0 && <span className="ml-1">{upvoteCount}</span>}
@@ -221,8 +242,8 @@ export const CommentReactions = memo(function CommentReactions({
           size="sm"
           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
           onClick={handleDownvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label="Downvote"
+          disabled={isPending || hasReacted}
+          aria-label={user ? 'Downvote' : t('auth.context.signInDownvote')}
         >
           <ThumbsDown className={cn('w-3 h-3', hasDownvoted && 'fill-current')} />
           {downvoteCount > 0 && <span className="ml-1">{downvoteCount}</span>}
@@ -241,8 +262,8 @@ export const CommentReactions = memo(function CommentReactions({
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
-                disabled={!user || isZapping || isOwnContent}
-                aria-label="Support with a zap"
+                disabled={isZapping || isOwnContent}
+                aria-label={user ? 'Support with a zap' : t('auth.context.signInZap')}
               >
                 {isZapping ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -253,7 +274,11 @@ export const CommentReactions = memo(function CommentReactions({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>{`Support with ${defaultZapAmount} sats — long press for more options`}</span>
+              <span>
+                {user
+                  ? `Support with ${defaultZapAmount} sats — long press for more options`
+                  : t('auth.context.signInZap')}
+              </span>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -281,6 +306,12 @@ export const CommentReactions = memo(function CommentReactions({
         isZapping={isZapping}
         isWalletConnected={isConnected}
         generateInvoice={generateInvoice}
+      />
+      <AuthDialog
+        isOpen={authAction !== null}
+        onClose={() => setAuthAction(null)}
+        onLogin={() => setAuthAction(null)}
+        description={t(`auth.context.${authAction ?? 'upvote'}`)}
       />
     </>
   )

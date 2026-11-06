@@ -245,12 +245,12 @@ export const ShortVideoOverlay = memo(
               </div>
             </div>
 
-            <div className="short-title text-white my-2 line-clamp-3">
+            <div className="short-title text-white mt-2 line-clamp-3">
               {video.title || video.description}
             </div>
 
             {(video.tags.length > 0 || (video.origins && video.origins.length > 0)) && (
-              <div className="short-tags flex flex-wrap gap-2 mb-2">
+              <div className="short-tags flex flex-wrap gap-2 mt-2">
                 {video.tags.slice(0, 3).map(tag => (
                   <Link
                     key={tag}

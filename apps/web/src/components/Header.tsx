@@ -93,7 +93,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`mobile-header sticky top-0 z-50 border-b transition-[transform,background-color,border-color] duration-300 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
+      className={`mobile-header sticky top-0 z-50 border-b transition-[translate,transform,background-color,border-color] duration-300 motion-reduce:transition-none focus-within:translate-y-0 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
         shouldHide && !transparent ? '-translate-y-full' : 'translate-y-0'
       }`}
       style={{

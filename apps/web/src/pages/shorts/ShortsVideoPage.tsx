@@ -1053,28 +1053,31 @@ export function ShortsVideoPage() {
           </div>
         )}
 
-        {/* Interactive overlay (action icons + bottom info) for the current video.
-            Rendered at z-20 — above the singleton <video> (z-10) and the slide
-            thumbnail backgrounds (z-auto) — so buttons are always tappable.
-            pointer-events-none on the root lets taps on transparent areas fall
-            through to the <video> element for play/pause toggling. */}
-        {currentVideo && currentPlayback !== 'hidden' && (
-          <div
-            className="absolute inset-0 z-20"
-            style={{
-              transform: `translate3d(0, ${deckOffsetY}px, 0)`,
-              transition: videoTransition,
-              willChange: deckPhase === 'idle' ? undefined : 'transform',
-            }}
-          >
-            <ShortVideoOverlay
-              video={currentVideo}
-              isMuted={isMuted}
-              onToggleMute={handleToggleMute}
-              maxWidth={videoMaxWidth}
-            />
-          </div>
-        )}
+        {/* Each slide carries its controls through the swipe, above the singleton video.
+            Transparent overlay areas pass taps through. */}
+        {visibleSlideIndexes.map(index => {
+          const video = allVideos[index]
+          const relativeIndex = index - currentVideoIndex
+          if (getVideoPlayback(video.contentWarning, config.nsfwFilter) === 'hidden') return null
+          return (
+            <div
+              key={video.id}
+              className="absolute inset-0 z-20"
+              style={{
+                transform: `translate3d(0, calc(${relativeIndex} * var(--app-height, 100vh) + ${deckOffsetY}px), 0)`,
+                transition: videoTransition,
+                willChange: deckPhase === 'idle' ? undefined : 'transform',
+              }}
+            >
+              <ShortVideoOverlay
+                video={video}
+                isMuted={isMuted}
+                onToggleMute={handleToggleMute}
+                maxWidth={videoMaxWidth}
+              />
+            </div>
+          )
+        })}
       </div>
     </>
   )

@@ -121,7 +121,7 @@ function VideoPageContent() {
 
   // State for video event loaded from EventStore/relays
   const [videoEvent, setVideoEvent] = useState<NostrEvent | undefined>(undefined)
-  const [failedVideoId, setFailedVideoId] = useState<string | null>(null)
+  const [failure, setFailure] = useState<{ videoId: string; urls: string[] } | null>(null)
 
   const preloadVideoId = useMemo(() => {
     if (videoEvent) return videoEvent.id
@@ -576,8 +576,8 @@ function VideoPageContent() {
   // A local/private event source is a deterministic safety decision, not a
   // persistent “missing video” result. A later hash mirror may resolve it.
   const handleAllSourcesFailed = useCallback(
-    (urls: string[]) => {
-      setFailedVideoId(video?.id ?? null)
+    (urls: string[], failedUrls: string[]) => {
+      if (video) setFailure({ videoId: video.id, urls: failedUrls })
       if (video?.id && video.mediaSourceStatus === 'safe-declared-source') {
         markVideoAsMissing(video.id, urls)
       }
@@ -682,12 +682,32 @@ function VideoPageContent() {
           ? 'w-full max-h-[80dvh]'
           : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
 
-    if (failedVideoId === video.id) {
+    if (failure?.videoId === video.id) {
       return (
         <Alert variant="destructive" role="alert">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t('video.networkError')}</AlertTitle>
-          <AlertDescription>{t('video.networkErrorDescription')}</AlertDescription>
+          <AlertDescription>
+            <p>{t('video.networkErrorDescription')}</p>
+            {failure.urls.length > 0 && (
+              <ul className="mt-3 list-inside list-disc space-y-1 break-all">
+                {failure.urls.map(url => (
+                  <li key={url}>{url}</li>
+                ))}
+              </ul>
+            )}
+            <Button
+              className="mt-3"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearMissingVideo(video.id)
+                setFailure(null)
+              }}
+            >
+              {t('common.retry')}
+            </Button>
+          </AlertDescription>
         </Alert>
       )
     }
@@ -749,7 +769,8 @@ function VideoPageContent() {
     prevPlaylistVideo,
     navigateToPrevious,
     nextPlaylistVideo,
-    failedVideoId,
+    failure,
+    clearMissingVideo,
     t,
     navigateToNext,
     config.nsfwFilter,

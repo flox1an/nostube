@@ -24,6 +24,7 @@ vi.mock('../hooks/useMediaUrls', () => ({
     ladder: {
       currentUrl: urls[0] ?? null,
       hasMore: false,
+      failedUrls: ['https://mirror.example/failed.mp4'],
       tryNext: vi.fn(),
     },
     isLoading: false,
@@ -233,7 +234,10 @@ describe('VideoPlayer source failures', () => {
 
     fireEvent.error(container.querySelector('video')!)
 
-    expect(onAllSourcesFailed).toHaveBeenCalledWith(urls)
+    expect(onAllSourcesFailed).toHaveBeenCalledWith(urls, [
+      'https://mirror.example/failed.mp4',
+      'https://example.com/video.mp4',
+    ])
   })
 })
 describe('VideoPlayer preset thumbnails', () => {

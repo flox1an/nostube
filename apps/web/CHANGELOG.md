@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.63] - 2026-11-06
+
+### Changed
+
+- Shorts show their controls alongside thumbnails during swipes and align the information area with the bottom safe area.
+
+### Fixed
+
+- The video network error lists failed source URLs and offers a retry without reloading the page.
+- The mobile header slides smoothly when scrolling, matching the bottom navigation.
+
 ## [0.2.62] - 2026-11-06
 
 ### Changed

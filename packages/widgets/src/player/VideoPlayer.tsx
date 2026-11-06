@@ -50,7 +50,7 @@ interface VideoPlayerProps {
   authorPubkey?: string
   eventId?: string
   initialPlayPos?: number
-  onAllSourcesFailed?: (urls: string[]) => void
+  onAllSourcesFailed?: (urls: string[], failedUrls: string[]) => void
   cinemaMode?: boolean
   onToggleCinemaMode?: () => void
   onVideoDimensionsLoaded?: (width: number, height: number) => void
@@ -245,9 +245,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Notify parent when all sources fail
   useEffect(() => {
     if (!hasMoreVideoUrls && !isLoadingVideoUrls && videoUrl === null) {
-      onAllSourcesFailedRef.current?.(urlsRef.current)
+      onAllSourcesFailedRef.current?.(urlsRef.current, videoUrlLadder.failedUrls)
     }
-  }, [hasMoreVideoUrls, isLoadingVideoUrls, videoUrl])
+  }, [hasMoreVideoUrls, isLoadingVideoUrls, videoUrl, videoUrlLadder])
 
   const handleDashError = useCallback(
     (message: string) => {
@@ -255,10 +255,12 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       if (hasMoreVideoUrls) {
         moveToNextVideo()
       } else {
-        onAllSourcesFailedRef.current?.(urlsRef.current)
+        onAllSourcesFailedRef.current?.(urlsRef.current, [
+          ...new Set([...videoUrlLadder.failedUrls, ...(videoUrl ? [videoUrl] : [])]),
+        ])
       }
     },
-    [hasMoreVideoUrls, moveToNextVideo]
+    [hasMoreVideoUrls, moveToNextVideo, videoUrl, videoUrlLadder]
   )
 
   // Protocol-neutral playback engine: native / HLS / DASH behind one interface.
@@ -533,9 +535,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       moveToNextVideo()
     } else {
       console.error('All video URLs failed')
-      onAllSourcesFailed?.(urls)
+      onAllSourcesFailed?.(urls, [
+        ...new Set([...videoUrlLadder.failedUrls, ...(videoUrl ? [videoUrl] : [])]),
+      ])
     }
-  }, [hasMoreVideoUrls, moveToNextVideo, onAllSourcesFailed, urls])
+  }, [hasMoreVideoUrls, moveToNextVideo, onAllSourcesFailed, urls, videoUrl, videoUrlLadder])
 
   // Startup failover - move to next URL if the source cannot become playable quickly.
   // Store moveToNextVideo in a ref so the effect only re-runs when videoUrl changes,

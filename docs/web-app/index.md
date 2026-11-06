@@ -142,6 +142,10 @@ The search service and the image proxy are not part of this repository. To run t
 
 To ship different defaults on your own deployment, edit the files in the table and rebuild. Read more about storage servers in [Blossom storage](/media/blossom).
 
+### Refining search results
+
+Search filters apply immediately and stay in the page URL. The panel explains this timing and shows how many of the loaded results match; the count is not a total across all relays. **Show results** closes the panel without changing your selections. **Reset** clears refinements and restores the default sort while keeping your search query.
+
 ### Browsing relays and relay sets
 
 The source control above Home, Shorts and category feeds offers **My feed** (your configured read relays), individual relays, locally saved sources and public Nostr relay lists. **Add relay…** opens a hostname or WebSocket URL without changing your default read/write relays. **Save on this device** keeps a shortcut in this browser for the current account; anonymous shortcuts remain separate. Manage these under **Settings → Network → Browse sources**.

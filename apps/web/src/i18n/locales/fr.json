@@ -874,7 +874,15 @@
     "search": {
       "emptyState": "Entrez une requête de recherche pour trouver des vidéos",
       "resultsFor": "Résultats de recherche pour : {{query}}",
-      "noResults": "Aucune vidéo trouvée pour \"{{query}}\"."
+      "noResults": "Aucune vidéo trouvée pour \"{{query}}\".",
+      "filters": "Filtres",
+      "filtersActive": "Filtres : {{count}} actifs",
+      "filterTitle": "Filtres de recherche",
+      "resetFilters": "Réinitialiser",
+      "filtersInstant": "Les modifications s’appliquent immédiatement. Fermez ce panneau pour voir les résultats.",
+      "filteredResults": "Résultats correspondants : {{count}} sur {{loaded}} chargés",
+      "searching": "Recherche de vidéos…",
+      "showResults": "Voir les résultats"
     },
     "hashtag": {
       "title": "#{{tag}}",
@@ -1343,12 +1351,12 @@
       "trustLabel": "Confiance {{label}}"
     },
     "filterWarning": {
-      "title": "Vous entrez en zone de danger",
-      "body1": "Désactiver le filtre de confiance affichera des vidéos de comptes non fiables et non vérifiés. Certains contenus peuvent être inappropriés, offensants ou réservés aux adultes (18+).",
-      "body2": "Ce que vous voyez à partir de maintenant est à vos propres risques — vous êtes seul responsable de ce que vous choisissez de regarder.",
-      "body3": "En cas de doute, laissez le filtre activé.",
+      "title": "Désactiver le filtre de confiance ?",
+      "body1": "Le filtre de confiance masque les vidéos des comptes dont le score de confiance est faible ou inconnu.",
+      "body2": "Le désactiver peut afficher du contenu inapproprié, offensant ou réservé aux adultes (18+). Vous pouvez le réactiver à tout moment.",
+      "body3": "Nous recommandons de garder le filtre activé.",
       "cancel": "Garder le filtre activé",
-      "confirm": "Je comprends, désactiver"
+      "confirm": "Désactiver le filtre"
     }
   },
   "relaySource": {

@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shorts keyboard shortcuts defer to open dialogs and focused controls, so dismissing sign-in keeps the current video open.
 - Feed categories have the full row width; the source name and trust-filter state stay visible in the scrolling feed context instead of an icon-only cluster. Shorts no longer show category links that leave Shorts.
 - Selected-source details and save/copy actions expand on demand, leaving a compact relay summary and a direct return to My feed.
+- Search filters explain that changes apply immediately, announce matching results among loaded videos, and keep a visible return-to-results action while options scroll.
+- The first trust-filter warning uses plain-language caution and recommends keeping protection on, with that choice emphasized and focused by default.
+- The default dark accent uses a deeper, more saturated violet for primary controls, links and focus rings while retaining readable dark button text.
 
 ## [0.2.66] - 2026-11-06
 

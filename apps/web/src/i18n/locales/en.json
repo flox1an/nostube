@@ -928,7 +928,15 @@
     "search": {
       "emptyState": "Enter a search query to find videos",
       "resultsFor": "Search Results for: {{query}}",
-      "noResults": "No videos found for \"{{query}}\"."
+      "noResults": "No videos found for \"{{query}}\".",
+      "filters": "Filters",
+      "filtersActive": "Filters: {{count}} active",
+      "filterTitle": "Search filters",
+      "resetFilters": "Reset",
+      "filtersInstant": "Changes apply immediately. Close this panel to browse the results.",
+      "filteredResults": "Matching results: {{count}} of {{loaded}} loaded",
+      "searching": "Searching for videos…",
+      "showResults": "Show results"
     },
     "hashtag": {
       "title": "#{{tag}}",
@@ -1399,12 +1407,12 @@
       "trustLabel": "{{label}} Trust"
     },
     "filterWarning": {
-      "title": "You are entering the danger zone",
-      "body1": "Disabling the trust filter will show videos from untrusted and unverified accounts. Some of this content may be inappropriate, offensive, or intended for adults only (18+).",
-      "body2": "What you see from this point on is entirely at your own risk — you are solely responsible for what you choose to watch.",
-      "body3": "If you are not sure, keep the filter on.",
+      "title": "Turn off the trust filter?",
+      "body1": "The trust filter hides videos from accounts with low or missing trust scores.",
+      "body2": "Turning it off may show inappropriate, offensive or adult content (18+). You can turn it back on at any time.",
+      "body3": "We recommend keeping the filter on.",
       "cancel": "Keep filter on",
-      "confirm": "I understand, disable it"
+      "confirm": "Turn filter off"
     }
   },
   "relaySource": {

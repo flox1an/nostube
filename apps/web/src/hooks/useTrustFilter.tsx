@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { Shield, TriangleAlert } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '@nostube/widgets/components/alert-dialog'
 import { Button } from '@nostube/widgets/components/button'
+import { buttonVariants } from '@nostube/widgets/components/button-variants'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getInstanceConfig } from '@nostube/core/instance-config'
@@ -129,48 +130,37 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
         <TooltipContent side="bottom">{trustFilterLabel}</TooltipContent>
       </Tooltip>
       <AlertDialog open={showWarning} onOpenChange={setShowWarning}>
-        <AlertDialogContent>
+        <AlertDialogContent className="min-w-0 break-words">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <TriangleAlert className="h-5 w-5 shrink-0 text-destructive" />
-              {t('trust.filterWarning.title', {
-                defaultValue: 'You are entering the danger zone',
-              })}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t('trust.filterWarning.title')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-muted-foreground">
-                <p>
-                  {t('trust.filterWarning.body1', {
-                    defaultValue:
-                      'Disabling the trust filter will show videos from untrusted and unverified accounts. Some of this content may be inappropriate, offensive, or intended for adults only (18+).',
-                  })}
-                </p>
-                <p className="font-medium text-foreground">
-                  {t('trust.filterWarning.body2', {
-                    defaultValue:
-                      'What you see from this point on is entirely at your own risk — you are solely responsible for what you choose to watch.',
-                  })}
-                </p>
-                <p>
-                  {t('trust.filterWarning.body3', {
-                    defaultValue: 'If you are not sure, keep the filter on.',
-                  })}
-                </p>
+                <p>{t('trust.filterWarning.body1')}</p>
+                <p>{t('trust.filterWarning.body2')}</p>
+                <p className="font-medium text-foreground">{t('trust.filterWarning.body3')}</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t('trust.filterWarning.cancel', { defaultValue: 'Keep filter on' })}
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <AlertDialogCancel
+              className={buttonVariants({
+                className:
+                  'mt-0 h-auto min-h-11 whitespace-normal py-2 hover:text-primary-foreground',
+              })}
+            >
+              {t('trust.filterWarning.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({
+                variant: 'outline',
+                className: 'h-auto min-h-11 whitespace-normal py-2',
+              })}
               onClick={() => {
                 localStorage.setItem('trustFilter.warningShown', 'true')
                 setEnabled(false)
               }}
             >
-              {t('trust.filterWarning.confirm', { defaultValue: 'I understand, disable it' })}
+              {t('trust.filterWarning.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

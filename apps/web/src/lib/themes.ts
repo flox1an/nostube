@@ -92,7 +92,7 @@ export const nostubeTheme: Theme = {
       cardForeground: 'oklch(0.96 0.003 286)',
       popover: 'oklch(0.225 0.008 286)',
       popoverForeground: 'oklch(0.96 0.003 286)',
-      primary: 'oklch(0.72 0.16 293)',
+      primary: 'oklch(0.66 0.24 293)',
       primaryForeground: 'oklch(0.16 0.006 286)',
       secondary: 'oklch(0.245 0.008 286)',
       secondaryForeground: 'oklch(0.985 0 0)',
@@ -103,7 +103,7 @@ export const nostubeTheme: Theme = {
       destructive: 'oklch(0.704 0.191 22.216)',
       border: 'oklch(1 0 0 / 12%)',
       input: 'oklch(1 0 0 / 16%)',
-      ring: 'oklch(0.68 0.16 293)',
+      ring: 'oklch(0.66 0.24 293)',
     },
   },
 }

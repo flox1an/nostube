@@ -900,7 +900,15 @@
     "search": {
       "emptyState": "Gib eine Suchanfrage ein, um Videos zu finden",
       "resultsFor": "Suchergebnisse für: {{query}}",
-      "noResults": "Keine Videos gefunden für \"{{query}}\"."
+      "noResults": "Keine Videos gefunden für \"{{query}}\".",
+      "filters": "Filter",
+      "filtersActive": "Filter: {{count}} aktiv",
+      "filterTitle": "Suchfilter",
+      "resetFilters": "Zurücksetzen",
+      "filtersInstant": "Änderungen gelten sofort. Schließe dieses Fenster, um die Ergebnisse anzusehen.",
+      "filteredResults": "Passende Ergebnisse: {{count}} von {{loaded}} geladenen",
+      "searching": "Videos werden gesucht…",
+      "showResults": "Ergebnisse anzeigen"
     },
     "hashtag": {
       "title": "#{{tag}}",
@@ -1369,12 +1377,12 @@
       "trustLabel": "{{label}} Vertrauen"
     },
     "filterWarning": {
-      "title": "Du betrittst den Gefahrenbereich",
-      "body1": "Wenn du den Vertrauensfilter deaktivierst, werden Videos von nicht vertrauenswürdigen und unbestätigten Konten angezeigt. Einige dieser Inhalte können unangemessen, anstößig oder nur für Erwachsene geeignet sein (18+).",
-      "body2": "Was du ab jetzt siehst, geschieht auf eigenes Risiko — du bist allein verantwortlich dafür, was du dir ansiehst.",
-      "body3": "Wenn du unsicher bist, lasse den Filter aktiviert.",
-      "cancel": "Filter aktiviert lassen",
-      "confirm": "Ich habe verstanden, deaktivieren"
+      "title": "Vertrauensfilter ausschalten?",
+      "body1": "Der Vertrauensfilter blendet Videos von Konten mit niedrigen oder fehlenden Vertrauenswerten aus.",
+      "body2": "Ohne Filter können unangemessene, anstößige oder nur für Erwachsene geeignete Inhalte (18+) erscheinen. Du kannst ihn jederzeit wieder einschalten.",
+      "body3": "Wir empfehlen, den Filter eingeschaltet zu lassen.",
+      "cancel": "Filter eingeschaltet lassen",
+      "confirm": "Filter ausschalten"
     }
   },
   "relaySource": {

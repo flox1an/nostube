@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { useTrustFilter } from './useTrustFilter'
 import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import type { ReactElement } from 'react'
+import i18n from '@/i18n/config'
 
 vi.mock('@/hooks/useTrustScore', () => ({
   useTrustScores: () => new Map(),
@@ -38,7 +39,7 @@ describe('useTrustFilter first-time disable warning', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     expect(latest.enabled).toBe(true)
 
-    fireEvent.click(screen.getByText('Keep filter on'))
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('trust.filterWarning.cancel') }))
     expect(latest.enabled).toBe(true)
     expect(localStorage.getItem('trustFilter.enabled')).toBe('true')
   })
@@ -46,7 +47,7 @@ describe('useTrustFilter first-time disable warning', () => {
   it('confirm disables the filter and marks the warning as shown', () => {
     render(<Harness />)
     clickShield()
-    fireEvent.click(screen.getByText('I understand, disable it'))
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('trust.filterWarning.confirm') }))
 
     expect(latest.enabled).toBe(false)
     expect(localStorage.getItem('trustFilter.warningShown')).toBe('true')
@@ -56,7 +57,7 @@ describe('useTrustFilter first-time disable warning', () => {
   it('does not warn again once shown', () => {
     render(<Harness />)
     clickShield()
-    fireEvent.click(screen.getByText('I understand, disable it'))
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('trust.filterWarning.confirm') }))
 
     // toggle back on
     clickShield()

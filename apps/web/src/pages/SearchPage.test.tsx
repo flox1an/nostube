@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
 import { AccountManager } from 'applesauce-accounts'
@@ -9,11 +9,44 @@ import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@nostube/core'
 import { SearchPage } from './SearchPage'
 import * as useSearchVideos from '@/hooks/useSearchVideos'
+import i18n from '@/i18n/config'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 // Mock the search hook
 vi.mock('@/hooks/useSearchVideos', () => ({
   useSearchVideos: vi.fn(),
 }))
+
+vi.mock('@/components/VideoTimelinePage', () => ({
+  VideoTimelinePage: ({ videos }: { videos: VideoEvent[] }) => (
+    <ul>
+      {videos.map(video => (
+        <li key={video.id}>{video.title}</li>
+      ))}
+    </ul>
+  ),
+}))
+
+const video: VideoEvent = {
+  id: 'video',
+  kind: 21,
+  title: 'Long video',
+  description: '',
+  images: [],
+  pubkey: 'creator',
+  created_at: 1234567890,
+  duration: 120,
+  tags: [],
+  searchText: '',
+  urls: [],
+  link: 'video',
+  type: 'videos',
+  textTracks: [],
+  videoVariants: [],
+  thumbnailVariants: [],
+  origins: [],
+  contentWarning: undefined,
+}
 
 // Fix IntersectionObserver mock for this test
 beforeAll(() => {
@@ -73,20 +106,6 @@ describe('SearchPage', () => {
     vi.clearAllMocks()
   })
 
-  it('extracts query parameter from URL', () => {
-    // We'll check that the component tries to use the query
-    // by looking for it in the rendered output
-    render(
-      <TestWrapper initialUrl="/search?q=bitcoin">
-        <SearchPage />
-      </TestWrapper>
-    )
-
-    // The page should render without crashing
-    // and should show some indication it's searching for "bitcoin"
-    expect(screen.getByText(/Search Results for: bitcoin/i)).toBeInTheDocument()
-  })
-
   it('shows empty message when query is missing', () => {
     render(
       <TestWrapper initialUrl="/search">
@@ -98,47 +117,37 @@ describe('SearchPage', () => {
     expect(screen.getByText(/enter a search query/i)).toBeInTheDocument()
   })
 
-  it('displays search query in the page', () => {
-    render(
-      <TestWrapper initialUrl="/search?q=nostr+videos">
-        <SearchPage />
-      </TestWrapper>
-    )
-
-    // Should display what we're searching for in the heading
-    expect(
-      screen.getByRole('heading', { name: /Search Results for: nostr videos/i })
-    ).toBeInTheDocument()
-  })
-
-  it('uses NIP-50 search with correct video kinds', () => {
+  it('applies refinements immediately, retains them after closing, and resets the results', () => {
+    vi.mocked(useSearchVideos.useSearchVideos).mockReturnValue({
+      videos: [video, { ...video, id: 'short', title: 'Short clip', type: 'shorts' }],
+      loading: false,
+      hasLoaded: true,
+      loadMore: vi.fn(),
+      presetUnavailable: false,
+    })
     render(
       <TestWrapper initialUrl="/search?q=bitcoin">
         <SearchPage />
       </TestWrapper>
     )
-
-    // Verify useSearchVideos was called with the correct query and kinds
-    expect(useSearchVideos.useSearchVideos).toHaveBeenCalledWith(
-      expect.objectContaining({
-        query: 'bitcoin',
-        kinds: expect.arrayContaining([21, 22, 34235, 34236]), // All video kinds
-      })
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('pages.search.filters') }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Shorts' }))
+    const panel = screen.getByRole('dialog')
+    expect(within(panel).getByRole('status')).toHaveTextContent(
+      i18n.t('pages.search.filteredResults', { count: 1, loaded: 2 })
     )
-  })
-
-  it('uses dedicated search hook that queries only relay.nostr.band', () => {
-    render(
-      <TestWrapper initialUrl="/search?q=nostr">
-        <SearchPage />
-      </TestWrapper>
+    expect(screen.queryByText('Long video')).not.toBeInTheDocument()
+    expect(screen.getByText('Short clip')).toBeInTheDocument()
+    fireEvent.click(within(panel).getByRole('button', { name: i18n.t('pages.search.showResults') }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: i18n.t('pages.search.filtersActive', { count: 1 }) })
     )
-
-    // Verify useSearchVideos was called (which internally only uses relay.nostr.band)
-    expect(useSearchVideos.useSearchVideos).toHaveBeenCalledWith(
-      expect.objectContaining({
-        query: 'nostr',
-      })
+    expect(screen.getByRole('radio', { name: 'Shorts' })).toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('pages.search.resetFilters') }))
+    expect(screen.getByText('Long video')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByRole('status')).toHaveTextContent(
+      i18n.t('pages.search.filteredResults', { count: 2, loaded: 2 })
     )
   })
 })

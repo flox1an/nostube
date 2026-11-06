@@ -874,7 +874,15 @@
     "search": {
       "emptyState": "Введите поисковый запрос для поиска видео",
       "resultsFor": "Результаты поиска для: {{query}}",
-      "noResults": "Видео не найдены для \"{{query}}\"."
+      "noResults": "Видео не найдены для \"{{query}}\".",
+      "filters": "Фильтры",
+      "filtersActive": "Активные фильтры: {{count}}",
+      "filterTitle": "Фильтры поиска",
+      "resetFilters": "Сбросить",
+      "filtersInstant": "Изменения применяются сразу. Закройте эту панель, чтобы посмотреть результаты.",
+      "filteredResults": "Подходящие результаты: {{count}} из {{loaded}} загруженных",
+      "searching": "Поиск видео…",
+      "showResults": "Показать результаты"
     },
     "hashtag": {
       "title": "#{{tag}}",
@@ -1345,12 +1353,12 @@
       "trustLabel": "{{label}} Trust"
     },
     "filterWarning": {
-      "title": "You are entering the danger zone",
-      "body1": "Disabling the trust filter will show videos from untrusted and unverified accounts. Some of this content may be inappropriate, offensive, or intended for adults only (18+).",
-      "body2": "What you see from this point on is entirely at your own risk — you are solely responsible for what you choose to watch.",
-      "body3": "If you are not sure, keep the filter on.",
-      "cancel": "Keep filter on",
-      "confirm": "I understand, disable it"
+      "title": "Отключить фильтр доверия?",
+      "body1": "Фильтр доверия скрывает видео от аккаунтов с низкой или неизвестной оценкой доверия.",
+      "body2": "После отключения может появиться неприемлемый, оскорбительный или взрослый контент (18+). Фильтр можно включить снова в любой момент.",
+      "body3": "Рекомендуем оставить фильтр включённым.",
+      "cancel": "Оставить фильтр включённым",
+      "confirm": "Отключить фильтр"
     }
   },
   "relaySource": {

@@ -57,6 +57,8 @@ An author passes the filter when the personal score is at least **40 %** and the
 
 The filter is on by default on the home page, Shorts, category and tag pages. Its shield button names the current state; the off state is highlighted. Turning it off shows a warning the first time. Suggestions next to a video are always filtered, whether they come from the search service or from relays. Search, Subscriptions, profile pages and direct links are not filtered by trust.
 
+The first-time warning explains what the trust filter hides and cautions that turning it off may expose inappropriate or adult content. **Keep filter on** is the emphasized, initially focused action; **Turn filter off** remains available. Cancelling leaves protection on, and you can re-enable it from the feed at any time.
+
 The shield next to an author's name shows their trust level; click it for the scores.
 
 ### First launch and background refresh

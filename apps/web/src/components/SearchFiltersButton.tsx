@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { Button } from '@nostube/widgets/components/button'
 import { Checkbox } from '@nostube/widgets/components/checkbox'
@@ -22,6 +24,7 @@ import {
 interface SearchFiltersButtonProps {
   filters: SearchFilters
   onChange: (filters: SearchFilters) => void
+  resultStatus: string
 }
 
 const typeOptions: { value: SearchTypeFilter; label: string }[] = [
@@ -95,7 +98,9 @@ function FilterRadioGroup<T extends string>({
   )
 }
 
-export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonProps) {
+export function SearchFiltersButton({ filters, onChange, resultStatus }: SearchFiltersButtonProps) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
   const isMobile = useIsMobile()
   const activeCount = getActiveSearchFilterCount(filters)
   const rowClassName = cn(OPTION_ROW_CLASS, isMobile ? 'min-h-11 px-3' : 'min-h-8')
@@ -117,10 +122,14 @@ export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonPr
       size="sm"
       className={cn('shrink-0 gap-2', isMobile && 'h-11 px-4')}
       aria-pressed={activeCount > 0}
-      aria-label={activeCount > 0 ? `Filter, ${activeCount} active` : 'Filter'}
+      aria-label={
+        activeCount > 0
+          ? t('pages.search.filtersActive', { count: activeCount })
+          : t('pages.search.filters')
+      }
     >
       <SlidersHorizontal className="h-4 w-4" />
-      <span>Filter</span>
+      <span>{t('pages.search.filters')}</span>
       {activeCount > 0 && (
         <span className="rounded-full bg-background/20 px-1.5 text-xs">{activeCount}</span>
       )}
@@ -181,19 +190,29 @@ export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonPr
     </>
   )
 
-  // Mobile: height-bounded bottom sheet; header (Reset + the sheet's own Close) stays
-  // visible while the groups scroll, so every group incl. "Sort by" is reachable.
+  const feedback = (
+    <div className="shrink-0 space-y-2 border-t px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+      <p role="status" aria-atomic="true" className="text-sm text-muted-foreground">
+        {resultStatus}
+      </p>
+      <Button className="h-11 w-full" onClick={() => setOpen(false)}>
+        {t('pages.search.showResults')}
+      </Button>
+    </div>
+  )
+
+  // Changes apply immediately; the result feedback and return action stay visible while options scroll.
   if (isMobile) {
     return (
-      <Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent
           side="bottom"
-          aria-describedby={undefined}
+          aria-describedby="search-filter-help"
           className="flex max-h-[85dvh] flex-col gap-0 rounded-t-xl p-0"
         >
-          <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b pl-4 pr-12">
-            <SheetTitle className="text-lg">Search filters</SheetTitle>
+          <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b pl-4 pr-12">
+            <SheetTitle className="py-2 text-lg">{t('pages.search.filterTitle')}</SheetTitle>
             <Button
               type="button"
               variant="ghost"
@@ -201,23 +220,31 @@ export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonPr
               disabled={activeCount === 0}
               onClick={() => onChange(DEFAULT_SEARCH_FILTERS)}
             >
-              Reset
+              {t('pages.search.resetFilters')}
             </Button>
           </div>
-          <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:grid-cols-2">
+          <p id="search-filter-help" className="shrink-0 px-4 pt-3 text-sm text-muted-foreground">
+            {t('pages.search.filtersInstant')}
+          </p>
+          <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto overscroll-contain p-4 sm:grid-cols-2">
             {groups}
           </div>
+          {feedback}
         </SheetContent>
       </Sheet>
     )
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(calc(100vw-2rem),42rem)] p-0">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <h2 className="text-base font-semibold">Search filters</h2>
+      <PopoverContent
+        align="end"
+        aria-describedby="search-filter-help"
+        className="flex max-h-[min(85dvh,var(--radix-popover-content-available-height))] w-[min(calc(100vw-2rem),42rem)] flex-col p-0"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3">
+          <h2 className="text-base font-semibold">{t('pages.search.filterTitle')}</h2>
           {activeCount > 0 && (
             <Button
               type="button"
@@ -227,12 +254,18 @@ export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonPr
               onClick={() => onChange(DEFAULT_SEARCH_FILTERS)}
             >
               <X className="h-4 w-4" />
-              Reset
+              {t('pages.search.resetFilters')}
             </Button>
           )}
         </div>
         <Separator />
-        <div className="grid gap-6 p-4 sm:grid-cols-2 lg:grid-cols-4">{groups}</div>
+        <p id="search-filter-help" className="shrink-0 px-4 pt-3 text-sm text-muted-foreground">
+          {t('pages.search.filtersInstant')}
+        </p>
+        <div className="grid min-h-0 gap-6 overflow-y-auto p-4 sm:grid-cols-2 lg:grid-cols-4">
+          {groups}
+        </div>
+        {feedback}
       </PopoverContent>
     </Popover>
   )

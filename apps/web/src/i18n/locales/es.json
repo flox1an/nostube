@@ -874,7 +874,15 @@
     "search": {
       "emptyState": "Ingrese una consulta de búsqueda para encontrar videos",
       "resultsFor": "Resultados de Búsqueda para: {{query}}",
-      "noResults": "No se encontraron videos para \"{{query}}\"."
+      "noResults": "No se encontraron videos para \"{{query}}\".",
+      "filters": "Filtros",
+      "filtersActive": "Filtros: {{count}} activos",
+      "filterTitle": "Filtros de búsqueda",
+      "resetFilters": "Restablecer",
+      "filtersInstant": "Los cambios se aplican al instante. Cierra este panel para ver los resultados.",
+      "filteredResults": "Resultados coincidentes: {{count}} de {{loaded}} cargados",
+      "searching": "Buscando videos…",
+      "showResults": "Ver resultados"
     },
     "hashtag": {
       "title": "#{{tag}}",
@@ -1343,12 +1351,12 @@
       "trustLabel": "Confianza {{label}}"
     },
     "filterWarning": {
-      "title": "Estás entrando en la zona de peligro",
-      "body1": "Al desactivar el filtro de confianza se mostrarán videos de cuentas no confiables y sin verificar. Algunos de estos contenidos pueden ser inapropiados, ofensivos o solo para adultos (18+).",
-      "body2": "Lo que veas a partir de ahora es bajo tu propio riesgo: eres el único responsable de lo que decides ver.",
-      "body3": "Si no estás seguro, deja el filtro activado.",
+      "title": "¿Desactivar el filtro de confianza?",
+      "body1": "El filtro de confianza oculta videos de cuentas con puntuaciones de confianza bajas o desconocidas.",
+      "body2": "Al desactivarlo, puedes ver contenido inapropiado, ofensivo o para adultos (18+). Puedes volver a activarlo en cualquier momento.",
+      "body3": "Recomendamos mantener el filtro activado.",
       "cancel": "Mantener el filtro activado",
-      "confirm": "Entiendo, desactivar"
+      "confirm": "Desactivar el filtro"
     }
   },
   "relaySource": {

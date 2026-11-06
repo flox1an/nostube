@@ -75,6 +75,9 @@ export function SearchPage() {
 
   const filteredVideos = useMemo(() => applySearchFilters(videos, filters), [videos, filters])
   const isFilteredEmpty = activeFilterCount > 0 && filteredVideos.length === 0 && videos.length > 0
+  const resultStatus = loading
+    ? t('pages.search.searching')
+    : t('pages.search.filteredResults', { count: filteredVideos.length, loaded: videos.length })
 
   const handleFiltersChange = useCallback(
     (nextFilters: SearchFilters) => {
@@ -143,13 +146,15 @@ export function SearchPage() {
           <h1 className="line-clamp-2 break-words text-xl font-bold sm:text-2xl">
             {t('pages.search.resultsFor', { query })}
           </h1>
-          {activeFilterCount > 0 && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Showing {filteredVideos.length} of {videos.length} results
-            </p>
-          )}
+          <p role="status" aria-atomic="true" className="mt-1 text-sm text-muted-foreground">
+            {resultStatus}
+          </p>
         </div>
-        <SearchFiltersButton filters={filters} onChange={handleFiltersChange} />
+        <SearchFiltersButton
+          filters={filters}
+          onChange={handleFiltersChange}
+          resultStatus={resultStatus}
+        />
       </div>
 
       <VideoTimelinePage

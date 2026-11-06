@@ -846,7 +846,9 @@
       "noVideos": "動画が見つかりません。",
       "noMore": "これ以上読み込める動画はありません。",
       "trustFilterOn": "トラストフィルター有効 — 低スコアの作者を非表示",
-      "trustFilterOff": "トラストフィルター無効 — すべての動画を表示"
+      "trustFilterOff": "トラストフィルター無効 — すべての動画を表示",
+      "trustFilterOnShort": "トラストフィルター有効",
+      "trustFilterOffShort": "トラストフィルター無効"
     },
     "shorts": {
       "noShorts": "ショートが見つかりません。",

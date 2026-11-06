@@ -4,7 +4,6 @@ import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Shield, TriangleAlert } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,24 +107,23 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
-            className={`relative h-10 w-10 shrink-0 rounded-full border after:absolute after:-inset-0.5 ${enabled ? 'border-green-500' : 'border-transparent'}`}
+            className={`h-11 min-w-11 shrink-0 gap-1.5 px-2 ${enabled ? 'text-muted-foreground' : 'text-destructive'}`}
             aria-label={trustFilterLabel}
             aria-pressed={enabled}
             onClick={() => {
               if (enabled && !localStorage.getItem('trustFilter.warningShown')) {
                 setShowWarning(true)
               } else {
-                // Tooltips don't open on touch: announce the new state visibly.
-                toast(enabled ? offLabel : onLabel)
                 setEnabled(!enabled)
               }
             }}
           >
-            <Shield
-              className={`h-3.5 w-3.5 ${enabled ? 'text-green-500' : 'text-muted-foreground'}`}
-            />
+            <Shield className="h-3.5 w-3.5" />
+            <span>
+              {t(enabled ? 'pages.home.trustFilterOnShort' : 'pages.home.trustFilterOffShort')}
+            </span>
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{trustFilterLabel}</TooltipContent>

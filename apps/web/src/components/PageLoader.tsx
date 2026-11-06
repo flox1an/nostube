@@ -3,7 +3,7 @@ import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { cn } from '@/lib/utils'
 
 /**
- * Loading skeleton for feed-style pages that pair a sticky
+ * Loading skeleton for feed-style pages that pair a
  * `CategoryButtonBar` with a horizontal video grid (`/`,
  * `/category/:slug`). Page-specific loaders live in
  * `components/page-loaders.tsx`.
@@ -12,8 +12,8 @@ export function PageLoader() {
   return (
     <div className="max-w-560 mx-auto">
       {/* Category bar skeleton */}
-      <div className="mb-4 sm:px-2">
-        <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md">
+      <div className="sm:px-2">
+        <div className="w-full overflow-x-auto scrollbar-hide">
           <div className="flex gap-2 p-2 min-w-max">
             {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton
@@ -23,6 +23,10 @@ export function PageLoader() {
             ))}
           </div>
         </div>
+      </div>
+      <div className="mb-2 flex h-11 items-center gap-4 px-4">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-5 w-32" />
       </div>
       {/* Video grid skeleton */}
       <div className="sm:px-2">

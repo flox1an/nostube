@@ -1,6 +1,5 @@
 import { VideoCardSkeleton } from '@/components/VideoCard'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { cn } from '@/lib/utils'
 
 /**
  * Per-page Suspense skeletons. Each loader mirrors the layout of the
@@ -14,19 +13,11 @@ const HORIZONTAL_GRID =
 const VERTICAL_GRID =
   'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7'
 
-function CategoryBarSkeleton() {
+function FeedContextSkeleton() {
   return (
-    <div className="mb-4 sm:px-2">
-      <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md">
-        <div className="flex gap-2 p-2 min-w-max">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              className={cn('h-10 rounded-full shrink-0', i === 0 ? 'w-12' : 'w-20')}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="mb-2 flex h-11 items-center gap-4 px-4">
+      <Skeleton className="h-5 w-28" />
+      <Skeleton className="h-5 w-32" />
     </div>
   )
 }
@@ -41,11 +32,11 @@ function HorizontalVideoGridSkeleton({ count = 24 }: { count?: number }) {
   )
 }
 
-/** `/shorts` — sticky CategoryButtonBar over a vertical (portrait) grid. */
+/** `/shorts` — feed context over a vertical (portrait) grid. */
 export function ShortsFeedPageLoader() {
   return (
     <div className="max-w-560 mx-auto">
-      <CategoryBarSkeleton />
+      <FeedContextSkeleton />
       <div className="sm:px-2">
         <div className={VERTICAL_GRID}>
           {Array.from({ length: 24 }).map((_, i) => (

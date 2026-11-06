@@ -2,16 +2,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@nostube/widgets/components/button'
 import { TAG_CATEGORIES } from '@/lib/tag-categories'
 import { cn } from '@/lib/utils'
-import { RelaySourcePicker } from '@/components/RelaySourcePicker'
 import { useEffect, useRef, useState } from 'react'
 
 interface CategoryButtonBarProps {
   activeSlug?: string
-  /** Optional element rendered right after the relay dropdown */
-  afterRelay?: React.ReactNode
 }
 
-export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarProps) {
+export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { search } = useLocation()
   const categoriesRef = useRef<HTMLDivElement>(null)
@@ -37,7 +34,7 @@ export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarP
   }, [])
 
   return (
-    <div className="sticky top-0 z-40 mb-4 flex w-full items-center bg-background/92 backdrop-blur-md supports-[backdrop-filter]:bg-background/82">
+    <div className="flex w-full items-center">
       <div
         ref={categoriesRef}
         className="min-w-0 flex-1 overflow-x-auto scroll-smooth scroll-pr-6 scrollbar-hide"
@@ -84,13 +81,6 @@ export function CategoryButtonBar({ activeSlug, afterRelay }: CategoryButtonBarP
             )
           })}
         </div>
-      </div>
-
-      {/* Source + safety: compact on mobile so categories stay the primary row. */}
-      <div className="flex shrink-0 items-center gap-1 py-2 pr-4 pl-1 sm:gap-2 sm:pr-2">
-        <RelaySourcePicker />
-
-        {afterRelay}
       </div>
     </div>
   )

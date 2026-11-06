@@ -73,15 +73,6 @@ export function RelayBrowseStatus() {
 
   const actions = (
     <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className={actionClass}
-        onClick={() => selectSource(null)}
-      >
-        <ArrowLeft aria-hidden />
-        {t('relaySource.backToMyFeed', { defaultValue: 'Back to My feed' })}
-      </Button>
       {source &&
         key !== null &&
         (saved ? (
@@ -121,10 +112,7 @@ export function RelayBrowseStatus() {
   )
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="mb-6 grid gap-3 rounded-lg border bg-card p-3 sm:mb-8 sm:p-4"
-    >
+    <section aria-labelledby={headingId} className="mb-2 grid gap-3 px-4">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -137,15 +125,24 @@ export function RelayBrowseStatus() {
 
       {shown ? (
         <Collapsible open={expanded} onOpenChange={setExpanded} className="grid gap-2">
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="flex min-w-0 flex-[1_1_14rem] items-start gap-3">
+          <div className="flex flex-wrap items-center gap-x-2">
+            <div className="flex min-w-0 flex-1 items-start gap-2">
               {shown.address || shown.relays.length > 1 ? (
-                <Layers className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                <Layers
+                  className="mt-1 hidden h-5 w-5 shrink-0 text-muted-foreground sm:block"
+                  aria-hidden
+                />
               ) : (
-                <Wifi className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                <Wifi
+                  className="mt-1 hidden h-5 w-5 shrink-0 text-muted-foreground sm:block"
+                  aria-hidden
+                />
               )}
               <div className="grid min-w-0 flex-1 gap-0.5">
-                <h2 id={headingId} className="text-base font-semibold break-words">
+                <h2
+                  id={headingId}
+                  className="sr-only text-base font-semibold break-words sm:not-sr-only"
+                >
                   {shown.title}
                 </h2>
                 {(!unresolved || pendingSource) && (
@@ -158,7 +155,7 @@ export function RelayBrowseStatus() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="-my-1 -ml-2 h-11 gap-1 px-2 font-normal text-muted-foreground sm:h-9"
+                          className="h-11 gap-1 px-2 font-normal text-muted-foreground"
                         >
                           {t('relaySource.relayCount', {
                             count: shown.relays.length,
@@ -183,21 +180,29 @@ export function RelayBrowseStatus() {
                     )}
                   </div>
                 )}
-                {!unresolved && (
-                  <CollapsibleContent className="grid gap-2 pt-1">
-                    {author && <SetAuthor pubkey={author} />}
-                    {shown.address && (
-                      <p className="font-mono text-xs break-all text-muted-foreground">
-                        {shown.address}
-                      </p>
-                    )}
-                    <RelayMemberList relays={shown.relays} />
-                  </CollapsibleContent>
-                )}
               </div>
             </div>
-            {actions}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-11 shrink-0"
+              onClick={() => selectSource(null)}
+            >
+              <ArrowLeft aria-hidden />
+              {t('relaySource.myFeed', { defaultValue: 'My feed' })}
+            </Button>
           </div>
+          {!unresolved && (
+            <CollapsibleContent className="grid gap-3 rounded-lg border bg-card p-3">
+              <p className="break-words font-medium sm:hidden">{shown.title}</p>
+              {author && <SetAuthor pubkey={author} />}
+              {shown.address && (
+                <p className="break-all font-mono text-xs text-muted-foreground">{shown.address}</p>
+              )}
+              <RelayMemberList relays={shown.relays} />
+              {actions}
+            </CollapsibleContent>
+          )}
 
           {unresolved && source?.address && (
             <div className="grid gap-2 sm:flex sm:items-center sm:justify-between">
@@ -225,6 +230,15 @@ export function RelayBrowseStatus() {
             {t('relaySource.statusLabel', { defaultValue: 'Feed source' })}
           </h2>
           {actions}
+          <Button
+            variant="outline"
+            size="sm"
+            className={actionClass}
+            onClick={() => selectSource(null)}
+          >
+            <ArrowLeft aria-hidden />
+            {t('relaySource.backToMyFeed', { defaultValue: 'Back to My feed' })}
+          </Button>
         </>
       )}
 

@@ -1,5 +1,6 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
+import { RelaySourcePicker } from '@/components/RelaySourcePicker'
 import { VideoCard } from '@/components/VideoCard'
 import { Button } from '@nostube/widgets/components/button'
 import { Link } from 'react-router-dom'
@@ -135,7 +136,16 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-560 px-3 sm:px-2">
       <div className="-mx-3 sm:mx-0">
-        <CategoryButtonBar afterRelay={filterButton} />
+        <CategoryButtonBar />
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-1 sm:px-2">
+        <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
+          {t('pages.home.latestVideos')}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+          <RelaySourcePicker />
+          {filterButton}
+        </div>
       </div>
       <RelayBrowseStatus />
       {!source && (
@@ -152,12 +162,6 @@ export function HomePage() {
           videos={subscriptionsVideos.slice(0, 12)}
         />
       )}
-      <div className="mb-4 flex items-baseline justify-between px-1 sm:mb-5 sm:px-2">
-        <h1 className="text-[22px] font-semibold tracking-tight sm:text-2xl">
-          {t('pages.home.latestVideos')}
-        </h1>
-        <span className="text-sm text-muted-foreground">{t('pages.home.newestFirst')}</span>
-      </div>
       {(!source || source.relays.length > 0) && (
         <div className="-mx-3 sm:mx-0">
           <VideoTimelinePage

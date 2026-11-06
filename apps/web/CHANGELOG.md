@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust detail badges have 44px mobile touch targets and retain a compact 24px target on larger screens.
 - Guest upvote, downvote and zap actions open contextual sign-in on watch pages, shorts, profiles, live streams and comments instead of silent controls or dead-end toasts. Signing in never automatically publishes a reaction or sends a payment.
 - Shorts keyboard shortcuts defer to open dialogs and focused controls, so dismissing sign-in keeps the current video open.
+- Feed categories have the full row width; the source name and trust-filter state stay visible in the scrolling feed context instead of an icon-only cluster. Shorts no longer show category links that leave Shorts.
+- Selected-source details and save/copy actions expand on demand, leaving a compact relay summary and a direct return to My feed.
 
 ## [0.2.66] - 2026-11-06
 

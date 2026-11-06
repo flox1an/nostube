@@ -157,7 +157,7 @@ export function RelaySourcePicker() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             role="combobox"
             aria-expanded={open}
@@ -166,7 +166,7 @@ export function RelaySourcePicker() {
               defaultValue: 'Content source: {{source}}',
             })}
             className={cn(
-              'relative h-10 shrink-0 rounded-full px-3 gap-1.5 border-border/80 bg-card shadow-none after:absolute after:inset-x-0 after:-inset-y-0.5',
+              'h-11 min-w-0 max-w-full gap-1.5 px-2 text-muted-foreground shadow-none',
               error && 'border-destructive/60 text-destructive'
             )}
           >
@@ -179,19 +179,15 @@ export function RelaySourcePicker() {
             ) : (
               <Wifi className="h-3.5 w-3.5" />
             )}
-            {/* The default feed collapses to its icon on mobile; a chosen source stays named. */}
-            <span
-              className={cn(
-                'max-w-24 truncate sm:max-w-32',
-                !source && !error && 'hidden sm:inline'
-              )}
-            >
-              {label}
-            </span>
+            <span className="max-w-32 truncate sm:max-w-48">{label}</span>
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0" align="start">
+        <PopoverContent
+          className="w-80 max-w-[calc(100vw-2rem)] p-0"
+          align="start"
+          collisionPadding={16}
+        >
           <Command shouldFilter={false}>
             <CommandInput
               aria-label={t('relaySource.searchLabel', { defaultValue: 'Search sources' })}

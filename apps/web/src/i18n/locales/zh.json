@@ -846,7 +846,9 @@
       "noVideos": "未找到视频。",
       "noMore": "没有更多视频可加载。",
       "trustFilterOn": "信任过滤已开启 — 隐藏低分作者",
-      "trustFilterOff": "信任过滤已关闭 — 显示所有视频"
+      "trustFilterOff": "信任过滤已关闭 — 显示所有视频",
+      "trustFilterOnShort": "信任过滤已开启",
+      "trustFilterOffShort": "信任过滤已关闭"
     },
     "shorts": {
       "noShorts": "未找到短视频。",

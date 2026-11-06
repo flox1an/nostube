@@ -35,7 +35,7 @@ describe('useTrustFilter first-time disable warning', () => {
     expect(latest.enabled).toBe(true)
 
     clickShield()
-    expect(screen.getByText('You are entering the danger zone')).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     expect(latest.enabled).toBe(true)
 
     fireEvent.click(screen.getByText('Keep filter on'))
@@ -61,6 +61,6 @@ describe('useTrustFilter first-time disable warning', () => {
     // toggle back on
     clickShield()
     expect(latest.enabled).toBe(true)
-    expect(screen.queryByText('You are entering the danger zone')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 })

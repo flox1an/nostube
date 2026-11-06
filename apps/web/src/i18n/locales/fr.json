@@ -846,7 +846,9 @@
       "noVideos": "Aucune vidéo trouvée.",
       "noMore": "Plus de vidéos à charger.",
       "trustFilterOn": "Filtre de confiance activé — auteurs à faible score masqués",
-      "trustFilterOff": "Filtre de confiance désactivé — toutes les vidéos affichées"
+      "trustFilterOff": "Filtre de confiance désactivé — toutes les vidéos affichées",
+      "trustFilterOnShort": "Filtre de confiance actif",
+      "trustFilterOffShort": "Filtre de confiance inactif"
     },
     "shorts": {
       "noShorts": "Aucun short trouvé.",

@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
+import { RelaySourcePicker } from '@/components/RelaySourcePicker'
 import { useReadRelays } from '@/hooks'
 import { useRelayBrowsing } from '@/contexts/RelayBrowsingContext'
 import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
@@ -72,7 +73,16 @@ export function CategoryPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:px-2">
-      <CategoryButtonBar activeSlug={categorySlug} afterRelay={filterButton} />
+      <CategoryButtonBar activeSlug={categorySlug} />
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-4 sm:px-2">
+        <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
+          {category.name}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+          <RelaySourcePicker />
+          {filterButton}
+        </div>
+      </div>
       <RelayBrowseStatus />
 
       {(!source || source.relays.length > 0) && (

@@ -3,10 +3,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CategoryButtonBar } from './CategoryButtonBar'
 
-vi.mock('@/components/RelaySourcePicker', () => ({
-  RelaySourcePicker: () => null,
-}))
-
 afterEach(() => vi.unstubAllGlobals())
 
 it('fades hidden categories, reveals the final category, and updates when the list resizes', () => {

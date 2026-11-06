@@ -39,8 +39,10 @@ export function HashtagPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:p-2">
-      <div className="flex items-center gap-2 p-2">
-        <h1 className="text-2xl font-bold">{t('pages.hashtag.title', { tag })}</h1>
+      <div className="flex flex-wrap items-center gap-x-2 p-2">
+        <h1 className="min-w-0 break-words text-2xl font-bold">
+          {t('pages.hashtag.title', { tag })}
+        </h1>
         {filterButton}
       </div>
 

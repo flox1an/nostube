@@ -1,5 +1,5 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
-import { CategoryButtonBar } from '@/components/CategoryButtonBar'
+import { RelaySourcePicker } from '@/components/RelaySourcePicker'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useReadRelays } from '@/hooks'
@@ -51,8 +51,14 @@ export function ShortsPage() {
 
   return (
     <div className="max-w-560 mx-auto">
-      <div className="sm:px-2">
-        <CategoryButtonBar afterRelay={filterButton} />
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-4">
+        <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
+          {t('navigation.shorts')}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+          <RelaySourcePicker />
+          {filterButton}
+        </div>
       </div>
       <RelayBrowseStatus />
       {(!source || source.relays.length > 0) && (

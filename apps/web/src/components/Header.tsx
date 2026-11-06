@@ -129,7 +129,8 @@ export function Header({ transparent = false }: HeaderProps) {
             to="/"
             className={cn(
               'text-xl font-bold flex flex-row gap-2 items-center',
-              transparent ? 'text-white' : 'text-foreground'
+              transparent ? 'text-white' : 'text-foreground',
+              transparent && 'max-md:hidden'
             )}
           >
             <img className="w-8" src={appTitle.imageUrl} alt="logo" />

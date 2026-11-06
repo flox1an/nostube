@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.61] - 2026-11-06
+
+### Changed
+
+- The iOS home-screen icon gives the logo more space on a black background.
+- The mobile shorts viewer uses a cleaner navigation bar and subtler action controls.
+- Shorts prepare their next video during the swipe transition to reduce the wait before playback.
+
 ## [0.2.60] - 2026-11-06
 
 ### Changed

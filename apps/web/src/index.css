@@ -168,6 +168,26 @@
 .short-actions > * {
   flex-shrink: 0;
 }
+@media (max-width: 767px) {
+  .media-header {
+    border-bottom: 0;
+    box-shadow: none;
+  }
+
+  .media-header :where(button, button:hover) {
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  .short-actions {
+    filter: none;
+  }
+
+  .short-actions :where(.bg-secondary, button.rounded-full) {
+    background-color: rgb(0 0 0 / 0.3);
+    box-shadow: none;
+  }
+}
 
 .video-shelf-item {
   width: min(18rem, 78vw);

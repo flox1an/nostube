@@ -330,6 +330,10 @@ export function ShortsVideoPage() {
     ? getVideoPlayback(currentVideo.contentWarning, config.nsfwFilter)
     : 'play'
   const currentBlocked = isPlaybackBlocked(currentVideo)
+  const playbackVideo = allVideos[settlingTargetIndex ?? currentVideoIndex]
+  const playbackBlocked = isPlaybackBlocked(playbackVideo)
+  const preparingNextVideo =
+    settlingTargetIndex !== null && settlingTargetIndex !== currentVideoIndex
   const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
   // Memoize proxyConfig to prevent infinite loops
@@ -341,13 +345,13 @@ export function ShortsVideoPage() {
   )
 
   const { ladder: videoUrlLadder } = useMediaUrls({
-    urls: currentVideo?.urls ?? [],
+    urls: playbackVideo?.urls ?? [],
     mediaType: 'video',
-    sha256: currentVideo?.x,
-    kind: currentVideo?.kind,
-    authorPubkey: currentVideo?.pubkey,
+    sha256: playbackVideo?.x,
+    kind: playbackVideo?.kind,
+    authorPubkey: playbackVideo?.pubkey,
     proxyConfig,
-    enabled: !!currentVideo,
+    enabled: !!playbackVideo && !playbackBlocked,
   })
   const videoUrl = videoUrlLadder.currentUrl
   const hasMoreVideoUrls = videoUrlLadder.hasMore
@@ -457,10 +461,10 @@ export function ShortsVideoPage() {
 
   useEffect(() => {
     const videoElement = singletonVideoRef.current
-    if (!videoElement || !currentVideo) return
+    if (!videoElement || !playbackVideo) return
 
     // Flagged short not (yet) allowed: keep the singleton empty so nothing loads or plays.
-    if (currentBlocked) {
+    if (playbackBlocked) {
       videoElement.pause()
       videoElement.removeAttribute('src')
       videoElement.dataset.videoId = ''
@@ -473,18 +477,19 @@ export function ShortsVideoPage() {
     if (!videoUrl) return
 
     const playCurrentSource = () => {
-      if (userPausedRef.current) return
+      if (userPausedRef.current || preparingNextVideo) return
 
       const playPromise = videoElement.play()
       if (playPromise !== undefined) {
         playPromise.catch(error => {
+          if (videoElement.dataset.videoId !== playbackVideo.id) return
           // Sound not allowed yet: keep playing, muted, instead of not playing at all.
           if (error?.name === 'NotAllowedError' && !videoElement.muted) {
             videoElement.muted = true
             videoElement.play().catch(mutedError => {
               console.error(
                 'Error playing muted short video:',
-                currentVideo.id.substring(0, 8),
+                playbackVideo.id.substring(0, 8),
                 mutedError
               )
             })
@@ -492,7 +497,7 @@ export function ShortsVideoPage() {
           }
           console.error(
             'Error playing singleton short video:',
-            currentVideo.id.substring(0, 8),
+            playbackVideo.id.substring(0, 8),
             error
           )
         })
@@ -503,7 +508,7 @@ export function ShortsVideoPage() {
     // not videoElement.src directly — the assigned src may be a local object
     // URL (from a prefetched Blob) rather than videoUrl itself.
     const sourceChanged =
-      videoElement.dataset.videoId !== currentVideo.id ||
+      videoElement.dataset.videoId !== playbackVideo.id ||
       videoElement.dataset.sourceUrl !== videoUrl
     if (!sourceChanged) {
       playCurrentSource()
@@ -534,11 +539,11 @@ export function ShortsVideoPage() {
       // with no buffering, instead of hoping the browser's HTTP cache can
       // serve the <video> element's range requests. Looked up by content hash
       // first so a Blob prefetched from a different mirror still matches.
-      const prefetchedBlob = getPrefetchedVideoBlob({ sha256: currentVideo.x, url: videoUrl })
+      const prefetchedBlob = getPrefetchedVideoBlob({ sha256: playbackVideo.x, url: videoUrl })
       const previousObjectUrl = objectUrlRef.current
       objectUrlRef.current = null
 
-      videoElement.dataset.videoId = currentVideo.id
+      videoElement.dataset.videoId = playbackVideo.id
       videoElement.dataset.sourceUrl = videoUrl
       if (prefetchedBlob) {
         const objectUrl = URL.createObjectURL(prefetchedBlob)
@@ -561,15 +566,15 @@ export function ShortsVideoPage() {
     return () => {
       window.cancelAnimationFrame(rafId)
     }
-  }, [currentVideo, videoUrl, currentBlocked])
+  }, [playbackVideo, videoUrl, playbackBlocked, preparingNextVideo])
 
   const handleVideoError = useCallback(() => {
     if (hasMoreVideoUrls) {
       moveToNextVideo()
-    } else if (currentVideo) {
-      console.error('All video URLs failed for:', currentVideo.id)
+    } else if (playbackVideo) {
+      console.error('All video URLs failed for:', playbackVideo.id)
     }
-  }, [currentVideo, hasMoreVideoUrls, moveToNextVideo])
+  }, [playbackVideo, hasMoreVideoUrls, moveToNextVideo])
 
   const handleVideoLoadedMetadata = useCallback(() => {
     const videoElement = singletonVideoRef.current
@@ -602,6 +607,13 @@ export function ShortsVideoPage() {
       })
     }
   }, [currentVideo])
+
+  useEffect(() => {
+    const videoElement = singletonVideoRef.current
+    if (!preparingNextVideo && videoElement && videoElement.readyState >= 2) {
+      handleVideoLoadedData()
+    }
+  }, [preparingNextVideo, handleVideoLoadedData])
 
   // Mid-playback rebuffering (e.g. the current video stalls on a slow
   // connection): show the same loading feedback as an initial swap.
@@ -985,7 +997,7 @@ export function ShortsVideoPage() {
               >
                 <video
                   ref={handleVideoRef}
-                  className={`w-full h-full cursor-pointer ${useOverscan ? 'object-cover' : 'object-contain'} ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
+                  className={`w-full h-full cursor-pointer ${useOverscan ? 'object-cover' : 'object-contain'} ${isVideoReady && !preparingNextVideo ? 'opacity-100' : 'opacity-0'}`}
                   loop
                   playsInline
                   poster={currentBlocked ? undefined : videoPoster}

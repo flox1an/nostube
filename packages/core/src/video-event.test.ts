@@ -1366,6 +1366,15 @@ describe('transformVideoEvents identity cache', () => {
     expect(second[0]).toBe(first[0])
   })
 
+  it('reuses parsed cards for equivalent relay hints while applying current moderation', () => {
+    const event = { ...zapStreamEvent }
+    const first = processEvents([event], [...relays])
+    const next = processEvents([event, nostubeEvent], [...relays])
+    expect(next.find(video => video.id === event.id)).toBe(first[0])
+    expect(processEvents([event], [...relays], { reportedEventIds: [event.id] })).toEqual([])
+    expect(processEvents([event], [...relays])[0]).toBe(first[0])
+  })
+
   it('rebuilds when the relay list changes', () => {
     const first = transformVideoEvents([zapStreamEvent], relays, {})
     const second = transformVideoEvents([zapStreamEvent], ['wss://other.example.com'], {})

@@ -106,7 +106,9 @@ export function transformVideoEvents(
 
     if (
       cached !== undefined &&
-      cached.relays === relays &&
+      (cached.relays === relays ||
+        (cached.relays.length === relays.length &&
+          cached.relays.every((relay, index) => relay === relays[index]))) &&
       cached.blossomServers === blossomServers &&
       cached.nsfwPubkeys === nsfwPubkeys &&
       cached.seenRelayCount === seenRelayCount

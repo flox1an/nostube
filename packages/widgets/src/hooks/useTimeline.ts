@@ -58,6 +58,7 @@ export interface UseTimelineResult {
 const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 10000
 const DEFAULT_PAGE_SETTLE_MS = 5000
 const DEFAULT_FIRST_USEFUL_TIMEOUT_MS = 900
+const EMPTY_RELAYS: string[] = []
 
 function isSingleFilter(filters?: Filter | Filter[]): filters is Filter {
   return !!filters && !Array.isArray(filters)
@@ -79,7 +80,7 @@ export function useTimeline(
   } = policy
   const eventStore = useEventStore()
   const {
-    relays = [],
+    relays = EMPTY_RELAYS,
     loader: providedLoader,
     directMode = false,
     includeAudio,

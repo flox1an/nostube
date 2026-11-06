@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.68] - 2026-11-06
+
+### Fixed
+
+- Rotating a playing video to landscape fills the available viewport on mobile browsers that require a user gesture for native fullscreen.
+
 ## [0.2.67] - 2026-11-06
 
 ### Fixed

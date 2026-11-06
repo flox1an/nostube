@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoPlayer } from './VideoPlayer'
 
@@ -7,10 +7,11 @@ const nativeWindow = vi.hoisted(() => ({
   isFullscreen: vi.fn(),
   setFullscreen: vi.fn(),
 }))
+const platform = vi.hoisted(() => ({ browser: false }))
 
 // The desktop shell: the player gets the native window from the platform context.
 vi.mock('../platform', () => ({
-  usePlatform: () => ({ nativeWindow }),
+  usePlatform: () => ({ nativeWindow: platform.browser ? undefined : nativeWindow }),
   useDesktopPlayerControls: () => undefined,
 }))
 
@@ -321,5 +322,42 @@ describe('VideoPlayer Tauri fullscreen', () => {
     await waitFor(() => {
       expect(nativeWindow.setFullscreen).toHaveBeenCalledWith(true)
     })
+  })
+})
+
+describe('VideoPlayer mobile rotation', () => {
+  it('fills the viewport only while a playing video is rotated to landscape', async () => {
+    const orientation = new EventTarget() as MediaQueryList
+    Object.defineProperty(orientation, 'matches', { configurable: true, value: false })
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi.fn(query =>
+      query === '(orientation: landscape)' ? orientation : originalMatchMedia(query)
+    )
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+    Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Android' })
+    platform.browser = true
+    const { container, unmount } = render(
+      <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />
+    )
+    const video = container.querySelector('video')!
+    const player = video.parentElement!
+    Object.defineProperty(player, 'requestFullscreen', { configurable: true, value: vi.fn() })
+    Object.defineProperty(video, 'paused', { configurable: true, value: false })
+    Object.defineProperty(orientation, 'matches', { configurable: true, value: true })
+    act(() => {
+      orientation.dispatchEvent(new Event('change'))
+    })
+    await waitFor(() => expect(player).toHaveStyle({ position: 'fixed' }))
+    Object.defineProperty(orientation, 'matches', { configurable: true, value: false })
+    act(() => {
+      orientation.dispatchEvent(new Event('change'))
+    })
+    await waitFor(() => expect(player).not.toHaveStyle({ position: 'fixed' }))
+    unmount()
+    platform.browser = false
+    window.matchMedia = originalMatchMedia
+    Reflect.deleteProperty(navigator, 'userAgent')
+    vi.restoreAllMocks()
   })
 })

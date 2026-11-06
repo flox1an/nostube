@@ -110,7 +110,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     videoRef.current = element
   }, [])
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [nativeFullscreen, setIsFullscreen] = useState(false)
+  const [rotationFullscreen, setRotationFullscreen] = useState(false)
+  const isFullscreen = nativeFullscreen || rotationFullscreen
   const [captionsEnabled, setCaptionsEnabled] = useState(false)
   const [selectedSubtitleLang, setSelectedSubtitleLang] = useState('')
   const [isSeeking, setIsSeeking] = useState(false)
@@ -801,6 +803,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [nativeWindow])
 
   const toggleFullscreen = useCallback(async () => {
+    if (rotationFullscreen) {
+      setRotationFullscreen(false)
+      return
+    }
     if (nativeWindow) {
       if (await nativeWindow.isFullscreen()) {
         await exitFullscreen()
@@ -818,34 +824,38 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     } else {
       await enterFullscreen()
     }
-  }, [enterFullscreen, exitFullscreen, nativeWindow])
+  }, [enterFullscreen, exitFullscreen, nativeWindow, rotationFullscreen])
 
-  // Auto-fullscreen on orientation change (mobile only)
+  // Rotation is not a user gesture, so browsers can reject requestFullscreen().
   useEffect(() => {
-    if (!isMobile) return
+    if (!isMobile || isAudioOnly) return
 
+    const orientation = window.matchMedia('(orientation: landscape)')
     const handleOrientationChange = () => {
-      const isLandscape = window.matchMedia('(orientation: landscape)').matches
       const video = videoRef.current
-
-      if (isLandscape && video && !video.paused) {
-        // Landscape + playing → enter fullscreen
-        enterFullscreen()
-      } else if (!isLandscape && document.fullscreenElement) {
-        // Portrait + in fullscreen → exit fullscreen
-        exitFullscreen()
+      if (orientation.matches && video && !video.paused) {
+        if (nativeWindow || !containerRef.current?.requestFullscreen) {
+          enterFullscreen()
+        } else if (!document.fullscreenElement) {
+          setRotationFullscreen(true)
+        }
+      } else if (!orientation.matches) {
+        setRotationFullscreen(false)
+        if (document.fullscreenElement) exitFullscreen()
       }
     }
+    orientation.addEventListener('change', handleOrientationChange)
+    return () => orientation.removeEventListener('change', handleOrientationChange)
+  }, [isMobile, isAudioOnly, nativeWindow, enterFullscreen, exitFullscreen])
 
-    // Use screen.orientation API if available, fall back to matchMedia
-    if (screen.orientation) {
-      screen.orientation.addEventListener('change', handleOrientationChange)
-      return () => screen.orientation.removeEventListener('change', handleOrientationChange)
-    } else {
-      window.addEventListener('orientationchange', handleOrientationChange)
-      return () => window.removeEventListener('orientationchange', handleOrientationChange)
+  useEffect(() => {
+    if (!rotationFullscreen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setRotationFullscreen(false)
     }
-  }, [isMobile, enterFullscreen, exitFullscreen])
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [rotationFullscreen])
 
   // PiP handling
   const isPipSupported = 'pictureInPictureEnabled' in document
@@ -1140,7 +1150,20 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      style={style}
+      style={
+        rotationFullscreen
+          ? {
+              ...style,
+              position: 'fixed',
+              inset: 0,
+              width: '100vw',
+              height: '100dvh',
+              maxWidth: 'none',
+              maxHeight: 'none',
+              zIndex: 2147483647,
+            }
+          : style
+      }
       className={`relative bg-black overflow-hidden ${className || ''} ${
         !controlsVisibleForRender && playerState.isPlaying ? 'cursor-none' : ''
       } ${effectiveCinemaMode && !isFullscreen ? 'flex items-center justify-center' : ''}`}

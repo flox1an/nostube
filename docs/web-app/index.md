@@ -8,6 +8,11 @@ Do you want a website for your own videos? The [Nostube Server](/server/) alread
 
 ![The Nostube web app home page](/screenshots/web-home.webp)
 
+On mobile, rotating a playing video to landscape expands the player to the available
+viewport; rotating back restores the page. In browsers that require a tap for
+native fullscreen, browser controls may remain visible. Use the fullscreen
+button to request native fullscreen.
+
 ## Livestreams
 
 **Live** opens `/live`, the streams currently live across Nostr ([NIP-53](https://github.com/nostr-protocol/nips/blob/master/53.md) kind `30311`); a stream opens at `/live/<naddr>`. Nostube only plays streams: there is no stream hosting, zap payment or presence publishing. Guests can watch and read; signed-in accounts send kind `1311` chat through their existing signer.

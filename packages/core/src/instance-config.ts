@@ -35,7 +35,10 @@ export const pageTitle = (page: string | null | undefined) => {
   return page ? `${page} - ${title}` : title
 }
 
-/** `local`: the site searches the creators' catalog in the browser (`@nostube/core/video-search`). */
+/**
+ * `local`: the site offers search, answered by NIP-50 on the instance's own relay
+ * (`instanceOwnRelay`). Studio searches regardless of the mode.
+ */
 export type InstanceSearch = { mode: 'off' } | { mode: 'local' }
 
 export const SITE_FONTS = ['sans', 'serif', 'mono'] as const
@@ -519,6 +522,10 @@ export function allowSignerRelays(relays: readonly string[]) {
 export function instanceRelays(config: InstanceConfig): string[] {
   return [...new Set([...config.videoSources, ...config.interactionRelays])]
 }
+
+/** The instance's own relay, at its origin (http → ws, https → wss); the one that answers NIP-50. */
+export const instanceOwnRelay = (config: InstanceConfig): string =>
+  config.origin.replace(/^http/, 'ws')
 
 /** Pairing traffic stays separate from catalog/interaction traffic; public relays come first. */
 export function instanceSignerRelays(config: InstanceConfig): string[] {

@@ -4,15 +4,15 @@ Nostube is one repository with npm workspaces and a Rust server ([ADR 0004](http
 
 ## Layout
 
-| Path | Package | What it is |
-| --- | --- | --- |
-| `apps/web` | `nostube` | The web app behind nostu.be, the embed player, a Node server for the oEmbed and playlist APIs, and the Tauri desktop wrapper |
-| `apps/server` | (Cargo) | Nostube Server: the self-hosted Rust server with relay, Blossom (Almond) and admin API. It embeds the site, the Studio and the embed player |
-| `apps/site` | `@nostube/site` | The creator homepage the server serves; reads `/api/config` |
-| `apps/studio` | `@nostube/studio` | The server's admin interface, served under `/studio/` |
-| `packages/core` | `@nostube/core` | Shared logic without React: Nostr client, media URL ladder, HLS loader, video event parsing, instance config, browser transcoding |
-| `packages/widgets` | `@nostube/widgets` | Shared React components: player, video card, UI primitives |
-| `docs` | `nostube-docs` | This documentation (VitePress, with its own `package.json`) |
+| Path               | Package            | What it is                                                                                                                                  |
+| ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`         | `nostube`          | The web app behind nostu.be, the embed player, a Node server for the oEmbed and playlist APIs, and the Tauri desktop wrapper                |
+| `apps/server`      | (Cargo)            | Nostube Server: the self-hosted Rust server with relay, Blossom (Almond) and admin API. It embeds the site, the Studio and the embed player |
+| `apps/site`        | `@nostube/site`    | The creator homepage the server serves; reads `/api/config`                                                                                 |
+| `apps/studio`      | `@nostube/studio`  | The server's admin interface, served under `/studio/`                                                                                       |
+| `packages/core`    | `@nostube/core`    | Shared logic without React: Nostr client, media URL ladder, HLS loader, video event parsing, instance config, browser transcoding           |
+| `packages/widgets` | `@nostube/widgets` | Shared React components: player, video card, UI primitives                                                                                  |
+| `docs`             | `nostube-docs`     | This documentation (VitePress, with its own `package.json`)                                                                                 |
 
 The packages are internal and not published. Apps import their TypeScript source by subpath, for example `@nostube/core/media-url-generator`, never through a barrel file. ESLint keeps `packages/core` free of React and app code.
 
@@ -51,7 +51,9 @@ NOSTUBE_DEV_CREATOR=<64-hex pubkey> NOSTUBE_DEV_RELAYS=wss://relay.example,wss:/
   npm run dev --workspace @nostube/site
 ```
 
-`NOSTUBE_DEV_SEARCH=local` turns on the site search.
+`NOSTUBE_DEV_SEARCH=local` turns on the site search box, but search requires the running
+instance relay's NIP-50 index: use `NOSTUBE_SERVER_URL` for search development. A stand-in
+config backed only by public relays can browse videos, but has no instance search index.
 
 ### Studio
 
@@ -84,11 +86,11 @@ npm run docs:dev
 
 ## Tests and checks
 
-| Workspace | Command (from the repository root) |
-| --- | --- |
+| Workspace                   | Command (from the repository root)                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
 | core, widgets, site, studio | `npm run lint --workspace @nostube/core` (likewise `typecheck`, `test`; repeat `--workspace` for several) |
-| web | `cd apps/web && npm run test` (typecheck, ESLint, Vitest and production build) |
-| server | `scripts/build-server-web.sh`, then `cd apps/server && cargo test` |
+| web                         | `cd apps/web && npm run test` (typecheck, ESLint, Vitest and production build)                            |
+| server                      | `scripts/build-server-web.sh`, then `cd apps/server && cargo test`                                        |
 
 The web app also has `npm run typecheck`, `npm run format` and `npm run format:check`. A pre-commit hook (Husky, installed by `npm ci`) runs lint-staged and the web, core, widgets and site checks.
 

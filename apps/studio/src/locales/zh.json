@@ -255,8 +255,8 @@
       "addCreator": "请先添加创作者以查看其视频。",
       "emptyTitle": "还没有视频",
       "emptyHint": "上传你的第一个视频，它会显示在这里和你的网站上。",
-      "search": "按标题搜索",
-      "noMatch": "没有与搜索匹配的视频标题。",
+      "search": "搜索视频",
+      "noMatch": "没有与搜索匹配的视频。",
       "viewOnSite": "在网站上查看",
       "loadMore": "加载更多",
       "contentWarning": "内容警告",
@@ -711,7 +711,7 @@
     },
     "features": {
       "searchTitle": "搜索",
-      "searchDescription": "网站上的搜索框，可按标题、描述和标签查找你的视频。搜索在访问者的浏览器中进行。",
+      "searchDescription": "网站上的搜索框，可按标题、描述、替代文本和标签查找你的视频，最匹配的排在前面。搜索由你服务器的中继响应。",
       "zapsTitle": "Zap 打赏",
       "zapsDescription": "观众可以从网站和 Nostr 应用向你发送比特币小费（zap）。",
       "zapsOwn": "Zap 会发送到你自己 Nostr 资料中的 Lightning 地址。请在你的 Nostr 应用中设置。"

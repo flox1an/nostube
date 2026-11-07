@@ -10,6 +10,7 @@ import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
+import { useVideoSearch } from '@nostube/widgets/hooks/useVideoSearch'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { HOMEPAGE_LIMITS, isRefHidden } from './draft'
 import { Field } from './fields'
@@ -19,9 +20,6 @@ import { replaceVideoPins, loadPinList } from '@nostube/core/pin-list'
 import { useSigner } from './signer-context'
 import { signAndPublish } from './upload/sign'
 import { useVideosByRef } from '@nostube/widgets/hooks/useVideosByRef'
-
-/** Fewer videos than this fit on a screen; more get a search box. */
-const SEARCH_FROM = 6
 
 /** The loaded video a homepage choice names (by its address or its id), if loaded. */
 export const findVideo = (videos: VideoEvent[], ref: string) =>
@@ -441,6 +439,8 @@ function ChoiceList({
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
   const [query, setQuery] = useState('')
+  const search = useVideoSearch(config, query)
+  const searching = query.trim() !== ''
   useEffect(() => onVideos(videos), [videos, onVideos])
 
   if (!config.startPage) {
@@ -451,21 +451,23 @@ function ChoiceList({
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('studio.videos.emptyHint')}</p>
   }
-  const needle = query.trim().toLowerCase()
-  const shown = needle ? videos.filter(v => v.title.toLowerCase().includes(needle)) : videos
+  const shown = searching ? search.videos : videos
+  const more = searching ? search.hasMore && !search.paging : hasMore
 
   return (
     <div className="space-y-3">
-      {videos.length >= SEARCH_FROM && (
-        <Input
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={t('studio.videos.search')}
-          aria-label={t('studio.videos.search')}
-        />
-      )}
-      {shown.length === 0 ? (
+      <Input
+        type="search"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder={t('studio.videos.search')}
+        aria-label={t('studio.videos.search')}
+      />
+      {searching && search.loading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : searching && search.error ? (
+        <p className="text-sm text-destructive">{t('studio.videos.loadFailed')}</p>
+      ) : shown.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('studio.videos.noMatch')}</p>
       ) : (
         <ul className="max-h-96 divide-y divide-border overflow-y-auto rounded-md border border-border">
@@ -496,8 +498,13 @@ function ChoiceList({
           {t('studio.homepage.full', { max: HOMEPAGE_LIMITS.selected })}
         </p>
       )}
-      {hasMore && (
-        <Button type="button" variant="outline" size="sm" onClick={loadMore}>
+      {more && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={searching ? search.loadMore : loadMore}
+        >
           {t('studio.videos.loadMore')}
         </Button>
       )}

@@ -165,7 +165,7 @@ fn check_nsite(nsite: &NsiteSettings) -> Result<(), BoxError> {
 }
 
 /// Same shape in TOML and in the public config JSON. `local`: the site searches the creators'
-/// videos in the browser.
+/// locally stored videos through the instance relay's NIP-50 index.
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(tag = "mode", rename_all = "lowercase", deny_unknown_fields)]
 pub enum Search {

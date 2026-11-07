@@ -255,8 +255,8 @@
       "addCreator": "Add a creator first to see their videos.",
       "emptyTitle": "No videos yet",
       "emptyHint": "Upload your first video and it appears here and on your site.",
-      "search": "Search by title",
-      "noMatch": "No video title matches the search.",
+      "search": "Search videos",
+      "noMatch": "No video matches the search.",
       "viewOnSite": "View on site",
       "loadMore": "Load more",
       "contentWarning": "content warning",
@@ -715,7 +715,7 @@
     },
     "features": {
       "searchTitle": "Search",
-      "searchDescription": "A search box on the site that finds your videos by title, description and tags. It searches in the visitor's browser.",
+      "searchDescription": "A search box on the site that finds your videos by title, description, alt text and tags, best matches first. Your server's relay answers the search.",
       "zapsTitle": "Zaps",
       "zapsDescription": "Viewers can send you Bitcoin tips (zaps) from the site and from Nostr apps.",
       "zapsOwn": "Zaps go to the Lightning address in your own Nostr profile. Set it in your Nostr app."

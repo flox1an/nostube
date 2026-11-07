@@ -430,6 +430,46 @@ describe('instance scoping', () => {
 
     expect(client.eventStore.verifyEvent?.(event)).toBe(false)
   })
+
+  it('sends a search only to its own relay, still scoped to creators and video kinds', async () => {
+    setInstanceConfig(instance)
+    const client = createNostubeClient({ defaultRelays: [], cache: false, instance })
+    const sent: { relays: string[]; filters: unknown }[] = []
+    const request = vi.spyOn(RelayGroup.prototype, 'request').mockImplementation(function (
+      this: RelayGroup,
+      filters
+    ) {
+      sent.push({ relays: this.relays.map(relay => relay.url), filters })
+      return from([])
+    })
+    try {
+      await lastValueFrom(
+        client
+          .searchVideos({ kinds: [21, 0], authors: [creator, stranger], search: 'cafe', limit: 50 })
+          .pipe(toArray())
+      )
+      expect(sent).toEqual([
+        {
+          relays: ['wss://example.org/'],
+          filters: [{ kinds: [21], authors: [creator], search: 'cafe', limit: 50 }],
+        },
+      ])
+      // Nothing in scope: nothing sent. The catalog still never goes to the own relay.
+      await lastValueFrom(
+        client.searchVideos({ kinds: [21], authors: [stranger], search: 'cafe' }).pipe(toArray())
+      )
+      await lastValueFrom(client.searchVideos({ kinds: [0], search: 'cafe' }).pipe(toArray()))
+      await lastValueFrom(
+        client.relayPool
+          .request(['wss://example.org'], [{ kinds: [21], authors: [creator] }])
+          .pipe(toArray())
+      )
+      expect(sent).toHaveLength(1)
+    } finally {
+      request.mockRestore()
+      client.reset()
+    }
+  })
 })
 
 describe('isRelaySecureForPage', () => {

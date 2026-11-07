@@ -255,8 +255,8 @@
       "addCreator": "Añade primero un creador para ver sus videos.",
       "emptyTitle": "Aún no hay videos",
       "emptyHint": "Sube tu primer video y aparecerá aquí y en tu sitio.",
-      "search": "Buscar por título",
-      "noMatch": "Ningún título de video coincide con la búsqueda.",
+      "search": "Buscar vídeos",
+      "noMatch": "Ningún vídeo coincide con la búsqueda.",
       "viewOnSite": "Ver en el sitio",
       "loadMore": "Cargar más",
       "contentWarning": "advertencia de contenido",
@@ -719,7 +719,7 @@
     },
     "features": {
       "searchTitle": "Búsqueda",
-      "searchDescription": "Un cuadro de búsqueda en el sitio que encuentra tus vídeos por título, descripción y etiquetas. La búsqueda se hace en el navegador del visitante.",
+      "searchDescription": "Un cuadro de búsqueda en el sitio que encuentra tus vídeos por título, descripción, texto alternativo y etiquetas, con los mejores resultados primero. Responde a la búsqueda el relé de tu servidor.",
       "zapsTitle": "Zaps",
       "zapsDescription": "Los espectadores pueden enviarte propinas en bitcoin (zaps) desde el sitio y desde apps de Nostr.",
       "zapsOwn": "Los zaps llegan a la dirección Lightning de tu propio perfil de Nostr. Configúrala en tu app de Nostr."

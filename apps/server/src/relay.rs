@@ -1,5 +1,5 @@
 //! The instance's own Nostr relay (ADR 0001, tickets #4 and #11): NIP-01, NIP-09 (`e`/`a` tags),
-//! NIP-11, NIP-40. Writes from the allowed writers, reads open. Visitors may not publish
+//! NIP-11, NIP-40, NIP-50 (search over video metadata). Writes from the allowed writers, reads open. Visitors may not publish
 //! arbitrary events, but the relay acts as an interaction inbox for its own videos: NIP-22
 //! comments (kind 1111, replies included), NIP-10 legacy replies (kind 1), NIP-25 reactions
 //! (kind 7), NIP-56 reports (kind 1984, ADR 0011) and NIP-09 deletions of a visitor's own
@@ -142,6 +142,71 @@ CREATE TABLE IF NOT EXISTS blob_view (
 );
 ";
 
+/// NIP-50 index fields, from the event JSON `{j}`: `title` tags; the content plus the
+/// `description`/`summary`/`alt` tags and imeta `alt` fields; `t` tags.
+const SEARCH_FIELDS: &str = "
+(SELECT group_concat(json_extract(value, '$[1]'), ' ') FROM json_each({j}, '$.tags')
+  WHERE json_extract(value, '$[0]') = 'title'),
+coalesce(json_extract({j}, '$.content'), '') || ' ' ||
+coalesce((SELECT group_concat(json_extract(value, '$[1]'), ' ') FROM json_each({j}, '$.tags')
+  WHERE json_extract(value, '$[0]') IN ('description', 'summary', 'alt')), '') || ' ' ||
+coalesce((SELECT group_concat(substr(f.value, 5), ' ') FROM json_each({j}, '$.tags') t, json_each(t.value) f
+  WHERE json_extract(t.value, '$[0]') = 'imeta' AND f.key > 0 AND f.type = 'text' AND f.value LIKE 'alt %'), ''),
+(SELECT group_concat(json_extract(value, '$[1]'), ' ') FROM json_each({j}, '$.tags')
+  WHERE json_extract(value, '$[0]') = 't')";
+
+/// NIP-50 ranking: a title hit outweighs body and topic hits (bm25 column weights).
+const SEARCH_RANK: &str = "bm25(event_search, 10.0, 1.0, 3.0)";
+
+/// Creates the NIP-50 index (FTS5, `rowid` = `event.id`) and fills it from the stored events in
+/// one transaction, on the first start that lacks it; later starts leave it alone. Triggers keep
+/// it current, so every path that stores or deletes an event row (replacement, NIP-09, NIP-40
+/// purge) updates it in the same transaction. Profiles (kind 0) stay out: no author-name search.
+fn init_search(conn: &Connection) -> rusqlite::Result<()> {
+    let tx = conn.unchecked_transaction()?;
+    let exists: bool = tx.query_row(
+        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE name = 'event_search')", [], |r| r.get(0),
+    )?;
+    if !exists {
+        let new = SEARCH_FIELDS.replace("{j}", "new.content");
+        let stored = SEARCH_FIELDS.replace("{j}", "event.content");
+        tx.execute_batch(&format!(
+            "CREATE VIRTUAL TABLE event_search USING fts5(title, body, topics, tokenize = 'unicode61 remove_diacritics 2');
+             CREATE TRIGGER event_search_insert AFTER INSERT ON event WHEN new.kind != 0 BEGIN
+               INSERT INTO event_search (rowid, title, body, topics) SELECT new.id, {new};
+             END;
+             CREATE TRIGGER event_search_delete AFTER DELETE ON event WHEN old.kind != 0 BEGIN
+               DELETE FROM event_search WHERE rowid = old.id;
+             END;
+             INSERT INTO event_search (rowid, title, body, topics) SELECT event.id, {stored} FROM event WHERE kind != 0;"
+        ))?;
+    }
+    tx.commit()
+}
+
+/// A NIP-50 `search` as an FTS5 query: every word an independent prefix term, all required, in
+/// any indexed field. Terms are runs of letters and digits, so no FTS5 syntax gets through;
+/// combining accents (U+0300–U+036F) are dropped without splitting, so a decomposed `fu\u{308}hr`
+/// finds `Führung` like the composed form does;
+/// `key:value` extensions (`include:spam`, `language:en`) are unsupported and dropped. `None`
+/// when no term is left: such a search matches nothing.
+fn fts_query(search: &str) -> Option<String> {
+    let extension = |word: &&str| {
+        word.split_once(':').is_some_and(|(key, _)| {
+            !key.is_empty() && key.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')
+        })
+    };
+    let terms: Vec<String> = search
+        .split_whitespace()
+        .filter(|word| !extension(word))
+        .flat_map(|word| word.split(|c: char| !c.is_alphanumeric() && !('\u{300}'..='\u{36f}').contains(&c)))
+        .map(|term| term.chars().filter(|c| c.is_alphanumeric()).collect::<String>())
+        .filter(|term| !term.is_empty())
+        .map(|term| format!("\"{term}\"*"))
+        .collect();
+    (!terms.is_empty()).then(|| terms.join(" "))
+}
+
 /// Per-connection pragmas (upstream `STARTUP_SQL`).
 const STARTUP: &str = "
 PRAGMA synchronous = NORMAL;
@@ -219,6 +284,7 @@ impl Relay {
     pub fn open(db: &Path, cfg: RelayConfig) -> Result<Relay, BoxError> {
         let writer = connect(db)?;
         writer.execute_batch(SCHEMA)?;
+        init_search(&writer)?;
         crate::outbox::initialize(&writer)?;
         // Older databases did not record historical timestamps. Superseded versions predate
         // the active version; the conservative migration value is zero.
@@ -488,8 +554,7 @@ impl Relay {
                             } else if subs.len() >= MAX_SUBSCRIPTIONS && !subs.contains_key(&id) {
                                 vec![RelayMessage::closed(id, "error: too many subscriptions (max 32)")]
                             } else {
-                                // NIP-50 is not supported: ignore `search` and return the superset.
-                                let filters: Vec<Filter> = filters.into_iter().map(|f| f.into_owned().remove_search()).collect();
+                                let filters: Vec<Filter> = filters.into_iter().map(|f| f.into_owned()).collect();
                                 let mut stored = self.query(&id, filters.clone());
                                 subs.insert(id.clone(), filters);
                                 while let Some(text) = stored.recv().await {
@@ -511,11 +576,15 @@ impl Relay {
                     Some(Ok(_)) => continue,
                 },
                 ev = live.recv() => match ev {
-                    Ok(ev) => subs
-                        .iter()
-                        .filter(|(_, fs)| fs.iter().any(|f| f.match_event(&ev, MatchEventOptions::new())))
-                        .map(|(id, _)| RelayMessage::event(id.clone(), (*ev).clone()))
-                        .collect(),
+                    Ok(ev) => {
+                        let mut out = Vec::new();
+                        for (id, fs) in &subs {
+                            if self.live_match(&ev, fs).await {
+                                out.push(RelayMessage::event(id.clone(), (*ev).clone()));
+                            }
+                        }
+                        out
+                    }
                     Err(broadcast::error::RecvError::Lagged(_)) => continue,
                     Err(broadcast::error::RecvError::Closed) => return,
                 },
@@ -526,6 +595,39 @@ impl Relay {
                 }
             }
         }
+    }
+
+    /// Whether a live event matches one of a subscription's filters. A `search` is decided by
+    /// the event's index row, as for stored queries (not the nostr crate's content-only match);
+    /// an unstored (ephemeral) event has none and never matches a search.
+    async fn live_match(&self, ev: &Event, filters: &[Filter]) -> bool {
+        for f in filters {
+            if !f.match_event(ev, MatchEventOptions::new().nip50(false)) {
+                continue;
+            }
+            let Some(search) = &f.search else { return true };
+            let Some(query) = fts_query(search) else { continue };
+            let (inner, id) = (self.0.clone(), ev.id);
+            let hit = tokio::task::spawn_blocking(move || -> rusqlite::Result<bool> {
+                let conn = inner.reader()?;
+                let hit = conn.query_row(
+                    "SELECT EXISTS (SELECT 1 FROM event e JOIN event_search ON event_search.rowid = e.id \
+                     WHERE e.event_hash = ? AND event_search MATCH ?)",
+                    params![id.as_bytes().as_slice(), query],
+                    |r| r.get(0),
+                );
+                inner.release(conn);
+                hit
+            })
+            .await;
+            match hit {
+                Ok(Ok(true)) => return true,
+                Ok(Ok(false)) => {}
+                Ok(Err(e)) => tracing::warn!("relay: live search match failed: {e}"),
+                Err(e) => tracing::warn!("relay: live search match failed: {e}"),
+            }
+        }
+        false
     }
 }
 
@@ -1406,13 +1508,26 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool)
 
 /// Upstream `query_from_filter`, against `nostr::Filter`. Empty `ids`/`authors`/`kinds` match
 /// everything and an empty tag value set matches nothing, as in `Filter::match_event`.
-/// Integers go into the SQL text; everything else is a parameter.
+/// Integers go into the SQL text; everything else is a parameter. A NIP-50 `search` joins the
+/// index and ranks by relevance (`score`, lower is better; `0` without search) before `limit`.
 fn filter_sql(f: &Filter, now: i64, params: &mut Vec<Value>) -> String {
     fn vars(n: usize) -> String {
         vec!["?"; n].join(",")
     }
     let mut w = vec!["(e.expires_at IS NULL OR e.expires_at >= ?)".to_owned()];
     params.push(Value::Integer(now));
+    let (join, score, order) = match f.search.as_deref().map(fts_query) {
+        None => ("", "0", ""),
+        Some(None) => {
+            w.push("0".to_owned());
+            ("", "0", "")
+        }
+        Some(Some(query)) => {
+            w.push("event_search MATCH ?".to_owned());
+            params.push(Value::Text(query));
+            (" JOIN event_search ON event_search.rowid = e.id", SEARCH_RANK, "score, ")
+        }
+    };
     if let Some(ids) = f.ids.as_ref().filter(|s| !s.is_empty()) {
         w.push(format!("e.event_hash IN ({})", vars(ids.len())));
         params.extend(ids.iter().map(|i| Value::Blob(i.as_bytes().to_vec())));
@@ -1442,8 +1557,8 @@ fn filter_sql(f: &Filter, now: i64, params: &mut Vec<Value>) -> String {
     }
     // Unqualified `kind`/`created_at` resolve to `tag` inside the subqueries, `event` here.
     let mut sql = format!(
-        "SELECT * FROM (SELECT e.created_at, e.event_hash, e.content FROM event e WHERE {}{narrow} \
-         ORDER BY e.created_at DESC, e.event_hash",
+        "SELECT * FROM (SELECT e.created_at, e.event_hash, e.content, {score} AS score FROM event e{join} \
+         WHERE {}{narrow} ORDER BY {order}e.created_at DESC, e.event_hash",
         w.join(" AND "),
     );
     if let Some(limit) = f.limit {
@@ -1454,14 +1569,26 @@ fn filter_sql(f: &Filter, now: i64, params: &mut Vec<Value>) -> String {
 }
 
 /// Runs a REQ's filters as one query (per-filter `limit`, deduplicated by UNION), newest
-/// first then lowest id, and hands each stored event's JSON to `each` until it returns false.
+/// first then lowest id — with a search, best match first — and hands each stored event's JSON
+/// to `each` until it returns false.
 fn run_query(conn: &Connection, filters: &[Filter], now: i64, mut each: impl FnMut(String) -> bool) -> rusqlite::Result<()> {
     if filters.is_empty() {
         return Ok(());
     }
     let mut params = Vec::new();
     let parts: Vec<String> = filters.iter().map(|f| filter_sql(f, now, &mut params)).collect();
-    let sql = format!("{} ORDER BY created_at DESC, event_hash", parts.join(" UNION "));
+    let sql = if filters.iter().any(|f| f.search.is_some()) {
+        // Materialize before aggregation: FTS5 auxiliary functions need their match cursor,
+        // and SQLite must not flatten bm25 into the outer MIN().
+        format!(
+            "WITH hits AS MATERIALIZED ({}) \
+             SELECT created_at, event_hash, content, MIN(score) AS best FROM hits \
+             GROUP BY event_hash ORDER BY best, created_at DESC, event_hash",
+            parts.join(" UNION ALL ")
+        )
+    } else {
+        format!("{} ORDER BY created_at DESC, event_hash", parts.join(" UNION "))
+    };
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
     while let Some(row) = rows.next()? {
@@ -1494,7 +1621,7 @@ fn nip11_doc(name: String, description: String) -> String {
     RelayInformationDocument {
         name: Some(name),
         description: Some(description),
-        supported_nips: Some(vec![1, 9, 11, 40]),
+        supported_nips: Some(vec![1, 9, 11, 40, 50]),
         software: Some("nostube-server".into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
         limitation: Some(Limitation {
@@ -2292,6 +2419,140 @@ mod tests {
         let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned(), b.to_owned()]);
         assert_eq!(event_jobs(&relay), jobs, "a restart neither duplicates nor resets jobs");
         assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
+    }
+
+    #[tokio::test]
+    async fn nip50_search_finds_video_metadata_and_ranks_titles_first() {
+        let relay = open(vec![]);
+        let (a, b) = (Keys::generate(), Keys::generate());
+        let ah = a.public_key().to_hex();
+        let titled = ev(&a, 34235, 100, "A walk through the old town.", &[&["d", "1"], &["title", "Rust Café Tour"], &["t", "travel"]]);
+        let described = ev(&a, 34235, 300, "We talk about rust, and more rust.", &[&["d", "2"], &["title", "Morning show"]]);
+        let summarized = ev(&a, 34235, 200, "", &[&["d", "3"], &["title", "Clip"], &["summary", "Zebra migration"]]);
+        let alt = ev(&a, 34235, 200, "", &[&["d", "4"], &["title", "Clip"], &["imeta", "url https://example.com/x.mp4", "alt Sunset over Lisbon"]]);
+        let topic = ev(&a, 34235, 200, "", &[&["d", "5"], &["title", "Clip"], &["t", "gardening"]]);
+        let tagged = ev(&a, 34235, 200, "", &[&["d", "6"], &["description", "Quokka selfie"], &["alt", "Kayak trip"]]);
+        let foreign = ev(&b, 34235, 400, "", &[&["d", "1"], &["title", "Rust"]]);
+        let note = ev(&a, 1, 500, "rust note", &[]);
+        let profile = ev(&a, 0, 500, r#"{"name":"Quinoa","display_name":"Quinoa"}"#, &[]);
+        let german = ev(&a, 34235, 200, "", &[&["d", "7"], &["title", "Führung durch die Altstadt"]]);
+        for e in [&titled, &described, &summarized, &alt, &topic, &tagged, &foreign, &note, &profile, &german] {
+            assert_eq!(put(&relay, e), Saved::Stored);
+        }
+        let found = |filters: &[&str]| -> Vec<EventId> {
+            get(&relay, &filters.iter().map(|f| filter(f)).collect::<Vec<_>>(), 0).into_iter().map(|e| e.id).collect()
+        };
+        let search = |q: &str| found(&[&format!(r#"{{"search":"{q}"}}"#)]);
+        let mine = |extra: &str| format!(r#"{{"kinds":[34235],"authors":["{ah}"]{extra}}}"#);
+
+        // Title outranks the newer description hit, before the limit applies.
+        assert_eq!(found(&[&mine(r#","search":"rust""#)]), [titled.id, described.id]);
+        assert_eq!(found(&[&mine(r#","search":"rust","limit":1"#)]), [titled.id]);
+        assert_eq!(found(&[&mine(r#","search":"rust include:spam language:en""#)]), [titled.id, described.id]);
+        // Standard filters still apply.
+        assert_eq!(found(&[r##"{"search":"rust","#t":["travel"]}"##]), [titled.id]);
+        assert_eq!(found(&[r#"{"search":"rust","kinds":[1]}"#]), [note.id]);
+        assert_eq!(found(&[&format!(r#"{{"search":"rust","kinds":[34235],"authors":["{}"]}}"#, b.public_key().to_hex())]), [foreign.id]);
+        // Every metadata field, case- and diacritic-insensitive word prefixes, all words required.
+        assert_eq!(search("ZEBRA"), [summarized.id]);
+        assert_eq!(search("lisbon"), [alt.id]);
+        assert_eq!(search("garden"), [topic.id]);
+        assert_eq!(search("quokka"), [tagged.id]);
+        assert_eq!(search("kayak"), [tagged.id]);
+        assert_eq!(search("cafe"), [titled.id]);
+        assert_eq!(search("CAFÉ tou"), [titled.id]);
+        // Decomposed accents (NFD) match like composed ones, without splitting the word.
+        assert_eq!(search("CAFE\u{301} tou"), [titled.id]);
+        assert_eq!(search("fu\u{308}hr"), [german.id]);
+        assert_eq!(search("führ"), [german.id]);
+        assert!(search("rust nowhere").is_empty());
+        assert!(search("quinoa").is_empty(), "profiles (author names) are not indexed");
+        // Several filters: union without duplicates, best match first.
+        assert_eq!(found(&[&mine(r#","search":"rust""#), r#"{"search":"tour"}"#]), [titled.id, described.id]);
+        assert_eq!(found(&[r#"{"search":"lisbon"}"#, r#"{"kinds":[1]}"#]), [alt.id, note.id]);
+
+        // Hostile input is never FTS5 syntax or SQL; nothing searchable left matches nothing.
+        for q in ["", "   ", "\"", "*", ":", "(((", "^", "include:spam", "nsfw:false", "-- ;"] {
+            assert!(get(&relay, &[Filter::new().search(q)], 0).is_empty(), "{q:?}");
+        }
+        for q in ["rust\" OR \"x", "NEAR(rust tour)", "rust' ; DROP TABLE event; --", "AND OR NOT", "title:rust", "² ① Ⅻ"] {
+            assert!(get(&relay, &[Filter::new().search(q)], 0).is_empty(), "{q:?}");
+        }
+        assert_eq!(search("rust*"), search("rust"));
+
+        let nips = serde_json::from_str::<serde_json::Value>(&nip11_doc("t".into(), "t".into())).unwrap();
+        assert!(nips["supported_nips"].as_array().unwrap().contains(&50.into()));
+    }
+
+    #[tokio::test]
+    async fn nip50_index_follows_replacement_deletion_expiry_backfill_and_live() {
+        let a = Keys::generate();
+        let relay = open(vec![a.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let found = |relay: &Relay, q: &str, at: u64| -> Vec<EventId> {
+            get(relay, &[Filter::new().search(q)], at as i64).into_iter().map(|e| e.id).collect()
+        };
+        // Index rows without an event row, plus indexable event rows without an index row.
+        let stale = |relay: &Relay| -> i64 {
+            relay.0.writer.lock().query_row(
+                "SELECT (SELECT count(*) FROM event_search WHERE rowid NOT IN (SELECT id FROM event WHERE kind != 0))
+                      + (SELECT count(*) FROM event WHERE kind != 0 AND id NOT IN (SELECT rowid FROM event_search))",
+                [], |r| r.get(0),
+            ).unwrap()
+        };
+
+        // Replacement: only the current version's words.
+        let v1 = ev(&a, 34235, now - 50, "", &[&["d", "clip"], &["title", "Alpha"]]);
+        let v2 = ev(&a, 34235, now - 40, "", &[&["d", "clip"], &["title", "Beta"]]);
+        assert_eq!(put(&relay, &v1), Saved::Stored);
+        assert_eq!(put(&relay, &v2), Saved::Stored);
+        assert!(found(&relay, "alpha", now).is_empty());
+        assert_eq!(found(&relay, "beta", now), [v2.id]);
+
+        // NIP-09 by id and by coordinate; a deleted event sent again stays unsearchable.
+        let note = ev(&a, 1, now - 30, "gamma", &[]);
+        assert_eq!(put(&relay, &note), Saved::Stored);
+        assert_eq!(put(&relay, &ev(&a, 5, now - 20, "", &[&["e", &note.id.to_hex()]])), Saved::Stored);
+        assert_eq!(put(&relay, &note), Saved::Deleted);
+        assert!(found(&relay, "gamma", now).is_empty());
+        let doomed = ev(&a, 34235, now - 30, "", &[&["d", "doomed"], &["title", "Delta"]]);
+        assert_eq!(put(&relay, &doomed), Saved::Stored);
+        let coordinate = format!("34235:{}:doomed", a.public_key().to_hex());
+        assert_eq!(put(&relay, &ev(&a, 5, now - 20, "", &[&["a", &coordinate]])), Saved::Stored);
+        assert!(found(&relay, "delta", now).is_empty());
+
+        // Expiry: hidden once lapsed, and the purge takes the index row along.
+        let expiring = ev(&a, 1, now - 10, "epsilon", &[&["expiration", &(now + 100).to_string()]]);
+        assert_eq!(put(&relay, &expiring), Saved::Stored);
+        assert_eq!(found(&relay, "epsilon", now), [expiring.id]);
+        assert!(found(&relay, "epsilon", now + 200).is_empty());
+        relay.0.writer.lock().execute("DELETE FROM event WHERE expires_at < ?", [now as i64 + 200]).unwrap();
+        assert_eq!(stale(&relay), 0);
+
+        // Live: decided by the same index, so title words match and unstored events never do.
+        let live = |json: &str| vec![filter(json)];
+        assert!(relay.live_match(&v2, &live(r#"{"search":"bet","kinds":[34235]}"#)).await);
+        assert!(!relay.live_match(&v2, &live(r#"{"search":"alpha"}"#)).await);
+        assert!(!relay.live_match(&v2, &live(r#"{"search":"beta","kinds":[1]}"#)).await);
+        assert!(!relay.live_match(&v2, &live(r#"{"search":"include:spam"}"#)).await);
+        let ephemeral = ev(&a, 20001, now, "beta", &[]);
+        assert!(!relay.live_match(&ephemeral, &live(r#"{"search":"beta"}"#)).await);
+        assert!(relay.live_match(&ephemeral, &live(r#"{"kinds":[20001]}"#)).await);
+
+        // A database from before the index: the next start fills it, later starts keep it.
+        relay.0.writer.lock().execute_batch(
+            "DROP TRIGGER event_search_insert; DROP TRIGGER event_search_delete; DROP TABLE event_search;",
+        ).unwrap();
+        let legacy = ev(&a, 1, now, "omega", &[]);
+        assert_eq!(put(&relay, &legacy), Saved::Stored);
+        let path = relay.0.path.clone();
+        let relay = reopen(&path, vec![a.public_key()], vec![]);
+        assert_eq!(found(&relay, "omega", now), [legacy.id]);
+        assert_eq!(found(&relay, "beta", now), [v2.id]);
+        assert_eq!(stale(&relay), 0);
+        let relay = reopen(&path, vec![a.public_key()], vec![]);
+        assert_eq!(stale(&relay), 0);
+        assert_eq!(found(&relay, "omega", now), [legacy.id]);
     }
 
 }

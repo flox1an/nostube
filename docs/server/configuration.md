@@ -167,9 +167,19 @@ relay's writer policy does not. See [Additional signer relays](/server/studio#ad
 
 ### `[search]`
 
-| Key    | Default | Meaning                                                                                                                     |
-| ------ | ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `mode` | `"off"` | `off`: no search. `local`: a search box that finds the shown videos by title, description and tags in the visitor's browser |
+| Key    | Default | Meaning                                                                                                                  |
+| ------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `mode` | `"off"` | `off`: no site search. `local`: search the instance relay's video index over NIP-50, with title matches weighted highest |
+
+The index covers event content, title, description, summary, alternative text (`alt`, including
+`imeta` alternative text) and topic (`t`) tags. Every query word must match a word prefix;
+case and diacritics are ignored. Results are ordered by relevance, not publication date.
+Author names and external subtitle files are not indexed.
+
+Site and Studio search the start-page creator's videos stored on the instance's own relay, even
+when the catalog uses public video sources. Videos present only on other relays are not in this
+index. Search uses the existing WebSocket connection protocol, not a separate HTTP search API.
+The relay advertises NIP-50 support independently of whether the site's search box is enabled.
 
 ### `[tls]`
 

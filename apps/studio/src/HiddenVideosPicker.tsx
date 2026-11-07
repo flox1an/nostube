@@ -11,15 +11,13 @@ import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@nostube/widgets/components/toggle-group'
 import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
+import { useVideoSearch } from '@nostube/widgets/hooks/useVideoSearch'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { loadPlays } from './api'
 import { isRefHidden, setRefHidden } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { VideoActions } from './VideoActions'
 import { hashFor } from './route'
-
-/** Fewer videos than this fit on a screen; more get a search box. */
-const SEARCH_FROM = 6
 
 /** The periods the play counts cover, in days. */
 const PLAY_PERIODS = [7, 30, 365]
@@ -66,9 +64,11 @@ function VideoList({
 }: PickerProps & { config: InstanceClient['config']; instance: InstanceClient }) {
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
+  const [query, setQuery] = useState('')
+  const search = useVideoSearch(config, query)
+  const searching = query.trim() !== ''
   const [hideBusy, setHideBusy] = useState(false)
   const [hideError, setHideError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
   const [days, setDays] = useState(30)
   const [sort, setSort] = useState<'newest' | 'plays'>('newest')
   // Plays per video event id; the previous period's stay while the next loads. Null: none known.
@@ -115,13 +115,13 @@ function VideoList({
       </div>
     )
   }
-  const needle = query.trim().toLowerCase()
-  const found = needle ? videos.filter(v => v.title.toLowerCase().includes(needle)) : videos
+  const found = searching ? search.videos : videos
   // ponytail: sorts the videos loaded so far; "Load more" may bring more-played ones.
   const shown =
     sort === 'plays' && plays
       ? [...found].sort((a, b) => (plays[b.id] ?? 0) - (plays[a.id] ?? 0))
       : found
+  const more = searching ? search.hasMore && !search.paging : hasMore
   const showPlays = countPlays || (plays !== null && Object.keys(plays).length > 0)
 
   return (
@@ -131,15 +131,13 @@ function VideoList({
           {hideError}
         </p>
       )}
-      {videos.length >= SEARCH_FROM && (
-        <Input
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={t('studio.videos.search')}
-          aria-label={t('studio.videos.search')}
-        />
-      )}
+      <Input
+        type="search"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder={t('studio.videos.search')}
+        aria-label={t('studio.videos.search')}
+      />
       {showPlays && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <ToggleGroup
@@ -169,7 +167,11 @@ function VideoList({
           </ToggleGroup>
         </div>
       )}
-      {shown.length === 0 ? (
+      {searching && search.loading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : searching && search.error ? (
+        <p className="text-sm text-destructive">{t('studio.videos.loadFailed')}</p>
+      ) : shown.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('studio.videos.noMatch')}</p>
       ) : (
         <ul className="divide-y divide-border rounded-md border border-border">
@@ -186,8 +188,13 @@ function VideoList({
           ))}
         </ul>
       )}
-      {hasMore && (
-        <Button type="button" variant="outline" size="sm" onClick={loadMore}>
+      {more && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={searching ? search.loadMore : loadMore}
+        >
           {t('studio.videos.loadMore')}
         </Button>
       )}

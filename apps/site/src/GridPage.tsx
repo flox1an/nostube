@@ -4,8 +4,10 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { ArrowLeft, Search } from 'lucide-react'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
-import { searchVideos } from '@nostube/core/video-search'
+import { isHiddenVideo } from '@nostube/core/hidden-videos'
+import { titleMatchesSearch } from '@nostube/core/video-search'
 import { VideoGrid, VideoGridSkeleton } from '@nostube/widgets'
+import { useVideoSearch } from '@nostube/widgets/hooks/useVideoSearch'
 import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
@@ -120,34 +122,46 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
 }
 
 /**
- * `/search?q=`: the shown videos (the grid's, without the hidden ones) that match the query. The
- * whole catalog is paged in, since a match may be on any page. A locked video matches on its title
- * only, the one thing its card shows before the age gate.
+ * `/search?q=`: the creator's videos matching the query, best match first, from the instance
+ * relay's search index. Hidden videos are left out; a locked video only counts when its title
+ * matches, the one thing its card shows before the age gate.
  */
 export function SearchPage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
   const { t } = useTranslation()
   const query = (useSearchParams()[0].get('q') ?? '').trim()
-  const { videos, error, hasMore, pagesLoaded, loadMore } = useCreatorVideos(config)
-  // Page in the whole catalog, one page after the other (loadMore does nothing while one loads).
-  // Keyed on the page count, not on a loading flag: a page that starts and ends in one render
-  // batch never shows the flag, and paging would stop.
-  useEffect(() => {
-    if (hasMore && !error) loadMore()
-  }, [hasMore, error, loadMore, pagesLoaded])
+  const { videos, loading, paging, error, hasMore, loadMore } = useVideoSearch(config, query)
+  const hidden = config.site.videos.hidden
   const found = useMemo(
-    () => searchVideos(videos, query, v => (gate.isLocked(v) ? v.title : v.searchText)),
-    [videos, query, gate]
+    () =>
+      videos.filter(
+        v => !isHiddenVideo(v, hidden) && (!gate.isLocked(v) || titleMatchesSearch(v.title, query))
+      ),
+    [videos, hidden, gate, query]
   )
+  // A page of only left-out matches says nothing yet: ask for the next one.
+  const skipAhead = !loading && !paging && !error && hasMore && found.length === 0
+  useEffect(() => {
+    if (skipAhead) loadMore()
+  }, [skipAhead, loadMore])
 
   if (!query) return <Navigate to="/" replace />
   return (
     <>
       <SubPageHeading>{t('site.search.title', { query })}</SubPageHeading>
       {error && <LoadFailed />}
-      {found.length === 0 && hasMore && !error ? (
+      {loading || skipAhead || (paging && found.length === 0) ? (
         gridSkeleton
       ) : (
-        <VideoLinks videos={found} gate={gate} emptyMessage={t('site.search.empty', { query })} />
+        <>
+          <VideoLinks videos={found} gate={gate} emptyMessage={t('site.search.empty', { query })} />
+          {hasMore && !paging && (
+            <div className="text-center">
+              <Button type="button" variant="outline" onClick={loadMore}>
+                {t('site.grid.loadMore')}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </>
   )

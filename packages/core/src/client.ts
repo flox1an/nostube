@@ -23,6 +23,7 @@ import {
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import {
   getInstanceConfig,
+  instanceOwnRelay,
   instanceRelays,
   isRelayAllowed,
   isVideoKind,
@@ -402,6 +403,27 @@ export function createNostubeClient(config: NostubeClientConfig) {
     return results
   }
 
+  /**
+   * NIP-50 video search on the instance's own relay, the one that indexes the catalog: the only
+   * video request that may leave `videoSources` (a mirror ignores `search` and would answer
+   * with its plain catalog). Kinds narrow to video kinds and authors to creators; nothing left,
+   * or no instance, sends nothing. Events arrive in the relay's rank order and are not stored.
+   */
+  function searchVideos(query: Filter & { search: string }): Observable<NostrEvent> {
+    if (!instance) return EMPTY
+    const relay = instanceOwnRelay(instance)
+    const kinds = query.kinds?.filter(isVideoKind) ?? []
+    const authors = (query.authors ?? instance.creators).filter(a => instance.creators.includes(a))
+    if (!kinds.length || !authors.length || !isRelaySecureForPage(relay)) return EMPTY
+    // identityGroup: the allowlist and video scoping of relayPool.group/request would drop the
+    // own relay when the public config lists only mirrors.
+    return withIdleTimeout(
+      identityGroup([relay]).request([{ ...query, kinds, authors }]),
+      `Relay search idle timed out after ${REQUEST_IDLE_TIMEOUT_MS}ms for ${relay}`,
+      debug
+    )
+  }
+
   // ---- loader factory ----
   //
   // Each call to the returned function loads the next page and COMPLETES once
@@ -515,6 +537,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
     cacheRequest,
     getTimelineLoader,
     requestVisitorIdentity,
+    searchVideos,
     subscriptionMethod,
     publishMethod,
     reset,

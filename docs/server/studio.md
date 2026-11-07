@@ -165,8 +165,14 @@ switch; its settings appear while it is on.
 
 #### Search
 
-On: a search box that finds the shown videos by title, description and tags, searched in the
-visitor's browser. Off: no search.
+On: a search box that queries the instance relay using NIP-50. It searches titles, event text,
+descriptions, summaries, alternative text and topic tags, with title matches weighted highest.
+Words match prefixes, ignoring case and diacritics. Off: no site search.
+
+The video selectors in Studio also use relay search, including videos not yet loaded into the
+list; they work independently of the site's search switch. Search covers locally stored videos
+of the start-page creator, not videos held only by external video sources. The site still omits
+hidden videos; before age confirmation, a locked video is discoverable only by its title.
 
 #### Play counter
 

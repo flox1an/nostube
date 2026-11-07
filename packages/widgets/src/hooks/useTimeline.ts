@@ -42,11 +42,6 @@ export interface UseTimelineResult {
   isLoadingMore: boolean
   isPrefetching: boolean
   subscriptionActive: boolean
-  /**
-   * Finished page loads so far. Unlike `subscriptionActive` it changes for every page, also when a
-   * page starts and finishes within one render batch (e.g. from a cache).
-   */
-  pagesLoaded: number
   exhausted: boolean
   hasMore: boolean
   phase: TimelinePhase
@@ -119,7 +114,6 @@ export function useTimeline(
   const [phase, setPhase] = useState<TimelinePhase>('idle')
   const [exhausted, setExhausted] = useState(false)
   const [subscriptionActive, setSubscriptionActive] = useState(false)
-  const [pagesLoaded, setPagesLoaded] = useState(0)
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -218,7 +212,6 @@ export function useTimeline(
         settled = true
         inFlightRef.current = false
         setSubscriptionActive(false)
-        setPagesLoaded(n => n + 1)
         clearTimers()
         if (intent === 'initial' && timelineCacheKey) {
           lastLoadedTimestamp.set(timelineCacheKey, Date.now())
@@ -409,7 +402,6 @@ export function useTimeline(
     isLoadingMore: phase === 'loading-more',
     isPrefetching: phase === 'prefetching',
     subscriptionActive,
-    pagesLoaded,
     exhausted,
     hasMore: !exhausted,
     phase,

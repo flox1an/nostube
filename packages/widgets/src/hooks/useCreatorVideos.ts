@@ -12,8 +12,6 @@ export interface CreatorVideos {
   hasMore: boolean
   /** A page is still loading (videos may already show); whether more exist is known after it. */
   paging: boolean
-  /** Finished page loads so far; changes after every page (to drive loading the whole catalog). */
-  pagesLoaded: number
   loadMore: () => void
 }
 
@@ -37,8 +35,9 @@ export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorV
         : undefined,
     [creator, tag]
   )
-  const { videos, isInitialLoading, phase, hasMore, pagesLoaded, loadMore, subscriptionActive } =
-    useTimeline(filters, {
+  const { videos, isInitialLoading, phase, hasMore, loadMore, subscriptionActive } = useTimeline(
+    filters,
+    {
       relays: config.videoSources,
       enabled: Boolean(creator),
       // The instance's relays answer with the full limit when they have it, so a short page is the end.
@@ -46,14 +45,14 @@ export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorV
       // Wait for every source's answer (a silent relay ends at the client's 8 s idle timeout):
       // a page cut off earlier leaves that relay unanswered, and "Load more" shows for nothing.
       pageSettleMs: 10_000,
-    })
+    }
+  )
   return {
     videos,
     loading: isInitialLoading,
     error: phase === 'error',
     hasMore,
     paging: subscriptionActive,
-    pagesLoaded,
     loadMore,
   }
 }

@@ -1,10 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState, type ReactNode } from 'react'
 import { videoRef } from '@nostube/core/hidden-videos'
 import type { SiteHomepage } from '@nostube/core/instance-config'
 import { processEvent, type VideoEvent } from '@nostube/core/video-event'
-import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from 'nostr-tools'
+import { finalizeEvent, generateSecretKey, getPublicKey, nip19, type NostrEvent } from 'nostr-tools'
+import { of } from 'rxjs'
 import { describe, expect, it, vi } from 'vitest'
+import { TimelineProvider } from '@nostube/widgets/timeline'
 import { HomepageCard } from './HomepageCard'
 import type { InstanceClient } from './instance-client'
 import './i18n'
@@ -13,12 +15,22 @@ const loaded = vi.hoisted(() => ({
   videos: [] as unknown[],
   refs: [] as string[],
   pins: [] as unknown[],
+  /** The instance relay's answer to any search, best match first. */
+  found: [] as NostrEvent[],
 }))
+// `of` is read when the card boots, after the static imports are in.
 vi.mock('./instance-client', () => ({
-  bootInstanceClient: async () => ({ config: { startPage: { creator: 'c' } }, client: {} }),
+  bootInstanceClient: async () => ({
+    config: { startPage: { creator: 'c' }, videoSources: [] },
+    client: { eventStore: { add: (e: unknown) => e }, searchVideos: () => of(...loaded.found) },
+  }),
 }))
 vi.mock('@nostube/widgets/instance-providers', () => ({
-  InstanceProviders: ({ children }: { children: ReactNode }) => children,
+  InstanceProviders: ({ client, children }: { client: never; children: ReactNode }) => (
+    <TimelineProvider value={{ client, policy: { getAllMissingVideos: () => ({}) } }}>
+      {children}
+    </TimelineProvider>
+  ),
 }))
 vi.mock('@nostube/widgets/hooks/useCreatorVideos', () => ({
   useCreatorVideos: () => ({ videos: loaded.videos, loading: false, error: null, hasMore: false }),
@@ -38,24 +50,22 @@ vi.mock('./signer-context', () => ({
 vi.mock('@nostube/widgets/hooks/useVideosByRef', () => ({ useVideosByRef: () => new Map() }))
 
 const key = generateSecretKey()
-const makeVideo = (d: string, title: string) =>
-  processEvent(
-    finalizeEvent(
-      {
-        kind: 34235,
-        created_at: 100,
-        content: '',
-        tags: [
-          ['d', d],
-          ['title', title],
-          ['imeta', 'url https://media.example/a.mp4', 'm video/mp4'],
-        ],
-      },
-      key
-    ),
-    []
-  )!
-const [a, b, c] = [makeVideo('a', 'Alpha'), makeVideo('b', 'Beta'), makeVideo('c', 'Gamma')]
+const makeEvent = (d: string, title: string) =>
+  finalizeEvent(
+    {
+      kind: 34235,
+      created_at: 100,
+      content: '',
+      tags: [
+        ['d', d],
+        ['title', title],
+        ['imeta', 'url https://media.example/a.mp4', 'm video/mp4'],
+      ],
+    },
+    key
+  )
+const events = [makeEvent('a', 'Alpha'), makeEvent('b', 'Beta'), makeEvent('c', 'Gamma')]
+const [a, b, c] = events.map(e => processEvent(e, [])!)
 loaded.videos = [a, b, c]
 
 function Editor({ onSaved }: { onSaved: (homepage: SiteHomepage | undefined) => void }) {
@@ -131,6 +141,26 @@ describe('homepage editor', () => {
     })
     expect(screen.getByRole('status').textContent).toBe(
       [videoRef(b), `34236:${older.pubkey}:old:clip`, videoRef(a)].join(',')
+    )
+  })
+
+  it('searches the instance relay in its ranking; a hidden match stays no choice', async () => {
+    loaded.found = [events[2], events[0]]
+    render(<Editor onSaved={() => {}} />)
+    await screen.findByRole('button', { name: 'Add “Beta”' })
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search videos' }), {
+      target: { value: 'a' },
+    })
+    const adds = () =>
+      (screen.queryAllByRole('button', { name: /^Add “/ }) as HTMLButtonElement[]).map(button => [
+        button.getAttribute('aria-label'),
+        button.disabled,
+      ])
+    await waitFor(() =>
+      expect(adds()).toEqual([
+        ['Add “Gamma”', true],
+        ['Add “Alpha”', false],
+      ])
     )
   })
 })

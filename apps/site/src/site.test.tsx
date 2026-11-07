@@ -4,7 +4,7 @@ import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
 import { nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
-import { EMPTY, NEVER, of } from 'rxjs'
+import { NEVER, Observable, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
 import {
@@ -499,65 +499,60 @@ describe('SiteHome', () => {
 
   describe('search', () => {
     const fresh = (): typeof video => JSON.parse(JSON.stringify(video))
-    const cafe = {
+    const match = (id: string, title: string, extra: Partial<typeof video> = {}) => ({
       ...fresh(),
-      id: 'd'.repeat(64),
-      content: 'Morning coffee by the river',
+      id: id.padStart(64, '0'),
       tags: [
-        ['title', 'Café in Lisbon'],
-        ['t', 'travel'],
-        ['imeta', 'url https://media.example/b.mp4', 'm video/mp4', 'duration 30'],
+        ['title', title],
+        ['imeta', `url https://media.example/${id}.mp4`, 'm video/mp4', 'duration 30'],
       ],
-    }
-    const secret = {
-      ...fresh(),
-      id: 'a'.repeat(64),
-      tags: [
-        ['title', 'Secret cafe'],
-        ['imeta', 'url https://media.example/c.mp4', 'm video/mp4', 'duration 30'],
-      ],
-    }
+      ...extra,
+    })
+    // Older than the café video, yet the relay ranks it first.
+    const trams = match('1', 'Lisbon trams', { created_at: 1_600_000_000 })
+    const cafe = match('2', 'Café in Lisbon', { content: 'Morning coffee by the river' })
+    const secret = match('3', 'Secret cafe')
     const gated = {
-      ...fresh(),
-      id: 'b'.repeat(64),
-      content: 'Cafe after dark',
+      ...match('4', 'Night shift', { content: 'Cafe after dark' }),
       tags: [
         ['title', 'Night shift'],
         ['content-warning', 'nudity'],
-        ['imeta', 'url https://media.example/d.mp4', 'm video/mp4', 'duration 30'],
+        ['imeta', 'url https://media.example/4.mp4', 'm video/mp4', 'duration 30'],
       ],
     }
-    // Two pages, then nothing: a match on the second page is found too. The pages complete
-    // synchronously (like a cache), so a page starts and ends within one render batch: paging
-    // must not wait for a loading flag to flip, or it stops after the first page.
-    const pagedClient = () =>
-      ({
+    /** A client whose own relay answers each search with `answer`, in that (ranked) order. */
+    const searchClient = (answer: (filter: Filter) => NostrEvent[]) => {
+      const searches: Filter[] = []
+      const client = {
         eventStore: makeStore(),
-        getTimelineLoader: () => {
-          const pages = [[fresh()], [cafe, secret, gated]]
-          return () => {
-            const page = pages.shift()
-            return page ? of(...page) : EMPTY
-          }
-        },
+        getTimelineLoader: () => () => of(fresh()),
         relayPool: { request: () => of(profile), subscription: () => NEVER },
-      }) as unknown as NostubeClient
+        searchVideos: (filter: Filter) => {
+          searches.push(filter)
+          return of(...answer(filter))
+        },
+      } as unknown as NostubeClient
+      return { client, searches }
+    }
     const local: InstanceConfig = {
       ...config,
       search: { mode: 'local' },
       site: { ...config.site, videos: { hidden: [secret.id] } },
     }
+    const titles = () =>
+      screen.getAllByText(/^(Lisbon trams|Café in Lisbon|Match \d+)$/).map(e => e.textContent)
 
     it('has no search box and no search page when search is off', async () => {
-      renderSite(pagedClient(), '/search?q=cafe')
+      renderSite(searchClient(() => [cafe]).client, '/search?q=cafe')
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
       expect(screen.queryByRole('search')).toBeNull()
       expect(screen.queryByRole('button', { name: 'Search videos' })).toBeNull()
       expect(screen.queryByText(/Search results/)).toBeNull()
     })
 
-    it('finds the shown videos by description words, ignoring case and accents', async () => {
-      renderSite(pagedClient(), '/', local)
+    it("shows the relay's ranked matches without the hidden ones", async () => {
+      const { client, searches } = searchClient(() => [trams, gated, secret, cafe])
+      renderSite(client, '/', local)
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
       // Folded into an icon until clicked; an empty box folds back on Escape, focus on the icon.
       expect(screen.queryByRole('searchbox')).toBeNull()
@@ -574,22 +569,69 @@ describe('SiteHome', () => {
       expect(
         await screen.findByRole('heading', { name: 'Search results for “COFFEE cafe”' })
       ).toBeTruthy()
-      await waitFor(() => expect(screen.getByText('Café in Lisbon')).toBeTruthy())
+      await waitFor(() => expect(titles()).toEqual(['Lisbon trams', 'Café in Lisbon']))
+      expect(searches).toEqual([
+        { kinds: [34235, 34236, 21, 22], authors: [creator], search: 'COFFEE cafe', limit: 50 },
+      ])
       expect(screen.queryByText('My first upload')).toBeNull()
       // Hidden by the creator: never found.
       expect(screen.queryByText('Secret cafe')).toBeNull()
-      // Locked: only its title is searched, and "cafe" is in its description only.
+      // Locked: found by its title only, and "cafe" is in its description only.
       expect(screen.queryByText('Night shift')).toBeNull()
       expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('COFFEE cafe')
     })
 
     it('says so when nothing matches, and finds a locked video by its title', async () => {
-      const { unmount } = renderSite(pagedClient(), '/search?q=nothing%20like%20this', local)
+      const { client } = searchClient(f => (f.search === 'nigh' ? [gated] : []))
+      const { unmount } = renderSite(client, '/search?q=nothing%20like%20this', local)
       expect(await screen.findByText('No video matches “nothing like this”.')).toBeTruthy()
       unmount()
-      renderSite(pagedClient(), '/search?q=night', local)
+      renderSite(client, '/search?q=nigh', local)
       await waitFor(() => expect(screen.getByText('Night shift')).toBeTruthy())
       expect(screen.getByText('Content warning')).toBeTruthy()
+    })
+
+    it('sends a decomposed accent composed, so the relay keeps the word whole', async () => {
+      const { client, searches } = searchClient(() => [])
+      renderSite(client, `/search?q=${encodeURIComponent('fu\u0308hr')}`, local)
+      await waitFor(() => expect(searches.map(f => f.search)).toEqual(['f\u00fchr']))
+    })
+
+    it('loads more by asking again for a longer ranked list', async () => {
+      const ranked = Array.from({ length: 60 }, (_, i) =>
+        match((0x100 + i).toString(16), `Match ${i}`)
+      )
+      const { client, searches } = searchClient(f => ranked.slice(0, f.limit))
+      renderSite(client, '/search?q=match', local)
+      await waitFor(() => expect(titles()).toHaveLength(50))
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+      await waitFor(() => expect(titles()).toHaveLength(60))
+      expect(titles()).toEqual(ranked.map(v => v.tags[0][1]))
+      expect(searches.map(f => [f.search, f.limit, f.until])).toEqual([
+        ['match', 50, undefined],
+        ['match', 100, undefined],
+      ])
+      // 60 of 100: the whole list is shown.
+      expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+    })
+
+    it('cancels the search of a replaced query', async () => {
+      const open: string[] = []
+      const client = {
+        ...searchClient(() => []).client,
+        searchVideos: ({ search = '' }: Filter) =>
+          new Observable<NostrEvent>(() => {
+            open.push(search)
+            return () => open.splice(open.indexOf(search), 1)
+          }),
+      } as unknown as NostubeClient
+      renderSite(client, '/search?q=first', local)
+      await waitFor(() => expect(open).toEqual(['first']))
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search videos' }), {
+        target: { value: 'second' },
+      })
+      fireEvent.submit(screen.getByRole('search'))
+      await waitFor(() => expect(open).toEqual(['second']))
     })
   })
 

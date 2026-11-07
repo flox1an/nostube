@@ -255,8 +255,8 @@
       "addCreator": "Füge zuerst einen Creator hinzu, um seine Videos zu sehen.",
       "emptyTitle": "Noch keine Videos",
       "emptyHint": "Lade dein erstes Video hoch; es erscheint dann hier und auf deiner Website.",
-      "search": "Nach Titel suchen",
-      "noMatch": "Kein Videotitel passt zur Suche.",
+      "search": "Videos suchen",
+      "noMatch": "Kein Video passt zur Suche.",
       "viewOnSite": "Auf der Website ansehen",
       "loadMore": "Mehr laden",
       "contentWarning": "Inhaltswarnung",
@@ -715,7 +715,7 @@
     },
     "features": {
       "searchTitle": "Suche",
-      "searchDescription": "Ein Suchfeld auf der Website, das deine Videos nach Titel, Beschreibung und Tags findet. Gesucht wird im Browser der Besucher.",
+      "searchDescription": "Ein Suchfeld auf der Website, das deine Videos nach Titel, Beschreibung, Alternativtext und Tags findet, die besten Treffer zuerst. Die Suche beantwortet das Relay deines Servers.",
       "zapsTitle": "Zaps",
       "zapsDescription": "Zuschauer können dir von der Website und aus Nostr-Apps Bitcoin-Trinkgeld (Zaps) senden.",
       "zapsOwn": "Zaps gehen an die Lightning-Adresse in deinem eigenen Nostr-Profil. Trage sie in deiner Nostr-App ein."

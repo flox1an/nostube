@@ -1,32 +1,33 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { TooltipProvider } from '@nostube/widgets/components/tooltip'
+import { TimelineProvider } from '@nostube/widgets/timeline'
 import { DEFAULT_PROFILE_RELAYS, DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { processEvent } from '@nostube/core/video-event'
-import { finalizeEvent, generateSecretKey } from 'nostr-tools'
+import { finalizeEvent, generateSecretKey, type Filter, type NostrEvent } from 'nostr-tools'
+import { of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminConfig } from './api'
 import { App } from './App'
 import { fakeAdminApi, refusal } from './test-admin-api'
 import './i18n'
 
-const makeVideo = (d: string, title: string) =>
-  processEvent(
-    finalizeEvent(
-      {
-        kind: 34235,
-        created_at: 100,
-        content: '',
-        tags: [
-          ['d', d],
-          ['title', title],
-          ['imeta', 'url https://media.example/a.mp4', 'm video/mp4'],
-        ],
-      },
-      generateSecretKey()
-    ),
-    []
-  )!
+const key = generateSecretKey()
+const makeEvent = (d: string, title: string) =>
+  finalizeEvent(
+    {
+      kind: 34235,
+      created_at: 100,
+      content: '',
+      tags: [
+        ['d', d],
+        ['title', title],
+        ['imeta', 'url https://media.example/a.mp4', 'm video/mp4'],
+      ],
+    },
+    key
+  )
+const makeVideo = (d: string, title: string) => processEvent(makeEvent(d, title), [])!
 const video = makeVideo('intro', 'Intro')
 
 const config: AdminConfig = {
@@ -74,13 +75,32 @@ vi.mock('./signer-context', () => ({
   SignerProvider: ({ children }: { children: ReactNode }) => children,
   useSigner: () => ({ status: 'none', mode: 'none', signer: null, pubkey: null }),
 }))
+/** What the instance relay answers to a search, best match first. */
+const relay = vi.hoisted(() => ({
+  answer: [] as NostrEvent[],
+  searches: [] as Filter[],
+}))
+// `of` is read when the studio boots, after the static imports are in.
 vi.mock('./instance-client', () => ({
-  bootInstanceClient: async () => ({ config: { startPage: 'creator' }, client: {} }),
+  bootInstanceClient: async () => ({
+    config: { startPage: { kind: 'creator-profile', creator: 'creator' }, videoSources: [] },
+    client: {
+      eventStore: { add: (event: unknown) => event },
+      searchVideos: (filter: Filter) => {
+        relay.searches.push(filter)
+        return of(...relay.answer)
+      },
+    },
+  }),
 }))
 // Renders lazily, after the static imports are in.
 vi.mock('@nostube/widgets/instance-providers', () => ({
-  InstanceProviders: ({ children }: { children: ReactNode }) => (
-    <TooltipProvider>{children}</TooltipProvider>
+  InstanceProviders: ({ client, children }: { client: never; children: ReactNode }) => (
+    <TooltipProvider>
+      <TimelineProvider value={{ client, policy: { getAllMissingVideos: () => ({}) } }}>
+        {children}
+      </TimelineProvider>
+    </TooltipProvider>
   ),
 }))
 const videos = vi.hoisted(() => ({ list: [] as unknown[] }))
@@ -91,6 +111,8 @@ vi.mock('@nostube/widgets/hooks/useCreatorVideos', () => ({
 beforeEach(() => {
   location.hash = '#/videos'
   videos.list = [video]
+  relay.answer = []
+  relay.searches = []
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -132,19 +154,23 @@ describe('studio videos page', () => {
     expect(screen.queryByText('Hidden')).toBeNull()
   })
 
-  it('filters a longer list by title', async () => {
-    videos.list = ['Intro', 'Cats', 'Dogs', 'Cat tricks', 'Birds', 'Fish'].map((title, i) =>
-      makeVideo(`v${i}`, title)
-    )
+  it("searches the instance relay and keeps the relay's ranking", async () => {
+    const [cats, catTricks] = [makeEvent('cats', 'Cats'), makeEvent('tricks', 'Cat tricks')]
+    videos.list = [makeVideo('dogs', 'Dogs'), processEvent(cats, [])!]
+    relay.answer = [catTricks, cats]
     serve()
     render(<App />)
-    fireEvent.change(await screen.findByRole('searchbox', { name: 'Search by title' }), {
+    // Few videos loaded, but more may match on the relay: the box is always there.
+    fireEvent.change(await screen.findByRole('searchbox', { name: 'Search videos' }), {
       target: { value: 'CAT' },
     })
-    expect(screen.getByText('Cats')).toBeTruthy()
-    expect(screen.getByText('Cat tricks')).toBeTruthy()
+    await waitFor(() =>
+      expect(screen.getAllByText(/^Cat/).map(e => e.textContent)).toEqual(['Cat tricks', 'Cats'])
+    )
     expect(screen.queryByText('Dogs')).toBeNull()
-    expect(screen.queryByText('Intro')).toBeNull()
+    expect(relay.searches).toEqual([
+      { kinds: [34235, 34236, 21, 22], authors: ['creator'], search: 'CAT', limit: 50 },
+    ])
   })
 
   it('offers an upload when there are no videos yet', async () => {

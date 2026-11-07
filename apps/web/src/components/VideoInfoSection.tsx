@@ -452,7 +452,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             className={
               desktop
                 ? 'flex w-full flex-wrap items-center gap-2'
-                : 'flex flex-wrap items-center gap-2 mt-3 md:mt-0 w-full md:w-auto'
+                : 'flex flex-wrap items-center gap-1 mt-3 md:mt-0 w-full md:w-auto md:gap-2'
             }
           >
             <VideoReactionButtons
@@ -486,7 +486,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="More actions">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={desktop ? 'h-11 w-11' : 'h-11 w-11 ml-auto md:ml-0'}
+                  aria-label="More actions"
+                >
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>

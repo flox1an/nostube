@@ -302,7 +302,7 @@ function VideoSuggestionItemSkeleton() {
 
 function SuggestionsHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sm:col-span-2 lg:col-span-1 px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="sm:col-span-2 lg:col-span-1 px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       {children}
     </div>
   )
@@ -610,9 +610,10 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     (!!v.contentWarning || isNSFWAuthor(v.pubkey, presetContent.nsfwPubkeys))
 
   return (
-    /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
+    // Rows keep px-2 for their hover background; -mx-2 pulls them back so thumbnails and
+    // headings sit on the page gutter in the stacked layout, flush with info and comments.
     <div
-      className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'} ${shouldFadeIn ? 'animate-in fade-in duration-200' : ''}`}
+      className={`-mx-2 sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block xl:mx-0'} ${shouldFadeIn ? 'animate-in fade-in duration-200' : ''}`}
     >
       {showLoadingSkeletons ? (
         Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)

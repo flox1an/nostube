@@ -234,10 +234,10 @@ export function VideoReactionButtons({
 
     return (
       <>
-        <div className="inline-flex items-center gap-2">
+        <div className="inline-flex items-center">
           <Button
             variant="ghost"
-            className={cn('min-h-11 min-w-11 px-4', className)}
+            className={cn('min-h-11 min-w-11 px-3', className)}
             onClick={handleUpvote}
             disabled={isPending || hasReacted}
             aria-label={user ? `Upvote, ${upvoteCount} reactions` : t('auth.context.signInUpvote')}
@@ -248,7 +248,7 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 min-w-11 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'min-h-11 min-w-8 px-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
@@ -258,10 +258,10 @@ export function VideoReactionButtons({
             {upvoteCount}
           </button>
         </div>
-        <div className="inline-flex items-center gap-2">
+        <div className="inline-flex items-center">
           <Button
             variant="ghost"
-            className={cn('min-h-11 min-w-11 px-4', className)}
+            className={cn('min-h-11 min-w-11 px-3', className)}
             onClick={handleDownvote}
             disabled={isPending || hasReacted}
             aria-label={
@@ -274,7 +274,7 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 min-w-11 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'min-h-11 min-w-8 px-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}

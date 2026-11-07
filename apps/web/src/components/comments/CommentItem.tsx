@@ -168,8 +168,8 @@ export const CommentItem = React.memo(function CommentItem({
           className={`${avatarSize} shrink-0`}
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="font-semibold text-sm">{name}</div>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="font-semibold text-sm truncate">{name}</div>
             <TrustBadge pubkey={comment.pubkey} />
             <div className="text-xs text-muted-foreground">
               {formatDistance(new Date(comment.created_at * 1000), new Date(), {
@@ -256,7 +256,7 @@ export const CommentItem = React.memo(function CommentItem({
             )}
           </div>
           {/* Reactions, reply, and expand buttons in same row */}
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex flex-wrap items-center gap-1 mt-1">
             <CommentReactions
               eventId={comment.id}
               authorPubkey={comment.pubkey}
@@ -314,32 +314,35 @@ export const CommentItem = React.memo(function CommentItem({
             </div>
           )}
 
-          {/* Render replies: auto-show if only 1 reply, or if expanded for multiple */}
+          {/* Render replies: auto-show if only 1 reply, or if expanded for multiple.
+              Root replies sit in the content column; deeper levels step in 24px along a
+              thread line from the parent avatar, and stop indenting from depth 3 so deep
+              threads never get wider than the screen. */}
           {hasReplies && (isExpanded || comment.replies!.length === 1) && depth < maxDepth && (
-            <div className="mt-2 relative -ml-[52px]">
+            <div
+              className={`mt-2 min-w-0 ${depth === 0 ? '' : depth < 3 ? '-ml-6 pl-3 border-l border-border' : '-ml-9'}`}
+            >
               {comment.replies!.map(reply => (
-                <div key={reply.id} className="relative flex">
-                  <div className="flex-1 pl-[52px]">
-                    <CommentItem
-                      comment={reply}
-                      link={link}
-                      depth={depth + 1}
-                      onScrollToComment={onScrollToComment}
-                      onReply={onReply}
-                      replyingTo={replyingTo}
-                      replyContent={replyContent}
-                      onReplyContentChange={onReplyContentChange}
-                      onSubmitReply={onSubmitReply}
-                      onCancelReply={onCancelReply}
-                      expandedComments={expandedComments}
-                      onToggleExpanded={onToggleExpanded}
-                      highlightedCommentId={highlightedCommentId}
-                      currentUserAvatar={currentUserAvatar}
-                      currentUserName={currentUserName}
-                      currentUserPubkey={currentUserPubkey}
-                      videoAuthorPubkey={videoAuthorPubkey}
-                    />
-                  </div>
+                <div key={reply.id} className="min-w-0">
+                  <CommentItem
+                    comment={reply}
+                    link={link}
+                    depth={depth + 1}
+                    onScrollToComment={onScrollToComment}
+                    onReply={onReply}
+                    replyingTo={replyingTo}
+                    replyContent={replyContent}
+                    onReplyContentChange={onReplyContentChange}
+                    onSubmitReply={onSubmitReply}
+                    onCancelReply={onCancelReply}
+                    expandedComments={expandedComments}
+                    onToggleExpanded={onToggleExpanded}
+                    highlightedCommentId={highlightedCommentId}
+                    currentUserAvatar={currentUserAvatar}
+                    currentUserName={currentUserName}
+                    currentUserPubkey={currentUserPubkey}
+                    videoAuthorPubkey={videoAuthorPubkey}
+                  />
                 </div>
               ))}
             </div>

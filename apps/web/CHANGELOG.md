@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.69] - 2026-11-07
+
+### Fixed
+
+- Large videos whose first frame takes longer than a few seconds (for example a big `moov` header) no longer fail with "Network error": a source whose server answers keeps playing for up to 45 seconds before the player tries the next one; servers that do not answer are still skipped after 3.5 seconds.
+- Watch page on mobile: tighter reaction buttons, the more-actions menu aligned right, suggestions flush with the page gutter, and long comment author names and deep reply threads no longer overflow the screen.
+
 ## [0.2.68] - 2026-11-06
 
 ### Fixed

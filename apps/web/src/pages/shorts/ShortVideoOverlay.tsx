@@ -307,7 +307,7 @@ export const ShortVideoOverlay = memo(
         <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
           <SheetContent
             side="bottom"
-            className="h-[85dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px))] overflow-y-auto max-w-2xl mx-auto pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+            className="h-[85dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px))] overflow-y-auto overflow-x-hidden max-w-2xl mx-auto pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
           >
             <SheetHeader>
               <SheetTitle>Comments</SheetTitle>

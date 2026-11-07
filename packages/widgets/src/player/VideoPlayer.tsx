@@ -66,7 +66,11 @@ interface VideoPlayerProps {
 }
 
 const LOOP_STORAGE_KEY = 'nostube:video-loop'
+// After this long without a playable frame, check whether the source server answers at all.
 const STARTUP_FAILOVER_TIMEOUT_MS = 3500
+// A server that answers stays the source until this cap: large files can need ~20s before the
+// first frame (moov atom at the end). A real 404/network failure still fails over at once via `error`.
+const STARTUP_ALIVE_SOURCE_CAP_MS = 45000
 
 export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
@@ -598,6 +602,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
 
     let startupTimeout: ReturnType<typeof setTimeout> | null = null
+    const probe = new AbortController()
 
     const clearStartupTimeout = () => {
       if (startupTimeout) {
@@ -606,23 +611,46 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       }
     }
 
+    const failOver = (reason: string) => {
+      // Re-check: if the browser has a frame to render now, don't switch.
+      if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
+      if (!hasMoreVideoUrlsRef.current) return
+      if (import.meta.env.DEV) {
+        console.log(`Video startup ${reason}, trying next URL...`)
+      }
+      preserveCurrentPlaybackTimeForFailover()
+      moveToNextVideoRef.current()
+    }
+
     const handlePlayable = () => {
       clearStartupTimeout()
+      probe.abort()
     }
 
     startupTimeout = setTimeout(() => {
-      // Re-check: if the browser has a frame to render now, don't switch.
       if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
-
-      if (hasMoreVideoUrlsRef.current) {
-        if (import.meta.env.DEV) {
-          console.log(
-            `Video startup timed out (${STARTUP_FAILOVER_TIMEOUT_MS}ms), trying next URL...`
+      // Slow first frame: is the server there at all? An opaque no-cors response resolves on
+      // headers, so this needs no CORS and transfers at most one byte.
+      let probeTimedOut = false
+      const probeTimeout = setTimeout(() => {
+        probeTimedOut = true
+        probe.abort()
+      }, STARTUP_FAILOVER_TIMEOUT_MS)
+      fetch(videoUrl, { mode: 'no-cors', headers: { Range: 'bytes=0-0' }, signal: probe.signal })
+        .then(res => {
+          clearTimeout(probeTimeout)
+          res.body?.cancel().catch(() => {})
+          if (probe.signal.aborted) return
+          startupTimeout = setTimeout(
+            () => failOver(`still not playable after ${STARTUP_ALIVE_SOURCE_CAP_MS}ms`),
+            STARTUP_ALIVE_SOURCE_CAP_MS - STARTUP_FAILOVER_TIMEOUT_MS
           )
-        }
-        preserveCurrentPlaybackTimeForFailover()
-        moveToNextVideoRef.current()
-      }
+        })
+        .catch(() => {
+          clearTimeout(probeTimeout)
+          // Aborted because the video became playable or the source changed: nothing to do.
+          if (probeTimedOut || !probe.signal.aborted) failOver('source server not responding')
+        })
     }, STARTUP_FAILOVER_TIMEOUT_MS)
 
     el.addEventListener('loadeddata', handlePlayable)
@@ -631,6 +659,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
     return () => {
       clearStartupTimeout()
+      probe.abort()
       el.removeEventListener('loadeddata', handlePlayable)
       el.removeEventListener('canplay', handlePlayable)
       el.removeEventListener('playing', handlePlayable)
@@ -676,7 +705,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         if (hasMoreVideoUrlsRef.current) {
           if (import.meta.env.DEV) {
             console.log(
-              `Video ${recoveryReason} recovery timed out (${STARTUP_FAILOVER_TIMEOUT_MS}ms), trying next URL...`
+              `Video ${recoveryReason} recovery stalled (${STARTUP_FAILOVER_TIMEOUT_MS}ms without progress), trying next URL...`
             )
           }
           preserveCurrentPlaybackTimeForFailover()
@@ -687,8 +716,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
     const handleSeeking = () => startRecoveryTimer('seek')
     const handleWaiting = () => startRecoveryTimer('buffer')
+    // Bytes still arriving: the source is alive, give it another window.
+    const handleProgress = () => {
+      if (recoveryTimeout) startRecoveryTimer(recoveryReason)
+    }
 
     el.addEventListener('seeking', handleSeeking)
+    el.addEventListener('progress', handleProgress)
     el.addEventListener('waiting', handleWaiting)
     el.addEventListener('seeked', clearIfRecovered)
     el.addEventListener('loadeddata', clearIfRecovered)
@@ -699,6 +733,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       clearRecoveryTimeout()
       el.removeEventListener('seeking', handleSeeking)
       el.removeEventListener('waiting', handleWaiting)
+      el.removeEventListener('progress', handleProgress)
       el.removeEventListener('seeked', clearIfRecovered)
       el.removeEventListener('loadeddata', clearIfRecovered)
       el.removeEventListener('canplay', clearIfRecovered)

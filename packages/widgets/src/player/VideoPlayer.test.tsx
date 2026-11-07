@@ -20,13 +20,15 @@ vi.mock('../host', () => ({
   useNostubeHostSafe: () => undefined,
 }))
 
+const ladder = vi.hoisted(() => ({ hasMore: false, tryNext: vi.fn() }))
+
 vi.mock('../hooks/useMediaUrls', () => ({
   useMediaUrls: ({ urls }: { urls: string[] }) => ({
     ladder: {
       currentUrl: urls[0] ?? null,
-      hasMore: false,
+      hasMore: ladder.hasMore,
       failedUrls: ['https://mirror.example/failed.mp4'],
-      tryNext: vi.fn(),
+      tryNext: ladder.tryNext,
     },
     isLoading: false,
     error: null,
@@ -239,6 +241,44 @@ describe('VideoPlayer source failures', () => {
       'https://mirror.example/failed.mp4',
       'https://example.com/video.mp4',
     ])
+  })
+
+  describe('slow startup', () => {
+    const renderSlowSource = (probe: (signal: AbortSignal) => Promise<Response>) => {
+      vi.useFakeTimers()
+      ladder.hasMore = true
+      ladder.tryNext.mockClear()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => probe(init!.signal!))
+      render(
+        <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />
+      )
+    }
+
+    afterEach(() => {
+      ladder.hasMore = false
+      vi.useRealTimers()
+    })
+
+    it('keeps a source whose server answers while the first frame takes long', async () => {
+      renderSlowSource(() => Promise.resolve(new Response(null)))
+
+      // A big MP4 that needs ~20s before the first frame.
+      await act(() => vi.advanceTimersByTimeAsync(20000))
+      expect(ladder.tryNext).not.toHaveBeenCalled()
+
+      await act(() => vi.advanceTimersByTimeAsync(30000))
+      expect(ladder.tryNext).toHaveBeenCalledTimes(1)
+    })
+
+    it('fails over when the source server does not answer', async () => {
+      renderSlowSource(
+        signal =>
+          new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)))
+      )
+
+      await act(() => vi.advanceTimersByTimeAsync(7100))
+      expect(ladder.tryNext).toHaveBeenCalledTimes(1)
+    })
   })
 })
 describe('VideoPlayer preset thumbnails', () => {

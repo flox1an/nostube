@@ -305,9 +305,9 @@ export function ShortsVideoPage() {
   })
   useEffect(() => {
     if (initialVideoEvent) {
-      addToHistoryRef.current(initialVideoEvent)
+      addToHistoryRef.current(initialVideoEvent, videoIdentifier?.data?.relays)
     }
-  }, [initialVideoEvent])
+  }, [initialVideoEvent, videoIdentifier])
 
   // Only reset data-load flags when navigation comes from outside this page
   useEffect(() => {

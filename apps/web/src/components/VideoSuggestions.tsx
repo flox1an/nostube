@@ -331,7 +331,32 @@ interface VideoSuggestionsProps {
   videoRef?: string // nevent or naddr for the search service recommendations
 }
 
-export const VideoSuggestions = React.memo(function VideoSuggestions({
+export const VideoSuggestions = React.memo(function VideoSuggestions(props: VideoSuggestionsProps) {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    // Let the watch page paint before subscribing to and processing cached recommendations.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const frame = requestAnimationFrame(() => {
+      timer = setTimeout(() => setReady(true), 0)
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(timer)
+    }
+  }, [])
+
+  if (ready) return <VideoSuggestionsContent {...props} />
+  return (
+    <div className={`-mx-2 sm:grid grid-cols-2 ${props.cinemaMode ? '' : 'lg:block xl:mx-0'}`}>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <VideoSuggestionItemSkeleton key={i} />
+      ))}
+    </div>
+  )
+})
+
+function VideoSuggestionsContent({
   currentVideoId,
   currentVideoType,
   authorPubkey,
@@ -691,4 +716,4 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       )}
     </div>
   )
-})
+}

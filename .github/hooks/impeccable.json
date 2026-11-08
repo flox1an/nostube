@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "matcher": "edit|create|apply_patch",
+        "bash": "[ ! -f \"$HOME/.github/skills/impeccable/scripts/impeccable\" ] || \"$HOME/.github/skills/impeccable/scripts/impeccable\" hook",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

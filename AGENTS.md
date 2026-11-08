@@ -89,3 +89,5 @@ Uses the canonical five-label vocabulary. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Uses a multi-context layout: see `CONTEXT-MAP.md` at the repository root (web app and server each have their own glossary), plus system-wide ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+
+- For repository collaboration, use ngit and follow `.agents/skills/ngit/SKILL.md`.

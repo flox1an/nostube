@@ -10,8 +10,8 @@ import React, { useMemo } from 'react'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
-import { useEventStore } from 'applesauce-react/hooks'
-import { buildProfileUrl } from '@/lib/nprofile'
+import { extractRelaysFromNip19 } from '@nostube/core/nip19'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
@@ -60,9 +60,9 @@ export const VideoCard = React.memo(function VideoCard({
   preload = false,
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
-  const metadata = useProfile({ pubkey: video.pubkey })
+  const relayHints = useMemo(() => extractRelaysFromNip19(video.link), [video.link])
+  const metadata = useProfile({ pubkey: video.pubkey, relays: relayHints })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
-  const eventStore = useEventStore()
   const { config } = useAppContext()
   const { setVideos } = useShortsFeedStore()
   const desktopWindowCoordinator = useDesktopWindowCoordinator()
@@ -70,11 +70,9 @@ export const VideoCard = React.memo(function VideoCard({
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
 
-  // Get the event from the store to access seenRelays
-  const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
   const authorProfileUrl = useMemo(
-    () => buildProfileUrl(video.pubkey, event),
-    [video.pubkey, event]
+    () => buildProfileUrlFromPubkey(video.pubkey, relayHints),
+    [video.pubkey, relayHints]
   )
 
   // Determine if we should show NSFW warning based on filter setting (default to 'hide' if not set)

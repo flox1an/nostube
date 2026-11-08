@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": "[ ! -f '/Users/flox/.cursor/skills/impeccable/scripts/impeccable' ] || '/Users/flox/.cursor/skills/impeccable/scripts/impeccable' hook",
+        "matcher": "^Write$",
+        "timeout": 5
+      }
+    ]
+  }
+}

@@ -530,9 +530,9 @@ function VideoPageContent() {
   })
   useEffect(() => {
     if (videoEvent) {
-      addToHistoryRef.current(videoEvent)
+      addToHistoryRef.current(videoEvent, hintRelays)
     }
-  }, [videoEvent])
+  }, [videoEvent, hintRelays])
 
   // Handle mirror action - trigger availability check when dialog opens
   const handleMirror = () => {

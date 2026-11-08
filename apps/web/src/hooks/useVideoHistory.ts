@@ -1,11 +1,13 @@
 import { useCallback } from 'react'
 import { useLocalStorage } from './useLocalStorage'
 import type { NostrEvent } from 'nostr-tools'
+import { buildEventRelays } from '@nostube/core/video-event'
 
 export interface VideoHistoryEntry {
   eventId: string
   timestamp: number // Unix timestamp in milliseconds
   event: NostrEvent // The full event for display purposes
+  relays?: string[] // Relay hints survive JSON serialization; seen-relay symbols do not
 }
 
 const MAX_HISTORY_SIZE = 100
@@ -25,8 +27,9 @@ export function useVideoHistory() {
    * - Limits history size to MAX_HISTORY_SIZE
    */
   const addToHistory = useCallback(
-    (event: NostrEvent) => {
+    (event: NostrEvent, hintRelays: string[] = []) => {
       setHistory(currentHistory => {
+        const existing = currentHistory.find(entry => entry.eventId === event.id)
         // Remove existing entry if it exists
         const filteredHistory = currentHistory.filter(entry => entry.eventId !== event.id)
 
@@ -35,6 +38,7 @@ export function useVideoHistory() {
           eventId: event.id,
           timestamp: Date.now(),
           event: event,
+          relays: buildEventRelays(event, [...hintRelays, ...(existing?.relays ?? [])]),
         }
 
         const updatedHistory = [newEntry, ...filteredHistory]

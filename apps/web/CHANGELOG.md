@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.71] - 2026-11-08
+
+### Fixed
+
+- Continue Watching and watch history retain video relay hints across reloads, so profiles available only on those relays can load their names and avatars and video/profile links keep the relay hints. Older history entries remain readable; missing historical hints are recovered when the video is opened again with a known relay.
+- Opening a video no longer decodes unused Blurhash images while processing recommendations. The watch page paints before recommendation subscriptions and cached-list processing begin, with suggestion skeletons shown in the meantime.
+
 ## [0.2.70] - 2026-11-08
 
 ### Fixed

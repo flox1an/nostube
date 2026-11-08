@@ -39,7 +39,12 @@ export function HistoryPage() {
     return history
       .map(entry => {
         try {
-          return processEvent(entry.event, [], config.blossomServers, presetContent.nsfwPubkeys)
+          return processEvent(
+            entry.event,
+            entry.relays ?? [],
+            config.blossomServers,
+            presetContent.nsfwPubkeys
+          )
         } catch (error) {
           console.error('Error processing history event:', error)
           return null

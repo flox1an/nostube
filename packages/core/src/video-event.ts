@@ -642,7 +642,11 @@ export function processEvent(
       0
     const fallbackImage =
       primaryVariant?.url ?? (url && isAllowedEventMediaUrl(url) ? url : undefined)
-    const blurhashImage = blurhash ? blurHashToDataURL(blurhash) : undefined
+    // Decode only when the blurhash will actually be used as the image fallback.
+    const blurhashImage =
+      primaryMediaType !== 'audio' && images.length === 0 && !fallbackImage && blurhash
+        ? blurHashToDataURL(blurhash)
+        : undefined
     const defaultImages: string[] =
       primaryMediaType === 'audio'
         ? []

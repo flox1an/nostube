@@ -49,7 +49,7 @@ export function useContinueWatching() {
 
   const videos: VideoEvent[] = useMemo(() => {
     if (!pubkey || !positions) return []
-    const historyByEventId = new Map(history.map(entry => [entry.eventId, entry.event]))
+    const historyByEventId = new Map(history.map(entry => [entry.eventId, entry]))
 
     const result: VideoEvent[] = []
     for (const position of positions) {
@@ -58,11 +58,16 @@ export function useContinueWatching() {
       if (position.time < MIN_PROGRESS_SECONDS) continue
       if (position.time >= position.duration * MAX_COMPLETION_RATIO) continue
 
-      const rawEvent = historyByEventId.get(position.videoId)
-      if (!rawEvent) continue
+      const entry = historyByEventId.get(position.videoId)
+      if (!entry) continue
 
       try {
-        const video = processEvent(rawEvent, [], config.blossomServers, presetContent.nsfwPubkeys)
+        const video = processEvent(
+          entry.event,
+          entry.relays ?? [],
+          config.blossomServers,
+          presetContent.nsfwPubkeys
+        )
         if (!video) continue
         if (!(config.showYouTubeContent ?? true) && isYouTubeVideo(video)) continue
         if (!(config.showAudioContent ?? true) && isAudioVideo(video)) continue

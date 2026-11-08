@@ -624,6 +624,31 @@ describe('processEvent', () => {
       )
     })
 
+    it.each([
+      {
+        name: 'thumbnail ahead of blurhash',
+        fields: ['image https://example.com/thumb.jpg', 'url https://example.com/video.mp4'],
+        image: 'https://example.com/thumb.jpg',
+      },
+      {
+        name: 'video URL ahead of blurhash',
+        fields: ['url https://example.com/video.mp4'],
+        image: 'https://example.com/video.mp4',
+      },
+      { name: 'blurhash-only fallback', fields: [], image: 'data:image/webp;base64,mock-hash' },
+      {
+        name: 'audio without a thumbnail',
+        fields: ['m audio/mpeg', 'url https://example.com/audio.mp3'],
+        image: undefined,
+      },
+    ])('preserves $name', ({ fields, image }) => {
+      const video = processEvent(
+        { ...zapStreamEvent, tags: [['imeta', 'blurhash hash', ...fields]] },
+        defaultRelays
+      )
+      expect(video?.images).toEqual(image ? [image] : [])
+    })
+
     it('should extract tags from event', () => {
       const eventWithTags = {
         ...nostubeEvent,

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.70] - 2026-11-08
+
+### Fixed
+
+- Live chat: trust badges line up beneath each other when timestamps are shown, with slightly tighter spacing around the badge.
+- Subtitles hosted on another origin than the page (any Blossom server) now load: the player fetches the VTT and hands the track a same-origin URL, since `<track>` refuses cross-origin files on a video without `crossorigin`.
+
 ## [0.2.69] - 2026-11-07
 
 ### Fixed

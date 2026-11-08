@@ -56,16 +56,19 @@ export function useValidatedTextTracks(textTracks: TextTrack[]): UseValidatedTex
           resourceType: 'vtt',
         })
 
-        // findValidUrl returns the first URL as fallback even if invalid
-        // We need to check if the URL actually works
+        // <track> on a media element without `crossorigin` refuses cross-origin VTT, and the
+        // player omits that attribute so video servers without CORS keep working. Fetching the
+        // file and handing the track a same-origin blob: URL sidesteps that.
         if (validUrl && !signal.aborted) {
           try {
-            const response = await fetch(validUrl, {
-              method: 'HEAD',
-              signal: AbortSignal.timeout(5000),
-            })
+            const response = await fetch(validUrl, { signal: AbortSignal.timeout(5000) })
             if (response.ok) {
-              return { ...track, validatedUrl: validUrl }
+              const blobUrl = URL.createObjectURL(await response.blob())
+              if (signal.aborted) {
+                URL.revokeObjectURL(blobUrl)
+                return null
+              }
+              return { ...track, validatedUrl: blobUrl }
             }
           } catch {
             // URL not accessible
@@ -74,8 +77,6 @@ export function useValidatedTextTracks(textTracks: TextTrack[]): UseValidatedTex
         return null
       })
     )
-
-    if (signal.aborted) return []
 
     // Filter out null results (failed validations)
     const validated: ValidatedTextTrack[] = []
@@ -106,14 +107,20 @@ export function useValidatedTextTracks(textTracks: TextTrack[]): UseValidatedTex
       setIsValidating(true)
     })
 
+    let created: ValidatedTextTrack[] = []
     validateTracks(controller.signal).then(validated => {
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted) {
+        validated.forEach(track => URL.revokeObjectURL(track.validatedUrl))
+        return
+      }
+      created = validated
       setValidatedTracks(validated)
       setIsValidating(false)
     })
 
     return () => {
       controller.abort()
+      created.forEach(track => URL.revokeObjectURL(track.validatedUrl))
     }
   }, [tracksKey, validateTracks, textTracks.length])
 

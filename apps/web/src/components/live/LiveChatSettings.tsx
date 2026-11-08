@@ -77,12 +77,16 @@ export function LiveChatSettings({
             className="rounded-lg bg-muted p-3 leading-relaxed wrap-anywhere"
             style={{ fontSize: appearance.fontSize }}
           >
-            {appearance.timestamps && <span className="mr-2 text-muted-foreground">12:34</span>}
+            {appearance.timestamps && (
+              <span className="mr-1 inline-block w-[5ch] whitespace-nowrap text-[0.8em] text-muted-foreground tabular-nums">
+                12:34
+              </span>
+            )}
             {appearance.showTrust && (
               <Shield
                 role="img"
                 aria-label={t('liveChat.showTrust', 'Show trust badges')}
-                className={`mr-1 inline h-3 w-3 align-[-1px] ${getTrustColor(0.8).colorClass}`}
+                className={`mr-0.5 inline h-3 w-3 align-[-1px] ${getTrustColor(0.8).colorClass}`}
               />
             )}
             <span

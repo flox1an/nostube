@@ -93,7 +93,7 @@ function ChatMessage({
       {appearance.timestamps && (
         <time
           dateTime={new Date(event.created_at * 1000).toISOString()}
-          className="mr-2 text-[0.8em] text-muted-foreground"
+          className="mr-1 inline-block w-[5ch] whitespace-nowrap text-[0.8em] text-muted-foreground tabular-nums"
         >
           {formatChatTime(event.created_at)}
         </time>
@@ -103,7 +103,7 @@ function ChatMessage({
           pubkey={event.pubkey}
           score={trust}
           compact
-          className="mr-1 align-[-1px]"
+          className="mr-0.5 align-[-1px]"
         />
       )}
       <Link

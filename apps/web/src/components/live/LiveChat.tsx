@@ -204,7 +204,7 @@ function ZapMessage({
 
 /** NIP-53 chat: kind 1311 messages plus NIP-57-verified zaps, with a composer for signed-in users. */
 export function LiveChat({ stream }: { stream: LiveStream }) {
-  const { events, isLoading, error, relays } = useLiveChat(stream)
+  const { events, isLoading, error, relays, loadOlder } = useLiveChat(stream)
   const [storedAppearance, setAppearance] = useLocalStorage(
     'nostube:live-chat-appearance',
     DEFAULT_CHAT_APPEARANCE
@@ -258,13 +258,26 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
     [events, stream, endpoints, hidden, trustScores, appearance.minTrust, user?.pubkey]
   )
 
-  // Follow new messages only while the reader is at the bottom.
+  // Follow new messages only while the reader is at the bottom. When older messages are
+  // prepended, keep the reader on the message they were looking at.
   const listRef = useRef<HTMLDivElement>(null)
   const [pinned, setPinned] = useState(true)
+  const lastLayout = useRef<{ firstKey?: string; height: number }>({ height: 0 })
+  const firstKey = rows[0]?.type === 'chat' ? rows[0].event.id : rows[0]?.zap.bolt11
   useLayoutEffect(() => {
     const list = listRef.current
-    if (pinned && list) list.scrollTop = list.scrollHeight
-  }, [rows, pinned])
+    if (!list) return
+    const last = lastLayout.current
+    if (pinned) list.scrollTop = list.scrollHeight
+    else if (last.firstKey !== undefined && firstKey !== last.firstKey)
+      list.scrollTop += list.scrollHeight - last.height
+    lastLayout.current = { firstKey, height: list.scrollHeight }
+  }, [rows, pinned, firstKey])
+  // A list too short to scroll never fires onScroll; keep paging until it overflows or ends.
+  useEffect(() => {
+    const list = listRef.current
+    if (list && list.scrollHeight <= list.clientHeight) loadOlder()
+  }, [rows, loadOlder])
   // The list shrinks when the composer grows (or the viewport changes); stay on the latest.
   useEffect(() => {
     const list = listRef.current
@@ -284,11 +297,12 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
           role="log"
           aria-label={t('liveChat.messages', 'Chat messages')}
           tabIndex={0}
-          className="h-full overflow-y-auto py-1"
+          className="h-full overflow-y-auto py-1 [overflow-anchor:none]"
           style={{ fontSize: appearance.fontSize }}
           onScroll={event => {
             const list = event.currentTarget
             setPinned(list.scrollHeight - list.scrollTop - list.clientHeight < 32)
+            if (list.scrollTop < 120) loadOlder()
           }}
         >
           {error && (

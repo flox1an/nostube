@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.73] - 2026-11-10
+
+### Fixed
+
+- Live stream chat showed only the newest message when the stream's `starts` time was later than most of the chat. The chat is no longer cut off by a time window: it loads the newest 100 events and fetches older pages (100 each) when you scroll to the top, keeping your scroll position. Paging stops at the start of the history or after a relay error.
+
 ## [0.2.72] - 2026-11-10
 
 ### Fixed

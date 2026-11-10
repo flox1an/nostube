@@ -10,10 +10,6 @@ const TimelineMarkersLoader = lazy(() =>
 interface ProgressBarProps {
   currentTime: number
   duration: number
-  isLive?: boolean
-  seekableStart?: number
-  liveEnd?: number
-  liveEdgeTolerance?: number
   bufferedPercentage: number
   onSeek: (time: number) => void
   onSeekingChange?: (isSeeking: boolean) => void
@@ -30,10 +26,6 @@ interface ProgressBarProps {
 export const ProgressBar = memo(function ProgressBar({
   currentTime,
   duration,
-  isLive = false,
-  seekableStart = 0,
-  liveEnd,
-  liveEdgeTolerance = 0,
   bufferedPercentage,
   onSeek,
   onSeekingChange,
@@ -54,13 +46,9 @@ export const ProgressBar = memo(function ProgressBar({
   const previewTimeRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
 
-  const start = isLive ? seekableStart : 0
-  const end = isLive ? (liveEnd ?? start) : duration
-  const span = Math.max(0, end - start)
   const percentage = (time: number) =>
-    span > 0 ? Math.max(0, Math.min(100, ((time - start) / span) * 100)) : 0
-  const progressPercentage =
-    isLive && span > 0 && currentTime >= end - liveEdgeTolerance ? 100 : percentage(currentTime)
+    duration > 0 ? Math.max(0, Math.min(100, (time / duration) * 100)) : 0
+  const progressPercentage = percentage(currentTime)
   // Show preview position while touch dragging or waiting for seek to complete
   const displayPercentage = previewTime !== null ? percentage(previewTime) : progressPercentage
   const visibleChapters = useMemo(
@@ -103,13 +91,13 @@ export const ProgressBar = memo(function ProgressBar({
   const getTimeFromPosition = useCallback(
     (clientX: number) => {
       const container = containerRef.current
-      if (!container || span <= 0) return start
+      if (!container || duration <= 0) return 0
 
       const rect = container.getBoundingClientRect()
       const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-      return start + position * span
+      return position * duration
     },
-    [span, start]
+    [duration]
   )
 
   const getPositionPercentage = useCallback((clientX: number) => {
@@ -231,10 +219,7 @@ export const ProgressBar = memo(function ProgressBar({
   useEffect(() => {
     if (previewTime !== null && !isSeeking) {
       // Check if currentTime is close enough to previewTime (within 0.5s)
-      if (
-        Math.abs(currentTime - previewTime) < 0.5 ||
-        (isLive && previewTime >= end - liveEdgeTolerance && currentTime >= end - liveEdgeTolerance)
-      ) {
+      if (Math.abs(currentTime - previewTime) < 0.5) {
         // Use setTimeout to avoid synchronous setState in effect
         setTimeout(() => {
           setPreviewTime(null)
@@ -242,7 +227,7 @@ export const ProgressBar = memo(function ProgressBar({
         }, 0)
       }
     }
-  }, [currentTime, previewTime, isSeeking, isLive, end, liveEdgeTolerance])
+  }, [currentTime, previewTime, isSeeking])
 
   // Notify parent when seeking state changes
   useEffect(() => {
@@ -318,7 +303,7 @@ export const ProgressBar = memo(function ProgressBar({
           {/* Buffered track */}
           <div
             className="absolute inset-y-0 left-0 bg-white/40 rounded-full"
-            style={{ width: `${isLive ? 100 : bufferedPercentage}%` }}
+            style={{ width: `${bufferedPercentage}%` }}
           />
 
           {/* Progress track (played) - shows preview position during drag */}

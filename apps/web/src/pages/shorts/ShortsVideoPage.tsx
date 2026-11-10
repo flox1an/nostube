@@ -28,6 +28,7 @@ import {
   useVideoViewTracking,
   useIsPortrait,
 } from '@/hooks'
+import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { getKindsForType } from '@nostube/core/video-types'
@@ -172,6 +173,21 @@ export function ShortsVideoPage() {
   // Track whether we've loaded from store or relays
   const loadSourceRef = useRef<'store' | 'relays' | null>(null)
 
+  // Relay-loaded suggestions, before the trust filter. Swiping must honour the same
+  // trust filter as the grid, otherwise untrusted authors surface one swipe in.
+  const [candidates, setCandidates] = useState<VideoEvent[] | null>(null)
+  const { filteredVideos: trustedCandidates } = useTrustFilter(candidates)
+
+  useEffect(() => {
+    if (!initialVideo || !trustedCandidates || loadSourceRef.current !== 'relays') return
+    // The directly opened short always stays first, even if its author is untrusted.
+    const unique = [...new Map([initialVideo, ...trustedCandidates].map(v => [v.id, v])).values()]
+    // Late trust scores re-filter the list: stay on the short being watched.
+    const { videos: prev, currentIndex } = useShortsFeedStore.getState()
+    const keptIndex = unique.findIndex(v => v.id === prev[currentIndex]?.id)
+    setVideos(unique, Math.max(keptIndex, 0))
+  }, [initialVideo, trustedCandidates, setVideos])
+
   // Load suggestions (shorts only) and subscribe to timeline
   useEffect(() => {
     if (!initialVideo) return
@@ -241,20 +257,8 @@ export function ShortsVideoPage() {
         })
       )
       .subscribe(videos => {
-        // Combine initial video with suggestions
-        const all = initialVideo ? [initialVideo, ...videos] : videos
-        // Deduplicate by ID
-        const seen = new Set<string>()
-        const unique = all.filter(v => {
-          if (seen.has(v.id)) return false
-          seen.add(v.id)
-          return true
-        })
-        setVideos(unique, 0)
-        // If we have at least the initial video, we can stop showing loading state
-        if (unique.length > 0) {
-          setLoading(false)
-        }
+        setCandidates(videos)
+        setLoading(false)
       })
 
     return () => {

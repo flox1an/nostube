@@ -68,16 +68,16 @@ function useHlsEngine(
   autoPlay: boolean
 ): PlaybackEngine {
   const { t } = useTranslation()
-  const {
-    levels,
-    currentLevel,
-    activeLevel,
-    setLevel,
-    isLoading,
-    error,
-    getLiveSyncPosition,
-    getLiveEdgeTolerance,
-  } = useHls(videoRef, videoUrl, isHlsSource, ladder, authorPubkey, eventId, 'never', autoPlay)
+  const { levels, currentLevel, activeLevel, setLevel, isLoading, error } = useHls(
+    videoRef,
+    videoUrl,
+    isHlsSource,
+    ladder,
+    authorPubkey,
+    eventId,
+    'never',
+    autoPlay
+  )
 
   const activeQualityLabel = useMemo(
     () =>
@@ -110,8 +110,6 @@ function useHlsEngine(
     qualityOptions,
     selectedQuality: currentLevel,
     activeQualityLabel,
-    getLiveSyncPosition,
-    getLiveEdgeTolerance,
     selectQuality: setLevel,
   }
 }

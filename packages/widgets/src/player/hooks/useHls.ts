@@ -21,8 +21,6 @@ interface UseHlsResult {
   setLevel: (level: number) => void
   isLoading: boolean
   error: string | null
-  getLiveSyncPosition: () => number | null
-  getLiveEdgeTolerance: () => number
 }
 
 // Empty array constant to avoid new array on every render
@@ -453,20 +451,12 @@ export function useHls(
     [hlsActiveLevel]
   )
 
-  const getLiveSyncPosition = useCallback(() => hlsRef.current?.liveSyncPosition ?? null, [])
-  const getLiveEdgeTolerance = useCallback(
-    () => hlsRef.current?.latestLevelDetails?.targetduration ?? 0,
-    []
-  )
-
   return {
     levels,
     currentLevel,
     activeLevel,
     setLevel,
     isLoading,
-    getLiveSyncPosition,
-    getLiveEdgeTolerance,
     error,
   }
 }

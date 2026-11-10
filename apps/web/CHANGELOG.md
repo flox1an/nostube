@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.72] - 2026-11-10
+
+### Fixed
+
+- Swiping to the next short in the shorts player now honours the trust filter. Suggestions loaded after opening a short directly were not trust-filtered, so untrusted authors could appear one swipe in. The opened short stays first; the list re-filters when trust scores arrive without leaving the short being watched.
+
+### Changed
+
+- Live players no longer show a progress/seek bar. Removed the obsolete live-edge progress pinning; recorded videos retain their seekable timeline.
+- Dependencies updated within their semver ranges (npm workspaces, docs, and both Rust crates).
+
 ## [0.2.71] - 2026-11-08
 
 ### Fixed

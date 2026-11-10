@@ -29,9 +29,6 @@ interface ControlBarProps {
   currentTime: number
   duration: number
   isLive?: boolean
-  seekableStart?: number
-  liveEnd?: number
-  liveEdgeTolerance?: number
   bufferedPercentage: number
 
   // Playback controls
@@ -101,9 +98,6 @@ export const ControlBar = memo(function ControlBar({
   currentTime,
   duration,
   isLive = false,
-  seekableStart = 0,
-  liveEnd,
-  liveEdgeTolerance,
   bufferedPercentage,
   onPlay,
   onPause,
@@ -168,24 +162,21 @@ export const ControlBar = memo(function ControlBar({
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      {/* Progress bar - re-enable pointer events */}
-      <div className="px-2 pointer-events-auto">
-        <ProgressBar
-          currentTime={currentTime}
-          duration={duration}
-          isLive={isLive}
-          seekableStart={seekableStart}
-          liveEnd={liveEnd}
-          liveEdgeTolerance={liveEdgeTolerance}
-          bufferedPercentage={bufferedPercentage}
-          onSeek={onSeek}
-          onSeekingChange={onSeekingChange}
-          eventId={eventId}
-          authorPubkey={authorPubkey}
-          chapters={chapters}
-          showTimelineMarkers={showTimelineMarkers}
-        />
-      </div>
+      {!isLive && (
+        <div className="px-2 pointer-events-auto">
+          <ProgressBar
+            currentTime={currentTime}
+            duration={duration}
+            bufferedPercentage={bufferedPercentage}
+            onSeek={onSeek}
+            onSeekingChange={onSeekingChange}
+            eventId={eventId}
+            authorPubkey={authorPubkey}
+            chapters={chapters}
+            showTimelineMarkers={showTimelineMarkers}
+          />
+        </div>
+      )}
 
       {/* Controls row - re-enable pointer events */}
       <div className="flex items-center justify-between pointer-events-auto">

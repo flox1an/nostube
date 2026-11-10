@@ -1312,18 +1312,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           isPlaying={playerState.isPlaying}
           currentTime={playerState.currentTime}
           isLive={isLive}
-          seekableStart={
-            isLive && videoRef.current?.seekable.length ? videoRef.current.seekable.start(0) : 0
-          }
-          liveEnd={
-            isLive
-              ? (engine.getLiveSyncPosition?.() ??
-                (videoRef.current?.seekable.length
-                  ? videoRef.current.seekable.end(videoRef.current.seekable.length - 1)
-                  : undefined))
-              : undefined
-          }
-          liveEdgeTolerance={isLive ? engine.getLiveEdgeTolerance?.() : undefined}
           duration={playerState.duration}
           bufferedPercentage={playerState.bufferedPercentage}
           onPlay={handlePlay}

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.74] - 2026-11-11
+
+### Fixed
+
+- A short opened from a link with relay hints (for example from the home feed) showed "Video not found" when the video was only on the author's own relays. The short page now looks the video up on the same relays as the video page: the link's hints, the author's NIP-65 relays, your read relays and the presets.
+
 ## [0.2.73] - 2026-11-10
 
 ### Fixed

@@ -30,6 +30,7 @@ import {
 } from '@/hooks'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
+import { useVideoPageRelays } from '@/hooks/useContextRelays'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { getKindsForType } from '@nostube/core/video-types'
 import { Header } from '@/components/Header'
@@ -111,8 +112,22 @@ export function ShortsVideoPage() {
     return decodeVideoEventIdentifier(nevent)
   }, [nevent])
 
-  const eventLoader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
-  const addressLoader = useMemo(() => createAddressLoader(pool, { eventStore }), [pool, eventStore])
+  // Same relay set as VideoPage: naddr/nevent hints + author outbox + user read + presets.
+  const loadRelays = useVideoPageRelays({
+    neventRelays: videoIdentifier?.data?.relays,
+    authorPubkey:
+      videoIdentifier?.type === 'address'
+        ? videoIdentifier.data?.pubkey
+        : (videoIdentifier?.data as { author?: string } | undefined)?.author,
+  })
+  const eventLoader = useMemo(
+    () => createEventLoader(pool, { eventStore, extraRelays: loadRelays }),
+    [pool, eventStore, loadRelays]
+  )
+  const addressLoader = useMemo(
+    () => createAddressLoader(pool, { eventStore, extraRelays: loadRelays }),
+    [pool, eventStore, loadRelays]
+  )
   const authorParam = searchParams.get('author') || undefined
 
   // Use EventStore to get the initial video event

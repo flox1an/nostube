@@ -20,6 +20,8 @@ export interface LiveStream {
   starts?: number
   participants?: number
   relays: string[]
+  /** NIP-75 `goal` tag: id of the kind 9041 zap goal this stream raises funds for. */
+  goalId?: string
   contentWarning?: string
 }
 
@@ -145,6 +147,7 @@ export function parseLiveStream(
     starts: positiveInt(tag('starts')),
     participants: positiveInt(tag('current_participants')),
     relays,
+    goalId: HEX_PUBKEY.test(tag('goal') ?? '') ? tag('goal') : undefined,
     contentWarning: warning ? warning[1]?.trim() || 'NSFW' : undefined,
   }
 }

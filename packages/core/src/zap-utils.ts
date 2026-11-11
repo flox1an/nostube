@@ -18,6 +18,8 @@ export interface ZapRequestParams {
   comment?: string
   relays: string[]
   event?: NostrEvent // The actual event to zap (includes d tag for addressable events)
+  /** Extra `a` coordinate on the request, e.g. the stream a zap goal belongs to (NIP-75). */
+  address?: string
   timestamp?: number // Video timestamp in seconds (for timestamped zaps)
 }
 
@@ -32,7 +34,7 @@ export async function getRecipientZapEndpoint(profile: NostrEvent): Promise<stri
  * Create an unsigned zap request event template
  */
 export function createZapRequest(params: ZapRequestParams): EventTemplate {
-  const { recipientPubkey, amount, comment, relays, event, timestamp } = params
+  const { recipientPubkey, amount, comment, relays, event, address, timestamp } = params
 
   const amountMsats = amount * 1000
 
@@ -60,6 +62,10 @@ export function createZapRequest(params: ZapRequestParams): EventTemplate {
   // Add timestamp tag if provided (for video timestamped zaps)
   if (timestamp !== undefined && timestamp >= 0) {
     template.tags = [...template.tags, ['timestamp', Math.floor(timestamp).toString()]]
+  }
+
+  if (address && !template.tags.some(tag => tag[0] === 'a')) {
+    template.tags = [...template.tags, ['a', address]]
   }
 
   return template

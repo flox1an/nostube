@@ -52,6 +52,8 @@ import { isAuthorTab, TAP_TARGET, SHELF_SCROLLER } from '@/components/author/sha
 import { useAuthorPinnedVideos } from '@/hooks/useAuthorPinnedVideos'
 import { useAuthorLiveStreams } from '@/hooks/useLiveStreams'
 import { LiveCard } from '@/components/live/LiveCard'
+import { ZapGoalBar } from '@/components/live/ZapGoalBar'
+import { useAuthorZapGoals } from '@/hooks/useZapGoals'
 
 function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null }) {
   const { t } = useTranslation()
@@ -121,6 +123,14 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
   // Live NIP-53 streams this author hosts; shown above pinned videos.
   const liveStreams = useAuthorLiveStreams(pubkey, relays)
   const liveNaddr = liveStreams[0]?.stream.naddr
+  // Open NIP-75 zap goals of this author; closed ones are hidden.
+  const allZapGoals = useAuthorZapGoals(pubkey, relays)
+  const zapGoals = useMemo(() => {
+    const now = Math.floor(Date.now() / 1000)
+    return allZapGoals
+      .filter(({ goal }) => goal.closedAt === undefined || goal.closedAt > now)
+      .slice(0, 3)
+  }, [allZapGoals])
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -452,6 +462,18 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {liveStreams.map(({ stream, playback }) => (
                     <LiveCard key={stream.address} stream={stream} warning={playback === 'warn'} />
+                  ))}
+                </div>
+              </section>
+            )}
+            {zapGoals.length > 0 && (
+              <section>
+                <div className="mb-3 flex min-h-9 items-center justify-between">
+                  <h2 className="text-lg font-semibold">{t('zapGoal.title', 'Zap goals')}</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {zapGoals.map(state => (
+                    <ZapGoalBar key={state.goal.id} state={state} />
                   ))}
                 </div>
               </section>

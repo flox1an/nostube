@@ -1371,6 +1371,13 @@
     "trustOff": "Off",
     "resetAppearance": "Reset appearance"
   },
+  "zapGoal": {
+    "title": "Zap goals",
+    "untitled": "Zap goal",
+    "raised": "{{amount}} sats",
+    "target": "Goal: {{amount}}",
+    "closed": "Closed"
+  },
   "trust": {
     "badge": {
       "tooltip": "{{label}} trust — tap for details",

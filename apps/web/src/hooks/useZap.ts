@@ -9,6 +9,10 @@ import { toast } from 'sonner'
 interface UseZapOptions {
   eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
+  /** `a` coordinate added to the zap request, e.g. the stream a zap goal belongs to (NIP-75). */
+  address?: string
+  /** Relays the receipt must reach in addition to the usual ones, e.g. a zap goal's `relays`. */
+  extraRelays?: string[]
 }
 
 interface ZapParams {
@@ -26,7 +30,12 @@ interface UseZapReturn {
   setNeedsWallet: (value: boolean) => void
 }
 
-export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
+export function useZap({
+  eventId,
+  authorPubkey,
+  address,
+  extraRelays,
+}: UseZapOptions): UseZapReturn {
   const [isZapping, setIsZapping] = useState(false)
   const [needsWallet, setNeedsWallet] = useState(false)
   const { user } = useCurrentUser()
@@ -83,8 +92,14 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           recipientPubkey: authorPubkey,
           amount,
           comment,
-          relays: await interactionRelays(authorPubkey, videoEvent),
+          relays: [
+            ...new Set([
+              ...(extraRelays ?? []),
+              ...(await interactionRelays(authorPubkey, videoEvent)),
+            ]),
+          ],
           event: videoEvent || undefined,
+          address,
           timestamp,
         })
 
@@ -113,6 +128,8 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
       eventStore,
       authorPubkey,
       interactionRelays,
+      address,
+      extraRelays,
       videoEvent,
       payInvoice,
       defaultZapAmount,
@@ -153,8 +170,14 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           recipientPubkey: authorPubkey,
           amount,
           comment,
-          relays: await interactionRelays(authorPubkey, videoEvent),
+          relays: [
+            ...new Set([
+              ...(extraRelays ?? []),
+              ...(await interactionRelays(authorPubkey, videoEvent)),
+            ]),
+          ],
           event: videoEvent || undefined,
+          address,
           timestamp,
         })
 
@@ -171,7 +194,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
         return null
       }
     },
-    [user, eventStore, authorPubkey, interactionRelays, videoEvent]
+    [user, eventStore, authorPubkey, interactionRelays, videoEvent, address, extraRelays]
   )
 
   return {

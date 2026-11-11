@@ -1317,6 +1317,13 @@
     "trustOff": "Désactivé",
     "resetAppearance": "Réinitialiser l’apparence"
   },
+  "zapGoal": {
+    "title": "Objectifs de zaps",
+    "untitled": "Objectif de zaps",
+    "raised": "{{amount}} sats",
+    "target": "Objectif : {{amount}}",
+    "closed": "Clôturé"
+  },
   "trust": {
     "badge": {
       "tooltip": "Confiance {{label}} ({{percentage}}%) — cliquez pour les détails"

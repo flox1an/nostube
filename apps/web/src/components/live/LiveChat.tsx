@@ -7,20 +7,17 @@ import { ArrowDown, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { kinds, type NostrEvent } from 'nostr-tools'
-import { getDisplayName, getProfileContent } from 'applesauce-core/helpers/profile'
+import { getDisplayName } from 'applesauce-core/helpers/profile'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { buildChatRows, zapRecipients } from '@nostube/core/live-zaps'
-import {
-  lnurlFromProfile,
-  resolveZapEndpoint,
-  type ZapEndpoint,
-  type ZapReceipt,
-} from '@nostube/core/lnurl-pay'
+import type { ZapReceipt } from '@nostube/core/lnurl-pay'
 import { formatSats } from '@nostube/core/zap-utils'
 import { genUserName } from '@nostube/core/gen-user-name'
 import { Button } from '@nostube/widgets/components/button'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
-import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
+import { useZapEndpoints } from '@/hooks/useZapEndpoints'
+import { useStreamZapGoal } from '@/hooks/useZapGoals'
+import { ZapGoalBar } from './ZapGoalBar'
 import { useBlockedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useMutedPubkeys, resolveMutedPubkeys } from '@/hooks/useMutedPubkeys'
 import { buildProfileUrl, buildProfileUrlFromPubkey } from '@/lib/nprofile'
@@ -38,36 +35,6 @@ import { RichTextContent } from '@/components/RichTextContent'
 import { formatChatTime } from './chat-time'
 
 const LARGE_ZAP_SATS = 5000
-
-/** Recipient pubkey -> LNURL endpoint from their own profile, for zaps that can be verified. */
-function useZapEndpoints(recipients: string[]): ReadonlyMap<string, ZapEndpoint> {
-  const eventStore = useEventStore()
-  const [endpoints, setEndpoints] = useState<ReadonlyMap<string, ZapEndpoint>>(() => new Map())
-  const key = recipients.join(',')
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const subscriptions = (key ? key.split(',') : []).map(pubkey => {
-      requestProfile(pubkey)
-      return eventStore.replaceable(kinds.Metadata, pubkey).subscribe(profile => {
-        const lnurl = profile && lnurlFromProfile(getProfileContent(profile) ?? {})
-        if (!lnurl) return
-        resolveZapEndpoint(lnurl, controller.signal)
-          .then(endpoint => {
-            if (endpoint.nostrPubkey && !controller.signal.aborted)
-              setEndpoints(prev => new Map(prev).set(pubkey, endpoint))
-          })
-          .catch(() => {})
-      })
-    })
-    return () => {
-      controller.abort()
-      subscriptions.forEach(subscription => subscription.unsubscribe())
-    }
-  }, [eventStore, key])
-
-  return endpoints
-}
 
 function ChatMessage({
   event,
@@ -246,6 +213,7 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
   const hasZaps = useMemo(() => events.some(event => event.kind === kinds.Zap), [events])
   const recipients = useMemo(() => (hasZaps ? zapRecipients(stream) : []), [hasZaps, stream])
   const endpoints = useZapEndpoints(recipients)
+  const goal = useStreamZapGoal(stream.goalId, stream.relays)
 
   const rows = useMemo(
     () =>
@@ -291,6 +259,7 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
 
   return (
     <section className="flex h-full min-h-0 flex-col" data-live-chat>
+      {goal && <ZapGoalBar state={goal} streamAddress={stream.address} className="mb-2" />}
       <div className="relative min-h-0 flex-1">
         <div
           ref={listRef}

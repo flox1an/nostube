@@ -1316,6 +1316,13 @@
     "trustOff": "关闭",
     "resetAppearance": "重置外观"
   },
+  "zapGoal": {
+    "title": "Zap目标",
+    "untitled": "Zap目标",
+    "raised": "{{amount}} sats",
+    "target": "目标：{{amount}}",
+    "closed": "已结束"
+  },
   "trust": {
     "badge": {
       "tooltip": "{{label}} 信任度（{{percentage}}%）— 点击查看详情"

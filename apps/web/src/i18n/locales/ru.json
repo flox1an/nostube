@@ -1319,6 +1319,13 @@
     "trustOff": "Выкл.",
     "resetAppearance": "Сбросить внешний вид"
   },
+  "zapGoal": {
+    "title": "Цели по запам",
+    "untitled": "Цель по запам",
+    "raised": "{{amount}} сат.",
+    "target": "Цель: {{amount}}",
+    "closed": "Закрыта"
+  },
   "trust": {
     "badge": {
       "tooltip": "{{label}} trust ({{percentage}}%) — click for details"

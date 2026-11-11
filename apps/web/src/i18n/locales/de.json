@@ -1343,6 +1343,13 @@
     "trustOff": "Aus",
     "resetAppearance": "Darstellung zurücksetzen"
   },
+  "zapGoal": {
+    "title": "Zap-Ziele",
+    "untitled": "Zap-Ziel",
+    "raised": "{{amount}} Sats",
+    "target": "Ziel: {{amount}}",
+    "closed": "Beendet"
+  },
   "trust": {
     "badge": {
       "tooltip": "{{label}}-Vertrauen ({{percentage}}%) — klicken für Details"

@@ -26,6 +26,10 @@ interface ZapButtonProps {
   className?: string
   currentTime?: number // Current video playback position (for timestamped zaps)
   identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+  /** `a` coordinate added to the zap request (a zap goal's stream, NIP-75). */
+  address?: string
+  /** Extra relays for the zap receipt (a zap goal's `relays`, NIP-75). */
+  extraRelays?: string[]
   showZapText?: boolean // Show "zap" text instead of amount
   size?: 'default' | 'sm' | 'lg' | 'icon' // Button size for inline layout
 }
@@ -41,6 +45,8 @@ export const ZapButton = memo(function ZapButton({
   className = '',
   currentTime,
   identifier,
+  address,
+  extraRelays,
   showZapText = false,
   size,
 }: ZapButtonProps) {
@@ -55,6 +61,8 @@ export const ZapButton = memo(function ZapButton({
   const { zap, generateInvoice, isZapping, isConnected } = useZap({
     eventId,
     authorPubkey: recipientPubkey,
+    address,
+    extraRelays,
   })
   const { defaultZapAmount } = useWallet()
   // Only fetch zap stats if we have an eventId (not for profile zaps)

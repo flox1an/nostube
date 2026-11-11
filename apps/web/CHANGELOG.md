@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.75] - 2026-11-11
+
+### Added
+
+- NIP-75 zap goals. A livestream that names a goal (`goal` tag) shows it above the live chat with a progress bar and a zap button; an author's profile lists their three newest open goals. Progress counts only zap receipts for the goal itself, verified against the goal author's lightning address, one per paid invoice, none after `closed_at`. A goal zap carries the goal's relays and, from a stream, the stream's address, so it also appears in that stream's chat. Goals cannot be created in the app yet.
+
 ## [0.2.74] - 2026-11-11
 
 ### Fixed

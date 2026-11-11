@@ -1316,6 +1316,13 @@
     "trustOff": "オフ",
     "resetAppearance": "外観をリセット"
   },
+  "zapGoal": {
+    "title": "Zap目標",
+    "untitled": "Zap目標",
+    "raised": "{{amount}} sats",
+    "target": "目標: {{amount}}",
+    "closed": "終了"
+  },
   "trust": {
     "badge": {
       "tooltip": "信頼度 {{label}}（{{percentage}}%）— 詳細はクリック"

@@ -1317,6 +1317,13 @@
     "trustOff": "Desactivado",
     "resetAppearance": "Restablecer apariencia"
   },
+  "zapGoal": {
+    "title": "Metas de zaps",
+    "untitled": "Meta de zaps",
+    "raised": "{{amount}} sats",
+    "target": "Meta: {{amount}}",
+    "closed": "Cerrada"
+  },
   "trust": {
     "badge": {
       "tooltip": "Confianza {{label}} ({{percentage}}%) — clic para detalles"

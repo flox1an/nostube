@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.76] - 2026-11-12
+
+### Changed
+
+- Category bar order: people-centred categories (Music, Social Media, Entertainment, Photography & Art, Travel & Nature) first, Technology, Politics, Nostr and Bitcoin last.
+
 ## [0.2.75] - 2026-11-11
 
 ### Added

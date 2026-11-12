@@ -6,27 +6,6 @@ export interface TagCategory {
 
 export const TAG_CATEGORIES: TagCategory[] = [
   {
-    name: 'Bitcoin',
-    slug: 'bitcoin',
-    tags: [
-      'bitcoin',
-      'btc',
-      'cryptocurrency',
-      'titcoin',
-      'crypto',
-      'proof of work',
-      'lightning',
-      'fiat',
-      'rhr',
-      'rabbitholerecap',
-    ],
-  },
-  {
-    name: 'Nostr',
-    slug: 'nostr',
-    tags: ['nostr'],
-  },
-  {
     name: 'Music',
     slug: 'music',
     tags: [
@@ -89,19 +68,6 @@ export const TAG_CATEGORIES: TagCategory[] = [
     ],
   },
   {
-    name: 'Technology & Innovation',
-    slug: 'technology-and-innovation',
-    tags: [
-      'technology',
-      'artificial intelligence',
-      'ai',
-      'tech',
-      'privacy',
-      'decentralization',
-      'open source',
-    ],
-  },
-  {
     name: 'Photography & Art',
     slug: 'photography-and-art',
     tags: [
@@ -114,6 +80,24 @@ export const TAG_CATEGORIES: TagCategory[] = [
       'beauty',
       'fashion',
       'craft',
+    ],
+  },
+  {
+    name: 'Travel & Nature',
+    slug: 'travel-and-nature',
+    tags: ['travel', 'brasil', 'brazil', 'nature', 'thailand', 'tokyo', 'sunset', 'beach', 'asia'],
+  },
+  {
+    name: 'Technology & Innovation',
+    slug: 'technology-and-innovation',
+    tags: [
+      'technology',
+      'artificial intelligence',
+      'ai',
+      'tech',
+      'privacy',
+      'decentralization',
+      'open source',
     ],
   },
   {
@@ -131,9 +115,25 @@ export const TAG_CATEGORIES: TagCategory[] = [
     ],
   },
   {
-    name: 'Travel & Nature',
-    slug: 'travel-and-nature',
-    tags: ['travel', 'brasil', 'brazil', 'nature', 'thailand', 'tokyo', 'sunset', 'beach', 'asia'],
+    name: 'Nostr',
+    slug: 'nostr',
+    tags: ['nostr'],
+  },
+  {
+    name: 'Bitcoin',
+    slug: 'bitcoin',
+    tags: [
+      'bitcoin',
+      'btc',
+      'cryptocurrency',
+      'titcoin',
+      'crypto',
+      'proof of work',
+      'lightning',
+      'fiat',
+      'rhr',
+      'rabbitholerecap',
+    ],
   },
 ]
 

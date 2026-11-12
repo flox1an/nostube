@@ -874,7 +874,11 @@
       "trustFilterOn": "Vertrauensfilter an — Autoren mit niedrigem Score ausgeblendet",
       "trustFilterOff": "Vertrauensfilter aus — alle Videos angezeigt",
       "trustFilterOnShort": "Vertrauensfilter an",
-      "trustFilterOffShort": "Vertrauensfilter aus"
+      "trustFilterOffShort": "Vertrauensfilter aus",
+      "groupPerDayOn": "Ein Video pro Creator und Tag – klicken, um alle Videos zu zeigen",
+      "groupPerDayOff": "Alle Videos werden gezeigt – klicken, um auf ein Video pro Creator und Tag zu gruppieren",
+      "groupPerDayOnShort": "Gruppiert",
+      "groupPerDayOffShort": "Ungruppiert"
     },
     "shorts": {
       "noShorts": "Keine Shorts gefunden.",

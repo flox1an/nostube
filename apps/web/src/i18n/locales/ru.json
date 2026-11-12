@@ -848,7 +848,11 @@
       "trustFilterOn": "Trust filter on — hiding low-score authors",
       "trustFilterOff": "Trust filter off — showing all videos",
       "trustFilterOnShort": "Фильтр доверия включён",
-      "trustFilterOffShort": "Фильтр доверия выключен"
+      "trustFilterOffShort": "Фильтр доверия выключен",
+      "groupPerDayOn": "Одно видео на автора в день — нажмите, чтобы показать все",
+      "groupPerDayOff": "Показаны все видео — нажмите, чтобы оставить одно на автора в день",
+      "groupPerDayOnShort": "Сгруппировано",
+      "groupPerDayOffShort": "Без группировки"
     },
     "shorts": {
       "noShorts": "Shorts не найдены.",

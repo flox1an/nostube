@@ -11,7 +11,9 @@ import { useRelayBrowsing } from '@/contexts/RelayBrowsingContext'
 import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
 import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getPublishDate } from '@nostube/core/video-event'
+import { applyDailyGrouping } from '@/lib/daily-grouping'
+import { useGroupPerDay } from '@/hooks/useGroupPerDay'
+import { GroupPerDayButton } from '@/components/GroupPerDayButton'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { getKindsForType } from '@nostube/core/video-types'
@@ -104,28 +106,8 @@ export function HomePage() {
     directMode: !!source,
   })
 
-  // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
-  const dedupedVideos = useMemo(() => {
-    const seenLongform = new Set<string>()
-    const seenShorts = new Set<string>()
-    const result: VideoEvent[] = []
-    for (const video of videos) {
-      const day = new Date(getPublishDate(video) * 1000).toISOString().slice(0, 10)
-      const key = `${video.pubkey}:${day}`
-      if (video.type === 'videos') {
-        if (!seenLongform.has(key)) {
-          seenLongform.add(key)
-          result.push(video)
-        }
-      } else if (video.type === 'shorts') {
-        if (!seenShorts.has(key)) {
-          seenShorts.add(key)
-          result.push(video)
-        }
-      }
-    }
-    return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [videos])
+  const [grouped] = useGroupPerDay()
+  const dedupedVideos = useMemo(() => applyDailyGrouping(videos, grouped), [videos, grouped])
 
   const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(dedupedVideos)
   const { videos: continueWatchingVideos } = useContinueWatching()
@@ -144,6 +126,7 @@ export function HomePage() {
         </h1>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2">
           <RelaySourcePicker />
+          <GroupPerDayButton />
           {filterButton}
         </div>
       </div>

@@ -8,12 +8,12 @@ import { client } from '@/nostr/core'
 import { createSubscriptionsLoader } from '@nostube/core/subscriptions-loader'
 import { INDEXER_RELAYS, METADATA_RELAYS } from '@/constants/relays'
 import { getInstanceConfig } from '@nostube/core/instance-config'
-import { getPublishDate } from '@nostube/core/video-event'
-import type { VideoEvent } from '@nostube/core/video-event'
+import { applyDailyGrouping } from '@/lib/daily-grouping'
+import { useGroupPerDay } from '@/hooks/useGroupPerDay'
 
 /**
- * Shared subscriptions timeline: long-form + shorts from followed authors,
- * deduped to at most one long-form and one short per author per day.
+ * Shared subscriptions timeline: long-form + shorts from followed authors, grouped to at most
+ * one long-form and one short per author per day unless the user turned grouping off.
  * Used by the full Subscriptions page and the Home "From creators you follow" shelf.
  */
 export function useSubscriptionsVideos() {
@@ -69,32 +69,13 @@ export function useSubscriptionsVideos() {
   } = useInfiniteTimeline(loader, relays, { filters })
   const error = phase === 'error'
 
-  // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
+  const [grouped] = useGroupPerDay()
   const dedupedVideos = useMemo(() => {
-    const seenLongform = new Set<string>()
-    const seenShorts = new Set<string>()
-    const result: VideoEvent[] = []
-    for (const video of videos) {
-      const day = new Date(getPublishDate(video) * 1000).toISOString().slice(0, 10)
-      const key = `${video.pubkey}:${day}`
-      if (video.type === 'videos') {
-        if (!seenLongform.has(key)) {
-          seenLongform.add(key)
-          result.push(video)
-        }
-      } else if (video.type === 'shorts') {
-        if (!seenShorts.has(key)) {
-          seenShorts.add(key)
-          result.push(video)
-        }
-      }
-    }
-    // Re-sort by publish date since we interleaved two sets
-    const sorted = result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    const sorted = applyDailyGrouping(videos, grouped)
     return (config.nsfwFilter ?? 'hide') === 'hide'
       ? sorted.filter(video => !video.contentWarning)
       : sorted
-  }, [videos, config.nsfwFilter])
+  }, [videos, grouped, config.nsfwFilter])
 
   return {
     followedPubkeys,

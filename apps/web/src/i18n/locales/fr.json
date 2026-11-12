@@ -848,7 +848,11 @@
       "trustFilterOn": "Filtre de confiance activé — auteurs à faible score masqués",
       "trustFilterOff": "Filtre de confiance désactivé — toutes les vidéos affichées",
       "trustFilterOnShort": "Filtre de confiance actif",
-      "trustFilterOffShort": "Filtre de confiance inactif"
+      "trustFilterOffShort": "Filtre de confiance inactif",
+      "groupPerDayOn": "Une vidéo par créateur et par jour : cliquer pour tout afficher",
+      "groupPerDayOff": "Toutes les vidéos affichées : cliquer pour grouper à une par créateur et par jour",
+      "groupPerDayOnShort": "Groupé",
+      "groupPerDayOffShort": "Non groupé"
     },
     "shorts": {
       "noShorts": "Aucun short trouvé.",

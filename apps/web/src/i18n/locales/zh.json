@@ -848,7 +848,11 @@
       "trustFilterOn": "信任过滤已开启 — 隐藏低分作者",
       "trustFilterOff": "信任过滤已关闭 — 显示所有视频",
       "trustFilterOnShort": "信任过滤已开启",
-      "trustFilterOffShort": "信任过滤已关闭"
+      "trustFilterOffShort": "信任过滤已关闭",
+      "groupPerDayOn": "每位创作者每天一个视频 — 点击显示全部",
+      "groupPerDayOff": "显示全部视频 — 点击改为每位创作者每天一个",
+      "groupPerDayOnShort": "已分组",
+      "groupPerDayOffShort": "未分组"
     },
     "shorts": {
       "noShorts": "未找到短视频。",

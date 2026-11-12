@@ -902,7 +902,11 @@
       "trustFilterOn": "Trust filter on — hiding low-score authors",
       "trustFilterOff": "Trust filter off — showing all videos",
       "trustFilterOnShort": "Trust filter on",
-      "trustFilterOffShort": "Trust filter off"
+      "trustFilterOffShort": "Trust filter off",
+      "groupPerDayOn": "One video per creator per day — click to show all videos",
+      "groupPerDayOff": "Showing all videos — click to group to one per creator per day",
+      "groupPerDayOnShort": "Grouped",
+      "groupPerDayOffShort": "Ungrouped"
     },
     "shorts": {
       "noShorts": "No shorts found.",

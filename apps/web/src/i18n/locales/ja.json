@@ -848,7 +848,11 @@
       "trustFilterOn": "トラストフィルター有効 — 低スコアの作者を非表示",
       "trustFilterOff": "トラストフィルター無効 — すべての動画を表示",
       "trustFilterOnShort": "トラストフィルター有効",
-      "trustFilterOffShort": "トラストフィルター無効"
+      "trustFilterOffShort": "トラストフィルター無効",
+      "groupPerDayOn": "クリエイターごとに1日1本表示中 — クリックですべて表示",
+      "groupPerDayOff": "すべての動画を表示中 — クリックでクリエイターごとに1日1本にまとめる",
+      "groupPerDayOnShort": "グループ化",
+      "groupPerDayOffShort": "グループ解除"
     },
     "shorts": {
       "noShorts": "ショートが見つかりません。",

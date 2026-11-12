@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.77] - 2026-11-12
+
+### Added
+
+- Feed toggle (layers button next to the trust filter) to turn off the one-video-per-creator-per-day grouping. It applies to the home feed, the "From creators you follow" shelf and the Subscriptions page, and is remembered per browser.
+
 ## [0.2.76] - 2026-11-12
 
 ### Changed

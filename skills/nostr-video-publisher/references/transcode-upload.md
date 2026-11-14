@@ -219,4 +219,4 @@ When shell tag flags become awkward, write JSON:
 }
 ```
 
-Configure `NOSTR_SECRET_KEY` and `RELAY` explicitly through protected environment settings, then use `nak event "$RELAY" < event.json` (see the main skill's guarded example), or a NosTube instance's managed signer. These example URLs/hashes are illustrative: replace them with verified media metadata. Check relay `OK` responses and read back the exact signed event id before reporting publication.
+Configure the signer as the [nak Remote Signer skill](../../nak-remote-signer/SKILL.md) describes (`NOSTR_SECRET_KEY`, or `~/.config/nak/signer.env`) and set `RELAY` explicitly, then use `nak event "$RELAY" < event.json` (see the main skill's guarded example), or a NosTube instance's managed signer. These example URLs/hashes are illustrative: replace them with verified media metadata. Check relay `OK` responses and read back the exact signed event id before reporting publication.

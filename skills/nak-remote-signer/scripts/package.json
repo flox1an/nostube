@@ -1,0 +1,13 @@
+{
+  "name": "nak-remote-signer-scripts",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.26.0",
+    "pngjs": "^7.0.0",
+    "qrcode": "^1.5.4"
+  }
+}

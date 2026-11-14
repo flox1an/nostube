@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.78] - 2026-11-14
+
+### Added
+
+- Agent skill `nak-remote-signer` for `nak`: it resolves which signer `nak` picks up (`NOSTR_SECRET_KEY` or `~/.config/nak/signer.env`), pairs it with a NIP-46 remote signer (Amber, nsec.app, nsecBunker) through a `nostrconnect://` QR code and stores the result in a mode-600 file, then shows how to call `nak` so it signs without a key on disk. Relays in the pairing code are probed first and unresponsive ones are dropped, because `nak` waits for every relay in the bunker URL. The QR renders in 53–69 terminal columns with a quiet zone that terminal trimming cannot eat.
+- `nostr-video-publisher` reference for importing from YouTube (yt-dlp setup, quality gate, metadata mapping). The skill linked it before the file existed.
+
+### Changed
+
+- `nostr-video-publisher` treats a working `nak` signer as a precondition and defers its setup to the `nak-remote-signer` skill instead of duplicating pairing instructions; its `nak` examples load a signer from the protected file as well as from the environment.
+
 ## [0.2.77] - 2026-11-12
 
 ### Added

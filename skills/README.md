@@ -10,6 +10,11 @@ create Nostr keys, upload media, or publish events.
   videos and thumbnails to Blossom, and sign and publish NIP-71 video events.
   Includes event examples, ffmpeg recipes, and Nostr/Blossom references. Works
   outside this repository; a Nostube server is optional.
+- [nak Remote Signer](nak-remote-signer/SKILL.md): resolve which signer `nak`
+  uses, pair it with a NIP-46 remote signer (Amber, nsec.app, nsecBunker) through
+  a `nostrconnect://` QR code, and call `nak` so it signs without a key on disk.
+  Prerequisite for any skill that signs with `nak`; the publisher skill defers to
+  it.
 
 ## Install with the skills CLI
 

@@ -30,13 +30,15 @@ RUN scripts/build-server-web.sh
 FROM rust:1-bookworm AS server
 WORKDIR /src
 COPY apps/server/Cargo.toml apps/server/Cargo.lock ./
-# The dependencies first, so a source change does not rebuild them.
+# The dependencies first, so a source change does not rebuild them. The placeholder is replaced in
+# place; the copied sources keep their context mtimes and can look older than the placeholder build,
+# which made cargo report them `Fresh` and ship the placeholder binary. Touch them first.
 RUN mkdir src && echo 'fn main() {}' > src/main.rs \
  && cargo build --release --locked \
- && rm -rf src target/release/nostube-server target/release/deps/nostube_server*
+ && rm -rf src
 COPY apps/server/src src
 COPY --from=web /app/apps/server/web web
-RUN cargo build --release --locked
+RUN find src -exec touch {} + && cargo build --release --locked
 
 # 3. The runtime image.
 FROM debian:bookworm-slim AS runtime

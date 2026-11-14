@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.80] - 2026-11-14
+
+### Fixed
+
+- The server image no longer ships the placeholder binary: the Dockerfile touches the copied sources before the release build, so cargo stops treating them as older than the placeholder build and actually links the real server.
+
 ## [0.2.79] - 2026-11-14
 
 ### Fixed

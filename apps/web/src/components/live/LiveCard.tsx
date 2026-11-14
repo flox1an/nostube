@@ -5,11 +5,15 @@ import type { LiveStream } from '@nostube/core/live-stream'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { LiveBadge } from './LiveBadge'
+import { useImageCascadeChain } from '@nostube/widgets/hooks/useImageCascade'
 
 /** Grid card for a live stream; `warning` covers the thumbnail. */
 export function LiveCard({ stream, warning }: { stream: LiveStream; warning: boolean }) {
   const { t } = useTranslation()
   const profile = useProfile({ pubkey: stream.hostPubkey })
+  const thumbnail = useImageCascadeChain([stream.image, stream.thumb], {
+    authorPubkey: stream.hostPubkey,
+  })
   const name = profile?.display_name || profile?.name || stream.hostPubkey.slice(0, 12)
   return (
     <Link
@@ -17,13 +21,15 @@ export function LiveCard({ stream, warning }: { stream: LiveStream; warning: boo
       className="group block min-w-0 rounded-xl p-2 hover:bg-accent/55 focus-visible:outline-2 focus-visible:outline-ring"
     >
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-        {stream.image && !warning && (
+        {thumbnail.src && !warning && (
           <img
-            src={stream.image}
+            src={thumbnail.src}
             alt=""
             loading="lazy"
             referrerPolicy="no-referrer"
             className="h-full w-full object-cover"
+            onError={thumbnail.onError}
+            onLoad={thumbnail.onLoad}
           />
         )}
         {warning && (

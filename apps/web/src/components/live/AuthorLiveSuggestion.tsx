@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
-import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
+import { useImageCascadeChain } from '@nostube/widgets/hooks/useImageCascade'
 import { useAuthorLiveStreams } from '@/hooks/useLiveStreams'
 import { LiveBadge } from './LiveBadge'
 
@@ -13,9 +13,7 @@ export function AuthorLiveSuggestion({ pubkey, relays }: { pubkey?: string; rela
   // Content-warned streams stay out of suggestions; they need a deliberate click.
   const stream = useAuthorLiveStreams(pubkey, relays).find(item => item.playback === 'play')?.stream
   const metadata = useProfile(stream ? { pubkey: stream.hostPubkey } : undefined)
-  const cascade = useImageCascade({
-    src: stream?.image,
-    variant: 'preview',
+  const cascade = useImageCascadeChain([stream?.image, stream?.thumb], {
     authorPubkey: stream?.hostPubkey,
   })
   if (!stream) return null

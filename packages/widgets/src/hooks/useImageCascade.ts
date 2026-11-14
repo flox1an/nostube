@@ -231,3 +231,25 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
     stage: effectiveStage,
   }
 }
+
+/**
+ * `useImageCascade` over several image candidates in order: when one candidate's cascade is
+ * exhausted, the next starts. For sources that name more than one image (e.g. `image` + `thumb`).
+ */
+export function useImageCascadeChain(
+  candidates: (string | null | undefined)[],
+  input: Omit<ImageCascadeInput, 'src'> = {}
+): ImageCascadeResult {
+  const urls = candidates.filter(
+    (url, i, all): url is string => !!url && all.indexOf(url) === i
+  )
+  const key = urls.join('\n')
+  const [state, setState] = useState({ key, index: 0 })
+  const index = state.key === key ? state.index : 0
+  const cascade = useImageCascade({ ...input, src: urls[index] })
+  const hasNext = cascade.exhausted && index + 1 < urls.length
+  useEffect(() => {
+    if (hasNext) setState({ key, index: index + 1 })
+  }, [hasNext, key, index])
+  return hasNext ? { ...cascade, exhausted: false } : cascade
+}

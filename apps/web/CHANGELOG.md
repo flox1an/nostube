@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.79] - 2026-11-14
+
+### Fixed
+
+- Live streams fall back to the stream's `thumb` tag (zap.stream and compatibles) when the `image` poster fails to load: grid cards, author suggestions and the player poster try the candidates in order. The player takes a `posterFallbacks` list for this.
+- The `nak-remote-signer` skill's frontmatter parses again: its `description` is quoted, so GitHub no longer reports "mapping values are not allowed in this context" for that line.
+
+### Changed
+
+- `nak-remote-signer` recommends `--window` in agent harnesses such as OMP, whose terminal truncates long output and wraps a narrow-pane QR code past recognition.
+
 ## [0.2.78] - 2026-11-14
 
 ### Added

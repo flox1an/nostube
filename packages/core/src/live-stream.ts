@@ -14,6 +14,8 @@ export interface LiveStream {
   title: string
   summary: string
   image?: string
+  /** Current-frame `thumb` tag (zap.stream and compatibles); fallback when `image` fails to load. */
+  thumb?: string
   streamingUrls: string[]
   recordingUrl?: string
   status: 'live' | 'planned' | 'ended'
@@ -141,6 +143,7 @@ export function parseLiveStream(
     title: tag('title')?.trim() ?? '',
     summary: tag('summary')?.trim() ?? '',
     image: publicUrl(tag('image'), 'https:')?.href,
+    thumb: publicUrl(tag('thumb'), 'https:')?.href,
     streamingUrls,
     recordingUrl: playbackUrl(tag('recording')),
     status,

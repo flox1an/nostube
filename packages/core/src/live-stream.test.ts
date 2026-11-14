@@ -28,6 +28,7 @@ describe('parseLiveStream', () => {
         ['streaming', 'https://cdn.example/live.m3u8?token=1'],
         ['recording', 'https://192.168.1.2/rec.mp4'],
         ['image', 'data:image/png;base64,AAAA'],
+        ['thumb', 'https://api.example/thumb.webp?n=1'],
         [
           'relays',
           'wss://relay.example',
@@ -42,6 +43,7 @@ describe('parseLiveStream', () => {
     expect(stream.streamingUrls).toEqual(['https://cdn.example/live.m3u8?token=1'])
     expect(stream.recordingUrl).toBeUndefined()
     expect(stream.image).toBeUndefined()
+    expect(stream.thumb).toBe('https://api.example/thumb.webp?n=1')
     expect(stream.relays).toEqual(['wss://relay.example/'])
     expect(safeLiveRelay('wss://relay.example')).toBe(true)
     expect(safeLiveRelay('wss://[::1]')).toBe(false)

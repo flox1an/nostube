@@ -6,7 +6,7 @@ import { type TextTrack, type VideoVariant } from '@nostube/core/video-event'
 import audioFallback from '../assets/audio-fallback.webp'
 import { useMediaUrls } from '../hooks/useMediaUrls'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { useImageCascade } from '../hooks/useImageCascade'
+import { useImageCascadeChain } from '../hooks/useImageCascade'
 import type { PresetThumbnailPreset } from '@nostube/core/preset-thumbnail-url'
 import {
   usePlayerState,
@@ -40,6 +40,8 @@ interface VideoPlayerProps {
   mediaType?: 'video' | 'audio'
   isLive?: boolean
   poster?: string
+  /** Tried in order once `poster` (and its proxy) failed. */
+  posterFallbacks?: string[]
   posterHash?: string
   posterPreset?: PresetThumbnailPreset
   onTimeUpdate?: (time: number) => void
@@ -78,6 +80,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   mediaType,
   isLive = false,
   poster,
+  posterFallbacks,
   posterHash,
   posterPreset = 'feed-preview-v1',
   textTracks,
@@ -1101,8 +1104,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     enabled: !!poster,
   })
   const posterSource = posterUrlLadder.currentUrl
-  const posterCascade = useImageCascade({
-    src: posterSource,
+  const posterCascade = useImageCascadeChain([posterSource, ...(posterFallbacks ?? [])], {
     preset: posterPreset,
     authorPubkey,
   })

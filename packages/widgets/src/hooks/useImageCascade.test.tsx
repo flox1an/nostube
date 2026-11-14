@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useImageCascade, type ImageCascadeInput } from './useImageCascade'
+import { useImageCascade, useImageCascadeChain, type ImageCascadeInput } from './useImageCascade'
 
 const BLOSSOM_HASH = 'a'.repeat(64)
 const BLOSSOM_URL = `https://blossom.example/${BLOSSOM_HASH}.jpg`
@@ -131,6 +131,33 @@ describe('useImageCascade', () => {
     render(<Probe src={null} />)
     expect(probeStage()).toBe('exhausted')
     expect(probeSrc()).toBe('')
+  })
+})
+
+function ChainProbe({ urls }: { urls: string[] }) {
+  const cascade = useImageCascadeChain(urls)
+  return (
+    <div
+      data-testid="probe"
+      data-src={cascade.src ?? ''}
+      data-exhausted={cascade.exhausted}
+      onClick={cascade.onError}
+    />
+  )
+}
+
+describe('useImageCascadeChain', () => {
+  it('moves to the next candidate once the first is exhausted, then exhausts', () => {
+    const fallback = 'https://thumbs.example/live.webp'
+    render(<ChainProbe urls={[DIRECT_URL, fallback]} />)
+    triggerError() // proxied → raw
+    expect(probeSrc()).toBe(DIRECT_URL)
+    triggerError() // raw fails → next candidate, proxied
+    expect(probeSrc()).toContain(encodeURIComponent(fallback))
+    triggerError()
+    expect(probeSrc()).toBe(fallback)
+    triggerError()
+    expect(screen.getByTestId('probe').getAttribute('data-exhausted')).toBe('true')
   })
 })
 

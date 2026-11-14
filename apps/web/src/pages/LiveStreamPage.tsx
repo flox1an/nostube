@@ -103,6 +103,7 @@ function StreamViewer({
                 mime={mime}
                 isLive={stream.status === 'live'}
                 poster={stream.image}
+                posterFallbacks={stream.thumb ? [stream.thumb] : undefined}
                 autoPlay
                 loop={false}
                 authorPubkey={stream.hostPubkey}

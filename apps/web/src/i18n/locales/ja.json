@@ -1318,10 +1318,14 @@
     "minTrust": "最低信頼度",
     "minTrustHint": "Web of Trust スコア。スコアのないアカウントは表示されたままです",
     "trustOff": "オフ",
-    "resetAppearance": "外観をリセット"
+    "resetAppearance": "外観をリセット",
+    "suggestions": "候補",
+    "emotes": {
+      "channel": "チャンネル",
+      "mine": "自分の"
+    }
   },
   "zapGoal": {
-    "title": "Zap目標",
     "untitled": "Zap目標",
     "raised": "{{amount}} sats",
     "target": "目標: {{amount}}",

@@ -63,6 +63,22 @@ describe('RichTextContent', () => {
     expect(src.searchParams.getAll('xs')).toEqual(['cdn.example.com'])
     expect(src.searchParams.get('as')).toBe('deadbeef')
   })
+
+  it('shows tagged shortcodes as images and leaves the rest as text', () => {
+    const { container } = render(
+      <RichTextContent
+        content="gg :pepe::pepe: at 10:30:00 :nope: see:https://example.com"
+        emojiTags={[['emoji', 'pepe', 'https://cdn.example.com/pepe.png']]}
+      />
+    )
+
+    expect(screen.getAllByRole('img', { name: ':pepe:' })).toHaveLength(2)
+    expect(container).toHaveTextContent('at 10:30:00 :nope: see:')
+    expect(screen.getByRole('link', { name: 'example.com' })).toHaveAttribute(
+      'href',
+      'https://example.com'
+    )
+  })
 })
 
 describe('RichTextContent inline (chat)', () => {

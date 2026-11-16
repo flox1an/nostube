@@ -1321,10 +1321,14 @@
     "minTrust": "Минимальное доверие",
     "minTrustHint": "Оценка Web of Trust; аккаунты без оценки остаются видимыми",
     "trustOff": "Выкл.",
-    "resetAppearance": "Сбросить внешний вид"
+    "resetAppearance": "Сбросить внешний вид",
+    "suggestions": "Подсказки",
+    "emotes": {
+      "channel": "Канал",
+      "mine": "Ваши"
+    }
   },
   "zapGoal": {
-    "title": "Цели по запам",
     "untitled": "Цель по запам",
     "raised": "{{amount}} сат.",
     "target": "Цель: {{amount}}",

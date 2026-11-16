@@ -21,6 +21,7 @@
     "applesauce-relay": "^6.2.1",
     "applesauce-signers": "^6.2.2",
     "blurhash": "^2.0.5",
+    "emojibase-data": "^18.0.0",
     "hls.js": "^1.7.1",
     "langs": "^2.0.0",
     "mediabunny": "^1.55.2",

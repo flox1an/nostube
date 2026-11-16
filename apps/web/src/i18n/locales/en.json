@@ -1373,10 +1373,14 @@
     "minTrust": "Minimum trust",
     "minTrustHint": "Web of Trust score; unscored accounts stay visible",
     "trustOff": "Off",
-    "resetAppearance": "Reset appearance"
+    "resetAppearance": "Reset appearance",
+    "suggestions": "Suggestions",
+    "emotes": {
+      "channel": "Channel",
+      "mine": "Yours"
+    }
   },
   "zapGoal": {
-    "title": "Zap goals",
     "untitled": "Zap goal",
     "raised": "{{amount}} sats",
     "target": "Goal: {{amount}}",

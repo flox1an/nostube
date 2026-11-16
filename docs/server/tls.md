@@ -306,6 +306,8 @@ thirds of its lifetime or when a name or IP changes, without a restart and witho
 
 The CA is name-constrained: it can only vouch for names ending in `.local`, `.home.arpa` or `.lan`
 and for private IP addresses (10/8, 172.16/12, 192.168/16, fd00::/8), never for public websites.
+Mesh addresses outside those ranges get no certificate: a Yggdrasil instance (`200::/7`) belongs in
+[proxy mode](#proxy-mode) with an explicit `http://` origin and `ws://` relay, like the FIPS setup.
 
 ### Ports
 
@@ -399,8 +401,11 @@ freshly built web assets and server.
 scripts/build-server-web.sh && cargo build --manifest-path apps/server/Cargo.toml
 node apps/server/scripts/check-local-profile.mjs
 node apps/server/scripts/check-local-profile.mjs --default-profile-relays
+node apps/server/scripts/check-local-profile.mjs --offline
 ```
 
 `--default-profile-relays` compares an omitted `profile_relays` with the explicit empty list; both must
-keep the public visitor lookup. `--serve` only seeds and keeps the instance running for manual
-inspection.
+keep the public visitor lookup. `--offline` is the isolated-network check: the browser resolves no
+name but the instance's, opens the site signed out, and the site, a video page and the embed must
+render with no external request at all. It needs no public relay connectivity. `--serve` only seeds
+and keeps the instance running for manual inspection.

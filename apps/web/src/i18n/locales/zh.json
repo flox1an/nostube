@@ -1318,10 +1318,14 @@
     "minTrust": "最低信任度",
     "minTrustHint": "Web of Trust 分数；无分数的账户仍然可见",
     "trustOff": "关闭",
-    "resetAppearance": "重置外观"
+    "resetAppearance": "重置外观",
+    "suggestions": "建议",
+    "emotes": {
+      "channel": "频道",
+      "mine": "我的"
+    }
   },
   "zapGoal": {
-    "title": "Zap目标",
     "untitled": "Zap目标",
     "raised": "{{amount}} sats",
     "target": "目标：{{amount}}",

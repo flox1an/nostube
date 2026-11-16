@@ -299,5 +299,11 @@
     "iosStep1": "Toca el botón Compartir en la barra del navegador.",
     "iosStep2": "Desplázate hacia abajo y elige «Añadir a pantalla de inicio».",
     "iosStep3": "Toca «Añadir»."
+  },
+  "emojiPicker": {
+    "add": "Añadir emoji",
+    "search": "Buscar emoji",
+    "emoji": "Emoji",
+    "empty": "No se encontró ningún emoji"
   }
 }

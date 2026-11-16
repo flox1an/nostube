@@ -5,8 +5,12 @@
 // both reaches); external HTTP, public writes, public video queries and all external embed
 // traffic fail. Public reach cannot run here: a local-ca `.local` instance cannot be public.
 //
+// `--offline` is the isolated-LAN check: the browser resolves no name but the instance's, opens
+// the site unsigned and must render it with zero external traffic (no public-relay connectivity
+// needed).
+//
 //   node apps/server/scripts/check-local-profile.mjs [--server <binary>] [--browser <path>]
-//     [--default-profile-relays] [--port 9443] [--wait 10] [--serve]
+//     [--default-profile-relays] [--port 9443] [--wait 10] [--serve] [--offline]
 //
 // macOS (the local-ca mode names the instance after `scutil --get LocalHostName`). Build the
 // web assets and the server first (scripts/build-server-web.sh, cargo build).
@@ -36,6 +40,8 @@ const { values: opt } = parseArgs({
     'default-profile-relays': { type: 'boolean', default: false },
     // Only seed and keep the instance running, for a look with another browser.
     serve: { type: 'boolean', default: false },
+    // No internet: only the instance's name resolves, the visitor stays signed out.
+    offline: { type: 'boolean', default: false },
   },
 })
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // the instance's own local CA
@@ -196,7 +202,7 @@ const browser = spawn(
     '--headless=new',
     '--remote-debugging-port=0',
     '--ignore-certificate-errors',
-    `--host-resolver-rules=MAP ${host} 127.0.0.1`,
+    `--host-resolver-rules=MAP ${host} 127.0.0.1${opt.offline ? ', MAP * ~NOTFOUND' : ''}`,
     '--no-first-run',
     'about:blank',
   ],
@@ -227,13 +233,15 @@ const send = (method, params = {}, sessionId) =>
   })
 const watch = async (sessionId, traffic) => {
   sessions.set(sessionId, traffic)
+  // A newly installed service worker attaches paused (`waitForDebuggerOnStart`); commands sent
+  // before this resume are never answered, `Network.enable` included. Resume first, then watch.
+  await send('Runtime.runIfWaitingForDebugger', {}, sessionId)
   await send('Network.enable', {}, sessionId)
   await send(
     'Target.setAutoAttach',
     { autoAttach: true, waitForDebuggerOnStart: true, flatten: true },
     sessionId
   )
-  await send('Runtime.runIfWaitingForDebugger', {}, sessionId)
 }
 cdp.on('message', raw => {
   const msg = JSON.parse(raw)
@@ -339,23 +347,53 @@ for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
   await send('Page.enable', {}, sessionId)
   await watch(sessionId, traffic)
-  // Signed in as a visitor (nsec account), so the site looks the visitor's profile up.
-  await send(
-    'Page.addScriptToEvaluateOnNewDocument',
-    {
-      source: `if (location.origin === ${JSON.stringify(origin)}) {
+  // Signed in as a visitor (nsec account), so the site looks the visitor's profile up. Offline
+  // there is no public indexer to look it up on: the page has to load unsigned.
+  if (!opt.offline)
+    await send(
+      'Page.addScriptToEvaluateOnNewDocument',
+      {
+        source: `if (location.origin === ${JSON.stringify(origin)}) {
   localStorage.setItem('nostr:accounts', ${JSON.stringify(JSON.stringify([{ pubkey: visitor, method: 'nsec', createdAt: Date.now() }]))})
   localStorage.setItem('nostr:active-account', ${JSON.stringify(visitor)})
   sessionStorage.setItem('nostr:session-nsec-keys', ${JSON.stringify(JSON.stringify({ [visitor]: nip19.nsecEncode(visitorKey) }))})
 }`,
-    },
-    sessionId
-  )
+      },
+      sessionId
+    )
   await send('Page.navigate', { url: origin + path }, sessionId)
   await sleep(Number(opt.wait) * 1000)
-  await Promise.all(traffic.watches)
+  // The index page has to be a page, not just a 200: booted config, rendered root, no error.
+  if (opt.offline) {
+    const { result } = await send(
+      'Runtime.evaluate',
+      {
+        expression: `JSON.stringify({
+  title: document.title,
+  text: (document.querySelector('#root, #nostube-embed')?.textContent ?? '').trim(),
+  main: !!document.querySelector('main'),
+  alert: (document.querySelector('[role=alert]')?.textContent ?? '').trim().slice(0, 200),
+})`,
+        returnByValue: true,
+      },
+      sessionId
+    )
+    const page = JSON.parse(result.value)
+    if (!page.text) traffic.failures.push('the app rendered nothing')
+    if (path === '/') {
+      if (!page.title.includes('Local check'))
+        traffic.failures.push(`title is ${JSON.stringify(page.title)}`)
+      if (!page.main) traffic.failures.push('no <main> rendered')
+      if (page.alert) traffic.failures.push(`the app shows a load error: ${page.alert}`)
+    }
+    // The seeded event and its creator resolve from the instance's own relay, not the internet.
+    if (path.startsWith('/v/') && !page.text.includes('Local check video'))
+      traffic.failures.push('the video page did not resolve the seeded video from the relay')
+  }
+  // A child target that stops answering must not hang the whole check.
+  await Promise.race([Promise.all(traffic.watches), sleep(5000)])
   await send('Target.closeTarget', { targetId })
-  if (!traffic.embed) {
+  if (!traffic.embed && !opt.offline) {
     for (const url of publicRelays)
       if (!traffic.publicSockets.has(url))
         traffic.failures.push(`missing mandatory public socket: ${url}`)
@@ -373,6 +411,8 @@ for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
 console.log(
   failures.length
     ? `FAILED:\n${failures.join('\n')}`
-    : 'OK: public traffic is visitor identity only; video sources and embed stayed on the instance'
+    : opt.offline
+      ? 'OK: the site, a video page and the embed load without internet; nothing left the instance'
+      : 'OK: public traffic is visitor identity only; video sources and embed stayed on the instance'
 )
 process.exit(failures.length ? 1 : 0)

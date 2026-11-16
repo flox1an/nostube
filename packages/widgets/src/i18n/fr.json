@@ -299,5 +299,11 @@
     "iosStep1": "Touchez le bouton Partager dans la barre du navigateur.",
     "iosStep2": "Faites défiler et choisissez « Sur l'écran d'accueil ».",
     "iosStep3": "Touchez « Ajouter »."
+  },
+  "emojiPicker": {
+    "add": "Ajouter un emoji",
+    "search": "Rechercher un emoji",
+    "emoji": "Emoji",
+    "empty": "Aucun emoji trouvé"
   }
 }

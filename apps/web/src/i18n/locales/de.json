@@ -1345,10 +1345,14 @@
     "minTrust": "Mindestvertrauen",
     "minTrustHint": "Web-of-Trust-Wert; Konten ohne Wert bleiben sichtbar",
     "trustOff": "Aus",
-    "resetAppearance": "Darstellung zurücksetzen"
+    "resetAppearance": "Darstellung zurücksetzen",
+    "suggestions": "Vorschläge",
+    "emotes": {
+      "channel": "Kanal",
+      "mine": "Deine"
+    }
   },
   "zapGoal": {
-    "title": "Zap-Ziele",
     "untitled": "Zap-Ziel",
     "raised": "{{amount}} Sats",
     "target": "Ziel: {{amount}}",

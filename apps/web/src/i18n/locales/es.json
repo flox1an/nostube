@@ -1319,10 +1319,14 @@
     "minTrust": "Confianza mínima",
     "minTrustHint": "Puntuación de Web of Trust; las cuentas sin puntuación siguen visibles",
     "trustOff": "Desactivado",
-    "resetAppearance": "Restablecer apariencia"
+    "resetAppearance": "Restablecer apariencia",
+    "suggestions": "Sugerencias",
+    "emotes": {
+      "channel": "Canal",
+      "mine": "Tuyos"
+    }
   },
   "zapGoal": {
-    "title": "Metas de zaps",
     "untitled": "Meta de zaps",
     "raised": "{{amount}} sats",
     "target": "Meta: {{amount}}",

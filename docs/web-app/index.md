@@ -19,11 +19,15 @@ button to request native fullscreen.
 
 Below the title, **Follow** follows the host, the zap button zaps the stream (paid to the host, bound to the stream address, so it appears in the chat) and **Share** shares the stream link. The player attempts autoplay; browser policy may require a click for sound. Chat sits beside the player (below it on narrow screens) with its own scroll area and follows new messages until you scroll up; **Jump to latest** resumes. Enter adds a line; Ctrl/Cmd+Enter or **Send chat** publishes. A rejected message keeps its draft. All chat links open a new tab so playback continues.
 
+**Mentions and emotes.** Typing `@` suggests the streamer and recent chatters, then matching follows and people search results; a pick writes `@name` and sends it as a `nostr:npub…` reference with a `p` tag, so the person is notified. `:` plus two characters suggests custom emoji ([NIP-30](https://github.com/nostr-protocol/nips/blob/master/30.md)), first the streamer's (channel emotes), then your own, then Unicode emoji by name (`:fire`). Custom emoji come from each account's emoji list (kind `10030`) and the emoji sets (kind `30030`) it names; anyone may use the streamer's. Arrow keys choose, Enter or Tab inserts, Escape closes. The smiley button in the field opens a picker with search, the channel and own emotes, and Unicode emoji. A `:shortcode:` typed in full also sends its emoji tag. Chat messages show custom emoji as images (through the image proxy) wherever the message carries the matching `emoji` tag.
+
 Chat author and zap-sender profile links use `nprofile` pointers with relay hints. Message authors carry the relays where their message was seen, falling back to the chat's relays when none are known; zap senders carry the chat's relays.
 
 **Chat settings** offer **Pop-out chat** (`/live/<naddr>/chat`, a chat-only window) and **Chat appearance**: font size, coloured names, timestamps, hiding accounts on your own and the streamer's mute list (on by default), Web of Trust badges and a minimum trust score. Unscored accounts, the streamer and you are never hidden by the trust filter. Settings are stored on this device.
 
 Kind `9735` zap receipts appear as highlighted messages only when they pass [NIP-57](https://github.com/nostr-protocol/nips/blob/master/57.md) Appendix F checks against the LNURL provider in the recipient's own profile (host, publisher or `zap` split target); each invoice appears once. Unverifiable receipts are not shown.
+
+While a stream is live, its zap goal ([NIP-75](https://github.com/nostr-protocol/nips/blob/master/75.md), kind `9041`) sits above the chat: the goal the stream's `goal` tag names, else the host's newest open goal. It shows verified progress (only receipts for the goal, checked against the goal author's lightning address) and a zap button that pays the goal's author.
 
 Creators who are live show a LIVE tag and a **Live now** section on their profile, a LIVE badge in header search results, and their stream at the top of the suggestions on their video pages.
 

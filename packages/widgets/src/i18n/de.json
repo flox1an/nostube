@@ -299,5 +299,11 @@
     "iosStep1": "Tippe in der Browser-Leiste auf „Teilen“.",
     "iosStep2": "Scrolle nach unten und wähle „Zum Home-Bildschirm“.",
     "iosStep3": "Tippe auf „Hinzufügen“."
+  },
+  "emojiPicker": {
+    "add": "Emoji einfügen",
+    "search": "Emoji suchen",
+    "emoji": "Emoji",
+    "empty": "Kein Emoji gefunden"
   }
 }

@@ -95,7 +95,12 @@ function ChatMessage({
       <span aria-hidden="true" className="text-muted-foreground">
         :{' '}
       </span>
-      <RichTextContent content={event.content} authorPubkey={event.pubkey} inline />
+      <RichTextContent
+        content={event.content}
+        authorPubkey={event.pubkey}
+        emojiTags={event.tags}
+        inline
+      />
     </li>
   )
 }
@@ -213,7 +218,7 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
   const hasZaps = useMemo(() => events.some(event => event.kind === kinds.Zap), [events])
   const recipients = useMemo(() => (hasZaps ? zapRecipients(stream) : []), [hasZaps, stream])
   const endpoints = useZapEndpoints(recipients)
-  const goal = useStreamZapGoal(stream.goalId, stream.relays)
+  const goal = useStreamZapGoal(stream)
 
   const rows = useMemo(
     () =>
@@ -224,6 +229,13 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- trustHidden reads trustScores/minTrust
     [events, stream, endpoints, hidden, trustScores, appearance.minTrust, user?.pubkey]
+  )
+  // Who wrote last comes first in the `@` suggestions.
+  const participants = useMemo(
+    () => [
+      ...new Set(rows.flatMap(row => (row.type === 'chat' ? [row.event.pubkey] : [])).reverse()),
+    ],
+    [rows]
   )
 
   // Follow new messages only while the reader is at the bottom. When older messages are
@@ -328,6 +340,8 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
       <LiveChatComposer
         stream={stream}
         relays={relays}
+        participants={participants}
+        hidden={hidden}
         onSent={() => setPinned(true)}
         settings={
           <LiveChatSettings naddr={stream.naddr} appearance={appearance} onChange={setAppearance} />

@@ -299,5 +299,11 @@
     "iosStep1": "Tap the Share button in the browser toolbar.",
     "iosStep2": "Scroll down and choose “Add to Home Screen”.",
     "iosStep3": "Tap “Add”."
+  },
+  "emojiPicker": {
+    "add": "Add emoji",
+    "search": "Search emoji",
+    "emoji": "Emoji",
+    "empty": "No emoji found"
   }
 }

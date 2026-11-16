@@ -2,6 +2,7 @@ import { use$, useEventStore } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { getInstanceConfig } from '@nostube/core/instance-config'
+import type { LiveStream } from '@nostube/core/live-stream'
 import {
   parseZapGoal,
   sortZapGoals,
@@ -14,7 +15,6 @@ import { useLiveRelayFeed } from './useLiveStreams'
 import { useZapEndpoints } from './useZapEndpoints'
 
 const GOAL_LIMIT = 20
-const NO_RELAYS: string[] = []
 
 export interface ZapGoalState {
   goal: ZapGoal
@@ -56,54 +56,35 @@ function useGoalProgress(goals: ZapGoal[], hints: string[]): ZapGoalState[] {
   )
 }
 
-/** The goal a stream announces with its `goal` tag, loaded by id; undefined while unknown. */
-export function useStreamZapGoal(
-  goalId: string | undefined,
-  hints: string[] = NO_RELAYS
-): ZapGoalState | undefined {
+/**
+ * The zap goal shown above a live stream's chat: the one its `goal` tag names, else the host's
+ * newest open goal. Undefined while unknown, once the stream is no longer live, and in
+ * server-instance builds.
+ */
+export function useStreamZapGoal(stream: LiveStream): ZapGoalState | undefined {
   const eventStore = useEventStore()
-  const filters = useMemo<Filter[] | null>(
-    () => (goalId && !getInstanceConfig() ? [{ kinds: [ZAP_GOAL_KIND], ids: [goalId] }] : null),
-    [goalId]
-  )
-  useLiveRelayFeed(filters, hints)
-  const event = use$(
-    () => (goalId && filters ? eventStore.event(goalId) : undefined),
-    [eventStore, goalId, filters]
-  )
-  const goals = useMemo(() => {
-    const parsed = event && event.id === goalId ? parseZapGoal(event) : null
-    return parsed ? [parsed] : []
-  }, [event, goalId])
-  return useGoalProgress(goals, hints)[0]
-}
-
-/** The newest goals an author published, open ones first. Empty in server-instance builds. */
-export function useAuthorZapGoals(
-  pubkey: string | undefined,
-  hints: string[] = NO_RELAYS
-): ZapGoalState[] {
-  const eventStore = useEventStore()
-  const filters = useMemo<Filter[] | null>(
-    () =>
-      pubkey && !getInstanceConfig()
-        ? [{ kinds: [ZAP_GOAL_KIND], authors: [pubkey], limit: GOAL_LIMIT }]
-        : null,
-    [pubkey]
-  )
-  useLiveRelayFeed(filters, hints)
+  const { goalId, hostPubkey, relays } = stream
+  const live = stream.status === 'live' && !getInstanceConfig()
+  const filters = useMemo<Filter[] | null>(() => {
+    if (!live) return null
+    return goalId
+      ? [{ kinds: [ZAP_GOAL_KIND], ids: [goalId] }]
+      : [{ kinds: [ZAP_GOAL_KIND], authors: [hostPubkey], limit: GOAL_LIMIT }]
+  }, [live, goalId, hostPubkey])
+  useLiveRelayFeed(filters, relays)
   const events = use$(
     () => (filters ? eventStore.timeline(filters) : undefined),
     [eventStore, filters]
   )
-  const goals = useMemo(
-    () =>
-      sortZapGoals(
-        (events ?? [])
-          .map((event: NostrEvent) => parseZapGoal(event))
-          .filter((goal): goal is ZapGoal => goal !== null)
-      ),
-    [events]
-  )
-  return useGoalProgress(goals, hints)
+  const goals = useMemo(() => {
+    const parsed = (events ?? [])
+      .map((event: NostrEvent) => parseZapGoal(event))
+      .filter((goal): goal is ZapGoal => goal !== null)
+    const now = Math.floor(Date.now() / 1000)
+    const goal = goalId
+      ? parsed.find(g => g.id === goalId)
+      : sortZapGoals(parsed, now).find(g => g.closedAt === undefined || g.closedAt > now)
+    return goal ? [goal] : []
+  }, [events, goalId])
+  return useGoalProgress(goals, relays)[0]
 }

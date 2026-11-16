@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.81] - 2026-11-16
+
+### Added
+
+- Livestream chat: `@` suggests people (streamer, recent chatters, follows, then search) and sends a picked name as a `nostr:npub…` mention with a `p` tag. `:` suggests the streamer's and your own NIP-30 custom emoji (kind `10030` lists and their `30030` sets) and Unicode emoji by name (emojibase, loaded on first use); sent emotes carry `emoji` tags. A smiley button in the field opens the emoji picker, which now has search and the custom emoji sections. Chat messages render custom emoji as inline images.
+- Server: `check-local-profile.mjs --offline` checks an isolated network. The browser resolves only the instance's name, opens the site signed out, and the site, a video page and the embed must render without any external request. Service workers that attach paused are resumed before their traffic is watched, and a child target that stops answering no longer hangs the check.
+
+### Changed
+
+- Zap goals: a live stream without a `goal` tag now shows the host's newest open goal above the chat (before, a goal only appeared when the stream named one). Ended streams show none. Profiles no longer list zap goals.
+- Server docs (HTTPS and networks): mesh addresses outside the private ranges (Yggdrasil `200::/7`) get no certificate from the local CA and belong in proxy mode; the `--offline` check is documented.
+
+### Removed
+
+- The Impeccable design hooks for Codex and Cursor (`.codex/hooks.json`, `.cursor/hooks.json`).
+
 ## [0.2.80] - 2026-11-14
 
 ### Fixed

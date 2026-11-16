@@ -1319,10 +1319,14 @@
     "minTrust": "Confiance minimale",
     "minTrustHint": "Score Web of Trust ; les comptes sans score restent visibles",
     "trustOff": "Désactivé",
-    "resetAppearance": "Réinitialiser l’apparence"
+    "resetAppearance": "Réinitialiser l’apparence",
+    "suggestions": "Suggestions",
+    "emotes": {
+      "channel": "Chaîne",
+      "mine": "Les vôtres"
+    }
   },
   "zapGoal": {
-    "title": "Objectifs de zaps",
     "untitled": "Objectif de zaps",
     "raised": "{{amount}} sats",
     "target": "Objectif : {{amount}}",

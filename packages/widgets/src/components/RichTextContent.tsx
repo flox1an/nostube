@@ -10,6 +10,7 @@ import { useImageCascade } from '../hooks/useImageCascade'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { of } from 'rxjs'
+import { CustomEmoji } from './CustomEmoji'
 
 /** Where a link inside rich text points: a route of the app (`to`) or another site (`href`). */
 export type LinkTarget = { to: string } | { href: string }
@@ -358,6 +359,8 @@ export interface RichTextContentProps {
    * resolves kindless event references from the store and opens every link in a new tab.
    */
   inline?: boolean
+  /** Tags of the event: `:shortcode:` with an `emoji` tag (NIP-30) shows as its image. */
+  emojiTags?: string[][]
 }
 
 /**
@@ -375,26 +378,48 @@ export function RichTextContent({
   videoLink,
   authorPubkey,
   inline = false,
+  emojiTags,
 }: RichTextContentProps) {
+  const emojis = useMemo(
+    () =>
+      new Map(
+        emojiTags
+          ?.filter(tag => tag[0] === 'emoji' && tag[1] && tag[2])
+          .map(tag => [tag[1], tag[2]])
+      ),
+    [emojiTags]
+  )
+
   const renderContent = () => {
     const parts: React.ReactNode[] = []
 
-    // Combined regex to match URLs, nostr profile references, and hashtags
+    // URLs, nostr profile references, hashtags and `:shortcode` (lookahead: the closing colon
+    // stays free to open the next one)
     const combinedRegex =
-      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1|nevent1|naddr1|note1)([023456789acdefghjklmnpqrstuvwxyz]+)|(#\w+)/g
+      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1|nevent1|naddr1|note1)([023456789acdefghjklmnpqrstuvwxyz]+)|(#\w+)|:([A-Za-z0-9_-]+)(?=:)/g
 
     const matches: Array<{
       start: number
       end: number
-      type: 'url' | 'npub' | 'nprofile' | 'event' | 'hashtag'
+      type: 'url' | 'npub' | 'nprofile' | 'event' | 'hashtag' | 'emoji'
       data: string | { pubkey: string; relays?: string[] } | EventReference
     }> = []
     let match: RegExpExecArray | null
 
     while ((match = combinedRegex.exec(content)) !== null) {
-      const [fullMatch, openParen, url, _closeParen, nostrPrefix, nostrData, hashtag] = match
+      const [fullMatch, openParen, url, _closeParen, nostrPrefix, nostrData, hashtag, shortcode] =
+        match
 
-      if (url) {
+      if (shortcode) {
+        // An unknown one is text: scan on right after its colon (`see:https://…` stays a link).
+        if (!emojis.has(shortcode)) {
+          combinedRegex.lastIndex = match.index + 1
+          continue
+        }
+        const end = match.index + fullMatch.length + 1
+        matches.push({ start: match.index, end, type: 'emoji', data: shortcode })
+        combinedRegex.lastIndex = end
+      } else if (url) {
         const trimmedUrl = trimTrailingUrlPunctuation(url)
         const start = match.index + (openParen ? openParen.length : 0)
 
@@ -592,6 +617,15 @@ export function RichTextContent({
             ) : (
               <span key={`hashtag-${item.start}`}>#{tag}</span>
             )
+          )
+        } else if (item.type === 'emoji') {
+          const shortcode = item.data as string
+          parts.push(
+            <CustomEmoji
+              key={`emoji-${item.start}`}
+              shortcode={shortcode}
+              url={emojis.get(shortcode)!}
+            />
           )
         }
       }

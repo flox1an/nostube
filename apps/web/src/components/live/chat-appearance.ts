@@ -17,23 +17,35 @@ export const DEFAULT_CHAT_APPEARANCE: ChatAppearance = {
   minTrust: 0,
 }
 
-export function normalizeChatAppearance(value: unknown): ChatAppearance {
+/** Phones: larger text, no trust badges to save width. */
+export const MOBILE_CHAT_APPEARANCE: ChatAppearance = {
+  ...DEFAULT_CHAT_APPEARANCE,
+  fontSize: 16,
+  showTrust: false,
+}
+
+/** Stored settings over `defaults`; invalid or missing fields fall back to the default. */
+export function normalizeChatAppearance(
+  value: unknown,
+  defaults: ChatAppearance = DEFAULT_CHAT_APPEARANCE
+): ChatAppearance {
   const stored = value && typeof value === 'object' ? value : {}
+  const bool = (key: keyof ChatAppearance) =>
+    key in stored && typeof stored[key as keyof typeof stored] === 'boolean'
+      ? (stored[key as keyof typeof stored] as boolean)
+      : (defaults[key] as boolean)
   return {
     fontSize:
       'fontSize' in stored && [12, 14, 16, 18].includes(Number(stored.fontSize))
         ? Number(stored.fontSize)
-        : 14,
-    coloredNames:
-      'coloredNames' in stored && typeof stored.coloredNames === 'boolean'
-        ? stored.coloredNames
-        : true,
-    timestamps: 'timestamps' in stored && stored.timestamps === true,
-    hideMuted: !('hideMuted' in stored && stored.hideMuted === false),
-    showTrust: !('showTrust' in stored && stored.showTrust === false),
+        : defaults.fontSize,
+    coloredNames: bool('coloredNames'),
+    timestamps: bool('timestamps'),
+    hideMuted: bool('hideMuted'),
+    showTrust: bool('showTrust'),
     minTrust:
       'minTrust' in stored && [0, 0.2, 0.4, 0.7].includes(Number(stored.minTrust))
         ? Number(stored.minTrust)
-        : 0,
+        : defaults.minTrust,
   }
 }

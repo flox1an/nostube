@@ -19,6 +19,8 @@ import { FollowButton } from '@/components/FollowButton'
 import { ZapButton } from '@/components/ZapButton'
 import { LiveChat } from '@/components/live/LiveChat'
 import { LiveBadge } from '@/components/live/LiveBadge'
+import { ZapGoalBar } from '@/components/live/ZapGoalBar'
+import { useStreamZapGoal } from '@/hooks/useZapGoals'
 
 function decodeStream(value: string | undefined) {
   try {
@@ -58,6 +60,7 @@ function StreamViewer({
         : stream.streamingUrls,
     [stream.status, stream.recordingUrl, stream.streamingUrls]
   )
+  const goal = useStreamZapGoal(stream)
   const playbackKey = urls.join('\n')
   const mime = urls[0]?.split('?')[0].endsWith('.mp4')
     ? 'video/mp4'
@@ -74,15 +77,21 @@ function StreamViewer({
         <header className="flex shrink-0 justify-end">
           <PublicationStatusButton />
         </header>
+        {goal && <ZapGoalBar state={goal} streamAddress={stream.address} className="mb-2" />}
         <div className="min-h-0 flex-1">
           <LiveChat stream={stream} />
         </div>
       </div>
     )
   return (
-    <div className="mx-auto h-full min-h-0 max-w-560 px-3 pt-3 sm:px-4">
-      <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4" data-live-details>
+    <div className="@container mx-auto h-full min-h-0 max-w-560 px-3 pt-3 sm:px-4">
+      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Below lg the details collapse to the player plus the title row (16:9 of the width
+            plus pt-3 and one title line) so the chat gets the rest; the remainder scrolls. */}
+        <div
+          className="max-h-[calc(56.25cqw+2.75rem)] min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4 lg:max-h-none"
+          data-live-details
+        >
           <div className="overflow-hidden rounded-xl bg-black" data-live-player>
             {stream.status === 'planned' || !urls.length ? (
               <div className="flex aspect-video flex-col items-center justify-center gap-3 p-6 text-center text-white">
@@ -124,7 +133,7 @@ function StreamViewer({
               )}
             </p>
           )}
-          <div className="space-y-4 px-1 py-5">
+          <div className="space-y-4 px-1 pt-3 pb-5 lg:pt-5">
             <div className="flex items-start justify-between gap-4">
               <h1 className="min-w-0 text-xl font-semibold tracking-tight wrap-anywhere sm:text-2xl">
                 {stream.title}
@@ -150,6 +159,9 @@ function StreamViewer({
                 )}
               </div>
             </div>
+            {goal && (
+              <ZapGoalBar state={goal} streamAddress={stream.address} className="lg:hidden" />
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Link
                 to={`/p/${nip19.npubEncode(stream.hostPubkey)}`}
@@ -196,9 +208,18 @@ function StreamViewer({
         <aside
           id="stream-chat"
           aria-label={t('live.chat', 'Live chat')}
-          className="h-full min-h-0 min-w-0 overflow-hidden"
+          className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
         >
-          <LiveChat stream={stream} />
+          {goal && (
+            <ZapGoalBar
+              state={goal}
+              streamAddress={stream.address}
+              className="mb-2 hidden lg:block"
+            />
+          )}
+          <div className="min-h-0 flex-1">
+            <LiveChat stream={stream} />
+          </div>
         </aside>
       </div>
     </div>

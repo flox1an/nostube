@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@nostube/widgets/components/dropdown-menu'
 import { Switch } from '@nostube/widgets/components/switch'
-import { DEFAULT_CHAT_APPEARANCE, type ChatAppearance } from './chat-appearance'
+import type { ChatAppearance } from './chat-appearance'
 import { getTrustColor } from '@/lib/trust-score-colors'
 
 export function LiveChatSettings({
@@ -26,7 +26,7 @@ export function LiveChatSettings({
 }: {
   naddr: string
   appearance: ChatAppearance
-  onChange: (value: ChatAppearance) => void
+  onChange: (value: Partial<ChatAppearance>) => void
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -168,12 +168,7 @@ export function LiveChatSettings({
               <option value={0.7}>70 %</option>
             </select>
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => onChange(DEFAULT_CHAT_APPEARANCE)}
-          >
+          <Button type="button" variant="outline" className="w-full" onClick={() => onChange({})}>
             {t('liveChat.resetAppearance', 'Reset appearance')}
           </Button>
         </DialogContent>

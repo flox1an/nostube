@@ -15,9 +15,8 @@ import { formatSats } from '@nostube/core/zap-utils'
 import { genUserName } from '@nostube/core/gen-user-name'
 import { Button } from '@nostube/widgets/components/button'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
+import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 import { useZapEndpoints } from '@/hooks/useZapEndpoints'
-import { useStreamZapGoal } from '@/hooks/useZapGoals'
-import { ZapGoalBar } from './ZapGoalBar'
 import { useBlockedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useMutedPubkeys, resolveMutedPubkeys } from '@/hooks/useMutedPubkeys'
 import { buildProfileUrl, buildProfileUrlFromPubkey } from '@/lib/nprofile'
@@ -28,6 +27,7 @@ import { LiveChatSettings } from './LiveChatSettings'
 import {
   normalizeChatAppearance,
   DEFAULT_CHAT_APPEARANCE,
+  MOBILE_CHAT_APPEARANCE,
   type ChatAppearance,
 } from './chat-appearance'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -177,11 +177,15 @@ function ZapMessage({
 /** NIP-53 chat: kind 1311 messages plus NIP-57-verified zaps, with a composer for signed-in users. */
 export function LiveChat({ stream }: { stream: LiveStream }) {
   const { events, isLoading, error, relays, loadOlder } = useLiveChat(stream)
-  const [storedAppearance, setAppearance] = useLocalStorage(
+  // Only the viewer's changes are stored; the rest follows the device's defaults.
+  const [storedAppearance, setAppearance] = useLocalStorage<Partial<ChatAppearance>>(
     'nostube:live-chat-appearance',
-    DEFAULT_CHAT_APPEARANCE
+    {}
   )
-  const appearance = normalizeChatAppearance(storedAppearance)
+  const appearance = normalizeChatAppearance(
+    storedAppearance,
+    useIsMobile() ? MOBILE_CHAT_APPEARANCE : DEFAULT_CHAT_APPEARANCE
+  )
   const { t } = useTranslation()
   const blocked = useBlockedPubkeys()
   const { mutedPubkeys } = useMutedPubkeys()
@@ -218,7 +222,6 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
   const hasZaps = useMemo(() => events.some(event => event.kind === kinds.Zap), [events])
   const recipients = useMemo(() => (hasZaps ? zapRecipients(stream) : []), [hasZaps, stream])
   const endpoints = useZapEndpoints(recipients)
-  const goal = useStreamZapGoal(stream)
 
   const rows = useMemo(
     () =>
@@ -271,7 +274,6 @@ export function LiveChat({ stream }: { stream: LiveStream }) {
 
   return (
     <section className="flex h-full min-h-0 flex-col" data-live-chat>
-      {goal && <ZapGoalBar state={goal} streamAddress={stream.address} className="mb-2" />}
       <div className="relative min-h-0 flex-1">
         <div
           ref={listRef}

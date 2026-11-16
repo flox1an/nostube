@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.82] - 2026-11-16
+
+### Changed
+
+- Livestream on phones: the area above the chat shows only the player and the first title line with the live status; host, buttons, zap goal and description scroll inside it, so the chat gets the rest of the screen. The zap goal moves from above the chat into that area on narrow screens.
+- Live chat appearance defaults per device: phones start at 16 px without trust badges, desktop keeps 14 px with badges. Only changed settings are stored, and **Reset appearance** returns to the device's defaults.
+
 ## [0.2.81] - 2026-11-16
 
 ### Added

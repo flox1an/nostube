@@ -55,7 +55,7 @@ import {
 } from '@/lib/dvm-transcode-session'
 import { extractBlossomHash } from '@nostube/core/video-event'
 import { getTrackedDvms } from '@/hooks/useDvmTracker'
-import { trackBlobActivity } from '@/lib/transcode-upload'
+import { trackBlobActivity, learnMirrorOutcome } from '@/lib/transcode-upload'
 import i18n from 'i18next' // the instance src/i18n/config initialises
 import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'
 import {
@@ -437,10 +437,20 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         )
         // Server failures settle into the activity; only cancellation throws.
         if (uploadServers.length > 0) {
-          updatedVideo.uploadedBlobs = await activity.mirror(sourceBlob, uploadServers, signal)
+          updatedVideo.uploadedBlobs = await activity.mirror(
+            sourceBlob,
+            uploadServers,
+            signal,
+            learnMirrorOutcome
+          )
         }
         if (mirrorServers.length > 0) {
-          updatedVideo.mirroredBlobs = await activity.mirror(sourceBlob, mirrorServers, signal)
+          updatedVideo.mirroredBlobs = await activity.mirror(
+            sourceBlob,
+            mirrorServers,
+            signal,
+            learnMirrorOutcome
+          )
         }
         activity.finish()
 

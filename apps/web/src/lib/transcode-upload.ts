@@ -1,5 +1,7 @@
 import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
+import { planUpload } from '@nostube/core/upload-plan'
 import {
+  httpStatusOf,
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
@@ -7,6 +9,13 @@ import {
   type UploadToServersOptions,
 } from '@/lib/blossom-upload'
 import { processUploadedVideo, type VideoVariant } from '@/lib/video-processing'
+import {
+  getServerCapabilities,
+  isMirrorUnsupported,
+  recordMirrorResult,
+  recordThroughput,
+  recordTooLarge,
+} from '@/lib/server-capabilities'
 import {
   beginPublication,
   dismissPublication,
@@ -37,8 +46,17 @@ export interface BlobActivity {
   /** Bytes sent to servers: `uploading` while flowing, `processing` once all await confirmation. */
   bytes(sent: number, total: number): void
   upload(options: Omit<UploadToServersOptions, 'signer'>): Promise<BlobDescriptor[]>
-  /** Mirrors `blob`; confirmed bytes count toward an active `mirroring` byte total. */
-  mirror(blob: BlobDescriptor, servers: string[], signal?: AbortSignal): Promise<BlobDescriptor[]>
+  /**
+   * Mirrors `blob`; confirmed bytes count toward an active `mirroring` byte total. When
+   * `onOutcome` returns true for a failure, the caller takes it over (e.g. falls back to a
+   * direct upload) and the server is not marked failed.
+   */
+  mirror(
+    blob: BlobDescriptor,
+    servers: string[],
+    signal?: AbortSignal,
+    onOutcome?: (outcome: MirrorServerOutcome) => boolean
+  ): Promise<BlobDescriptor[]>
   /** Settles the activity; a cancellation (`AbortError`) removes it instead. */
   finish(error?: unknown): void
 }
@@ -145,14 +163,21 @@ export function trackBlobActivity(
         },
       })
     },
-    async mirror(blob, mirrorServers, signal) {
+    async mirror(blob, mirrorServers, signal, onOutcome) {
       hold(mirrorServers)
       return mirrorBlobsToServers({
         mirrorServers,
         blob,
         signer,
         signal,
-        onServerSettle: outcome => settle(outcome, blob),
+        onServerSettle: outcome => {
+          if (onOutcome?.(outcome) && !outcome.ok) {
+            server(outcome.server).running = Math.max(0, server(outcome.server).running - 1)
+            emit()
+            return
+          }
+          settle(outcome, blob)
+        },
       })
     },
     finish(error) {
@@ -207,6 +232,7 @@ export function trackBlobActivity(
 
 export interface UploadAndMirrorOptions {
   file: File
+  /** Servers the user picked as upload servers; together with `mirrorServers` one flat list. */
   initialServers: string[]
   mirrorServers: string[]
   activity: BlobActivity
@@ -214,9 +240,52 @@ export interface UploadAndMirrorOptions {
   signal?: AbortSignal
 }
 
+const abortIfNeeded = (signal?: AbortSignal) => {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+}
+
+/** Error for a file that no configured server accepts (all of them have a smaller size limit). */
+export class NoServerAcceptsFileError extends Error {
+  constructor(public readonly servers: string[]) {
+    super(`None of the servers accepts a file of this size: ${servers.join(', ')}`)
+    this.name = 'NoServerAcceptsFileError'
+  }
+}
+
 /**
- * Uploads one file to the initial servers, then has mirror servers copy it. Mirrors pull
- * the first uploaded copy; every copy has the same hash.
+ * Feeds a mirror outcome into the learned server capabilities. Returns false, so as an
+ * `activity.mirror` callback it leaves failures to the activity (shown, with retry).
+ */
+export function learnMirrorOutcome(outcome: MirrorServerOutcome): boolean {
+  if (outcome.ok) {
+    if (!outcome.alreadyExisted) recordMirrorResult(outcome.server, { ok: true })
+  } else {
+    const status = httpStatusOf(outcome.error)
+    if (status !== undefined) recordMirrorResult(outcome.server, { status })
+  }
+  return false
+}
+
+/**
+ * The upload strategy for a file of `fileSize` bytes on the user's servers: `direct` get the file
+ * from the browser (the first is the primary), `copies` mirror it. Throws when no server accepts
+ * the size.
+ */
+export function planServers(servers: string[], fileSize: number) {
+  const plan = planUpload(servers, getServerCapabilities(servers), fileSize)
+  if (plan.targets.length === 0) throw new NoServerAcceptsFileError(servers)
+  return {
+    direct: plan.targets.filter(t => t.method === 'upload').map(t => t.server),
+    copies: plan.targets.filter(t => t.method === 'mirror').map(t => t.server),
+  }
+}
+
+/**
+ * Uploads one file following the upload strategy (`planUpload`): the browser sends it to the
+ * primary server (and to servers known not to mirror), the others copy it from there. A server
+ * that turns out to have no mirror endpoint gets a direct upload instead, and when the primary fails the next server takes
+ * over. Outcomes feed the learned server capabilities. `uploadedBlobs` are the direct uploads,
+ * `mirroredBlobs` every other copy; all have the same hash.
  */
 export async function uploadAndMirror({
   file,
@@ -229,25 +298,76 @@ export async function uploadAndMirror({
   uploadedBlobs: BlobDescriptor[]
   mirroredBlobs: BlobDescriptor[]
 }> {
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-  const uploadedBlobs = await activity.upload({
-    file,
-    servers: initialServers,
-    options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
-    callbacks: { onProgress },
-    signal,
-  })
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+  abortIfNeeded(signal)
+  const { direct, copies } = planServers([...initialServers, ...mirrorServers], file.size)
+
+  const uploadTo = async (targets: string[]) => {
+    const startedAt = Date.now()
+    return activity.upload({
+      file,
+      servers: targets,
+      options: {
+        chunkSize: DEFAULT_CHUNK_SIZE,
+        maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS,
+      },
+      callbacks: { onProgress },
+      signal,
+      onServerSettle: outcome => {
+        if (outcome.ok) {
+          // Parallel transfers share the line; only a lone transfer measures the server.
+          if (!outcome.alreadyExisted && targets.length === 1) {
+            recordThroughput(outcome.server, file.size, (Date.now() - startedAt) / 1000)
+          }
+        } else if (httpStatusOf(outcome.error) === 413) {
+          recordTooLarge(outcome.server, file.size)
+        }
+      },
+    })
+  }
+
+  // `uploadTo` rejects when every target failed; the activity already shows each failure.
+  const tryUpload = async (targets: string[]) => {
+    try {
+      return { blobs: await uploadTo(targets) }
+    } catch (error) {
+      if ((error as { name?: unknown }).name === 'AbortError') throw error
+      return { blobs: [] as BlobDescriptor[], error }
+    }
+  }
+
+  let attempt = await tryUpload(direct)
+  // The primary failed: the next server gets the file directly and becomes the mirror source.
+  while (attempt.blobs.length === 0 && copies.length > 0) {
+    abortIfNeeded(signal)
+    attempt = await tryUpload([copies.shift()!])
+  }
+  abortIfNeeded(signal)
+  if (attempt.blobs.length === 0) throw attempt.error ?? new Error('Upload failed')
+  const uploadedBlobs = attempt.blobs
 
   let mirroredBlobs: BlobDescriptor[] = []
-  if (mirrorServers.length > 0 && uploadedBlobs.length > 0) {
+  if (copies.length > 0 && uploadedBlobs.length > 0) {
     activity.set({
       phase: 'mirroring',
       completed: 0,
-      total: uploadedBlobs[0].size * mirrorServers.length,
+      total: uploadedBlobs[0].size * copies.length,
       unit: 'bytes',
     })
-    mirroredBlobs = await activity.mirror(uploadedBlobs[0], mirrorServers, signal)
+    const fallback: string[] = []
+    mirroredBlobs = await activity.mirror(uploadedBlobs[0], copies, signal, outcome => {
+      learnMirrorOutcome(outcome)
+      if (outcome.ok) return false
+      if (httpStatusOf(outcome.error) === 413) recordTooLarge(outcome.server, file.size)
+      // Only a server without a mirror endpoint gets the file directly. A timeout or 5xx may
+      // still finish server-side and keeps the user's "retry" instead of a second transfer.
+      if (!isMirrorUnsupported(outcome.error)) return false
+      fallback.push(outcome.server)
+      return true
+    })
+    abortIfNeeded(signal)
+    // A failed direct upload here only costs that copy; the primary already holds the file.
+    if (fallback.length > 0)
+      mirroredBlobs = [...mirroredBlobs, ...(await tryUpload(fallback)).blobs]
   }
   return { uploadedBlobs, mirroredBlobs }
 }

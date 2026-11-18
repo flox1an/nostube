@@ -8,7 +8,7 @@ An upload in the Nostube web app goes through four stages: pick a file, optional
 
 1. **Sign in and choose the source.** The upload page (`/upload`) needs a signed-in user. Choose **Upload File** or **From URL**. A file upload needs at least one hosting server tagged Primary (see [Blossom storage](/media/blossom#server-roles-in-the-web-app)). If none is set, the page offers to set them up first.
 2. **Optimise for Nostr (optional).** The browser analyses the file and suggests a conversion (see below). You can also upload the file unchanged.
-3. **Upload to Blossom.** Every resulting file is uploaded to all Primary servers, then mirrored to all Backup servers.
+3. **Upload to Blossom.** Every resulting file is uploaded from the browser to one server, and the other servers copy it from there (see the upload strategy below).
 4. **Details.** Add a title, description, tags, language, thumbnail, subtitles and an optional content warning while the upload runs. The draft is saved in the browser, so a reload does not lose it.
 5. **Review and publish.** The web app builds a video event (kind `34235`, or `34236` for portrait video). It signs the event with your signer and sends it to your write relays. The event format is described in [NIP-71 video events](/developers/nip-71).
 
@@ -16,15 +16,24 @@ With **From URL**, nothing is uploaded: the event points to the given URL. If th
 
 ## Blossom upload
 
+Primary and Backup servers together form one list; the web app decides per file which server gets the upload and which ones copy it:
+
+- The **primary** is the first server in the list (Primary servers before Backup servers), unless another server was measured at least twice as fast from this browser. The browser only measures servers it uploads to on their own, so in practice this happens after a server took over from a failed primary.
+- Servers whose size limit the file exceeds are left out. Limits come from the server catalog or from an earlier `413` answer.
+- Every other server copies the file with `PUT /mirror`. A server known to have no mirror endpoint gets the file uploaded directly instead.
+- If the primary fails, the next server gets the upload and becomes the source for the copies. A server that answers a mirror with `404`, `405` or `501` (or blocks the request) gets the file uploaded directly. A mirror timeout or server error stays a failure that you can retry, since the copy may still finish on the server.
+
+The browser remembers per server, for 30 days, whether it mirrors, its size limit and its upload speed. For an HLS conversion the strategy is chosen once for the whole job; a playlist or segment the primary rejects goes to the next server.
+
 For each file, the web app:
 
 1. computes its SHA-256 in the browser, reading it in 20 MB pieces so large files never sit in memory at once;
-2. sends `HEAD /<sha256>` to each Primary server and skips servers that already have the blob;
+2. sends `HEAD /<sha256>` to each server it uploads to and skips servers that already have the blob;
 3. signs one upload authorization (kind `24242`, `t=upload`, the hash in `x`, the server's domain in `server`, valid for one hour) per server;
 4. uploads with `PUT /upload`. Files above 100 MB are first tried as a chunked `PATCH /upload` with 10 MB chunks, two at a time, the last chunk sent last. If the server does not support chunked uploads or the attempt fails, the file is sent with `PUT`;
-5. mirrors each uploaded blob to every Backup server with `PUT /mirror` (`{"url": "<uploaded blob URL>"}`), again skipping servers that already have the hash.
+5. has every other server copy the uploaded blob with `PUT /mirror` (`{"url": "<uploaded blob URL>"}`), again skipping servers that already have the hash.
 
-The upload succeeds if at least one Primary server accepts the file. Its URL becomes the event's `url`. The other uploads and the mirrors become `fallback` URLs.
+The upload succeeds if at least one server accepts the file. The primary's URL becomes the event's `url`. The other copies become `fallback` URLs.
 
 ### Progress and relay confirmations
 

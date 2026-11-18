@@ -1,14 +1,17 @@
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { usePublications } from '@nostube/widgets/publication'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
+import type * as BlossomUpload from '@/lib/blossom-upload'
 import type { MirrorServerOutcome } from '@/lib/blossom-upload'
-import { trackBlobActivity, uploadAndMirror } from './transcode-upload'
+import { getServerCapabilities } from '@/lib/server-capabilities'
+import { NoServerAcceptsFileError, trackBlobActivity, uploadAndMirror } from './transcode-upload'
 
 const mockUpload = vi.fn()
 const mockMirror = vi.fn()
 
-vi.mock('@/lib/blossom-upload', () => ({
+vi.mock('@/lib/blossom-upload', async importOriginal => ({
+  ...(await importOriginal<typeof BlossomUpload>()),
   uploadFileToMultipleServersChunked: (...args: unknown[]) => mockUpload(...args),
   mirrorBlobsToServers: (...args: unknown[]) => mockMirror(...args),
 }))
@@ -104,5 +107,129 @@ describe('trackBlobActivity', () => {
     expect(stopped.error).toBe('disk full')
     expect(stopped.targets).toEqual([{ url: 'https://u1', status: 'failed' }])
     expect(result.current.some(entry => entry.label === 'cancelled.mp4')).toBe(false)
+  })
+})
+
+describe('uploadAndMirror upload strategy', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    mockUpload.mockReset()
+    mockMirror.mockReset()
+  })
+
+  const fileOfSize = (size: number) => {
+    const file = new File(['x'], 'clip.mp4')
+    Object.defineProperty(file, 'size', { value: size })
+    return file
+  }
+
+  const run = (initialServers: string[], mirrorServers: string[], size = 1) =>
+    uploadAndMirror({
+      file: fileOfSize(size),
+      initialServers,
+      mirrorServers,
+      activity: trackBlobActivity('clip.mp4', vi.fn()),
+    })
+
+  it('uploads to the first server only and mirrors to every other server', async () => {
+    mockUpload.mockImplementation(confirmAll)
+    mockMirror.mockImplementation(confirmAll)
+
+    const result = await run(['https://u1', 'https://u2'], ['https://m1'])
+
+    expect(mockUpload).toHaveBeenCalledTimes(1)
+    expect(mockUpload.mock.calls[0][0].servers).toEqual(['https://u1'])
+    expect(mockMirror.mock.calls[0][0].mirrorServers).toEqual(['https://u2', 'https://m1'])
+    expect(result.uploadedBlobs).toEqual([blobOn('https://u1')])
+    expect(result.mirroredBlobs).toHaveLength(2)
+  })
+
+  it('uploads directly to a server without a mirror endpoint and remembers it', async () => {
+    mockUpload.mockImplementation(confirmAll)
+    mockMirror.mockImplementation(async ({ onServerSettle }: Settle) => {
+      const error = Object.assign(new Error('Mirror request failed: 405'), { status: 405 })
+      onServerSettle({ ok: false, server: 'https://m1', error })
+      return []
+    })
+
+    const result = await run(['https://u1'], ['https://m1'])
+
+    expect(mockUpload.mock.calls[1][0].servers).toEqual(['https://m1'])
+    expect(result.mirroredBlobs).toEqual([blobOn('https://m1')])
+    expect(getServerCapabilities(['https://m1'])['https://m1'].mirror).toBe(false)
+
+    // Next time the plan skips the mirror attempt and uploads to both servers at once.
+    mockMirror.mockClear()
+    await run(['https://u1'], ['https://m1'])
+    expect(mockUpload.mock.lastCall![0].servers).toEqual(['https://u1', 'https://m1'])
+    expect(mockMirror).not.toHaveBeenCalled()
+  })
+
+  const rejectAll = async ({ servers, onServerSettle }: Settle) => {
+    const error = new Error('Regular upload failed: 500')
+    for (const server of servers ?? []) onServerSettle({ ok: false, server, error })
+    throw error
+  }
+
+  it('lets the next server take over when the primary fails', async () => {
+    mockUpload.mockImplementationOnce(rejectAll).mockImplementation(confirmAll)
+    mockMirror.mockImplementation(confirmAll)
+
+    const result = await run(['https://u1'], ['https://m1', 'https://m2'])
+
+    expect(mockUpload.mock.calls[1][0].servers).toEqual(['https://m1'])
+    expect(mockMirror.mock.calls[0][0].mirrorServers).toEqual(['https://m2'])
+    expect(result.uploadedBlobs).toEqual([blobOn('https://m1')])
+  })
+
+  it('fails only when every server failed', async () => {
+    mockUpload.mockImplementation(rejectAll)
+
+    await expect(run(['https://u1'], ['https://m1'])).rejects.toThrow('Regular upload failed: 500')
+    expect(mockUpload).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the primary upload when a fallback upload fails', async () => {
+    mockUpload.mockImplementationOnce(confirmAll).mockImplementation(rejectAll)
+    mockMirror.mockImplementation(async ({ onServerSettle }: Settle) => {
+      const error = Object.assign(new Error('Mirror request failed: 405'), { status: 405 })
+      onServerSettle({ ok: false, server: 'https://m1', error })
+      return []
+    })
+    const { result: publications } = renderHook(() => usePublications())
+
+    let uploaded: BlobDescriptor[] = []
+    await act(async () => {
+      const activity = trackBlobActivity('partial.mp4', vi.fn())
+      const result = await uploadAndMirror({
+        file: new File(['x'], 'partial.mp4'),
+        initialServers: ['https://u1'],
+        mirrorServers: ['https://m1'],
+        activity,
+      })
+      uploaded = result.uploadedBlobs
+      activity.finish()
+    })
+
+    expect(uploaded).toEqual([blobOn('https://u1')])
+    const entry = publications.current.find(e => e.label === 'partial.mp4')!
+    expect(entry.status).toBe('partial')
+  })
+
+  it('leaves out a server whose size limit the file exceeds', async () => {
+    mockUpload.mockImplementation(confirmAll)
+    mockMirror.mockImplementation(confirmAll)
+
+    // 24242.io takes at most 100 MB (server catalog).
+    await run(['https://24242.io'], ['https://m1'], 101 * 1024 * 1024)
+
+    expect(mockUpload.mock.calls[0][0].servers).toEqual(['https://m1'])
+    expect(mockMirror).not.toHaveBeenCalled()
+  })
+
+  it('fails clearly when no server accepts the file', async () => {
+    await expect(run(['https://24242.io'], [], 101 * 1024 * 1024)).rejects.toBeInstanceOf(
+      NoServerAcceptsFileError
+    )
   })
 })

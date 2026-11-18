@@ -25,13 +25,13 @@ The web app keeps its servers in **Settings → Network**. Every server in the l
 
 | Role | Where to set it | What it does |
 | --- | --- | --- |
-| Hosting, tagged **Primary** (`initial upload`) | Video Hosting | Receives every upload. You need at least one before you can upload a file. |
-| Hosting, tagged **Backup** (`mirror`) | Video Hosting | Receives a copy of every uploaded blob through `PUT /mirror`, after the upload to the Primary servers. |
+| Hosting, tagged **Primary** (`initial upload`) | Video Hosting | Takes part in every upload. You need at least one before you can upload a file. The first one is normally the server the browser uploads to; see [the upload strategy](/media/uploads#blossom-upload). |
+| Hosting, tagged **Backup** (`mirror`) | Video Hosting | Takes part in every upload like a Primary server, after the Primary servers in the list. |
 | Hosting, no tag | Video Hosting | Not used for uploads, but still asked for a video's hash during playback. |
 | Streaming server (caching server) | Streaming Servers | Tried first during playback. It fetches blobs it does not have from the servers named in the URL. |
 | Image proxy | Service endpoints → Image Proxy URL | Produces resized WebP thumbnails. Default: `https://imgproxy.nostu.be`. |
 
-In the nostu.be build, new users start with `blossom.primal.net`, `nostr.download` and `almond.slidestr.net` as Primary servers, with no Backup servers and no streaming server. `cdn.nostrcheck.me` cannot be added: it re-encodes videos, so what it serves no longer matches the hash. For the same reason, URLs on `video.nostr.build`, `image.nostr.build` and `cdn.nostrcheck.me` are not treated as Blossom URLs.
+In the nostu.be build, new users start with `blossom.primal.net`, `nostr.download` and `almond.slidestr.net` as Primary servers, with no Backup servers and no streaming server. The browser uploads to `blossom.primal.net`; the other two copy the file from there. `cdn.nostrcheck.me` cannot be added: it re-encodes videos, so what it serves no longer matches the hash. For the same reason, URLs on `video.nostr.build`, `image.nostr.build` and `cdn.nostrcheck.me` are not treated as Blossom URLs.
 
 None of this applies to a Nostube Server. Its site and Studio use the instance's own Blossom, plus the creator's server list for playback. They use no image proxy and no media discovery (see [Storage and S3](/server/storage)).
 

@@ -5,6 +5,8 @@ import {
   trackBlobActivity,
   uploadAndProcessFile,
   type BlobActivity,
+  learnMirrorOutcome,
+  planServers,
 } from '@/lib/transcode-upload'
 import type { BrowserTranscodeState, BrowserTranscodeVariantState } from '@/types/upload-draft'
 import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
@@ -237,27 +239,42 @@ async function runWithConcurrency<T>(
   return results
 }
 
+/**
+ * Uploads one HLS file to the direct-upload servers. When all of them fail, the file goes to the
+ * next fallback server instead (the mirror stage later finds it there and skips that copy).
+ */
 async function uploadAndGetUrl(
   file: File,
-  initialServers: string[],
+  servers: string[],
   activity: BlobActivity,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  fallbacks: string[] = []
 ): Promise<{ url: string; blobs: BlobDescriptor[] }> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
   const uploadFile = normaliseHlsFile(file)
-  const blobs = await activity.upload({
-    file: uploadFile,
-    servers: initialServers,
-    options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
-    skipExistenceCheck: true, // HLS files are freshly generated — skip the HEAD round-trip
-    signal,
-  })
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-
-  // uploadFileToMultipleServersChunked now throws when all servers fail,
-  // so an empty array here means servers is an empty list.
-  if (blobs.length === 0) throw new Error(`No upload servers configured`)
-  return { url: blobs[0].url, blobs }
+  const attempts = [servers, ...fallbacks.map(server => [server])]
+  let lastError: unknown = new Error('No upload servers configured')
+  for (const targets of attempts) {
+    if (targets.length === 0) continue
+    try {
+      const blobs = await activity.upload({
+        file: uploadFile,
+        servers: targets,
+        options: {
+          chunkSize: DEFAULT_CHUNK_SIZE,
+          maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS,
+        },
+        skipExistenceCheck: true, // HLS files are freshly generated — skip the HEAD round-trip
+        signal,
+      })
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      if (blobs.length > 0) return { url: blobs[0].url, blobs }
+    } catch (error) {
+      if ((error as { name?: unknown }).name === 'AbortError') throw error
+      lastError = error
+    }
+  }
+  throw lastError
 }
 
 export function subscribeToBrowserTranscodeUploads(listener: BrowserTranscodeUploadListener) {
@@ -401,6 +418,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     const uploadedVideos: VideoVariant[] = []
 
     if (isHls && transcodedFiles instanceof Map) {
+      // One plan for the whole HLS job: the largest file decides which servers accept it.
+      const { direct: hlsUploadServers, copies: hlsMirrorServers } = planServers(
+        [...initialServers, ...mirrorServers],
+        Array.from(transcodedFiles.values()).reduce((max, f) => Math.max(max, f.size), 0)
+      )
       const uploadedUrls = new Map<string, string>()
       const hlsVariantStreams: Array<{
         type?: 'video' | 'audio'
@@ -462,7 +484,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       }))
       activity.set({ phase: 'uploading', completed: 0, total: totalFiles, unit: 'files' })
       // Upload servers stay pending until every HLS file reached them.
-      activity.hold(initialServers)
+      activity.hold(hlsUploadServers)
 
       // Collect all blobs for later deletion support
       const allHlsBlobs: BlobDescriptor[] = []
@@ -475,7 +497,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       // Key: uploaded blob URL → location (for mirror tracking)
       const uploadedUrlToLoc = new Map<string, SegLoc>()
 
-      const serverHostnames = initialServers.map(s => {
+      const serverHostnames = hlsUploadServers.map(s => {
         try {
           return new URL(s).hostname
         } catch {
@@ -620,9 +642,10 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           const hlsFile = transcodedFiles.get(path)!
           const { url, blobs } = await uploadAndGetUrl(
             hlsFile,
-            initialServers,
+            hlsUploadServers,
             activity,
-            controller.signal
+            controller.signal,
+            hlsMirrorServers
           )
           uploadedUrls.set(path, url)
           allHlsBlobs.push(...blobs)
@@ -651,7 +674,10 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           for (const blob of blobs) {
             try {
               const hostname = new URL(blob.url).hostname
-              const loc = segmentLocations.get(`${path}::${hostname}`)
+              // A copy on a fallback server has no row of its own; its mirrors use the primary's.
+              const loc =
+                segmentLocations.get(`${path}::${hostname}`) ??
+                segmentLocations.get(`${path}::${serverHostnames[0]}`)
               if (loc) uploadedUrlToLoc.set(blob.url, loc)
             } catch {
               /* ignore */
@@ -701,9 +727,10 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           const playlistFile = rewrittenFiles.get(path)!
           const { url, blobs } = await uploadAndGetUrl(
             playlistFile,
-            initialServers,
+            hlsUploadServers,
             activity,
-            controller.signal
+            controller.signal,
+            hlsMirrorServers
           )
           uploadedUrls.set(path, url)
           allHlsBlobs.push(...blobs)
@@ -769,20 +796,21 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       const finalMaster = finalRewritten.get('master.m3u8')!
       const { url: masterUrl, blobs: masterBlobs } = await uploadAndGetUrl(
         finalMaster,
-        initialServers,
+        hlsUploadServers,
         activity,
-        controller.signal
+        controller.signal,
+        hlsMirrorServers
       )
       allHlsBlobs.push(...masterBlobs)
       uploadedBytes += finalMaster.size
       reportProgress(totalFiles, `Uploading master playlist (${totalFiles}/${totalFiles})…`)
 
-      activity.release(initialServers)
+      activity.release(hlsUploadServers)
       console.log('[BrowserTranscodeUploadManager] HLS master playlist URL:', masterUrl)
 
       // Stage 4: Mirror all HLS blobs to mirror servers
       let hlsMirroredBlobs: BlobDescriptor[] = []
-      if (mirrorServers.length > 0 && allHlsBlobs.length > 0) {
+      if (hlsMirrorServers.length > 0 && allHlsBlobs.length > 0) {
         if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
         let mirrored = 0
         const total = allHlsBlobs.length
@@ -819,10 +847,10 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         activity.set({
           phase: 'mirroring',
           completed: 0,
-          total: allHlsBlobs.reduce((sum, blob) => sum + blob.size, 0) * mirrorServers.length,
+          total: allHlsBlobs.reduce((sum, blob) => sum + blob.size, 0) * hlsMirrorServers.length,
           unit: 'bytes',
         })
-        activity.hold(mirrorServers)
+        activity.hold(hlsMirrorServers)
 
         const mirrorResults = await runWithConcurrency(
           allHlsBlobs.map(blob => async () => {
@@ -832,11 +860,16 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               liveMirrorStatuses[loc.stateIdx][loc.segIdx] = 'mirroring'
               flushMirrorStates()
             }
-            const result = await activity.mirror(blob, mirrorServers, controller.signal)
+            const result = await activity.mirror(
+              blob,
+              hlsMirrorServers,
+              controller.signal,
+              learnMirrorOutcome
+            )
             mirrored++
             if (loc) {
               liveMirrorStatuses[loc.stateIdx][loc.segIdx] =
-                result.length === mirrorServers.length ? 'done' : 'error'
+                result.length === hlsMirrorServers.length ? 'done' : 'error'
               flushMirrorStates()
             }
             updateBrowserState(draftId, state => ({
@@ -852,7 +885,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           4
         )
         hlsMirroredBlobs = mirrorResults.flat()
-        activity.release(mirrorServers)
+        activity.release(hlsMirrorServers)
         updateBrowserState(draftId, state => ({
           ...state,
           mirrorProgress: { mirrored: total, total, percentage: 100 },
@@ -889,8 +922,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       })
     } else if (transcodedFiles instanceof Array) {
       const filesToUpload = keepOriginal ? [...transcodedFiles, file] : transcodedFiles
+      const allServers = [...initialServers, ...mirrorServers]
+      // Bytes the browser itself sends per file: one copy per direct-upload server.
+      const sentBytes = (f: File) => f.size * planServers(allServers, f.size).direct.length
       // Job-wide bytes: what earlier files sent plus the current file's live transfer.
-      const jobBytes = filesToUpload.reduce((sum, f) => sum + f.size, 0) * initialServers.length
+      const jobBytes = filesToUpload.reduce((sum, f) => sum + sentBytes(f), 0)
       let earlierBytes = 0
       for (const fileToUpload of filesToUpload) {
         const video = await uploadAndProcessFile(
@@ -910,7 +946,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           controller.signal,
           activity
         )
-        earlierBytes += fileToUpload.size * initialServers.length
+        earlierBytes += sentBytes(fileToUpload)
         uploadedVideos.push(video)
       }
     }

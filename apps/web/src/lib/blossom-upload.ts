@@ -33,6 +33,20 @@ const TRANSFER_IDLE_TIMEOUT_MS = 2 * 60_000 // PUT: no bytes sent and no respons
 const MIN_CHUNK_RATE = 32 * 1024 // 256 kbit/s, plus the two-minute response allowance
 
 /** Caller cancellation plus a hard deadline; the deadline rejects with a `TimeoutError`. */
+/** An HTTP failure that keeps the status, so callers can learn from it (413, 404, 405, 501). */
+function httpError(message: string, status: number): Error & { status: number } {
+  return Object.assign(new Error(message), { status })
+}
+
+/** The HTTP status behind an upload or mirror error, also when wrapped as `cause`. */
+export function httpStatusOf(error: unknown): number | undefined {
+  for (let e = error as { status?: unknown; cause?: unknown } | undefined; e;) {
+    if (typeof e.status === 'number') return e.status
+    e = e.cause as typeof e
+  }
+  return undefined
+}
+
 function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
   const timeout = AbortSignal.timeout(ms)
   return signal ? AbortSignal.any([signal, timeout]) : timeout
@@ -64,7 +78,10 @@ async function customMirrorBlob(
   })
 
   if (!response.ok) {
-    throw new Error(`Mirror request failed: ${response.status} ${response.statusText}`)
+    throw httpError(
+      `Mirror request failed: ${response.status} ${response.statusText}`,
+      response.status
+    )
   }
 
   const blobData = await response.json()
@@ -533,7 +550,10 @@ export async function uploadChunk(
     console.error(
       `[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} failed: ${response.status} ${response.statusText}`
     )
-    throw new Error(`PATCH chunk upload failed: ${response.status} ${response.statusText}`)
+    throw httpError(
+      `PATCH chunk upload failed: ${response.status} ${response.statusText}`,
+      response.status
+    )
   }
 
   if (import.meta.env.DEV)
@@ -1016,7 +1036,7 @@ async function uploadFileToSingleServer(
     }
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        settle(new Error(`Regular upload failed: ${xhr.status} ${xhr.statusText}`))
+        settle(httpError(`Regular upload failed: ${xhr.status} ${xhr.statusText}`, xhr.status))
         return
       }
       try {

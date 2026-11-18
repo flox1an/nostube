@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Uploads follow an upload strategy instead of sending every file to every upload server: the browser uploads to one primary server and the other configured servers (upload and mirror servers alike) copy the file from there (BUD-04 mirror). The strategy (`planUpload` in `@nostube/core/upload-plan`) takes the user's first server unless another one was measured at least twice as fast, leaves out servers whose size limit the file exceeds, and uploads directly to servers known to have no mirror endpoint. When the primary fails, the next server takes over; a server that answers a mirror with 404, 405 or 501 (or blocks it) gets the file directly. A mirror timeout or server error stays a failure with **Retry**, since the copy may still finish on the server. HLS jobs plan once per job and fall back to the next server per file.
 - The browser learns per server whether it mirrors, its size limit (413) and its upload speed (`lib/server-capabilities.ts`, kept 30 days, starting from the server catalog in `lib/blossom-servers.ts`). Upload and mirror errors keep their HTTP status for this.
 
+### Fixed
+
+- Upload: dropping a file no longer fails with "Maximum 10 items allowed" when the draft list looked empty or short. Drafts older than 30 days are hidden from the list but still filled the 10 slots; they now make room for a new draft. When all 10 slots hold visible drafts, a notice says so and the upload continues without being saved as a draft.
+
 ## [0.2.82] - 2026-11-16
 
 ### Changed

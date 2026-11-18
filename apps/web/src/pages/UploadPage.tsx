@@ -76,10 +76,15 @@ export function UploadPage() {
   // Persist an ephemeral draft to localStorage when user takes a meaningful action
   const handlePersist = useCallback(() => {
     if (ephemeralDraftRef.current) {
-      persistDraft(ephemeralDraftRef.current)
+      try {
+        persistDraft(ephemeralDraftRef.current)
+      } catch {
+        // All slots hold visible drafts: the upload continues, it just is not saved as a draft.
+        toast({ title: t('upload.draft.maxDraftsReached'), variant: 'destructive', duration: 5000 })
+      }
       ephemeralDraftRef.current = null
     }
-  }, [persistDraft])
+  }, [persistDraft, toast, t])
 
   // Handle back navigation with Nostr sync flush
   const handleBack = useCallback(async () => {

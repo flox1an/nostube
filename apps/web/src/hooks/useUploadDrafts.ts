@@ -6,6 +6,9 @@ import { useDraftPersistence } from './useDraftPersistence'
 import { getItemsFromStorage, saveItemsToStorage } from '@/lib/draft-persistence-storage'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
+
+/** Drafts older than this are hidden from the list (and removed once space is needed). */
+const DRAFT_MAX_AGE_DAYS = 30
 const MAX_DRAFTS = 10
 
 function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
@@ -29,7 +32,7 @@ export function useUploadDrafts() {
 
   // Apply age-based cleanup on read
   const drafts = useMemo(() => {
-    return removeOldDrafts(stripRuntimeStateFromDrafts(persistence.items), 30)
+    return removeOldDrafts(stripRuntimeStateFromDrafts(persistence.items), DRAFT_MAX_AGE_DAYS)
   }, [persistence.items])
 
   useEffect(() => {
@@ -65,6 +68,13 @@ export function useUploadDrafts() {
       // Already persisted, skip
       const existing = getItemsFromStorage<UploadDraft>(STORAGE_KEY)
       if (existing.some(d => d.id === draft.id)) return
+
+      // Drafts past DRAFT_MAX_AGE_DAYS are hidden from the list but still count toward the
+      // limit; at the limit they make room first, so an invisible draft never blocks a new one.
+      if (existing.length >= MAX_DRAFTS) {
+        const visible = new Set(removeOldDrafts(existing, DRAFT_MAX_AGE_DAYS).map(d => d.id))
+        for (const old of existing) if (!visible.has(old.id)) persistence.deleteItem(old.id)
+      }
 
       persistence.createItem({ ...stripRuntimeStateFromDrafts([draft])[0], updatedAt: Date.now() })
     },

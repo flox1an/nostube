@@ -53,6 +53,37 @@ describe('useUploadDrafts', () => {
     }).toThrow('Maximum 10 items allowed')
   })
 
+  it('makes room by removing hidden expired drafts when the limit is reached', () => {
+    const old = Date.now() - 31 * 24 * 60 * 60 * 1000
+    const stored = Array.from({ length: 10 }, (_, i) => ({
+      id: `old-${i}`,
+      createdAt: old,
+      updatedAt: old,
+      title: '',
+      description: '',
+      tags: [],
+      language: 'en',
+      people: [],
+      inputMethod: 'file',
+      uploadInfo: { videos: [] },
+      thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
+      thumbnailSource: 'generated',
+    }))
+    localStorage.setItem(
+      'nostube_upload_drafts',
+      JSON.stringify({ version: '1', lastModified: Date.now(), items: stored })
+    )
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
+    expect(result.current.drafts).toHaveLength(0)
+
+    act(() => {
+      result.current.createDraft()
+    })
+
+    expect(result.current.drafts).toHaveLength(1)
+  })
+
   it('updates draft and modifies updatedAt', async () => {
     const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 

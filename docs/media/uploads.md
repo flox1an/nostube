@@ -89,7 +89,7 @@ With HLS, every segment, init segment and playlist is uploaded as its own blob. 
 ### Limits
 
 - Browser transcoding needs WebCodecs (`VideoEncoder` and `VideoDecoder`). Without them, the page offers only to upload the original file.
-- Conversion speed and the largest file you can convert depend on the device. MP4 output is assembled in memory.
+- Conversion speed and the largest file you can convert depend on the device. Output files are streamed to the browser's private file system (OPFS) while they are written, so a conversion does not have to fit in memory. Only when OPFS is missing (older Safari, some private windows) or the free quota is too small does the output stay in memory, and then it must fit.
 
 ## Uploads in the Nostube Server Studio
 

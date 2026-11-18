@@ -1,4 +1,5 @@
 import type { VideoCodec } from 'mediabunny'
+import { openTranscodeSink } from './transcode-sink'
 
 export const BITRATE_CUTOFF_MBPS = 8
 export const PRIMARY_TARGET_HEIGHT = 1080
@@ -314,9 +315,39 @@ export function estimateMp4ConversionBytes(meta: TranscodeSourceMeta): number {
 }
 
 /**
+ * Expected size of everything `transcodeToHls` writes: a passthrough variant keeps the source
+ * bitrate, a converted one gets its target bitrate plus audio, and the encoder overshoots both.
+ */
+export function estimateHlsOutputBytes(
+  variants: BrowserTranscodeVariant[],
+  meta: TranscodeSourceMeta
+): number {
+  const audioBytes = (BROWSER_TRANSCODE_AUDIO_BITRATE * meta.duration) / 8
+  return (
+    ENCODER_OVERSHOOT *
+    variants.reduce((sum, variant) => {
+      if (variant.passthrough) return sum + meta.sizeMB * 1024 * 1024
+      const { width, height } = computeTargetDimensions(
+        meta.width,
+        meta.height,
+        variant.targetHeight
+      )
+      const bitrate = computeBrowserTranscodeVideoBitrate(
+        width,
+        height,
+        variant.qualityPreset,
+        meta
+      )
+      return sum + (bitrate * meta.duration) / 8 + audioBytes
+    }, 0)
+  )
+}
+
+/**
  * Memory the browser tab needs at the peak of a conversion: the growing output buffer, then its
- * copy into a File. ponytail: measured factor (the same conversion took +1 GB of renderer memory
- * in Chrome, 4.3× its output); streaming the output to OPFS would remove it and the 4 GiB cap.
+ * copy into a File. Only the in-memory fallback of `openTranscodeSink` costs this; the OPFS path
+ * streams to disk. ponytail: measured factor (the same conversion took +1 GB of renderer memory in
+ * Chrome, 4.3× its output).
  */
 export const estimateMp4ConversionMemoryBytes = (meta: TranscodeSourceMeta) =>
   4.5 * estimateMp4ConversionBytes(meta)
@@ -392,9 +423,13 @@ export async function transcodeFile(
 ): Promise<File> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat, BufferTarget } =
-    await import('mediabunny')
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat } = await import(
+    'mediabunny'
+  )
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+
+  const sink = await openTranscodeSink({ expectedBytes: estimateMp4ConversionBytes(sourceMeta) })
+  const name = `${file.name.replace(/\.[^.]+$/, '')}_${variant.targetHeight}p_${variant.codec}.mp4`
 
   const { width: targetWidth, height: targetHeight } = computeTargetDimensions(
     sourceMeta.width,
@@ -410,7 +445,7 @@ export async function transcodeFile(
 
   const createConversion = async (hardwareAcceleration: 'prefer-hardware' | 'no-preference') => {
     const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) })
-    const target = new BufferTarget()
+    const target = sink.target(name, 'video/mp4')
     const output = new Output({ format: new Mp4OutputFormat(), target })
     const conversion = await Conversion.init({
       input,
@@ -430,12 +465,12 @@ export async function transcodeFile(
       tags: {},
     })
 
-    return { conversion, target }
+    return { conversion }
   }
 
-  let { conversion, target } = await createConversion('prefer-hardware')
+  let { conversion } = await createConversion('prefer-hardware')
   if (!conversion.isValid) {
-    ;({ conversion, target } = await createConversion('no-preference'))
+    ;({ conversion } = await createConversion('no-preference'))
   }
 
   if (!conversion.isValid) {
@@ -461,13 +496,7 @@ export async function transcodeFile(
   }
 
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
-  if (!target.buffer) throw new Error('Transcode produced no output')
-
-  const baseName = file.name.replace(/\.[^.]+$/, '')
-  return new File([target.buffer], `${baseName}_${variant.targetHeight}p_${variant.codec}.mp4`, {
-    type: 'video/mp4',
-    lastModified: Date.now(),
-  })
+  return await sink.file(name, 'video/mp4')
 }
 
 export async function transcodeToHls(
@@ -479,19 +508,12 @@ export async function transcodeToHls(
 ): Promise<Map<string, File>> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const {
-    Input,
-    Output,
-    Conversion,
-    ALL_FORMATS,
-    BlobSource,
-    HlsOutputFormat,
-    CmafOutputFormat,
-    BufferTarget,
-    PathedTarget,
-  } = await import('mediabunny')
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, HlsOutputFormat, CmafOutputFormat, PathedTarget } =
+    await import('mediabunny')
 
-  const outputFiles = new Map<string, File>()
+  const sink = await openTranscodeSink({ expectedBytes: estimateHlsOutputBytes(variants, sourceMeta) })
+  /** Path → MIME type of every file the conversion writes. */
+  const outputs = new Map<string, string>()
 
   const output = new Output({
     format: new HlsOutputFormat({
@@ -501,15 +523,10 @@ export async function transcodeToHls(
       getSegmentPath: info => `variant-${info.playlist.n - 1}/segment-${info.n - 1}.m4s`,
       getInitPath: info => `variant-${info.n - 1}/init.mp4`,
     }),
-    target: new PathedTarget(
-      'master.m3u8',
-      ({ path, mimeType }) =>
-        new BufferTarget({
-          onFinalize: buffer => {
-            outputFiles.set(path, new File([buffer], path, { type: mimeType }))
-          },
-        })
-    ),
+    target: new PathedTarget('master.m3u8', ({ path, mimeType }) => {
+      outputs.set(path, mimeType)
+      return sink.target(path, mimeType)
+    }),
   })
 
   const conversion = await Conversion.init({
@@ -562,6 +579,9 @@ export async function transcodeToHls(
   } finally {
     signal.removeEventListener('abort', abortConversion)
   }
+
+  const outputFiles = new Map<string, File>()
+  for (const [path, mimeType] of outputs) outputFiles.set(path, await sink.file(path, mimeType))
 
   return repairGeneratedHlsInitSegments(outputFiles)
 }

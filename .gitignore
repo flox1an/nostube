@@ -27,3 +27,7 @@ docs/competitor-analysis/
 # Docker Compose instance state (includes FIPS identity keys).
 /apps/server/data/
 /apps/server/fips/
+
+# impeccable design-check local state
+/.impeccable/hook.cache.json
+/.impeccable/config.local.json

@@ -10,7 +10,7 @@ An upload in the Nostube web app goes through four stages: pick a file, optional
 2. **Optimise for Nostr (optional).** The browser analyses the file and suggests a conversion (see below). You can also upload the file unchanged.
 3. **Upload to Blossom.** Every resulting file is uploaded from the browser to one server, and the other servers copy it from there (see the upload strategy below).
 4. **Details.** Add a title, description, tags, language, thumbnail, subtitles and an optional content warning while the upload runs. The draft is saved in the browser, so a reload does not lose it.
-5. **Review and publish.** The web app builds a video event (kind `34235`, or `34236` for portrait video). It signs the event with your signer and sends it to your write relays. The event format is described in [NIP-71 video events](/developers/nip-71).
+5. **Publish.** Details and publishing share one page: the right column shows how the video will appear, what is still missing (processing, title, thumbnail) and the publish button. **Show all options** adds relay selection and the event preview. The web app builds a video event (kind `34235`, or `34236` for portrait video). It signs the event with your signer and sends it to your write relays. The event format is described in [NIP-71 video events](/developers/nip-71).
 
 With **From URL**, nothing is uploaded: the event points to the given URL. If the URL is a Blossom URL, the web app mirrors that blob to your Backup servers.
 

@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="de" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nostube · Upload-Prototyp</title>
+<style>
+/* Tokens 1:1 aus packages/widgets/src/theme.css */
+:root{--radius:.75rem;--background:oklch(.982 .002 286);--foreground:oklch(.205 .006 286);--card:oklch(1 0 0);--popover:oklch(1 0 0);--primary:oklch(.48 .2 293);--primary-foreground:oklch(.969 .016 293.756);--secondary:oklch(.952 .004 286);--muted:oklch(.952 .004 286);--muted-foreground:oklch(.49 .012 286);--accent:oklch(.945 .012 293);--destructive:oklch(.577 .245 27.325);--border:oklch(.89 .006 286);--input:oklch(.89 .006 286);--ring:oklch(.55 .17 293);--ok:oklch(.55 .15 155);--warn:oklch(.6 .14 70);--shadow:0 8px 24px -8px oklch(.2 .02 286 / .18),0 2px 6px -2px oklch(.2 .02 286 / .1)}
+.dark{--background:oklch(.16 .006 286);--foreground:oklch(.96 .003 286);--card:oklch(.205 .007 286);--popover:oklch(.225 .008 286);--primary:oklch(.66 .24 293);--primary-foreground:oklch(.16 .006 286);--secondary:oklch(.245 .008 286);--muted:oklch(.245 .008 286);--muted-foreground:oklch(.7 .01 286);--accent:oklch(.275 .018 293);--destructive:oklch(.704 .191 22.216);--border:oklch(1 0 0 / 12%);--input:oklch(1 0 0 / 16%);--ring:oklch(.66 .24 293);--ok:oklch(.74 .15 155);--warn:oklch(.8 .13 75);--shadow:0 16px 40px -12px oklch(0 0 0 / .6),0 2px 8px -2px oklch(0 0 0 / .4)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--background);color:var(--foreground);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:color-mix(in oklch,var(--primary) 35%,transparent)}
+:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:6px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.num{font-variant-numeric:tabular-nums}
+.mut{color:var(--muted-foreground)} .sm{font-size:12.5px} .xs{font-size:12px}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg.i.lg{width:22px;height:22px} svg.spin{animation:spin 1s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Demo-Steuerung (gehört nicht zum Design) */
+.demo{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:repeating-linear-gradient(135deg,oklch(.8 .13 75 / .14) 0 10px,transparent 10px 20px),var(--background);border-bottom:1px dashed var(--warn);font-size:12px}
+.demo b{color:var(--warn);font-weight:600;letter-spacing:.02em}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px;background:var(--card)}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:6px;font-size:12px;color:var(--muted-foreground)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--foreground);font-weight:600}
+
+/* App-Chrome */
+.top{display:flex;align-items:center;gap:16px;height:56px;padding:0 20px;border-bottom:1px solid var(--border)}
+.logo{font-weight:800;letter-spacing:-.02em;font-size:18px}
+.logo span{color:var(--primary)}
+.search{flex:1;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--input);border-radius:999px;color:var(--muted-foreground)}
+.avatar{width:32px;height:32px;border-radius:50%;background:conic-gradient(from 200deg,oklch(.66 .24 293),oklch(.75 .15 200),oklch(.66 .24 293))}
+.uppill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid color-mix(in oklch,var(--primary) 50%,transparent);background:color-mix(in oklch,var(--primary) 12%,transparent);font-size:12.5px;font-weight:600}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:calc(var(--radius) - 2px);border:1px solid transparent;font-weight:600;font-size:14px;transition:background .15s,border-color .15s,transform .1s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--primary);color:var(--primary-foreground)}
+.btn.primary:hover{background:color-mix(in oklch,var(--primary) 88%,var(--foreground))}
+.btn.outline{background:transparent;border-color:var(--input)}
+.btn.outline:hover{background:var(--accent)}
+.btn.ghost{background:transparent;height:32px;padding:0 10px;font-weight:500;color:var(--muted-foreground)}
+.btn.ghost:hover{background:var(--accent);color:var(--foreground)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}
+.btn.block{width:100%}
+.link{background:none;border:0;padding:0;color:var(--primary);font-weight:500;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+
+/* Felder */
+label.f{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field{width:100%;border:1px solid var(--input);background:transparent;border-radius:calc(var(--radius) - 2px);padding:9px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.field:focus{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in oklch,var(--ring) 25%,transparent)}
+.field::placeholder{color:var(--muted-foreground)}
+textarea.field{resize:vertical;min-height:84px}
+.hint{font-size:12px;color:var(--muted-foreground);margin-top:6px;display:flex;gap:6px;align-items:center}
+
+/* Fake-Videoframes: gemalte Szenen statt grauer Platzhalter */
+.scene{--h:200;position:relative;overflow:hidden;aspect-ratio:16/9;border-radius:10px;background:
+ radial-gradient(circle at var(--sx,70%) var(--sy,38%),oklch(.95 .09 85) 0 5%,transparent 6%),
+ linear-gradient(to bottom,oklch(.78 .09 var(--h)) 0%,oklch(.86 .06 calc(var(--h) + 40)) 46%,oklch(.42 .07 calc(var(--h) - 10)) 47%,oklch(.3 .06 calc(var(--h) - 20)) 100%)}
+.scene::after{content:"";position:absolute;inset:auto 0 40% 0;height:24%;background:linear-gradient(170deg,transparent 40%,oklch(.35 .05 150) 41%,oklch(.3 .05 150) 100%);clip-path:polygon(0 100%,0 55%,14% 30%,26% 60%,44% 10%,58% 52%,72% 34%,86% 64%,100% 40%,100% 100%)}
+.scene.dusk{--h:30;--sx:30%;--sy:44%} .scene.noon{--h:230;--sx:80%;--sy:20%} .scene.dawn{--h:300;--sx:50%;--sy:46%}
+.scene.portrait{aspect-ratio:9/16}
+.scene .dur{position:absolute;right:8px;bottom:8px;z-index:1;background:oklch(0 0 0 / .72);color:#fff;font-size:11.5px;font-weight:600;padding:1px 6px;border-radius:5px}
+
+/* Konzept A: Studio */
+.page{max-width:1160px;margin:0 auto;padding:28px 20px 120px}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+.ph h1{font-size:26px;letter-spacing:-.02em;margin:0;line-height:1.2}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:500;background:none;border:0;padding:4px;color:var(--foreground)}
+.switch .t{width:34px;height:20px;border-radius:999px;background:var(--input);position:relative;transition:background .2s}
+.switch .t::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--foreground);transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.switch[aria-checked=true] .t{background:var(--primary)} .switch[aria-checked=true] .t::after{transform:translateX(14px);background:var(--primary-foreground)}
+
+.drop{display:grid;place-items:center;text-align:center;gap:14px;min-height:340px;border:2px dashed color-mix(in oklch,var(--primary) 45%,var(--border));border-radius:18px;padding:40px 24px;background:radial-gradient(ellipse at 50% 0%,color-mix(in oklch,var(--primary) 9%,transparent),transparent 70%);transition:border-color .2s,background .2s}
+.drop:hover{border-color:var(--primary)}
+.drop .bubble{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:color-mix(in oklch,var(--primary) 16%,transparent);color:var(--primary)}
+.drop h2{margin:0;font-size:22px;letter-spacing:-.015em}
+.pasterow{display:flex;gap:8px;width:min(460px,100%);margin-top:4px}
+.drafts{margin-top:28px}
+.drafts h3{font-size:14px;margin:0 0 10px}
+.draftrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.draft{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);text-align:left}
+.draft:hover{border-color:color-mix(in oklch,var(--primary) 45%,var(--border))}
+.draft .scene{width:96px;flex:none;border-radius:7px}
+
+.studio{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:32px;align-items:start}
+.col{display:flex;flex-direction:column;gap:22px}
+.filebar{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
+.filebar .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--muted)}
+.filebar .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground)}
+.chip.p{background:color-mix(in oklch,var(--primary) 16%,transparent);color:var(--primary)}
+
+.ask{border:1px solid color-mix(in oklch,var(--primary) 55%,var(--border));background:color-mix(in oklch,var(--primary) 6%,var(--card));border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.enter{animation:rise .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.ask h3{margin:0 0 4px;font-size:16px}
+.opts{display:grid;gap:10px;margin-top:14px}
+.opt{display:grid;grid-template-columns:20px 1fr;gap:12px;text-align:left;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);transition:border-color .15s,background .15s}
+.opt:hover{border-color:var(--primary)}
+.opt .r{width:18px;height:18px;border-radius:50%;border:2px solid var(--input);margin-top:2px}
+.opt b{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.why{margin-top:12px;font-size:12px;color:var(--muted-foreground)}
+
+.enc{border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
+.enc .head{display:flex;gap:12px;align-items:center;padding:12px 14px}
+.enc .body{border-top:1px solid var(--border);padding:14px;display:grid;gap:14px}
+.enc .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.enc .lbl{width:110px;font-size:12.5px;color:var(--muted-foreground)}
+.tog{border:1px solid var(--input);background:transparent;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:500}
+.tog[aria-pressed=true]{border-color:var(--primary);background:color-mix(in oklch,var(--primary) 14%,transparent);color:var(--foreground)}
+
+.frames{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.frame{padding:0;border:2px solid transparent;border-radius:12px;background:none;position:relative;transition:border-color .15s}
+.frame .scene{border-radius:9px}
+.frame[aria-pressed=true]{border-color:var(--primary)}
+.frame[aria-pressed=true]::after{content:"";position:absolute;top:6px;left:6px;width:18px;height:18px;border-radius:50%;background:var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat}
+.frame.own{display:grid;place-items:center;border:1.5px dashed var(--input);aspect-ratio:16/9;color:var(--muted-foreground);font-size:12px;gap:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--input);border-radius:calc(var(--radius) - 2px);padding:6px 8px}
+.tags .chip{background:var(--accent);color:var(--foreground)}
+.tags input{border:0;outline:0;background:none;flex:1;min-width:120px;padding:3px}
+
+.secs{border-top:1px solid var(--border)}
+.sec{border-bottom:1px solid var(--border)}
+.sec>button{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:14px 2px;font-weight:600;text-align:left}
+.sec>button .sum{margin-left:auto;font-weight:400;font-size:12.5px;color:var(--muted-foreground)}
+.sec>button svg{transition:transform .2s}
+.sec[data-open=true]>button svg.chev{transform:rotate(180deg)}
+.sec .in{padding:0 2px 16px;display:grid;gap:12px}
+.pro{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);border:1px solid color-mix(in oklch,var(--primary) 45%,transparent);padding:0 5px;border-radius:4px}
+pre.ev{margin:0;font:11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--muted);border-radius:10px;padding:12px;overflow:auto;max-height:220px}
+
+.rail{position:sticky;top:64px;display:flex;flex-direction:column;gap:16px}
+.card{border:1px solid var(--border);border-radius:14px;background:var(--card)}
+.preview{padding:12px}
+.preview .meta{display:flex;gap:10px;margin-top:10px}
+.preview .av{width:32px;height:32px;border-radius:50%;flex:none;background:conic-gradient(from 200deg,oklch(.66 .24 293),oklch(.75 .15 200),oklch(.66 .24 293))}
+.preview .tt{font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cap{font-size:11.5px;font-weight:600;color:var(--muted-foreground);padding:12px 14px 0}
+.steps{list-style:none;margin:0;padding:6px 14px 12px}
+.step{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:8px 0}
+.step .dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--input);color:var(--muted-foreground)}
+.step.done .dot{background:var(--ok);border-color:var(--ok);color:var(--background)}
+.step.active .dot{border-color:var(--primary);color:var(--primary)}
+.step.wait .dot{border-style:dashed;border-color:var(--warn);color:var(--warn)}
+.step .dot svg{width:12px;height:12px;stroke-width:3}
+.step .t{font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;gap:8px}
+.step .d{font-size:12px;color:var(--muted-foreground)}
+.bar{height:6px;border-radius:999px;background:var(--muted);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--primary);border-radius:inherit;transition:width .25s linear}
+.pub{padding:16px;display:grid;gap:10px}
+.pub .state{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.armed{background:color-mix(in oklch,var(--primary) 10%,var(--card));border-color:color-mix(in oklch,var(--primary) 45%,var(--border))}
+.okc{background:color-mix(in oklch,var(--ok) 10%,var(--card));border-color:color-mix(in oklch,var(--ok) 45%,var(--border))}
+.relaysel{display:grid;gap:6px;font-size:12.5px}
+.relaysel label{display:flex;gap:8px;align-items:center}
+input[type=checkbox]{accent-color:var(--primary);width:15px;height:15px}
+table.var{width:100%;border-collapse:collapse;font-size:12px}
+table.var th{text-align:left;font-weight:600;color:var(--muted-foreground);padding:6px 4px;border-bottom:1px solid var(--border)}
+table.var td{padding:7px 4px;border-bottom:1px solid var(--border)}
+
+.modal{width:min(720px,94vw);max-height:88vh;overflow:auto;background:var(--popover);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow);text-align:left}
+.modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.modal h3{margin:0;font-size:17px}
+table.srv td{vertical-align:middle}table.srv tr.off td{opacity:.55}
+.opt[aria-pressed=true]{border-color:var(--primary);background:color-mix(in oklch,var(--primary) 8%,var(--card))}
+.opt[aria-pressed=true] .r{border:5px solid var(--primary)}
+.nudge{animation:nudge .4s ease-out}@keyframes nudge{30%{transform:translateX(-6px)}60%{transform:translateX(6px)}}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px}
+select.field{appearance:auto;padding:8px 10px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;overflow-x:auto}
+.tabs button{background:none;border:0;padding:8px 12px;font-size:13px;font-weight:500;color:var(--muted-foreground);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--foreground);border-bottom-color:var(--primary);font-weight:600}
+.tabs button:hover{color:var(--foreground)}
+.scrub{display:grid;gap:10px}
+.scrub .scene{max-width:560px}
+.scrubrow{display:flex;gap:6px;align-items:center}
+.scrubrow input[type=range]{flex:1;accent-color:var(--primary)}
+button[disabled]{opacity:.45;cursor:not-allowed}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+
+/* Konzept B: Dock */
+.home{max-width:1240px;margin:0 auto;padding:24px 20px 160px}
+.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px 16px}
+.vc .tt{font-weight:600;margin-top:8px;line-height:1.3}
+.overlay{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:color-mix(in oklch,var(--background) 70%,transparent);backdrop-filter:blur(6px)}
+.overlay.fadein{animation:fade .2s ease-out}
+.overlay .box{display:grid;place-items:center;gap:10px;text-align:center;width:min(640px,90vw);aspect-ratio:2/1;border:2.5px dashed var(--primary);border-radius:24px;background:color-mix(in oklch,var(--primary) 10%,transparent)}
+.overlay h2{margin:0;font-size:24px;letter-spacing:-.015em}
+@keyframes fade{from{opacity:0}}
+.dock{position:fixed;right:20px;bottom:20px;z-index:40;width:400px;max-height:calc(100vh - 140px);display:flex;flex-direction:column;background:var(--popover);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.dock header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.dock header .t{font-weight:700}
+.dock .list{overflow:auto}
+.ditem{padding:12px 14px;border-bottom:1px solid var(--border)}
+.ditem:last-child{border-bottom:0}
+.ditem .row{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center}
+.ditem .scene{border-radius:7px}
+.ditem .scene.portrait{width:40px;justify-self:center}
+.ditem input.tit{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:2px 6px;margin-left:-6px;font-weight:600}
+.ditem input.tit:hover{border-color:var(--input)} .ditem input.tit:focus{border-color:var(--ring);outline:0}
+.ditem .more{margin-top:12px;display:grid;gap:10px}
+.ditem .acts{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px}
+.sig{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:color-mix(in oklch,var(--warn) 14%,transparent);font-size:12.5px}
+.dask{padding:14px;border-bottom:1px solid var(--border);background:color-mix(in oklch,var(--primary) 7%,transparent)}
+.dask .opts{margin-top:10px;gap:8px}
+.dask .opt{padding:10px 12px}
+.iconbtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:none;border:0;color:var(--muted-foreground)}
+.iconbtn:hover{background:var(--accent);color:var(--foreground)}
+
+.note{max-width:1160px;margin:0 auto;padding:0 20px}
+.note p{margin:0;padding:10px 14px;border:1px dashed var(--warn);border-radius:10px;font-size:12.5px;color:var(--muted-foreground)}
+.note p b{color:var(--foreground)}
+
+@media (max-width:900px){
+ .studio{grid-template-columns:1fr}
+ .rail{position:static}
+ .pubdock{position:fixed;left:0;right:0;bottom:0;z-index:30;border-radius:16px 16px 0 0;box-shadow:var(--shadow);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+ .pubdock #save,.pubdock>.xs{display:none}
+ .pubdock .state .xs{display:none}
+ .ph{flex-wrap:wrap;align-items:center}
+ .ph h1{font-size:22px}
+ .demo{position:static}
+ .frames{grid-template-columns:repeat(2,1fr)}
+ .search{display:none}
+ .dock{left:0;right:0;bottom:0;width:auto;border-radius:16px 16px 0 0;max-height:70vh}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="demo" role="region" aria-label="Demo-Steuerung">
+  <b>PROTOTYP</b>
+  <span hidden><span class="seg" id="dConcept"></span></span>
+  <span>Konto <span class="seg" id="dAccount"></span></span>
+  <span>Theme <span class="seg" id="dTheme"></span></span>
+  <span class="seg"><button id="dReset">Neu starten</button><button id="dFast">Zeitraffer</button></span>
+</div>
+<div id="app"></div>
+
+<script>
+const ICONS={
+ upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+ link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>',
+ loader:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+ chev:'<path d="m6 9 6 6 6-6"/>',
+ server:'<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>',
+ x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+ sliders:'<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+ pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+ plus:'<path d="M5 12h14M12 5v14"/>',
+ film:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M3 7.5h4M3 12h18M3 16.5h4M17 3v18M17 7.5h4M17 16.5h4"/>',
+ info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ out:'<path d="M7 7h10v10M7 17 17 7"/>',
+ min:'<path d="M5 12h14"/>',
+ wand:'<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9"/>',
+ left:'<path d="m15 18-6-6 6-6"/>',
+ right:'<path d="m9 18 6-6-6-6"/>',
+ user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+};
+const SEEN=new Set();const anim=k=>SEEN.has(k)?'':(SEEN.add(k),'enter');
+const ic=(n,c='')=>`<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+const FREE='Kostenlose öffentliche Server';
+const init=()=>({
+ phase:'empty', storage:null, pro:false, armed:false, settings:false, fmt:'mp4', res:{2160:false,1080:true,720:true,480:false}, quality:'standard', keep:false,
+ frame:0, go:false, signed:false, signedTitle:'', signing:null, modal:null, storageHint:false, thumbTab:'auto', t:96, skip:false, hevc:false, subs:false, cw:false, exp:'none', title:'Urlaub Gardasee 2026', desc:'', tags:['reisen','italien'], open:{}, schedule:false, p:{a:0,e:0,u:0,m:0}, published:false, signing:false,
+ dock:{shown:false, overlay:false, min:false, storage:null, items:[
+  {id:1,file:'gardasee-drohne.mp4',title:'Gardasee Drohne',scene:'noon',dur:'3:48',p:0,armed:true,open:false,status:'run',needsSig:false},
+  {id:2,file:'pasta-workshop.mov',title:'Pasta Workshop',scene:'dusk portrait',dur:'0:52',short:true,p:0,armed:true,open:false,status:'run',needsSig:true},
+  {id:3,file:'geburtstag-oma.mp4',title:'Geburtstag Oma',scene:'dawn',dur:'12:05',p:0,armed:false,open:false,status:'run',needsSig:false},
+ ]}
+});
+let S=Object.assign({concept:'A',account:'new',theme:'dark',fast:false},init());
+const $=s=>document.querySelector(s);
+
+function seg(el,key,opts){el.innerHTML=opts.map(([v,l])=>`<button aria-pressed="${S[key]===v}" data-v="${v}">${l}</button>`).join('');
+ el.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[key]=b.dataset.v;if(key==='theme')document.documentElement.className=S.theme;if(key!=='theme'){SEEN.clear();Object.assign(S,init())}demoBar();render()}}
+function demoBar(){seg($('#dConcept'),'concept',[['A','A · Studio-Seite'],['B','B · Upload-Dock']]);seg($('#dAccount'),'account',[['new','Neu, ohne Server'],['list','Hat Server-Liste']]);seg($('#dTheme'),'theme',[['dark','Dunkel'],['light','Hell']]);$('#dFast').setAttribute('aria-pressed',S.fast)}
+$('#dReset').onclick=()=>{SEEN.clear();Object.assign(S,init());render()};
+$('#dFast').onclick=()=>{S.fast=!S.fast;demoBar()};
+
+const hasStorage=()=>S.account==='list'||!!S.storage;
+const resList=()=>Object.entries(S.res).filter(([,v])=>v).map(([k])=>+k).sort((a,b)=>b-a);
+const encLabel=()=>{const r=resList();return (r.length?r.map(h=>h===2160?'4K':h+'p').join(' + '):'nur Original')+' · '+(S.fmt==='hls'?'HLS':'MP4')};
+const estMB=()=>{const m={2160:900,1080:420,720:210,480:110};let t=resList().reduce((s,h)=>s+m[h],0);if(S.keep)t+=1800;if(S.quality==='hoch')t*=1.4;return Math.round(t)};
+const fmtMB=mb=>mb>=1000?(mb/1000).toFixed(1).replace('.',',')+' GB':mb+' MB';
+const serversLabel=()=>S.account==='list'?'deinen 3 Servern aus deinem Nostr-Profil':S.storage==='free'?'blossom.primal.net, Kopie auf nostr.download':'blossom.band, Kopie auf nostr.download';
+
+/* ───────── Konzept A ───────── */
+function topbar(extra=''){return `<div class="top"><div class="logo">nos<span>tube</span></div><div class="search">${ic('search')}<span class="sm">Suchen</span></div>${extra}<div class="avatar" aria-label="Dein Konto"></div></div>`}
+
+function viewA(){
+ const busy=S.phase==='work'&&!S.published&&S.p.m<100;
+ const pill=busy&&S.go?`<span class="uppill num">${ic('loader','spin')} 1 Upload · <span data-total>0</span> %</span>`:'';
+ if(S.phase==='empty')return topbar()+`<main class="page"><div class="ph"><h1>Video hochladen</h1></div>
+  <div class="drop" id="drop" role="button" tabindex="0" aria-label="Video auswählen">
+   <div class="bubble">${ic('upload','lg')}</div>
+   <div><h2>Video hierher ziehen</h2><p class="mut" style="margin:6px 0 0">oder klicken, um eine Datei auszuwählen. Mehrere Dateien werden zu einzelnen Entwürfen.</p></div>
+   <div class="pasterow" onclick="event.stopPropagation()"><input class="field" placeholder="…oder einen Video-Link einfügen" aria-label="Video-Link"><button class="btn outline">${ic('link')}Laden</button></div>
+  </div>
+  <section class="drafts"><h3>Weiter bearbeiten</h3><div class="draftrow">
+   <button class="draft"><div class="scene dawn"></div><div><div style="font-weight:600">Bergtour Teil 2</div><div class="xs mut">Entwurf · vor 2 Tagen</div></div></button>
+   <button class="draft"><div class="scene noon"></div><div><div style="font-weight:600">Ohne Titel</div><div class="xs mut">Entwurf · vor 1 Woche</div></div></button>
+  </div></section>
+  ${note('Kein Server-Dialog, kein Datei/URL-Umschalter, keine Vorab-Entscheidung zur Optimierung. Entwürfe liegen unter der Dropzone statt auf einer eigenen Seite davor. Klick auf die Dropzone simuliert eine 1,8-GB-Datei.')}</main>`;
+
+ const sel=S.frame;
+ return topbar(pill)+`<main class="page">
+  <div class="ph"><h1>${S.published?'Veröffentlicht':'Video hochladen'}</h1>
+   <button class="switch" role="switch" aria-checked="${S.pro}" id="pro"><span class="t"></span>Alle Optionen zeigen</button></div>
+  <div class="studio"><div class="col">
+   <div class="filebar"><div class="ic">${ic('film')}</div><div style="min-width:0;flex:1"><div class="name">urlaub-gardasee-2026.mov</div><div class="xs mut num">1,8 GB · 4K · 6:12 · Querformat, wird als Video veröffentlicht</div></div><button class="btn ghost sm">Andere Datei</button></div>
+   ${S.account!=='list'&&!S.go?askStorage():''}
+   ${encCard()}
+   <div><label class="f" for="title">Titel</label><input class="field" id="title" value="${esc(S.title)}"><div class="hint">${ic('wand')}Aus dem Dateinamen übernommen</div></div>
+   <div><label class="f" for="desc">Beschreibung</label><textarea class="field" id="desc" placeholder="Worum geht es? Links, #Hashtags und Zeitstempel wie 1:30 werden erkannt.">${esc(S.desc)}</textarea></div>
+   ${thumbBlock()}
+   <div class="two"><div><label class="f">Tags</label><div class="tags">${S.tags.map(t=>`<span class="chip">#${t}</span>`).join('')}<input placeholder="Tag hinzufügen" aria-label="Tag hinzufügen"></div></div>
+    <div><label class="f" for="lang">Sprache</label><select class="field" id="lang"><option>Deutsch</option><option>Englisch</option><option>Italienisch</option><option>Keine Sprache</option></select><div class="hint">${ic('wand')}Aus den Video-Metadaten erkannt</div></div></div>
+   ${sections()}
+  </div>
+  <aside class="rail">${previewCard()}${pipeline()}${publishCard()}</aside></div>
+  ${S.modal==='servers'?serverModal():''}${S.modal==='preview'?previewModal():''}<div style="margin-top:28px">${note('Quelle, Details und Review sind eine Seite. Alle heutigen Funktionen sind enthalten: Vorschaubild per Frame, Upload oder URL; Sprache; Untertitel mit Sprache; Veröffentlichungsdatum; Inhaltswarnung; Ablauf; Personen und Referenzen; Varianten-Tabelle mit eigener Datei oder DVM; Original ohne Optimierung; Entwurf löschen. Die Optimierung startet sofort im Browser. Hochgeladen wird erst nach dem Klick auf „Hochladen“; der Signer gibt dabei jede Datei pro Server frei (BUD-11 mit Server-Tag). Veröffentlicht wird erst am Ende, nach einer Vorschau, die direkt vom Server abspielt. Man schreibt Titel und Beschreibung, während das Video verarbeitet wird. Der Veröffentlichen-Button ist nie gesperrt, sondern lässt sich „scharf schalten“. „Alle Optionen zeigen“ ist der gespeicherte Pro-Modus.')}</div>
+ </main>`;
+}
+function note(t){return `<div class="note"><p><b>Design-Notiz:</b> ${t}</p></div>`}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+
+const CATALOG=[ // aus apps/web/src/lib/blossom-servers.ts
+ ['blossom.primal.net','free'],['nostr.download','free'],['almond.slidestr.net','free'],['24242.io','free','100MB','60 Tage'],
+ ['blossom.band','paid',null,null,'$0.05/GB/Monat, Lightning'],['cdn.satellite.earth','paid',null,null,'$0.05/GB/Monat, Lightning'],['blossom.yakihonne.com','free']];
+function askStorage(){
+ return `<section class="ask ${anim('ask')}${S.storageHint?' nudge':''}" aria-labelledby="askh" id="askcard">
+ <h3 id="askh">Wo soll dein Video gespeichert werden?</h3>
+ <p class="sm mut" style="margin:0">Die Optimierung läuft schon auf deinem Gerät. Hochgeladen wird erst, wenn du rechts auf „Hochladen“ klickst.</p>
+ <div class="opts">
+  <button class="opt" data-storage="free" aria-pressed="${S.storage==='free'}"><span class="r"></span><span><b>${FREE} <span class="chip">Zum Ausprobieren</span></b><span class="sm mut">blossom.primal.net speichert, nostr.download hält eine Kopie. Kostenlos, aber ohne Garantie. 24242.io lassen wir weg: nimmt nur bis 100 MB, dein Video hat ca. ${fmtMB(estMB())}.</span></span></button>
+  <button class="opt" data-modal="servers" aria-pressed="${S.storage==='own'}"><span class="r"></span><span><b>Server selbst auswählen <span class="chip p">Dauerhaft</span></b><span class="sm mut">${S.storage==='own'?'blossom.band, Kopie auf nostr.download · <u>ändern</u>':'Bezahlte Anbieter, eigene Adresse oder ein bestimmter kostenloser Server.'}</span></span></button>
+ </div>
+ <p class="why">${ic('info')} nostube betreibt keinen eigenen Speicher. Dein Video liegt dort, wo du es hinlegst, und gehört dir.</p>
+ <label class="xs" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" checked> Als Blossom-Server-Liste in meinem Nostr-Profil veröffentlichen, damit andere Apps sie kennen <span class="pro">Neu</span></label>
+</section>`}
+function serverModal(){const big=estMB();return `<div class="overlay ${SEEN.has('modal')?'':(SEEN.add('modal'),'fadein')}" style="backdrop-filter:blur(3px)" data-modal-bg><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mh">
+ <header><h3 id="mh">Server auswählen</h3><button class="iconbtn" data-modal="close" aria-label="Schließen">${ic('x')}</button></header>
+ <p class="sm mut" style="margin:0 0 12px">Ein Server speichert, weitere halten Kopien. Wer dauerhaft speichern will, zahlt meist für Speicher und Datenverkehr.</p>
+ <table class="var srv"><tr><th>Server</th><th>Kosten</th><th>Grenzen</th><th>Speichert</th><th>Kopie</th></tr>
+ ${CATALOG.map(([n,pay,max,ret,price],i)=>{const tooBig=max&&parseInt(max)<big;return `<tr class="${tooBig?'off':''}"><td><b>${n}</b></td><td>${pay==='paid'?`<span class="chip p">${price}</span>`:'<span class="chip">kostenlos</span>'}</td><td class="xs mut">${tooBig?`<span style="color:var(--destructive)">max. ${max}, zu klein für dein Video</span>`:[max&&'max. '+max,ret&&ret].filter(Boolean).join(' · ')||'keine bekannt'}</td><td><input type="radio" name="prim" ${n==='blossom.band'?'checked':''} ${tooBig?'disabled':''} aria-label="${n} speichert"></td><td><input type="checkbox" ${n==='nostr.download'?'checked':''} ${tooBig?'disabled':''} aria-label="Kopie auf ${n}"></td></tr>`}).join('')}</table>
+ <div style="display:flex;gap:8px;margin-top:14px"><input class="field" placeholder="Eigene Adresse, z. B. https://mein-server.example"><button class="btn outline">Hinzufügen</button></div>
+ <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn ghost" data-modal="close">Abbrechen</button><button class="btn primary" data-storage="own">Übernehmen</button></div>
+</div></div>`}
+
+function encCard(){
+ const r=S.res;const dis=S.skip?'disabled':'';const b=(k,l)=>`<button class="tog" aria-pressed="${r[k]&&!S.skip}" data-res="${k}" ${dis}>${l}</button>`;
+ const open=S.settings||S.pro;
+ return `<div class="enc"><div class="head">${ic('sliders')}<div style="flex:1;min-width:0"><div style="font-weight:600">${S.skip?'Original wird unverändert hochgeladen':'Optimiert für flüssiges Abspielen'}</div><div class="xs mut num">${S.skip?'1,8 GB · H.265, spielt nicht in jedem Browser':`${encLabel()} · ca. ${fmtMB(estMB())} statt 1,8 GB · noch ca. 9 Min.`}</div></div><button class="btn ghost sm" id="encT" aria-expanded="${open}">${open?'Schließen':'Anpassen'}</button></div>
+ ${open?`<div class="body">
+  <div class="row"><span class="lbl">Verarbeitung</span><button class="tog" aria-pressed="${!S.skip}" data-skip="0">Optimieren (empfohlen)</button><button class="tog" aria-pressed="${!!S.skip}" data-skip="1">Original unverändert hochladen</button></div>
+  <div class="row"><span class="lbl">Format</span><button class="tog" aria-pressed="${S.fmt==='mp4'}" data-fmt="mp4" ${dis}>MP4</button><button class="tog" aria-pressed="${S.fmt==='hls'}" data-fmt="hls" ${dis}>HLS (adaptiv)</button></div>
+  <div class="row"><span class="lbl">Auflösungen</span>${b(2160,'4K')}${b(1080,'1080p')}${b(720,'720p')}${b(480,'480p')}${S.fmt==='hls'?`<button class="tog" aria-pressed="true" ${dis}>Original als Stufe</button>`:''}</div>
+  <div class="row"><span class="lbl">Codec</span><button class="tog" aria-pressed="${!S.hevc}" data-hevc="0" ${dis}>H.264 (überall)</button><button class="tog" aria-pressed="${!!S.hevc}" data-hevc="1" ${dis}>H.265 (kleiner)</button></div>
+  <div class="row"><span class="lbl">Qualität</span><button class="tog" aria-pressed="${S.quality==='standard'}" data-q="standard" ${dis}>Standard</button><button class="tog" aria-pressed="${S.quality==='hoch'}" data-q="hoch" ${dis}>Hoch</button></div>
+  <div class="row"><span class="lbl">Original</span><button class="tog" aria-pressed="${S.keep}" id="keep" ${dis}>Original zusätzlich hochladen</button></div>
+  <div class="hint">${ic('info')}Änderungen starten die Optimierung neu. Bereits hochgeladene Varianten bleiben erhalten.</div>
+ </div>`:''}</div>`}
+
+function sceneStyle(t){const f=t/372;return `--h:${Math.round(30+200*f)};--sx:${Math.round(12+76*f)}%;--sy:${Math.round(46-26*Math.sin(f*Math.PI))}%`}
+const tc=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function thumbBlock(){const tab=S.thumbTab;const T=(k,l)=>`<button role="tab" aria-selected="${tab===k}" data-ttab="${k}">${l}</button>`;
+ let body='';
+ if(tab==='auto')body=`<div class="frames" style="grid-template-columns:repeat(3,1fr)">${['dusk','noon','dawn'].map((c,i)=>`<button class="frame" aria-pressed="${S.frame===i}" data-frame="${i}" aria-label="Vorschlag ${i+1}"><div class="scene ${c}"></div></button>`).join('')}</div>
+  <div class="hint">Drei Frames automatisch gewählt: scharf, nicht schwarz, verteilt über das Video. Passt keiner? Wähle einen Frame selbst.</div>`;
+ if(tab==='frame')body=`<div class="scrub"><div class="scene" id="scrubScene" style="${sceneStyle(S.t)}"><span class="dur num" id="scrubTc">${tc(S.t)} / 6:12</span></div>
+  <div class="scrubrow"><button class="iconbtn" data-step="-1" aria-label="Einen Frame zurück">${ic('left')}</button><input type="range" id="scrub" min="0" max="372" step="0.04" value="${S.t}" aria-label="Position im Video"><button class="iconbtn" data-step="1" aria-label="Einen Frame vor">${ic('right')}</button></div>
+  <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span class="xs mut">Ziehen, oder mit den Pfeiltasten Frame für Frame</span><button class="btn primary sm" id="useFrame">${S.frame===3?ic('check')+'Wird verwendet':'Diesen Frame verwenden'}</button></div></div>`;
+ if(tab==='upload')body=`<button class="frame own" style="aspect-ratio:auto;padding:28px;width:100%">${ic('upload')}<span>Bild hierher ziehen oder auswählen</span><span class="xs">JPG, PNG oder WebP, am besten 1280 × 720</span></button>`;
+ if(tab==='url')body=`<div style="display:flex;gap:8px"><input class="field" placeholder="https://… (Bild-URL)" aria-label="Bild-URL"><button class="btn outline">Importieren</button></div><div class="hint">Das Bild wird geladen und auf deinem Speicher abgelegt, nicht nur verlinkt.</div>`;
+ return `<div><label class="f">Vorschaubild</label><div class="tabs" role="tablist">${T('auto','Vorschläge')}${T('frame','Frame wählen')}${T('upload','Bild hochladen')}${T('url','Von URL')}</div>${body}
+  ${hasStorage()&&S.p.u>0?`<div class="hint">${ic('check')}Vorschaubild auf ${S.account==='list'?'deinen Servern':'Primal'} gespeichert</div>`:''}</div>`}
+
+function sec(id,title,sum,inner,pro=false){if(pro&&!S.pro)return'';const o=S.pro||S.open[id];
+ return `<div class="sec" data-open="${!!o}"><button data-sec="${id}" aria-expanded="${!!o}">${title}${pro?' <span class="pro">Pro</span>':''}<span class="sum">${sum}</span>${ic('chev','chev')}</button>${o?`<div class="in">${inner}</div>`:''}</div>`}
+function variantRows(){if(S.p.e<100)return `<p class="sm mut" style="margin:0">Varianten erscheinen hier, sobald sie fertig optimiert sind.</p>`;
+ const L=S.skip?[['Original','H.265','3840×2160',1800]]:resList().map(h=>[h===2160?'4K':h+'p',S.hevc?'H.265':'H.264',{2160:'3840×2160',1080:'1920×1080',720:'1280×720',480:'854×480'}[h],{2160:900,1080:420,720:210,480:110}[h]]);
+ const up=S.p.u>=100?'1/1':S.p.u>0?'…':'0/1',mi=S.p.m>=100?'2/2':S.p.m>0?'…':'0/2';
+ return `<div style="overflow:auto"><table class="var num"><tr><th>Qualität</th><th>Codec</th><th>Abmessungen</th><th>Größe</th><th>Hochgeladen</th><th>Kopien</th><th></th></tr>${L.map(([q,c,d,mb])=>`<tr><td>${q}</td><td>${c}</td><td>${d}</td><td>${fmtMB(mb)}</td><td>${up}</td><td>${mi}</td><td style="white-space:nowrap"><button class="link xs">Vorschau</button> · <button class="link xs" style="color:var(--destructive)">Entfernen</button></td></tr>`).join('')}</table></div>`}
+function sections(){const dmode=S.schedule;return `<div class="secs">
+ ${sec('files','Video-Dateien',S.p.e>=100?`${S.skip?1:resList().length} ${S.skip||resList().length===1?'Variante':'Varianten'}`:'wird optimiert',`${variantRows()}
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn outline sm">${ic('plus')}Weitere Qualität hinzufügen (eigene Datei)</button><button class="btn outline sm">${ic('wand')}Weitere Versionen erstellen lassen</button></div>
+  <div class="hint">${ic('info')}„Erstellen lassen“ nutzt einen Transcoding-Dienst im Nostr-Netz (DVM), falls dein Browser es nicht selbst kann.</div>`)}
+ ${sec('sub','Untertitel',S.subs?'1 Datei':'Keine',`<button class="frame own" style="aspect-ratio:auto;padding:18px;width:100%" id="addSub">${ic('plus')}<span>Untertitel hierher ziehen oder auswählen (.vtt, .srt)</span></button>
+  ${S.subs?`<div style="display:flex;gap:8px;align-items:center"><span class="sm" style="flex:1">urlaub-gardasee.de.vtt</span><select class="field" style="width:auto;padding:5px 8px"><option>Deutsch</option><option>Englisch</option></select><button class="link xs" style="color:var(--destructive)">Entfernen</button></div><div class="hint">${ic('wand')}Sprache aus dem Dateinamen erkannt</div>`:''}`)}
+ ${sec('sched','Veröffentlichung & Sichtbarkeit',(dmode?'Fr, 21.11., 20:00':'Datum: jetzt')+(S.cw?' · Inhaltswarnung':'')+(S.exp&&S.exp!=='none'?' · läuft ab':''),`
+  <div><div class="sm" style="font-weight:600;margin-bottom:6px">Veröffentlichungsdatum</div><div class="seg"><button aria-pressed="${!dmode}" data-date="now">Jetzt</button><button aria-pressed="${!!dmode}" data-date="custom">Eigenes Datum</button></div>
+  ${dmode?`<div style="display:flex;gap:8px;margin-top:8px"><input class="field" type="date" value="2026-11-21" style="width:auto"><input class="field" type="time" value="20:00" style="width:auto"></div><div class="hint">Auch ein Datum in der Vergangenheit geht, etwa für ältere Aufnahmen.</div>`:''}</div>
+  <div><label style="display:flex;gap:8px;align-items:center;font-weight:600" class="sm"><input type="checkbox" id="cw" ${S.cw?'checked':''}> Inhaltswarnung</label>${S.cw?`<input class="field" style="margin-top:8px" placeholder="Grund, z. B. flackerndes Licht">`:''}</div>
+  <div><label class="sm" style="font-weight:600;display:block;margin-bottom:6px" for="exp">Läuft ab</label><select class="field" id="exp" style="width:auto">${[['none','Nie'],['1day','Nach 1 Tag'],['7days','Nach 7 Tagen'],['1month','Nach 1 Monat'],['1year','Nach 1 Jahr']].map(([v,l])=>`<option value="${v}" ${S.exp===v?'selected':''}>${l}</option>`).join('')}</select></div>`)}
+ ${sec('ppl','Personen & Referenzen','Niemand markiert',`<div><label class="f">Personen im Video</label><input class="field" placeholder="Person suchen (Name oder npub)"></div>
+  <div><label class="f">Externe Referenzen</label><div style="display:flex;gap:8px"><input class="field" placeholder="URL oder Nostr-URI"><button class="btn outline">Hinzufügen</button></div><div class="hint">Link zu YouTube, TikTok oder anderen Nostr-Events.</div></div>`)}
+ ${sec('relays','Relays','3 von 4','<div class="relaysel">'+['relay.damus.io','nos.lol','relay.primal.net','wss://mein.relay.example'].map((r,i)=>`<label><input type="checkbox" ${i<3?'checked':''}>${r}</label>`).join('')+'</div>',true)}
+ ${sec('ev','Event-Vorschau','kind 34235',`<pre class="ev">{"kind":34235,"tags":[
+ ["d","gardasee-2026"],["title","${esc(S.title)}"],
+ ["imeta","dim 1920x1080","url https://…/9f2c.mp4",
+  "x 9f2c…","m video/mp4","fallback https://nostr.download/9f2c.mp4"],
+ ["t","reisen"],["t","italien"]]}</pre>`,true)}
+</div>`}
+
+function previewCard(){const c=S.frame>=0&&S.frame<3?['dusk','noon','dawn'][S.frame]:'';const st=S.frame===3?` style="${sceneStyle(S.t)}"`:'';return `<div class="card preview"><div class="cap" style="padding:0 0 8px">So erscheint es auf nostube</div><div class="scene ${c||'dusk'}"${st}><span class="dur num">6:12</span></div><div class="meta"><div class="av"></div><div style="min-width:0"><div class="tt">${esc(S.title)||'Ohne Titel'}</div><div class="xs mut">Dein Kanal · ${S.schedule?'Fr, 21.11., 20:00':'gerade eben'}</div></div></div></div>`}
+
+function stepState(k){const p=S.p;
+ if(k==='a')return p.a>=100?'done':'active';
+ if(k==='e')return S.skip?(p.a>=100?'done':''):p.e>=100?'done':p.a>=100?'active':'';
+ if(k==='u')return p.u>=100?'done':S.go&&p.e>=100?'active':S.go?'wait':'';
+ if(k==='m')return p.m>=100?'done':p.u>=100?'active':'';}
+const nFiles=()=>(S.skip?1:resList().length)+1, nServers=()=>S.account==='list'?3:2;
+function step(k,title,desc){const st=stepState(k);const icon=st==='done'?ic('check'):st==='active'?ic('loader','spin'):st==='wait'?ic('clock'):'';
+ return `<li class="step ${st}"><span class="dot">${icon}</span><div><div class="t"><span>${title}</span><span class="num xs mut" data-pct="${k}"></span></div><div class="d">${desc}</div>${st==='active'?`<div class="bar"><i data-bar="${k}"></i></div>`:''}</div></li>`}
+function pipeline(){const busy=S.p.m<100&&!S.published;
+ return `<div class="card"><div class="cap">Verarbeitung</div><ol class="steps">
+ ${step('a','Analysieren','4K · H.265 · 6:12')}
+ ${step('e',S.skip?'Optimieren übersprungen':'Optimieren im Browser',S.skip?'Original wird hochgeladen':encLabel()+' · läuft auf deinem Gerät')}
+  ${step('u','Hochladen',!hasStorage()?'Speicherort fehlt noch':S.go?(S.p.e<100?`startet, sobald die Optimierung fertig ist · auf ${serversLabel()}`:`auf ${serversLabel()} · dein Signer gibt jede Datei pro Server frei`):`auf ${serversLabel()} · erst nach deinem Klick`)}
+ ${step('m','Kopien anlegen','damit das Video erreichbar bleibt')}
+ </ol>${busy?`<div style="display:flex;gap:4px;padding:0 8px 10px"><button class="btn ghost sm">Abbrechen</button><button class="btn ghost sm" data-sec-open="files">Dateien ansehen</button></div>`:''}</div>`}
+
+function publishCard(){
+ const done=S.p.m>=100;
+ if(S.published)return `<div class="card pub okc pubdock"><div class="state">${ic('check')}<div><b>„${esc(S.title)}“ ist online.</b><div class="xs mut">Auf ${nServers()} Servern gespeichert, an 3 Relays gesendet.</div></div></div><div style="display:flex;gap:8px"><button class="btn primary sm">${ic('out')}Video ansehen</button><button class="btn outline sm">Teilen</button><button class="btn ghost sm" id="again">Noch ein Video</button></div></div>`;
+ if(S.signing==='event')return `<div class="card pub armed pubdock"><div class="state">${ic('pen')}<div><b>Bitte in deinem Signer bestätigen</b><div class="xs mut">Eine Unterschrift für die Veröffentlichung.</div></div></div></div>`;
+ if(done)return `<div class="card pub okc pubdock"><div class="state">${ic('check')}<div><b>Hochgeladen und gesichert.</b><div class="xs mut">Schau es dir an, so wie es abgespielt wird, und veröffentliche dann.</div></div></div><button class="btn outline block" id="prev">${ic('film')}Vorschau ansehen</button><button class="btn primary block" id="pubNow">Veröffentlichen</button><button class="btn ghost block" id="save">Als Entwurf speichern</button></div>`;
+ if(S.go)return `<div class="card pub armed pubdock"><div class="state">${ic('loader','spin')}<div><b>${S.p.e<100?'Hochladen startet nach der Optimierung.':'Wird hochgeladen …'}</b><div class="xs mut">Du kannst weiter Details bearbeiten. Der Tab muss offen bleiben. Dein Signer fragt für jede Datei und jeden Server nach einer Freigabe.</div></div></div><button class="btn primary block" disabled>Veröffentlichen</button><div class="xs mut">Veröffentlichen geht, sobald alles hochgeladen ist.</div></div>`;
+ return `<div class="card pub pubdock">${S.storageHint?`<div class="sig" style="margin:0 0 4px;background:color-mix(in oklch,var(--destructive) 14%,transparent)">${ic('info')}<span>Wähle zuerst oben, wo dein Video gespeichert wird.</span></div>`:''}<button class="btn primary block" id="go">${ic('upload')}Hochladen</button><button class="btn ghost block" id="save">Als Entwurf speichern</button><div class="xs mut" style="display:flex;justify-content:space-between;gap:8px"><span>Bis du klickst, wird nichts hochgeladen. Veröffentlicht wird erst ganz am Ende.</span><button class="link xs" style="color:var(--destructive);white-space:nowrap" id="delDraft">Entwurf löschen …</button></div></div>`}
+
+function previewModal(){return `<div class="overlay ${SEEN.has('pv')?'':(SEEN.add('pv'),'fadein')}" data-modal-bg><div class="modal" role="dialog" aria-modal="true" aria-labelledby="pvh"><header><h3 id="pvh">Vorschau</h3><button class="iconbtn" data-pv="close" aria-label="Schließen">${ic('x')}</button></header>
+ <div class="scene" style="${S.frame===3?sceneStyle(S.t):''}" ><span class="dur num">0:00 / 6:12</span></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${resList().map((h,i)=>`<button class="tog" aria-pressed="${i===0}">${h===2160?'4K':h+'p'}</button>`).join('')}<span class="xs mut" style="margin-left:auto;align-self:center">wird von ${S.account==='list'?'deinem Server':S.storage==='own'?'blossom.band':'blossom.primal.net'} abgespielt</span></div>
+ <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn ghost" data-pv="close">Weiter bearbeiten</button><button class="btn primary" id="pubNow">Veröffentlichen</button></div></div></div>`}
+
+/* ───────── Konzept B ───────── */
+const HOME=[['Sonnenaufgang am Watzmann','dawn','14:22','Bergwelt'],['Espresso wie in Neapel','dusk','8:03','Kaffeekultur'],['Nostr in 5 Minuten erklärt','noon','5:10','dezentral.tv'],['Segeln vor Rügen','noon','21:47','Ostseeblick'],['Lofi Beats zum Coden','dawn','1:02:00','beatkeller'],['Abendrunde im Park','dusk','6:31','Laufclub'],['Blossom-Server selbst hosten','noon','18:09','selfhost.de'],['Herbst in Kyoto','dusk','11:55','Wanderlust']];
+function viewB(){const d=S.dock;const items=d.items;const total=Math.round(items.reduce((s,i)=>s+i.p,0)/items.length);
+ const pill=d.shown&&d.min?`<button class="uppill num" id="dockOpen">${ic('loader','spin')} ${items.filter(i=>i.status!=='live').length} Uploads · <span data-dtotal>${total}</span> %</button>`:'';
+ return topbar(`${pill}<button class="btn primary sm" id="fakeDrop">${ic('upload')}Hochladen</button>`)+`<main class="home">
+  ${note('Ausgefallene Variante: Man zieht Videos auf <b>jede</b> nostube-Seite (oder klickt „Hochladen“). Statt auf eine Upload-Seite zu wechseln, öffnet sich ein Dock unten rechts, und man stöbert weiter. Pro Datei gibt es einen Entwurf mit dem Nötigsten. „Alle Details“ führt zur Studio-Seite aus Konzept A. Klick auf „Hochladen“ simuliert das Reinziehen von drei Dateien.')}
+  <h2 style="font-size:18px;margin:22px 0 14px">Für dich</h2>
+  <div class="homegrid">${HOME.map(([t,c,dur,ch])=>`<article class="vc"><div class="scene ${c}"><span class="dur num">${dur}</span></div><div class="tt">${t}</div><div class="xs mut">${ch}</div></article>`).join('')}</div>
+ </main>${d.overlay?`<div class="overlay"><div class="box"><div class="bubble" style="width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:color-mix(in oklch,var(--primary) 18%,transparent);color:var(--primary)">${ic('upload','lg')}</div><h2>Loslassen zum Hochladen</h2><p class="mut" style="margin:0">3 Videos · jedes wird ein eigener Entwurf</p></div></div>`:''}
+ ${d.shown&&!d.min?dock(total):''}`}
+
+function dock(total){const d=S.dock;const need=S.account!=='list'&&!d.storage;
+ return `<section class="dock ${anim('dock')}" aria-label="Uploads"><header>${ic('upload')}<span class="t">Uploads</span><span class="xs mut num">${d.items.filter(i=>i.status==='live').length} von 3 online · <span data-dtotal>${total}</span> %</span><span style="flex:1"></span><button class="iconbtn" id="dockMin" aria-label="Minimieren">${ic('min')}</button></header>
+ ${need?`<div class="dask"><b class="sm">Wo sollen deine Videos gespeichert werden?</b><div class="xs mut">Die Optimierung läuft schon, hochgeladen wird nach deiner Wahl.</div><div class="opts">
+  <button class="opt" data-dstorage="free"><span class="r"></span><span><b class="sm">${FREE}</b><span class="xs mut">Kostenlos, ohne Garantie, für große Dateien oft zu klein</span></span></button>
+  <button class="opt" data-dstorage="own"><span class="r"></span><span><b class="sm">Eigener oder bezahlter Server</b><span class="xs mut">Dauerhaft, du bestimmst den Anbieter</span></span></button></div></div>`:''}
+ <div class="list">${d.items.map(ditem).join('')}</div><div class="xs mut" style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">${ic('pen')}Uploads brauchen je Datei und Server eine Unterschrift. <button class="link xs">Automatisch erlauben</button></div></section>`}
+
+function ditem(it){const live=it.status==='live',sig=it.status==='sig',ready=it.p>=100;
+ const big=it.status==='big';const st=big?'<span style="color:var(--destructive)">Zu groß für den kostenlosen Server</span>':live?`<span style="color:var(--ok)">Online</span>`:sig?'Wartet auf deine Unterschrift':ready?'Fertig, noch nicht veröffentlicht':(S.account!=='list'&&!S.dock.storage&&it.p>=45)?'Wartet auf Speicherort':it.p<45?`Optimiert · <span data-ip="${it.id}">${it.p}</span> %`:`Lädt hoch · <span data-ip="${it.id}">${it.p}</span> %`;
+ return `<div class="ditem"><div class="row"><div class="scene ${it.scene}"></div><div style="min-width:0"><input class="tit" value="${esc(it.title)}" data-tit="${it.id}" aria-label="Titel"><div class="xs mut num">${it.short?'<span class="chip p" style="margin-right:4px">Short</span>':''}${st}</div>${!live&&!ready?`<div class="bar"><i data-ibar="${it.id}" style="width:${it.p}%"></i></div>`:''}</div>
+ <button class="iconbtn" data-iopen="${it.id}" aria-expanded="${it.open}" aria-label="Details">${ic('chev')}</button></div>
+ ${it.open?`<div class="more"><textarea class="field" placeholder="Beschreibung (optional)" style="min-height:64px"></textarea><div class="frames" style="grid-template-columns:repeat(3,1fr)">${['dusk','noon','dawn'].map((c,i)=>`<button class="frame" aria-pressed="${i===0}"><div class="scene ${c}"></div></button>`).join('')}</div><button class="link sm" style="justify-self:start" data-studio>Alle Details in der Studio-Seite öffnen</button></div>`:''}
+ ${big?`<div class="sig">${ic('info')}<span style="flex:1">Der Server hat die Datei abgelehnt. Kleiner optimieren oder einen anderen Server nehmen?</span></div><div class="acts"><button class="btn outline sm" data-small="${it.id}">Als 720p optimieren</button><button class="btn ghost sm">Anderen Server wählen</button></div>`:''}
+ ${sig?`<div class="sig">${ic('pen')}<span style="flex:1">Dein Signer möchte die Veröffentlichung bestätigen.</span><button class="btn primary sm" data-sign="${it.id}">Bestätigen</button></div>`:''}
+ ${big?'':live?`<div class="acts"><span class="xs mut">Auf 3 Servern, 3 Relays</span><button class="btn outline sm">${ic('out')}Ansehen</button></div>`:!sig?`<div class="acts"><label class="xs" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-iarm="${it.id}" ${it.armed?'checked':''}> Veröffentlichen, sobald fertig</label>${ready&&!it.armed?`<button class="btn primary sm" data-ipub="${it.id}">Veröffentlichen</button>`:''}</div>`:''}
+ </div>`}
+
+/* ───────── Render & Events ───────── */
+function render(){
+ const a=document.activeElement,id=a&&a.id,ss=a&&a.selectionStart;
+ $('#app').innerHTML=S.concept==='A'?viewA():viewB();
+ if(id&&document.getElementById(id)){const n=document.getElementById(id);n.focus();try{n.setSelectionRange(ss,ss)}catch(e){}}
+ paint();
+}
+function paint(){const p=S.p;
+ document.querySelectorAll('[data-bar]').forEach(b=>b.style.width=p[b.dataset.bar]+'%');
+ document.querySelectorAll('[data-pct]').forEach(e=>{const v=p[e.dataset.pct];e.textContent=v>0&&v<100?Math.floor(v)+' %':''});
+ const t=Math.floor((p.a*.05+p.e*.55+p.u*.3+p.m*.1));document.querySelectorAll('[data-total]').forEach(e=>e.textContent=t);
+ const d=S.dock,tot=Math.round(d.items.reduce((s,i)=>s+i.p,0)/d.items.length);
+ document.querySelectorAll('[data-dtotal]').forEach(e=>e.textContent=tot);
+ d.items.forEach(it=>{document.querySelectorAll(`[data-ibar="${it.id}"]`).forEach(b=>b.style.width=it.p+'%');document.querySelectorAll(`[data-ip="${it.id}"]`).forEach(e=>e.textContent=Math.floor(it.p))});
+}
+
+document.addEventListener('click',e=>{if(e.target.matches('[data-modal-bg]')){S.modal=null;SEEN.delete('modal');SEEN.delete('pv');return render()}const t=e.target.closest('button,[role=button],input[type=checkbox]');if(!t)return;const ds=t.dataset;
+ if(t.id==='drop'){S.phase='work';return render()}
+ if(t.id==='pro'){S.pro=!S.pro;return render()}
+ if(t.id==='encT'){S.settings=!(S.settings||S.pro);if(S.pro&&!S.settings)S.pro=false;return render()}
+ if(ds.storage){S.storage=ds.storage;S.modal=null;SEEN.delete('modal');S.storageHint=false;return render()}
+ if(ds.modal){S.modal=ds.modal==='close'?null:ds.modal;if(!S.modal)SEEN.delete('modal');return render()}
+ if(ds.frame){S.frame=+ds.frame;return render()}
+ if(ds.ttab){S.thumbTab=ds.ttab;return render()}
+ if(ds.step){S.t=Math.max(0,Math.min(372,S.t+ +ds.step/25));if(S.frame===3)S.frame=-1;return render()}
+ if(t.id==='useFrame'){S.frame=3;return render()}
+ if(ds.skip){S.skip=ds.skip==='1';S.p.e=Math.min(S.p.e,5);return render()}
+ if(ds.hevc){S.hevc=ds.hevc==='1';S.p.e=Math.min(S.p.e,5);return render()}
+ if(ds.date){S.schedule=ds.date==='custom';return render()}
+ if(t.id==='cw'){S.cw=t.checked;return render()}
+ if(t.id==='addSub'){S.subs=true;return render()}
+ if(ds.secOpen){S.open[ds.secOpen]=true;render();document.querySelector('[data-sec='+ds.secOpen+']').scrollIntoView({behavior:'smooth',block:'center'});return}
+ if(t.id==='delDraft'){if(confirm('Entwurf löschen? Im echten Dialog: „Nur Entwurf“ oder „Entwurf und hochgeladene Dateien von den Servern löschen“.')){Object.assign(S,init());render()}return}
+ if(ds.res){S.res[ds.res]=!S.res[ds.res];S.p.e=Math.min(S.p.e,5);return render()}
+ if(ds.fmt){S.fmt=ds.fmt;S.p.e=Math.min(S.p.e,5);return render()}
+ if(ds.q){S.quality=ds.q;return render()}
+ if(t.id==='keep'){S.keep=!S.keep;return render()}
+ if(ds.sec){S.open[ds.sec]=!S.open[ds.sec];return render()}
+ if(t.id==='sch'){S.schedule=t.checked;return render()}
+ if(t.id==='go'){if(!hasStorage()){S.storageHint=true;render();$('#askcard')?.scrollIntoView({behavior:'smooth',block:'center'});return}S.go=true;return render()}
+ if(t.id==='prev'){S.modal='preview';return render()}
+ if(ds.pv){S.modal=null;SEEN.delete('pv');return render()}
+ if(t.id==='pubNow'){S.modal=null;SEEN.delete('pv');return publishNow()}
+
+ if(t.id==='save'){t.textContent='Entwurf gespeichert';return}
+ if(t.id==='again'){Object.assign(S,init());return render()}
+ // B
+ if(t.id==='fakeDrop'){if(S.dock.shown){S.dock.min=false;return render()}S.dock.overlay=true;render();setTimeout(()=>{S.dock.overlay=false;S.dock.shown=true;render()},1100);return}
+ if(t.id==='dockMin'){S.dock.min=true;return render()}
+ if(t.id==='dockOpen'){S.dock.min=false;return render()}
+ if(ds.dstorage){S.dock.storage=ds.dstorage;return render()}
+ if(ds.iopen){const it=S.dock.items.find(i=>i.id==ds.iopen);it.open=!it.open;return render()}
+ if(ds.iarm){const it=S.dock.items.find(i=>i.id==ds.iarm);it.armed=t.checked;checkDock();return render()}
+ if(ds.ipub){const it=S.dock.items.find(i=>i.id==ds.ipub);it.armed=true;checkDock();return render()}
+ if(ds.small){const it=S.dock.items.find(i=>i.id==ds.small);it.status='run';it.small=true;it.p=50;return render()}
+ if(ds.sign){S.dock.items.find(i=>i.id==ds.sign).status='live';return render()}
+ if('studio' in ds){S.concept='A';Object.assign(S,init(),{phase:'work'});demoBar();return render()}
+});
+document.addEventListener('keydown',e=>{if(e.target.id==='drop'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();S.phase='work';render()}});
+document.addEventListener('change',e=>{if(e.target.id==='exp'){S.exp=e.target.value;render()}});
+document.addEventListener('input',e=>{if(e.target.id==='scrub'){S.t=+e.target.value;if(S.frame===3)S.frame=-1;$('#scrubScene').setAttribute('style',sceneStyle(S.t));$('#scrubTc').textContent=tc(S.t)+' / 6:12';const u=$('#useFrame');if(u)u.textContent='Diesen Frame verwenden';return}if(e.target.id==='title'){S.title=e.target.value;document.querySelectorAll('.preview .tt').forEach(n=>n.textContent=S.title||'Ohne Titel')}if(e.target.id==='desc')S.desc=e.target.value;
+ if(e.target.dataset.tit)S.dock.items.find(i=>i.id==e.target.dataset.tit).title=e.target.value});
+
+function publishNow(){S.signing='event';render();setTimeout(()=>{S.signing=null;S.published=true;render()},1500)}
+function checkDock(){S.dock.items.forEach(it=>{if(it.p>=100&&it.armed&&it.status==='run')it.status=it.needsSig?'sig':'live'})}
+
+setInterval(()=>{const k=S.fast?6:1;let changed=false;
+ if(S.concept==='A'&&S.phase==='work'&&!S.published&&!S.signing){const p=S.p;
+  const bump=(key,v)=>{const was=p[key];p[key]=Math.min(100,p[key]+v*k);if(was<100&&p[key]>=100)changed=true;if(was===0&&p[key]>0)changed=true};
+  if(p.a<100)bump('a',9);else if(S.skip){if(p.e<100){p.e=100;changed=true}}else if(p.e<100)bump('e',.55);
+  if(p.e>=100&&S.go&&p.u<100)bump('u',1.1);if(p.u>=100&&p.m<100)bump('m',2.2);
+  if(changed)render();else paint()}
+ if(S.concept==='B'&&S.dock.shown){const blocked=S.account!=='list'&&!S.dock.storage;
+  S.dock.items.forEach((it,i)=>{if(it.status!=='run'||it.p>=100)return;const was=it.p;const sp=[.9,1.6,.5][i]*k;
+   if(blocked&&it.p>=45)return;if(S.dock.storage==='free'&&it.id===3&&!it.small&&it.p>=60){it.status='big';changed=true;return}it.p=Math.min(100,it.p+sp);if((was<45&&it.p>=45)||it.p>=100)changed=true});
+  if(changed){checkDock();render()}else paint()}
+},120);
+
+demoBar();render();
+</script>
+</body>
+</html>

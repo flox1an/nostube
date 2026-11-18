@@ -15,7 +15,7 @@ interface PreviewEvent {
   tags: string[][]
 }
 
-export interface UploadReviewScreenProps {
+export interface UploadPublishPanelProps {
   // Preview card data
   title: string
   description: string
@@ -36,8 +36,12 @@ export interface UploadReviewScreenProps {
   canPublish: boolean
   handleSubmit: (e: FormEvent) => Promise<void>
   previewEvent: PreviewEvent | null
-  // Navigation
-  onGoToDetails: () => void
+  /** Scrolls the form to the field a checklist row is about. */
+  onJump: (field: 'processing' | 'title' | 'thumbnail') => void
+  /** Pro mode: relay selection and the event preview. */
+  pro: boolean
+  /** A direct upload or URL import is running (not a background browser or DVM job). */
+  uploadInProgress: boolean
 }
 
 function formatDuration(seconds: number): string {
@@ -84,7 +88,12 @@ function ChecklistRow({ ok, processing, label, hint, onJump }: ChecklistRowProps
   )
 }
 
-export function UploadReviewScreen({
+/**
+ * The right column of the upload page: how the video will look, what is still missing, and the
+ * publish button. Publishing stays disabled until the video is processed and title and thumbnail
+ * are set; every missing item jumps to its field.
+ */
+export function UploadPublishPanel({
   title,
   description,
   tags,
@@ -102,8 +111,10 @@ export function UploadReviewScreen({
   canPublish,
   handleSubmit,
   previewEvent,
-  onGoToDetails,
-}: UploadReviewScreenProps) {
+  onJump,
+  pro,
+  uploadInProgress,
+}: UploadPublishPanelProps) {
   const { t } = useTranslation()
   const uploadManager = useUploadManager()
 
@@ -111,7 +122,7 @@ export function UploadReviewScreen({
   const browserJobActive =
     !!browserTranscodeState &&
     ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
-  const videoProcessing = dvmActive || browserJobActive
+  const videoProcessing = dvmActive || browserJobActive || uploadInProgress
 
   // Memoize the object URL for the blob thumbnail and revoke on change
   const thumbnailSrc = useMemo<string | null>(() => {
@@ -130,15 +141,17 @@ export function UploadReviewScreen({
   const durationLabel = rawDuration != null ? formatDuration(rawDuration) : undefined
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Preview card (left column) */}
-        <div>
-          <div className="rounded-lg border overflow-hidden">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+      <div className="rounded-lg border overflow-hidden">
+        <p className="px-3 pt-3 text-xs font-medium text-muted-foreground">
+          {t('upload.panel.previewTitle', { defaultValue: 'How it will appear on nostube' })}
+        </p>
+        <div className="p-3">
+          <div className="relative overflow-hidden rounded-md">
             {thumbnailSrc ? (
               <img
                 src={thumbnailSrc}
-                alt="Thumbnail preview"
+                alt={t('upload.thumbnail.title')}
                 className="w-full aspect-video object-cover"
               />
             ) : (
@@ -146,66 +159,64 @@ export function UploadReviewScreen({
                 <span className="text-muted-foreground text-sm">{t('upload.thumbnail.title')}</span>
               </div>
             )}
-            <div className="p-4 space-y-2">
-              <h3 className="font-semibold line-clamp-2">{title || t('upload.draft.untitled')}</h3>
-              {description && (
-                <p className="text-sm text-muted-foreground line-clamp-3">{description}</p>
-              )}
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {tags.slice(0, 5).map(tag => (
-                    <span key={tag} className="text-xs bg-muted px-2 py-0.5 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {durationLabel && <p className="text-xs text-muted-foreground">{durationLabel}</p>}
+            {durationLabel && (
+              <span className="absolute bottom-2 right-2 rounded bg-black/75 px-1.5 py-0.5 text-xs font-medium text-white tabular-nums">
+                {durationLabel}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-3 font-semibold leading-snug line-clamp-2">
+            {title || t('upload.draft.untitled')}
+          </h3>
+          {description && (
+            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{description}</p>
+          )}
+          {tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {tags.slice(0, 5).map(tag => (
+                <span key={tag} className="text-xs bg-muted px-2 py-0.5 rounded">
+                  #{tag}
+                </span>
+              ))}
             </div>
-          </div>
-        </div>
-
-        {/* Checklist + publish (right column) */}
-        <div>
-          <div className="rounded-lg border divide-y">
-            <ChecklistRow
-              ok={videos.length > 0 && !videoProcessing}
-              processing={videoProcessing}
-              label={t('upload.review.checklist.video', { defaultValue: 'Video files' })}
-              hint={
-                videoProcessing
-                  ? t('upload.review.checklist.videoProcessing', {
-                      defaultValue: 'Processing...',
-                    })
-                  : undefined
-              }
-              onJump={onGoToDetails}
-            />
-            <ChecklistRow
-              ok={title.trim().length > 0}
-              label={t('upload.review.checklist.title', { defaultValue: 'Title' })}
-              onJump={onGoToDetails}
-            />
-            <ChecklistRow
-              ok={hasThumbnailSet}
-              label={t('upload.review.checklist.thumbnail', { defaultValue: 'Thumbnail' })}
-              onJump={onGoToDetails}
-            />
-          </div>
-
-          <div className="mt-4">
-            <PublishButton
-              isPublishing={isPublishing}
-              disabled={!canPublish || videoProcessing}
-              writeRelays={writeRelays}
-              selectedRelays={publishRelays}
-              onSelectedRelaysChange={setPublishRelays}
-            />
-          </div>
-
-          <EventPreview event={previewEvent} />
+          )}
         </div>
       </div>
+
+      <div className="rounded-lg border px-3">
+        <ChecklistRow
+          ok={videos.length > 0 && !videoProcessing}
+          processing={videoProcessing}
+          label={t('upload.review.checklist.video', { defaultValue: 'Video files' })}
+          hint={
+            videoProcessing
+              ? t('upload.review.checklist.videoProcessing', { defaultValue: 'Processing...' })
+              : undefined
+          }
+          onJump={() => onJump('processing')}
+        />
+        <ChecklistRow
+          ok={title.trim().length > 0}
+          label={t('upload.review.checklist.title', { defaultValue: 'Title' })}
+          onJump={() => onJump('title')}
+        />
+        <ChecklistRow
+          ok={hasThumbnailSet}
+          label={t('upload.review.checklist.thumbnail', { defaultValue: 'Thumbnail' })}
+          onJump={() => onJump('thumbnail')}
+        />
+      </div>
+
+      <PublishButton
+        isPublishing={isPublishing}
+        disabled={!canPublish || videoProcessing}
+        writeRelays={writeRelays}
+        selectedRelays={publishRelays}
+        onSelectedRelaysChange={setPublishRelays}
+        showRelayPicker={pro}
+      />
+
+      {pro && <EventPreview event={previewEvent} />}
     </form>
   )
 }

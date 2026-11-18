@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
 import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
 
-export type UploadScreen = 'source' | 'details' | 'review'
+export type UploadScreen = 'source' | 'details'
 
 export interface UploadFlowFooterProps {
   screen: UploadScreen
@@ -69,7 +69,7 @@ export function UploadFlowFooter({
           </Button>
         )}
 
-        {showContinue && screen !== 'review' && (
+        {showContinue && screen === 'source' && (
           <Button
             type="button"
             className="min-h-11 md:min-h-10"

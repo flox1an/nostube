@@ -609,7 +609,11 @@
     "selectRelays": "リレーを選択",
     "publishToRelays": "リレーに公開",
     "selectAllRelays": "すべて選択",
-    "upload": "アップロード"
+    "upload": "アップロード",
+    "proMode": "すべてのオプションを表示",
+    "panel": {
+      "previewTitle": "nostube での表示"
+    }
   },
   "settings": {
     "title": "設定",

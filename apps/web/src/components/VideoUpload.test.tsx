@@ -53,8 +53,8 @@ vi.mock('./video-upload/UploadDetailsScreen', () => ({
   UploadDetailsScreen: () => <div>Details screen marker</div>,
 }))
 
-vi.mock('./video-upload/UploadReviewScreen', () => ({
-  UploadReviewScreen: () => <div>Review screen marker</div>,
+vi.mock('./video-upload/UploadPublishPanel', () => ({
+  UploadPublishPanel: () => <div>Publish panel marker</div>,
 }))
 
 vi.mock('./video-upload/UploadOnboardingDialog', () => ({
@@ -163,9 +163,19 @@ describe('VideoUpload screen selection', () => {
     expect(screen.getByText('Details screen marker')).toBeInTheDocument()
   })
 
-  it('never resumes directly into Review even when requested', () => {
+  it('opens the details page (with the publish panel) for an old screen=review link', () => {
     renderUpload(makeDraft({ uploadInfo: { videos: [video] } }), '/upload?screen=review')
     expect(screen.getByText('Details screen marker')).toBeInTheDocument()
+    expect(screen.getByText('Publish panel marker')).toBeInTheDocument()
+  })
+
+  it('shows the Pro mode switch on the details page and remembers it', () => {
+    renderUpload(makeDraft({ uploadInfo: { videos: [video] } }), '/upload')
+    const toggle = screen.getByRole('switch', { name: /show all options/i })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(localStorage.getItem('nostube_upload_pro_mode')).toBe('true')
   })
 })
 

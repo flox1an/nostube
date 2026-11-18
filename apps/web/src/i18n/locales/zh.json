@@ -609,7 +609,11 @@
     "selectRelays": "选择中继",
     "publishToRelays": "发布到中继",
     "selectAllRelays": "全选",
-    "upload": "上传"
+    "upload": "上传",
+    "proMode": "显示所有选项",
+    "panel": {
+      "previewTitle": "在 nostube 上的显示效果"
+    }
   },
   "settings": {
     "title": "设置",

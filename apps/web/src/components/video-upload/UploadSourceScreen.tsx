@@ -12,6 +12,8 @@ import type { UploadInfo } from '@/hooks/useVideoUpload'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
 
 export interface UploadSourceScreenProps {
+  /** Pro mode: the video settings start open. */
+  pro?: boolean
   draftId: string
   file: File | null
   videoUrl: string
@@ -45,6 +47,7 @@ export interface UploadSourceScreenProps {
 }
 
 export function UploadSourceScreen({
+  pro,
   draftId,
   file,
   videoUrl,
@@ -133,6 +136,7 @@ export function UploadSourceScreen({
   if (file && uploadState === 'transcoding' && !browserTranscodeState) {
     return (
       <BrowserTranscodeStep
+        pro={pro}
         file={file}
         backgroundState={undefined}
         onStartBackground={onStartBackground}

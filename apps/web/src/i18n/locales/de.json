@@ -609,7 +609,11 @@
     "selectRelays": "Relays auswählen",
     "publishToRelays": "An Relays veröffentlichen",
     "selectAllRelays": "Alle auswählen",
-    "upload": "Hochladen"
+    "upload": "Hochladen",
+    "proMode": "Alle Optionen zeigen",
+    "panel": {
+      "previewTitle": "So erscheint es auf nostube"
+    }
   },
   "settings": {
     "title": "Einstellungen",

@@ -29,12 +29,15 @@ import { UploadFlowFooter } from './video-upload/UploadFlowFooter'
 import type { UploadScreen } from './video-upload/UploadFlowFooter'
 import { UploadSourceScreen } from './video-upload/UploadSourceScreen'
 import { UploadDetailsScreen } from './video-upload/UploadDetailsScreen'
-import { UploadReviewScreen } from './video-upload/UploadReviewScreen'
+import { UploadPublishPanel } from './video-upload/UploadPublishPanel'
+import { Switch } from '@nostube/widgets/components/switch'
+import { Label } from '@nostube/widgets/components/label'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { Film, ListChecks, UploadCloud } from 'lucide-react'
 
 // ── Screen derivation ────────────────────────────────────────────────────────
 
-/** Minimum screen based on draft state — never advances to 'review' automatically. */
+/** Minimum screen based on draft state. */
 function deriveMinScreen(
   draft: UploadDraft,
   browserTranscodeState: BrowserTranscodeState | null | undefined
@@ -58,20 +61,21 @@ function resolveInitialScreen(
   const screenParam = searchParams.get('screen')
   const stepParam = searchParams.get('step')
 
-  if (screenParam === 'source' || screenParam === 'details' || screenParam === 'review') {
+  if (screenParam === 'source' || screenParam === 'details') {
     requested = screenParam
+  } else if (screenParam === 'review') {
+    // Review and publishing now live on the details page (old links and notifications).
+    requested = 'details'
   } else if (stepParam) {
     const step = parseInt(stepParam, 10)
     if (!isNaN(step)) {
       if (step === 2 && draft.videoUrl) requested = 'details'
       else if (step <= 2) requested = 'source'
-      else if (step <= 5) requested = 'details'
-      else requested = 'review'
+      else requested = 'details'
     }
   }
 
-  // Never auto-resume to 'review'
-  if (!requested || requested === 'review') return minScreen
+  if (!requested) return minScreen
   // Don't advance beyond what the draft state supports
   if (requested === 'details' && minScreen === 'source') return 'source'
   return requested
@@ -176,6 +180,26 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   } = videoUploadState
 
   // ── Screen state ─────────────────────────────────────────────────────────
+
+  // Pro mode: every optional section open, relay choice and event preview. Remembered.
+  const [proMode, setProMode] = useLocalStorage<boolean>('nostube_upload_pro_mode', false)
+  const handleProModeChange = useCallback(
+    (enabled: boolean) => {
+      setProMode(enabled)
+      // Leaving Pro mode hides the relay choice, so publishing goes to all write relays again.
+      if (!enabled) setPublishRelays(null)
+    },
+    [setProMode, setPublishRelays]
+  )
+
+  const jumpTo = useCallback((field: 'processing' | 'title' | 'thumbnail') => {
+    const id = { processing: 'upload-processing', title: 'title', thumbnail: 'upload-thumbnail' }[
+      field
+    ]
+    const element = document.getElementById(id)
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (field === 'title') (element as HTMLInputElement | null)?.focus({ preventScroll: true })
+  }, [])
 
   const [screen, setScreen] = useState<UploadScreen>(() => {
     const initialJob = getBrowserTranscodeUploadDraft(draft.id)
@@ -283,10 +307,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
       console.log('[VideoUpload] handleBack from screen:', screen)
     }
 
-    if (screen === 'review') {
-      setScreen('details')
-      return
-    }
     if (screen === 'details') {
       setScreen('source')
       return
@@ -516,37 +536,24 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
 
   // Continue gating per screen
-  const continueDisabled =
-    screen === 'source'
-      ? uploadInfo.videos.length === 0
-      : screen === 'details'
-        ? title.trim().length === 0
-        : false
+  const continueDisabled = uploadInfo.videos.length === 0
 
   // Source screen: hide Continue while BrowserTranscodeStep settings are showing
   const showContinue =
-    screen !== 'review' &&
-    !(screen === 'source' && !!file && uploadState === 'transcoding' && !browserTranscodeState)
+    screen === 'source' && !(!!file && uploadState === 'transcoding' && !browserTranscodeState)
 
   // ── Screen titles ─────────────────────────────────────────────────────────
 
-  const screenTitle =
-    screen === 'source'
-      ? t('upload.screen.source.title', { defaultValue: 'Upload video' })
-      : screen === 'details'
-        ? t('upload.screen.details.title', { defaultValue: 'Details' })
-        : t('upload.screen.review.title', { defaultValue: 'Review & publish' })
+  const screenTitle = t('upload.screen.source.title', { defaultValue: 'Upload video' })
 
   const screenDescription =
     screen === 'source'
       ? t('upload.screen.source.description', {
           defaultValue: 'Choose file upload or URL to start',
         })
-      : screen === 'details'
-        ? t('upload.screen.details.description', {
-            defaultValue: 'Add details while your video is processed',
-          })
-        : t('upload.screen.review.description', { defaultValue: 'Review and publish your video' })
+      : t('upload.screen.details.description', {
+          defaultValue: 'Add details while your video is processed',
+        })
 
   if (!user) {
     return (
@@ -595,8 +602,20 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     <>
       <Card className="mt-4 max-w-6xl mx-auto">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3">
             <span>{screenTitle}</span>
+            {(screen === 'details' || !!file) && (
+              <div className="flex items-center gap-2 text-sm font-normal">
+                <Switch
+                  id="upload-pro-mode"
+                  checked={proMode}
+                  onCheckedChange={handleProModeChange}
+                />
+                <Label htmlFor="upload-pro-mode" className="cursor-pointer">
+                  {t('upload.proMode', { defaultValue: 'Show all options' })}
+                </Label>
+              </div>
+            )}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-2">{screenDescription}</p>
         </CardHeader>
@@ -604,6 +623,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         <CardContent className="space-y-4">
           {screen === 'source' && (
             <UploadSourceScreen
+              pro={proMode}
               draftId={draft.id}
               file={file}
               videoUrl={videoUrl}
@@ -636,100 +656,101 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           )}
 
           {screen === 'details' && (
-            <UploadDetailsScreen
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              tags={tags}
-              setTags={setTags}
-              language={language}
-              setLanguage={setLanguage}
-              thumbnailSource={thumbnailSource}
-              onThumbnailSourceChange={handleThumbnailSourceChange}
-              thumbnailBlob={thumbnailBlob}
-              onThumbnailDrop={handleThumbnailDrop}
-              onAutoThumbnailCapture={handleAutoThumbnailCapture}
-              onDeleteThumbnail={handleDeleteThumbnail}
-              thumbnailUploadInfo={thumbnailUploadInfo}
-              file={file}
-              videoUrl={videoUrl}
-              uploadInfo={uploadInfo}
-              subtitles={subtitles}
-              onSubtitleDrop={handleSubtitleDrop}
-              onRemoveSubtitle={handleRemoveSubtitle}
-              onSubtitleLanguageChange={handleSubtitleLanguageChange}
-              subtitleUploading={subtitleUploading}
-              publishAt={publishAt}
-              setPublishAt={setPublishAt}
-              contentWarningEnabled={contentWarningEnabled}
-              setContentWarningEnabled={setContentWarningEnabled}
-              contentWarningReason={contentWarningReason}
-              setContentWarningReason={setContentWarningReason}
-              expiration={expiration}
-              setExpiration={setExpiration}
-              people={people}
-              setPeople={setPeople}
-              origins={origins}
-              setOrigins={setOrigins}
-              draftId={draft.id}
-              videos={uploadInfo.videos}
-              uploadState={uploadState}
-              uploadProgress={uploadProgress}
-              browserTranscodeState={browserTranscodeState}
-              deletingIndex={deletingIndex}
-              hasHlsVideo={hasHlsVideo}
-              onRemoveVideo={handleRemoveVideo}
-              onAddAdditional={wrappedOnAddAdditional}
-              onAddTranscodedVideo={handleAddTranscodedVideo}
-              onStatusChange={() => {
-                // DVM status comes from UploadManager on Review; no longer needed here
-              }}
-              onChangeSettings={() => setScreen('source')}
-              onRetryProcessing={handleRetryBrowserTranscodeUpload}
-              hasSourceFile={!!file}
-              onCancelProcessing={handleCancelBrowserTranscodeUpload}
-              onStartBackground={wrappedOnStartBackground}
-              onBrowserTranscodeComplete={handleBrowserTranscodeComplete}
-              onBrowserTranscodeSkip={handleBrowserTranscodeSkip}
-            />
-          )}
-
-          {screen === 'review' && (
-            <UploadReviewScreen
-              title={title}
-              description={description}
-              tags={tags}
-              thumbnailBlob={thumbnailBlob}
-              thumbnailUploadInfo={thumbnailUploadInfo}
-              originalVideoInfo={originalVideoInfo}
-              videos={uploadInfo.videos}
-              hasThumbnailSet={hasThumbnailSet}
-              browserTranscodeState={browserTranscodeState}
-              draftId={draft.id}
-              writeRelays={writeRelays}
-              publishRelays={publishRelays}
-              setPublishRelays={setPublishRelays}
-              isPublishing={isPublishing}
-              canPublish={
-                !browserJobActive &&
-                hasThumbnailSet &&
-                title.trim().length > 0 &&
-                uploadInfo.videos.length > 0
-              }
-              handleSubmit={handleSubmit}
-              previewEvent={previewEvent}
-              onGoToDetails={() => setScreen('details')}
-            />
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+              <UploadDetailsScreen
+                pro={proMode}
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                tags={tags}
+                setTags={setTags}
+                language={language}
+                setLanguage={setLanguage}
+                thumbnailSource={thumbnailSource}
+                onThumbnailSourceChange={handleThumbnailSourceChange}
+                thumbnailBlob={thumbnailBlob}
+                onThumbnailDrop={handleThumbnailDrop}
+                onAutoThumbnailCapture={handleAutoThumbnailCapture}
+                onDeleteThumbnail={handleDeleteThumbnail}
+                thumbnailUploadInfo={thumbnailUploadInfo}
+                file={file}
+                videoUrl={videoUrl}
+                uploadInfo={uploadInfo}
+                subtitles={subtitles}
+                onSubtitleDrop={handleSubtitleDrop}
+                onRemoveSubtitle={handleRemoveSubtitle}
+                onSubtitleLanguageChange={handleSubtitleLanguageChange}
+                subtitleUploading={subtitleUploading}
+                publishAt={publishAt}
+                setPublishAt={setPublishAt}
+                contentWarningEnabled={contentWarningEnabled}
+                setContentWarningEnabled={setContentWarningEnabled}
+                contentWarningReason={contentWarningReason}
+                setContentWarningReason={setContentWarningReason}
+                expiration={expiration}
+                setExpiration={setExpiration}
+                people={people}
+                setPeople={setPeople}
+                origins={origins}
+                setOrigins={setOrigins}
+                draftId={draft.id}
+                videos={uploadInfo.videos}
+                uploadState={uploadState}
+                uploadProgress={uploadProgress}
+                browserTranscodeState={browserTranscodeState}
+                deletingIndex={deletingIndex}
+                hasHlsVideo={hasHlsVideo}
+                onRemoveVideo={handleRemoveVideo}
+                onAddAdditional={wrappedOnAddAdditional}
+                onAddTranscodedVideo={handleAddTranscodedVideo}
+                onStatusChange={() => {
+                  // DVM status comes from UploadManager on Review; no longer needed here
+                }}
+                onChangeSettings={() => setScreen('source')}
+                onRetryProcessing={handleRetryBrowserTranscodeUpload}
+                hasSourceFile={!!file}
+                onCancelProcessing={handleCancelBrowserTranscodeUpload}
+                onStartBackground={wrappedOnStartBackground}
+                onBrowserTranscodeComplete={handleBrowserTranscodeComplete}
+                onBrowserTranscodeSkip={handleBrowserTranscodeSkip}
+              />
+              <div className="lg:sticky lg:top-20">
+                <UploadPublishPanel
+                  title={title}
+                  description={description}
+                  tags={tags}
+                  thumbnailBlob={thumbnailBlob}
+                  thumbnailUploadInfo={thumbnailUploadInfo}
+                  originalVideoInfo={originalVideoInfo}
+                  videos={uploadInfo.videos}
+                  hasThumbnailSet={hasThumbnailSet}
+                  browserTranscodeState={browserTranscodeState}
+                  draftId={draft.id}
+                  writeRelays={writeRelays}
+                  publishRelays={publishRelays}
+                  setPublishRelays={setPublishRelays}
+                  isPublishing={isPublishing}
+                  canPublish={
+                    !browserJobActive &&
+                    hasThumbnailSet &&
+                    title.trim().length > 0 &&
+                    uploadInfo.videos.length > 0
+                  }
+                  handleSubmit={handleSubmit}
+                  previewEvent={previewEvent}
+                  onJump={jumpTo}
+                  pro={proMode}
+                  uploadInProgress={uploadState === 'transcoding' || uploadState === 'uploading'}
+                />
+              </div>
+            </div>
           )}
 
           <UploadFlowFooter
             screen={screen}
             onBack={handleBack}
-            onContinue={() => {
-              if (screen === 'source') setScreen('details')
-              else if (screen === 'details') setScreen('review')
-            }}
+            onContinue={() => setScreen('details')}
             continueDisabled={continueDisabled}
             showContinue={showContinue}
             onSaveDraft={onBack ? handleSaveDraft : undefined}

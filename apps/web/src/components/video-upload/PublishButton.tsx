@@ -18,6 +18,8 @@ interface PublishButtonProps {
   /** Currently selected relay URLs. null = all write relays. */
   selectedRelays: string[] | null
   onSelectedRelaysChange: (relays: string[] | null) => void
+  /** Offers choosing a subset of the write relays (Pro mode); otherwise publishes to all. */
+  showRelayPicker?: boolean
 }
 
 function deriveLabel(url: string): string {
@@ -34,6 +36,7 @@ export function PublishButton({
   writeRelays,
   selectedRelays,
   onSelectedRelaysChange,
+  showRelayPicker = true,
 }: PublishButtonProps) {
   const { t } = useTranslation()
 
@@ -49,9 +52,9 @@ export function PublishButton({
   }
 
   // No relay picker needed when there is only one relay
-  if (writeRelays.length <= 1) {
+  if (writeRelays.length <= 1 || !showRelayPicker) {
     return (
-      <Button type="submit" disabled={isPublishing || disabled}>
+      <Button type="submit" className="w-full" disabled={isPublishing || disabled}>
         {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
       </Button>
@@ -63,7 +66,7 @@ export function PublishButton({
       <Button
         type="submit"
         disabled={isPublishing || disabled || effective.length === 0}
-        className="rounded-r-none border-r-0"
+        className="flex-1 rounded-r-none border-r-0"
       >
         {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {isPublishing

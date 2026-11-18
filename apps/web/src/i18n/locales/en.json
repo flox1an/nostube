@@ -637,7 +637,11 @@
     "selectRelays": "Select relays",
     "publishToRelays": "Publish to relays",
     "selectAllRelays": "Select all",
-    "upload": "Upload"
+    "upload": "Upload",
+    "proMode": "Show all options",
+    "panel": {
+      "previewTitle": "How it will appear on nostube"
+    }
   },
   "settings": {
     "title": "Settings",

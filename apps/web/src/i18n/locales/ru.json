@@ -609,7 +609,11 @@
     "selectRelays": "Выбрать релеи",
     "publishToRelays": "Опубликовать на релеях",
     "selectAllRelays": "Выбрать все",
-    "upload": "Загрузить"
+    "upload": "Загрузить",
+    "proMode": "Показать все параметры",
+    "panel": {
+      "previewTitle": "Как это будет выглядеть на nostube"
+    }
   },
   "settings": {
     "title": "Настройки",

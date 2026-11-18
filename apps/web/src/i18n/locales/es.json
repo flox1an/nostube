@@ -609,7 +609,11 @@
     "selectRelays": "Seleccionar relays",
     "publishToRelays": "Publicar en relays",
     "selectAllRelays": "Seleccionar todo",
-    "upload": "Subir"
+    "upload": "Subir",
+    "proMode": "Mostrar todas las opciones",
+    "panel": {
+      "previewTitle": "Así se verá en nostube"
+    }
   },
   "settings": {
     "title": "Ajustes",

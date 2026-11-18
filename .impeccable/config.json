@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "organic-clip-path",
+        "value": "*",
+        "files": [
+          "docs/plans/2026-11-18-upload-ux-prototype.html"
+        ],
+        "createdAt": "2026-11-18T08:24:36.295Z",
+        "reason": "agent decision: mountain silhouette in painted placeholder video frames of a throwaway prototype, stands in for real video thumbnails, not product UI"
+      }
+    ]
+  }
+}

@@ -44,6 +44,8 @@ interface BrowserTranscodeStepProps {
   onCancelBackground?: () => void
   onComplete: (files: File[] | Map<string, File>) => void
   onSkip: () => void
+  /** Pro mode: the advanced video settings start open. */
+  pro?: boolean
 }
 
 export interface BrowserTranscodeStepHandle {
@@ -111,6 +113,7 @@ export const BrowserTranscodeStep = forwardRef<
     onCancelBackground,
     onComplete,
     onSkip,
+    pro = false,
   },
   ref
 ) {
@@ -124,7 +127,9 @@ export const BrowserTranscodeStep = forwardRef<
   const [qualityPreset, setQualityPreset] = useState<BrowserTranscodeQualityPreset>('balanced')
   // Advanced settings (format/resolution/quality/original) start collapsed —
   // the recommended defaults above are enough to proceed without opening them.
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(pro)
+  // Switching Pro mode while the settings are visible opens or closes them along.
+  useEffect(() => setAdvancedOpen(pro), [pro])
 
   const {
     status,

@@ -81,6 +81,8 @@ export interface UploadDetailsScreenProps {
   onAddTranscodedVideo: (video: VideoVariant) => void
   onStatusChange: (status: TranscodeStatus) => void
   onChangeSettings: () => void
+  /** Pro mode: every optional section open. */
+  pro?: boolean
   onRetryProcessing: () => void
   hasSourceFile: boolean
   onCancelProcessing: () => void
@@ -148,6 +150,7 @@ export function UploadDetailsScreen({
   onStartBackground,
   onBrowserTranscodeComplete,
   onBrowserTranscodeSkip,
+  pro = false,
 }: UploadDetailsScreenProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
@@ -179,9 +182,10 @@ export function UploadDetailsScreen({
   }, [])
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="min-w-0 space-y-6">
       {file && uploadState === 'transcoding' && !browserTranscodeState ? (
         <BrowserTranscodeStep
+          pro={pro}
           file={file}
           backgroundState={undefined}
           onStartBackground={onStartBackground}
@@ -190,7 +194,7 @@ export function UploadDetailsScreen({
           onSkip={onBrowserTranscodeSkip}
         />
       ) : (
-        <div data-slot="processing-rail">
+        <div data-slot="processing-rail" id="upload-processing" className="scroll-mt-24">
           <ProcessingRail
             draftId={draftId}
             browserTranscodeState={browserTranscodeState}
@@ -226,32 +230,39 @@ export function UploadDetailsScreen({
       </div>
 
       {/* Thumbnail */}
-      <ThumbnailSection
-        thumbnailSource={thumbnailSource}
-        onThumbnailSourceChange={
-          onThumbnailSourceChange as (source: 'generated' | 'upload') => void
-        }
-        thumbnailBlob={thumbnailBlob}
-        onThumbnailDrop={onThumbnailDrop}
-        onDeleteThumbnail={onDeleteThumbnail}
-        thumbnailUploadInfo={thumbnailUploadInfo}
-        videoUrl={videoUrlForThumb}
-        onAutoCapture={onAutoThumbnailCapture}
-        onUrlFetchError={message => toast({ ...message, variant: 'destructive' })}
-        serverStatus={
-          <UploadServer
-            inputMethod="file"
-            uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
-            uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
-            mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
-            hasInitialUploadServers={true}
-            forceShow={true}
-          />
-        }
-      />
+      <div id="upload-thumbnail" className="scroll-mt-24">
+        <ThumbnailSection
+          thumbnailSource={thumbnailSource}
+          onThumbnailSourceChange={
+            onThumbnailSourceChange as (source: 'generated' | 'upload') => void
+          }
+          thumbnailBlob={thumbnailBlob}
+          onThumbnailDrop={onThumbnailDrop}
+          onDeleteThumbnail={onDeleteThumbnail}
+          thumbnailUploadInfo={thumbnailUploadInfo}
+          videoUrl={videoUrlForThumb}
+          onAutoCapture={onAutoThumbnailCapture}
+          onUrlFetchError={message => toast({ ...message, variant: 'destructive' })}
+          serverStatus={
+            <UploadServer
+              inputMethod="file"
+              uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
+              uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
+              mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
+              hasInitialUploadServers={true}
+              forceShow={true}
+            />
+          }
+        />
+      </div>
 
       {/* Collapsible sections */}
-      <Accordion type="multiple" defaultValue={defaultOpenSections}>
+      <Accordion
+        // Pro mode opens every section; remounting keeps the uncontrolled default simple.
+        key={pro ? 'pro' : 'default'}
+        type="multiple"
+        defaultValue={pro ? ['subtitles', 'schedule', 'attribution'] : defaultOpenSections}
+      >
         {/* Subtitles */}
         <AccordionItem value="subtitles">
           <AccordionTrigger>

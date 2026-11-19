@@ -19,7 +19,8 @@ RUN npx vite build \
  && cp dist/index.html dist/404.html \
  && npx tsc server/standalone.ts --outDir server-dist \
       --module nodenext --moduleResolution nodenext \
-      --target es2022 --skipLibCheck
+      --target es2022 --skipLibCheck \
+      --ignoreConfig --types node
 
 # Runtime: prod deps + dist + compiled server only
 FROM node:24.22.1-alpine

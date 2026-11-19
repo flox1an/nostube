@@ -37,6 +37,7 @@ import {
 import {
   isWebCodecsSupported,
   recommendedVariants,
+  shouldAutoOptimise,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@nostube/core/video-transcode'
@@ -687,21 +688,21 @@ export function useVideoUpload(
       })
     }
 
-    // Start with the recommended settings right away: the upload page shows the
-    // progress rail and the form while the file is encoded, instead of a
-    // blocking "Optimise for Nostr" choice. BrowserTranscodeStep stays reachable
-    // for adjusting or restarting the job. Without WebCodecs (or a browser that
-    // reports no encodable resolution) the step keeps its explicit start button.
-    if (isWebCodecsSupported()) {
-      try {
-        const meta = await probeTranscodeSource(droppedFile)
-        const variants = recommendedVariants(meta, await encodableVideoCodecs())
-        if (variants.length > 0) {
-          startTranscodeJob(droppedFile, variants, meta)
-        }
-      } catch (error) {
-        console.warn('[useVideoUpload] Auto-start transcode failed:', error)
+    // Decide right away instead of asking first: files that need it start optimising with
+    // the recommended settings, small or already playable files go up as they are. Either
+    // way the progress rail offers "Adjust" to pick resolutions. Without WebCodecs (or
+    // when the probe fails) BrowserTranscodeStep keeps its explicit choice.
+    if (!isWebCodecsSupported()) return
+    try {
+      const meta = await probeTranscodeSource(droppedFile)
+      if (!shouldAutoOptimise(meta)) {
+        await uploadOriginal(droppedFile, 'replace')
+        return
       }
+      const variants = recommendedVariants(meta, await encodableVideoCodecs())
+      if (variants.length > 0) startTranscodeJob(droppedFile, variants, meta, false, 'replace')
+    } catch (error) {
+      console.warn('[useVideoUpload] Auto-start failed:', error)
     }
   }
 
@@ -709,7 +710,9 @@ export function useVideoUpload(
     sourceFile: File,
     variants: BrowserTranscodeVariant[],
     sourceMeta: TranscodeSourceMeta,
-    keepOriginal = false
+    keepOriginal = false,
+    // A fresh drop passes 'replace': the state it just set is not visible in this closure yet.
+    mode = browserTranscodeMode
   ) => {
     if (uploadServers.length === 0 || !user || !signer) {
       console.warn('[useVideoUpload] Cannot start transcode upload. Missing requirements:', {
@@ -731,7 +734,7 @@ export function useVideoUpload(
       file: sourceFile,
       variants,
       sourceMeta,
-      mode: browserTranscodeMode,
+      mode,
       keepOriginal,
       initialServers: uploadServers,
       mirrorServers: [],
@@ -834,8 +837,11 @@ export function useVideoUpload(
     setUploadProgress(null)
   }
 
-  const handleBrowserTranscodeSkip = async () => {
-    if (!file || uploadServers.length === 0 || !user) {
+  const handleBrowserTranscodeSkip = () => uploadOriginal(file)
+
+  /** Uploads the file unchanged; `file` is passed in because state lags behind a fresh drop. */
+  const uploadOriginal = async (sourceFile: File | null, mode = browserTranscodeMode) => {
+    if (!sourceFile || uploadServers.length === 0 || !user) {
       setUploadState('initial')
       return
     }
@@ -844,14 +850,14 @@ export function useVideoUpload(
     setUploadProgress(null)
 
     try {
-      const variant = await uploadFileAndProcess(file)
+      const variant = await uploadFileAndProcess(sourceFile)
       setUploadInfo(ui => ({
-        videos: browserTranscodeMode === 'append' ? [...ui.videos, variant] : [variant],
+        videos: mode === 'append' ? [...ui.videos, variant] : [variant],
       }))
     } catch (error) {
       console.error('BUD-10 upload failed:', error)
-      setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
-      if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
+      setUploadState(mode === 'append' ? 'finished' : 'initial')
+      if (mode === 'replace') setUploadInfo({ videos: [] })
       setUploadProgress(null)
       if (!(error instanceof Error && error.name === 'AbortError')) showVideoUploadError(error)
       return

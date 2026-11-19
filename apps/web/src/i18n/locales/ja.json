@@ -520,7 +520,10 @@
       "changeSettings": "設定を変更",
       "filesUploaded": "{{count}} ファイルをアップロード",
       "filesUploaded_other": "{{count}} ファイルをアップロード",
-      "eta": "残り {{eta}}"
+      "eta": "残り {{eta}}",
+      "adjust": "調整",
+      "adjustConfirmBody": "アップロードはすでに進行中です。設定を変更してやり直しますか？",
+      "uploadingUnchanged": "そのままアップロード中..."
     },
     "review": {
       "checklist": {

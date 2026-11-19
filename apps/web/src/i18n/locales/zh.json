@@ -520,7 +520,10 @@
       "changeSettings": "更改设置",
       "filesUploaded": "已上传 {{count}} 个文件",
       "filesUploaded_other": "已上传 {{count}} 个文件",
-      "eta": "预计 {{eta}}"
+      "eta": "预计 {{eta}}",
+      "adjust": "调整",
+      "adjustConfirmBody": "上传已在进行中。要更改设置并重新开始吗？",
+      "uploadingUnchanged": "正在原样上传..."
     },
     "review": {
       "checklist": {

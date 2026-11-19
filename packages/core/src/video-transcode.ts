@@ -75,6 +75,20 @@ export function assessTranscodeNeed(meta: TranscodeSourceMeta): TranscodeRecomme
   return 'none'
 }
 
+/** Below this size a file with a playable codec is uploaded as is: re-encoding saves little. */
+export const SMALL_FILE_MAX_MB = 50
+
+/**
+ * Whether dropping a file should start the browser optimisation on its own. Small files with a
+ * playable codec (a phone short, say) and files that already play everywhere go up unchanged.
+ */
+export function shouldAutoOptimise(meta: TranscodeSourceMeta): boolean {
+  if (meta.sizeMB > 0 && meta.sizeMB < SMALL_FILE_MAX_MB && isCompatibleCodec(meta.videoCodec)) {
+    return false
+  }
+  return assessTranscodeNeed(meta) !== 'none'
+}
+
 export function computeTargetDimensions(
   srcWidth: number,
   srcHeight: number,

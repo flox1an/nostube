@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
@@ -154,6 +154,12 @@ export function UploadDetailsScreen({
 }: UploadDetailsScreenProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
+  // "Adjust" on the rail stops the job; the picker then opens with its settings expanded.
+  const [adjusting, setAdjusting] = useState(false)
+  const handleAdjust = () => {
+    setAdjusting(true)
+    onCancelProcessing()
+  }
 
   // Compute video URL for thumbnail generator, revoke object URL on cleanup
   const videoUrlForThumb = useMemo(() => {
@@ -185,7 +191,7 @@ export function UploadDetailsScreen({
     <div className="min-w-0 space-y-6">
       {file && uploadState === 'transcoding' && !browserTranscodeState ? (
         <BrowserTranscodeStep
-          pro={pro}
+          pro={pro || adjusting}
           file={file}
           backgroundState={undefined}
           onStartBackground={onStartBackground}
@@ -204,6 +210,7 @@ export function UploadDetailsScreen({
             deletingIndex={deletingIndex}
             hasHlsVideo={hasHlsVideo}
             onCancel={onCancelProcessing}
+            onAdjust={handleAdjust}
             onChangeSettings={onChangeSettings}
             onRetry={onRetryProcessing}
             hasSourceFile={hasSourceFile}

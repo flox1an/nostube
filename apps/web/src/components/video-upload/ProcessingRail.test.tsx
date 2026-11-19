@@ -46,6 +46,7 @@ function renderRail(overrides: Partial<ProcessingRailProps> = {}) {
         deletingIndex={null}
         hasHlsVideo={false}
         onCancel={vi.fn()}
+        onAdjust={vi.fn()}
         onChangeSettings={vi.fn()}
         onRetry={vi.fn()}
         hasSourceFile={true}
@@ -91,6 +92,16 @@ describe('ProcessingRail', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
     expect(confirm).toHaveBeenCalledOnce()
     expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('shows what the job produces and offers Adjust while processing', () => {
+    const onAdjust = vi.fn()
+    const confirm = vi.spyOn(window, 'confirm')
+    renderRail({ onAdjust })
+    expect(screen.getByText('720p')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /adjust/i }))
+    expect(confirm).not.toHaveBeenCalled()
+    expect(onAdjust).toHaveBeenCalledTimes(1)
   })
 
   it('cancels transcoding without confirmation', () => {

@@ -520,7 +520,10 @@
       "changeSettings": "Изменить настройки",
       "filesUploaded": "{{count}} файл загружен",
       "filesUploaded_other": "{{count}} файлов загружено",
-      "eta": "Осталось {{eta}}"
+      "eta": "Осталось {{eta}}",
+      "adjust": "Настроить",
+      "adjustConfirmBody": "Загрузка уже идёт. Изменить настройки и начать заново?",
+      "uploadingUnchanged": "Загрузка без изменений..."
     },
     "review": {
       "checklist": {

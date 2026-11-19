@@ -520,7 +520,10 @@
       "changeSettings": "Cambiar ajustes",
       "filesUploaded": "{{count}} archivo subido",
       "filesUploaded_other": "{{count}} archivos subidos",
-      "eta": "Tiempo restante {{eta}}"
+      "eta": "Tiempo restante {{eta}}",
+      "adjust": "Ajustar",
+      "adjustConfirmBody": "La subida ya está en curso. ¿Cambiar los ajustes y empezar de nuevo?",
+      "uploadingUnchanged": "Subiendo sin cambios..."
     },
     "review": {
       "checklist": {

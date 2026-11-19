@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, XCircle } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  SlidersHorizontal,
+  X,
+  XCircle,
+} from 'lucide-react'
 import { Button } from '@nostube/widgets/components/button'
 import { Progress } from '@nostube/widgets/components/progress'
 import { estimateRemainingSeconds, formatEtaSeconds } from '@/lib/transcode-progress'
@@ -18,6 +26,8 @@ export interface ProcessingRailProps {
   deletingIndex: number | null
   hasHlsVideo: boolean
   onCancel: () => void
+  /** Stops the running job and shows the resolution picker in its place. */
+  onAdjust: () => void
   onChangeSettings: () => void
   onRetry: () => void
   hasSourceFile: boolean
@@ -36,6 +46,7 @@ export function ProcessingRail({
   deletingIndex,
   hasHlsVideo,
   onCancel,
+  onAdjust,
   onChangeSettings,
   onRetry,
   hasSourceFile,
@@ -107,18 +118,28 @@ export function ProcessingRail({
           defaultValue:
             browserTranscodeState.status === 'uploading' ? 'Uploading...' : 'Processing...',
         })
-      : t('upload.rail.uploading', { defaultValue: 'Uploading...' })
+      : t('upload.rail.uploadingUnchanged', { defaultValue: 'Uploading unchanged...' })
+    // What the job produces, e.g. "720p H.264 · 480p H.264", so the settings are never a mystery.
+    const outputSummary = browserTranscodeState?.variants.map(variant => variant.label).join(' · ')
+
+    // Once the encoded files are uploading, stopping throws away finished work: ask first.
+    const confirmDiscard = (key: 'cancelConfirmBody' | 'adjustConfirmBody') =>
+      browserTranscodeState?.status !== 'uploading' ||
+      window.confirm(
+        key === 'adjustConfirmBody'
+          ? t('upload.rail.adjustConfirmBody', {
+              defaultValue: 'The upload is already running. Change the settings and start over?',
+            })
+          : t('upload.rail.cancelConfirmBody', {
+              defaultValue: 'Upload is in progress. Cancel processing anyway?',
+            })
+      )
 
     const handleCancel = () => {
-      if (browserTranscodeState?.status === 'uploading') {
-        const ok = window.confirm(
-          t('upload.rail.cancelConfirmBody', {
-            defaultValue: 'Upload is in progress. Cancel processing anyway?',
-          })
-        )
-        if (!ok) return
-      }
-      onCancel()
+      if (confirmDiscard('cancelConfirmBody')) onCancel()
+    }
+    const handleAdjust = () => {
+      if (confirmDiscard('adjustConfirmBody')) onAdjust()
     }
 
     return (
@@ -131,6 +152,9 @@ export function ProcessingRail({
               <span className="shrink-0 text-muted-foreground">{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} />
+            {outputSummary && (
+              <p className="truncate text-xs text-muted-foreground">{outputSummary}</p>
+            )}
             {eta !== undefined && (
               <p className="text-xs text-muted-foreground">
                 {t('upload.rail.eta', {
@@ -159,9 +183,22 @@ export function ProcessingRail({
             </Button>
           ) : null}
           {browserTranscodeState && (
-            <Button type="button" variant="outline" size="sm" onClick={handleCancel}>
-              {t('upload.browserTranscode.cancel', { defaultValue: 'Cancel' })}
-            </Button>
+            <>
+              <Button type="button" variant="outline" size="sm" onClick={handleAdjust}>
+                <SlidersHorizontal className="h-4 w-4" />
+                {t('upload.rail.adjust', { defaultValue: 'Adjust' })}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleCancel}
+                aria-label={t('upload.browserTranscode.cancel', { defaultValue: 'Cancel' })}
+                title={t('upload.browserTranscode.cancel', { defaultValue: 'Cancel' })}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
 

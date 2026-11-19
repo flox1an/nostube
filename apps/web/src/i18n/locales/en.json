@@ -548,7 +548,10 @@
       "changeSettings": "Change settings",
       "filesUploaded": "{{count}} file uploaded",
       "filesUploaded_other": "{{count}} files uploaded",
-      "eta": "ETA {{eta}}"
+      "eta": "ETA {{eta}}",
+      "adjust": "Adjust",
+      "adjustConfirmBody": "The upload is already running. Change the settings and start over?",
+      "uploadingUnchanged": "Uploading unchanged..."
     },
     "review": {
       "checklist": {

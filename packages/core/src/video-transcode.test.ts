@@ -10,6 +10,7 @@ import {
   defaultContributeResolutions,
   defaultVariants,
   recommendedVariants,
+  shouldAutoOptimise,
   repairDuplicateAvcNalHeadersInMp4,
   type TranscodeSourceMeta,
 } from './video-transcode'
@@ -23,6 +24,34 @@ const baseMeta: TranscodeSourceMeta = {
   videoCodec: 'hvc1.1.6.L123.B0',
   mimeType: 'video/mp4',
 }
+
+describe('shouldAutoOptimise', () => {
+  it('uploads a small H.264 short as is', () => {
+    expect(
+      shouldAutoOptimise({ ...baseMeta, sizeMB: 10, videoCodec: 'avc1.64001f', bitrateMbps: 8 })
+    ).toBe(false)
+  })
+
+  it('uploads a small HEVC phone clip in a QuickTime container as is', () => {
+    expect(
+      shouldAutoOptimise({ ...baseMeta, sizeMB: 30, mimeType: 'video/quicktime', height: 2160 })
+    ).toBe(false)
+  })
+
+  it('optimises a small file with a codec browsers cannot play everywhere', () => {
+    expect(shouldAutoOptimise({ ...baseMeta, sizeMB: 10, videoCodec: 'av01.0.04M.08' })).toBe(true)
+  })
+
+  it('uploads a large file that already plays everywhere as is', () => {
+    expect(
+      shouldAutoOptimise({ ...baseMeta, sizeMB: 400, videoCodec: 'avc1.64001f', bitrateMbps: 5 })
+    ).toBe(false)
+  })
+
+  it('optimises a large high-bitrate file', () => {
+    expect(shouldAutoOptimise(baseMeta)).toBe(true)
+  })
+})
 
 describe('assessTranscodeNeed', () => {
   it('returns full for non-mp4 container', () => {

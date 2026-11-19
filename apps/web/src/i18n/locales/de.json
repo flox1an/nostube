@@ -520,7 +520,10 @@
       "changeSettings": "Einstellungen ändern",
       "filesUploaded": "{{count}} Datei hochgeladen",
       "filesUploaded_other": "{{count}} Dateien hochgeladen",
-      "eta": "Voraussichtlich {{eta}}"
+      "eta": "Voraussichtlich {{eta}}",
+      "adjust": "Anpassen",
+      "adjustConfirmBody": "Der Upload läuft bereits. Einstellungen ändern und neu starten?",
+      "uploadingUnchanged": "Wird unverändert hochgeladen..."
     },
     "review": {
       "checklist": {

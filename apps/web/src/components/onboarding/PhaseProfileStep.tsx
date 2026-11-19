@@ -14,7 +14,7 @@ import {
   useUserBlossomServers,
 } from '@/hooks'
 import { useFileUpload } from '@/hooks/useFileUpload'
-import { DEFAULT_UPLOAD_SERVERS, configuredServerUrls } from '@/lib/blossom-servers'
+import { DEFAULT_UPLOAD_SERVERS, uploadServerUrls } from '@/lib/blossom-servers'
 import { toast } from 'sonner'
 
 interface PhaseProfileStepProps {
@@ -34,8 +34,8 @@ export function PhaseProfileStep({ onComplete, onSkip }: PhaseProfileStepProps) 
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  // One flat server list; the upload strategy picks which servers get the file.
-  const configuredServers = configuredServerUrls(config.blossomServers)
+  // The servers switched on for uploads; the upload strategy orders them.
+  const configuredServers = uploadServerUrls(config.blossomServers)
   const servers = configuredServers.length
     ? configuredServers
     : userBlossomServers.length

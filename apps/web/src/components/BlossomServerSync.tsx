@@ -20,16 +20,20 @@ export function BlossomServerSync() {
     const pubkey = user?.pubkey
     if (!pubkey || profileUrls.length === 0) return
     const key = signatureKey(pubkey)
+    const lastSignature = localStorage.getItem(key)
+    let signature: string | undefined
+    // The updater stays pure (it may run twice); the fingerprint is stored afterwards.
     updateConfig(currentConfig => {
       const merged = mergeProfileServers(
         normalizeBlossomServers(currentConfig.blossomServers),
         profileUrls,
-        localStorage.getItem(key)
+        lastSignature
       )
       if (!merged) return currentConfig
-      localStorage.setItem(key, merged.signature)
+      signature = merged.signature
       return { ...currentConfig, blossomServers: merged.servers }
     })
+    if (signature) localStorage.setItem(key, signature)
   }, [user?.pubkey, profileUrls, updateConfig])
 
   return null

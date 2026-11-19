@@ -34,7 +34,7 @@ import { displayNip05, verifyNip05 } from '@nostube/core/nip05'
 import { toast } from 'sonner'
 import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
-import { DEFAULT_UPLOAD_SERVERS, configuredServerUrls } from '@/lib/blossom-servers'
+import { DEFAULT_UPLOAD_SERVERS, uploadServerUrls } from '@/lib/blossom-servers'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { Avatar, AvatarImage, AvatarFallback } from '@nostube/widgets/components/avatar'
 import { useTranslation } from 'react-i18next'
@@ -357,8 +357,8 @@ function EditProfileDialog({
     setForm(current => ({ ...current, [field]: value }))
   }
 
-  // One flat server list; the upload strategy picks which servers get the file.
-  const configuredServers = configuredServerUrls(config.blossomServers)
+  // The servers switched on for uploads; the upload strategy orders them.
+  const configuredServers = uploadServerUrls(config.blossomServers)
   const servers = configuredServers.length
     ? configuredServers
     : userBlossomServers.length

@@ -15,7 +15,6 @@ import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { useAppContext, useMuteUser, useNostrPublish } from '@/hooks'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { toast } from 'sonner'
 import {
   DropdownMenu,
@@ -74,6 +73,7 @@ import { isBetaUser } from '@/lib/beta-users'
 import { getLanguageDisplay } from '@/lib/language-flags'
 import ngeohash from 'ngeohash'
 import { getOriginLink } from '@nostube/core/origin-utils'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 interface ProfileMetadata {
   name?: string
@@ -226,7 +226,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     if (!userPubkey || loadedPinListKeyRef.current === pinListKey) return
     loadedPinListKeyRef.current = pinListKey
 
-    const loader = createTimelineLoader(pool, relaysToUse, pinFilters, { eventStore })
+    const loader = () => loadFromRelays(pool, relaysToUse, pinFilters, { eventStore })
     const sub = loader().subscribe({
       next: event => eventStore.add(event),
       error: () => {},

@@ -7,6 +7,7 @@ import { AccountsContext } from 'applesauce-react'
 import { Button } from '../button'
 import { saveAccountToStorage, saveActiveAccount } from '../../hooks/useAccountPersistence'
 import { allowSignerRelays } from '@nostube/core/instance-config'
+import { nostrConnectClient } from '@nostube/core/nostr-connect-client'
 import { useTranslation } from 'react-i18next'
 
 interface QRCodeLoginProps {
@@ -73,9 +74,7 @@ export function QRCodeLogin({
 
       // Generate the nostrconnect:// URI
       const uri = signer.getNostrConnectURI({
-        name: clientName,
-        url: window.location.origin,
-        image: new URL('/apple-touch-icon.png', window.location.origin).toString(),
+        ...nostrConnectClient(clientName),
         // 1111 (NIP-22 comments) so a connected signer can sign site comments.
         permissions: NostrConnectSigner.buildSigningPermissions([0, 1, 3, 7, 1111, 10002]),
       })

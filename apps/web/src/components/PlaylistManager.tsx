@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent } from '@nostube/core/video-event'
 import { buildVideoUrl } from '@/utils/video-utils'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
@@ -43,6 +42,7 @@ import {
   DialogTitle,
 } from '@nostube/widgets/components/dialog'
 import { formatDateSimple } from '@nostube/core/format-utils'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 interface PlaylistVideoItemProps {
   video: Video
@@ -157,7 +157,7 @@ function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
     if (missingIds.length === 0) return
 
     // Batch load missing videos
-    const loader = createTimelineLoader(pool, readRelays, { ids: missingIds }, { eventStore })
+    const loader = () => loadFromRelays(pool, readRelays, { ids: missingIds }, { eventStore })
 
     const subscription = loader().subscribe({
       next: event => {

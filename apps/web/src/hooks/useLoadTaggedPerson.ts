@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getProfileContent } from 'applesauce-core/helpers'
 import { kinds } from 'nostr-tools'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import type { EventStore } from 'applesauce-core'
 import type { RelayPool } from 'applesauce-relay'
 import { useAppContext } from './useAppContext'
 import type { TaggedPerson } from '@/types/upload-draft'
 import { DEFAULT_RELAYS } from '@/nostr/core'
 import { METADATA_RELAYS } from '@/constants/relays'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 /**
  * Hook to load profile data for a pubkey and return a TaggedPerson object.
@@ -59,18 +59,19 @@ export function useLoadTaggedPerson(
     // Use provided relays or fall back to default + metadata-specialized relays
     const queryRelays =
       relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, ...METADATA_RELAYS]
-    const loader = createTimelineLoader(
-      pool,
-      queryRelays,
-      {
-        kinds: [kinds.Metadata],
-        authors: [pubkey],
-      },
-      {
-        eventStore,
-        limit: 1,
-      }
-    )
+    const loader = () =>
+      loadFromRelays(
+        pool,
+        queryRelays,
+        {
+          kinds: [kinds.Metadata],
+          authors: [pubkey],
+        },
+        {
+          eventStore,
+          limit: 1,
+        }
+      )
 
     const subscription = loader().subscribe({
       next: event => {
@@ -146,18 +147,19 @@ export async function loadTaggedPeople(
       // Use provided relays or fall back to default + metadata-specialized relays
       const queryRelays =
         relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, ...METADATA_RELAYS]
-      const loader = createTimelineLoader(
-        pool,
-        queryRelays,
-        {
-          kinds: [kinds.Metadata],
-          authors: [pubkey],
-        },
-        {
-          eventStore,
-          limit: 1,
-        }
-      )
+      const loader = () =>
+        loadFromRelays(
+          pool,
+          queryRelays,
+          {
+            kinds: [kinds.Metadata],
+            authors: [pubkey],
+          },
+          {
+            eventStore,
+            limit: 1,
+          }
+        )
 
       // Wait for profile to load
       await new Promise<void>((resolve, reject) => {

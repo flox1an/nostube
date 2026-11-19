@@ -5,7 +5,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { nowInSecs } from '@/lib/utils'
 import { useAppContext } from './useAppContext'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { createAddressLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
+import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@nostube/core/deletions'
 import { randomUUID } from '@nostube/core/random-uuid'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -13,6 +13,7 @@ import type { Event } from 'nostr-tools'
 import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
 import { type ValidationStatus, usePlaylistValidation } from './usePlaylistValidation'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 export interface Video {
   id: string
@@ -133,8 +134,8 @@ export function usePlaylists() {
   )
 
   const loader = useMemo(
-    () =>
-      createTimelineLoader(pool, playlistRelays, [...filters, ...deletionFilters], {
+    () => () =>
+      loadFromRelays(pool, playlistRelays, [...filters, ...deletionFilters], {
         eventStore,
       }),
     [pool, playlistRelays, filters, deletionFilters, eventStore]
@@ -553,12 +554,8 @@ export function usePlaylists() {
     const subscriptions: { unsubscribe: () => void }[] = []
 
     if (missingIds.size > 0) {
-      const idLoader = createTimelineLoader(
-        pool,
-        readRelays,
-        { ids: Array.from(missingIds) },
-        { eventStore }
-      )
+      const idLoader = () =>
+        loadFromRelays(pool, readRelays, { ids: Array.from(missingIds) }, { eventStore })
       subscriptions.push(
         idLoader().subscribe({
           next: event => {
@@ -712,8 +709,8 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   const hasLoadedOnceRef = useRef(false)
   const [isLoading, setIsLoading] = useState(false)
   const loader = useMemo(
-    () =>
-      createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
+    () => () =>
+      loadFromRelays(pool, readRelays, [...filters, ...deletionFilters], {
         eventStore,
       }),
     [pool, readRelays, filters, deletionFilters, eventStore]

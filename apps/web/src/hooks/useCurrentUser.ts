@@ -1,7 +1,8 @@
 import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
 import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers'
+import { ExtensionSigner, SimpleSigner } from 'applesauce-signers'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
+import { connectBunker, nostrConnectClient } from '@nostube/core/nostr-connect-client'
 import {
   saveAccountToStorage,
   saveActiveAccount,
@@ -61,7 +62,7 @@ export function useCurrentUser() {
   ) => {
     if (!accountManager) throw new Error('Account manager not available')
 
-    const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri, {
+    const signer = await connectBunker(bunkerUri, nostrConnectClient(), {
       onAuth: options?.onAuth,
     })
     const pubkey = await signer.getPublicKey()

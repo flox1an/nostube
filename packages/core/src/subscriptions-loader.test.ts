@@ -92,8 +92,11 @@ describe('subscriptions outbox feed', () => {
       'bob-video',
       'carol-legacy',
     ])
+    // One batch; applesauce 7 asks once more for the lists still missing (EOSE is no proof of
+    // absence while a round makes progress).
     expect(requests.filter(request => request.relay === discovery)).toEqual([
       { relay: discovery, filters: [{ kinds: [10002], authors: [alice, bob, carol] }] },
+      { relay: discovery, filters: [{ kinds: [10002], authors: [carol] }] },
     ])
     expect(
       videoRequests(requests).map(({ relay, filters }) => [relay, filters[0].authors])
@@ -119,7 +122,8 @@ describe('subscriptions outbox feed', () => {
       page(createSubscriptionsLoader(client, [alice, bob], [], [discovery])),
     ])
     await page(createSubscriptionsLoader(client, [alice, bob], [], [discovery]))
-    expect(requests.filter(request => request.relay === discovery)).toHaveLength(1)
+    // The batch and applesauce 7's one retry for bob's missing list; later mounts reuse both.
+    expect(requests.filter(request => request.relay === discovery)).toHaveLength(2)
     expect(client.eventStore.getReplaceable(10002, alice)?.id).toBe('alice-list')
   })
 

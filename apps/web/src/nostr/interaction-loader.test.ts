@@ -76,7 +76,6 @@ it('does not cache failures or share freshness between event stores', async () =
 
 it('does not mistake relay refusal or connection errors for an empty EOSE', async () => {
   const pool = new RelayPool()
-  pool.ignoreOffline = false
   const store = new EventStore()
   const relay = pool.relay(relays[0])
   const req = vi
@@ -85,9 +84,10 @@ it('does not mistake relay refusal or connection errors for an empty EOSE', asyn
     .mockReturnValueOnce(throwError(() => new Error('disconnected')))
     .mockReturnValue(of({ type: 'EOSE', from: relay.url, id: 'test' }))
   await expect(loadInteractions(pool, store, relays, { eventIds: [id] })).rejects.toThrow('denied')
-  await expect(loadInteractions(pool, store, relays, { eventIds: [id] })).rejects.toThrow(
-    'disconnected'
-  )
+  // A dropped connection reaches us as applesauce 7's RelayGroupError, with the cause kept.
+  await expect(loadInteractions(pool, store, relays, { eventIds: [id] })).rejects.toMatchObject({
+    errors: [expect.objectContaining({ message: 'disconnected' })],
+  })
   await loadInteractions(pool, store, relays, { eventIds: [id] })
   await loadInteractions(pool, store, relays, { eventIds: [id] })
   expect(req).toHaveBeenCalledTimes(3)

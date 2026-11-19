@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader, createAddressLoader } from 'applesauce-loaders/loaders'
+import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event as NostrEvent } from 'nostr-tools'
 
@@ -36,6 +36,7 @@ import {
 } from '@/lib/playlist-validation-db'
 import type { Video } from './usePlaylist'
 import { useAppContext } from './useAppContext'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 export type ValidationStatus = PlaylistValidationStatus | 'pending'
 
@@ -331,7 +332,7 @@ export function usePlaylistValidation(
       if (missingEvents.size > 0) {
         const ids = [...missingEvents.keys()]
         const eventRelays = collectRelayHints(missingEvents.values(), relays, eventStore)
-        const loader = createTimelineLoader(pool, eventRelays, { ids }, { eventStore })
+        const loader = () => loadFromRelays(pool, eventRelays, { ids }, { eventStore })
         if (cancelled) return
         subscriptions.push(
           loader().subscribe({

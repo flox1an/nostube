@@ -1,5 +1,5 @@
 import { EventStore } from 'applesauce-core'
-import { RelayPool } from 'applesauce-relay'
+import { RelayGroup, RelayPool } from 'applesauce-relay'
 import { createEventLoaderForStore } from 'applesauce-loaders/loaders'
 import { kinds, type Filter, type NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents, deleteEvent, deleteReplaceable } from 'nostr-idb'
@@ -18,7 +18,6 @@ import {
   finalize,
   defer,
   isObservable,
-  map,
 } from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import {
@@ -257,8 +256,10 @@ export function createNostubeClient(config: NostubeClientConfig) {
   // Initialize EventStore
   const eventStore = new EventStore()
   const relayPool = new RelayPool()
-  // The visitor identity is the only instance lookup allowed outside the configured relay set.
-  const identityGroup = relayPool.group.bind(relayPool)
+  // The visitor identity is the only instance lookup allowed outside the configured relay set:
+  // a plain group of pool relays, past the filterRelays() gates below.
+  const identityGroup = (relays: string[]) =>
+    new RelayGroup(relays.map(url => relayPool.relay(url)))
   function requestVisitorIdentity(pubkey: string, relays: string[]) {
     if (!/^[a-f0-9]{64}$/.test(pubkey)) throw new Error('Invalid visitor public key')
     return identityGroup(relays)
@@ -324,21 +325,16 @@ export function createNostubeClient(config: NostubeClientConfig) {
     )
   }) as typeof relayPool.request
 
-  // Every pool connection goes through group(). Two gates live here:
+  // Every pool connection resolves its relay list through filterRelays() (group() and the
+  // liveness-aware liveGroup() of subscriptions both do). Two gates live here:
   // - an https page drops ws:// relays off loopback. Chrome lets ws:// through to `.local` and
   //   private hosts (Local Network Access) and then shows the page as "Not Secure";
   // - the instance build (nostube-server ADR 0005) only connects to videoSources ∪
   //   interactionRelays (hints, outbox, NIP-65, presets and the hardcoded relay constants are
   //   dropped).
-  const group = relayPool.group.bind(relayPool)
+  const filterRelays = relayPool.filterRelays.bind(relayPool)
   const allowed = (url: string) => isRelayAllowed(url) && isRelaySecureForPage(url)
-  relayPool.group = ((relays, ignoreOffline) =>
-    group(
-      Array.isArray(relays)
-        ? relays.filter(allowed)
-        : relays.pipe(map(urls => urls.filter(allowed))),
-      ignoreOffline
-    )) as typeof relayPool.group
+  relayPool.filterRelays = (relays: string[]) => filterRelays(relays).filter(allowed)
 
   if (instance) {
     // Video-kind requests only go to videoSources and only for creators; a request with

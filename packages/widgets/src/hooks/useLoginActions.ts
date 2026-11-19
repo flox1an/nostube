@@ -7,6 +7,7 @@ import { saveAccountToStorage, saveActiveAccount } from './useAccountPersistence
 import { isNip05, resolveNip05ToBunkerUri } from '@nostube/core/nip05-bunker'
 import { allowSignerRelays } from '@nostube/core/instance-config'
 import { decryptNcryptsec } from '@nostube/core/nip49'
+import { connectBunker, nostrConnectClient } from '@nostube/core/nostr-connect-client'
 
 // NOTE: This file should not be edited except for adding new login methods.
 
@@ -77,7 +78,11 @@ export function useLoginActions() {
     // Login with a NIP-46 "bunker://" URI or NIP-05 address (user@domain)
     async bunker(
       _input: string,
-      options?: { onAuth?: (url: string) => Promise<void> }
+      options?: {
+        onAuth?: (url: string) => Promise<void>
+        /** Name the remote signer shows for this client; defaults to nostube. */
+        clientName?: string
+      }
     ): Promise<void> {
       try {
         if (!_input.trim()) {
@@ -100,7 +105,7 @@ export function useLoginActions() {
         // instance relay allowlist would drop them and the login would wait forever.
         allowSignerRelays(NostrConnectSigner.parseBunkerURI(bunkerUri).relays)
 
-        const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri, {
+        const signer = await connectBunker(bunkerUri, nostrConnectClient(options?.clientName), {
           onAuth: options?.onAuth,
         })
         const pubkey = await signer.getPublicKey()

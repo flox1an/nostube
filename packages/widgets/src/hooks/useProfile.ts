@@ -6,8 +6,8 @@ import { type Model } from 'applesauce-core'
 import { defer, EMPTY, merge, of } from 'rxjs'
 import { requestProfile } from './useBatchedProfiles'
 import { useNostubeHost } from '../host'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { type RelayPool } from 'applesauce-relay'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 /**
  * Module-level model factory.
@@ -37,12 +37,12 @@ function ProfileQuery(
         // that only lives on a private server still resolves.
         requestProfile(pubkey)
         if (relays && relays.length > 0) {
-          createTimelineLoader(
+          loadFromRelays(
             pool,
             relays,
             { kinds: [kinds.Metadata], authors: [pubkey] },
             { eventStore: events, limit: 1 }
-          )().subscribe({
+          ).subscribe({
             error: err => {
               console.error('[Profile Loader] Error loading profile from hint relays:', err)
             },

@@ -11,9 +11,9 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { kinds } from 'nostr-tools'
 import { getProfileContent } from 'applesauce-core/helpers'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { DEFAULT_RELAYS } from '@/nostr/core'
 import { METADATA_RELAYS } from '@/constants/relays'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 export interface SelectedPerson {
   pubkey: string
@@ -109,18 +109,19 @@ export function PeoplePicker({
     // Use fallback relays (including metadata-specialized relay) when person has no relay hints
     const relays = [...DEFAULT_RELAYS, ...METADATA_RELAYS]
 
-    const loader = createTimelineLoader(
-      pool,
-      relays,
-      {
-        kinds: [kinds.Metadata],
-        authors: pubkeysToLoad,
-      },
-      {
-        eventStore,
-        limit: pubkeysToLoad.length,
-      }
-    )
+    const loader = () =>
+      loadFromRelays(
+        pool,
+        relays,
+        {
+          kinds: [kinds.Metadata],
+          authors: pubkeysToLoad,
+        },
+        {
+          eventStore,
+          limit: pubkeysToLoad.length,
+        }
+      )
 
     const subscription = loader().subscribe({
       next: event => {

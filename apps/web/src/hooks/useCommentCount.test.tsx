@@ -1,11 +1,11 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { EventStoreProvider } from 'applesauce-react'
 import { finalizeEvent, getPublicKey } from 'nostr-tools'
 import { expect, it } from 'vitest'
 import { useCommentCount } from './useCommentCount'
 
-it('counts event-ID and address comments once and reflects locally added comments immediately', () => {
+it('counts event-ID and address comments once and reflects locally added comments', async () => {
   const store = new EventStore()
   // jsdom uses a different Uint8Array realm from the signature verifier.
   store.verifyEvent = () => true
@@ -41,5 +41,6 @@ it('counts event-ID and address comments once and reflects locally added comment
     )
     store.add(comment([['A', `34236:${getPublicKey(secret)}:other`]], 'unrelated'))
   })
-  expect(result.current).toBe(3)
+  // applesauce 7 batches timeline updates to the next tick.
+  await waitFor(() => expect(result.current).toBe(3))
 })

@@ -3,11 +3,11 @@ import { combineLatest, of } from 'rxjs'
 import { map, startWith } from 'rxjs/operators'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { nip19, kinds } from 'nostr-tools'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { genUserName } from '@/lib/genUserName'
 import { useAppContext } from '@/hooks/useAppContext'
 import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 import type { VideoNote } from '@/hooks/useVideoNotes'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 interface Mention {
   token: string // full "nostr:npub1..." match to replace
@@ -69,12 +69,13 @@ export function useFirstLineTitle(note: VideoNote | null): string {
     for (const { pubkey, relays } of mentions) {
       if (eventStore.hasReplaceable(kinds.Metadata, pubkey)) continue
       if (relays.length > 0) {
-        const loader = createTimelineLoader(
-          pool,
-          relays,
-          { kinds: [kinds.Metadata], authors: [pubkey] },
-          { eventStore, limit: 1 }
-        )
+        const loader = () =>
+          loadFromRelays(
+            pool,
+            relays,
+            { kinds: [kinds.Metadata], authors: [pubkey] },
+            { eventStore, limit: 1 }
+          )
         loader().subscribe({ error: err => console.error('[useFirstLineTitle]', err) })
       } else {
         requestProfile(pubkey)

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import type { NostrEvent } from 'nostr-tools'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 export interface VideoLabels {
   hashtags: string[] // Additional hashtags from labels
@@ -33,18 +33,19 @@ export function useVideoLabels(videoEventId: string | undefined): VideoLabels {
     const labelEvents: NostrEvent[] = []
 
     // Query kind 1985 events that reference this video
-    const loader = createTimelineLoader(
-      pool,
-      readRelays,
-      [
-        {
-          kinds: [1985],
-          '#e': [videoEventId],
-          limit: 100,
-        },
-      ],
-      { eventStore }
-    )
+    const loader = () =>
+      loadFromRelays(
+        pool,
+        readRelays,
+        [
+          {
+            kinds: [1985],
+            '#e': [videoEventId],
+            limit: 100,
+          },
+        ],
+        { eventStore }
+      )
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {

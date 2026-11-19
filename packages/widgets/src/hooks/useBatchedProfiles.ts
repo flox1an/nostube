@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { kinds } from 'nostr-tools'
 import { useNostubeHost } from '../host'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 /**
  * Batched profile loader
@@ -36,18 +36,19 @@ export function useBatchedProfileLoader() {
       if (pubkeysToLoad.length === 0) return
 
       // Load all profiles in a single request
-      const loader = createTimelineLoader(
-        pool,
-        [...readRelays, ...hostRelays.metadata],
-        {
-          kinds: [kinds.Metadata],
-          authors: pubkeysToLoad,
-        },
-        {
-          eventStore,
-          limit: pubkeysToLoad.length,
-        }
-      )
+      const loader = () =>
+        loadFromRelays(
+          pool,
+          [...readRelays, ...hostRelays.metadata],
+          {
+            kinds: [kinds.Metadata],
+            authors: pubkeysToLoad,
+          },
+          {
+            eventStore,
+            limit: pubkeysToLoad.length,
+          }
+        )
 
       loader().subscribe({
         next: _event => {

@@ -1,13 +1,13 @@
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { PlaylistCard } from './PlaylistCard'
 import { CreatePlaylistCard } from './CreatePlaylistCard'
 import type { Playlist } from '@/hooks/usePlaylist'
 import { useAppContext } from '@/hooks'
+import { loadFromRelays } from '@nostube/core/relay-load'
 
 interface PlaylistGridProps {
   playlists: Playlist[]
@@ -61,7 +61,7 @@ export function PlaylistGrid({
     // Deduplicate
     const uniqueIds = [...new Set(missingIds)]
 
-    const loader = createTimelineLoader(pool, readRelays, { ids: uniqueIds }, { eventStore })
+    const loader = () => loadFromRelays(pool, readRelays, { ids: uniqueIds }, { eventStore })
 
     const subscription = loader().subscribe({
       next: event => {

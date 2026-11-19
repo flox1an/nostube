@@ -200,7 +200,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     setAuthUrl(null)
 
     try {
-      await login.bunker(bunkerUri, { onAuth: handleBunkerAuth })
+      await login.bunker(bunkerUri, { onAuth: handleBunkerAuth, clientName })
       localStorage.setItem('nostube:last-bunker', bunkerUri.trim())
       setAuthUrl(null)
       onLogin()

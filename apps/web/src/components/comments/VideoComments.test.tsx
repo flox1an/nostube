@@ -78,13 +78,14 @@ describe('VideoComments loading', () => {
     expect(screen.getByText('Start the conversation.')).toBeInTheDocument()
   })
 
-  it('renders comments from all relays and clears the skeleton at EOSE', () => {
+  it('renders comments from all relays and clears the skeleton at EOSE', async () => {
     renderComments(baseProps)
     act(() => {
       requests[0][0].next(commentFor(baseProps.videoId, 'Fast relay comment'))
       requests[0][1].next(commentFor(baseProps.videoId, 'Slow relay comment'))
     })
-    expect(screen.getByText('Fast relay comment')).toBeInTheDocument()
+    // applesauce 7 batches timeline updates to the next tick.
+    expect(await screen.findByText('Fast relay comment')).toBeInTheDocument()
     expect(screen.getByText('Slow relay comment')).toBeInTheDocument()
 
     act(() => requests[0].forEach(source => source.complete()))

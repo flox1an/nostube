@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { EventStoreProvider } from 'applesauce-react/providers'
 import type { NostrEvent, VerifiedEvent } from 'nostr-tools'
@@ -47,7 +47,7 @@ describe('useLiveChat paging', () => {
     state.request.mockReset().mockReturnValue(page)
   })
 
-  it('requests the page before the oldest chat message and merges it in order', () => {
+  it('requests the page before the oldest chat message and merges it in order', async () => {
     const now = Math.floor(Date.now() / 1000)
     store.add(message(now - 10))
     store.add(message(now - 20))
@@ -66,12 +66,15 @@ describe('useLiveChat paging', () => {
       page.next(message(now - 40))
       page.complete()
     })
-    expect(result.current.events.map(e => e.content)).toEqual([
-      `m${now - 40}`,
-      `m${now - 30}`,
-      `m${now - 20}`,
-      `m${now - 10}`,
-    ])
+    // applesauce 7 batches timeline updates to the next tick.
+    await waitFor(() =>
+      expect(result.current.events.map(e => e.content)).toEqual([
+        `m${now - 40}`,
+        `m${now - 30}`,
+        `m${now - 20}`,
+        `m${now - 10}`,
+      ])
+    )
   })
 
   it('stops requesting once a page brings nothing new, or fails', () => {

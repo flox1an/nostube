@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.84] - 2026-11-19
+
+### Changed
+
+- Applesauce 7 (all `applesauce-*` packages, from 6.2). One-shot relay loads that used `createTimelineLoader(...)()` (profiles, playlists, labels, notes, pin lists, people picker) go through `loadFromRelays` in `@nostube/core/relay-load`; v7's timeline loader pages explicit time windows instead. The relay allowlist and the https/ws gate of an instance sit in `RelayPool.filterRelays`, which both `group()` and v7's liveness-aware subscriptions pass through; the visitor identity lookup keeps its own ungated group. Behaviour now coming from applesauce: `request()` completes once relays go idle after EOSE instead of five seconds after the first one, a relay that never answers fails after 10 s, missing NIP-65 lists are asked for once more while a lookup round still finds others, a total relay failure arrives as one `RelayGroupError` with each relay's cause, and event store timelines update on the next tick.
+- Dependencies: TypeScript 6.0 (`baseUrl` dropped from the web tsconfigs; TypeScript 7 waits for typescript-eslint), Vitest 5, jsdom 31, `@testing-library/jest-dom` 8 (setup imports `@testing-library/jest-dom/vitest`), `@vitejs/plugin-react` 6, `vite-plugin-pwa` 2, i18next 27 with react-i18next 18, nostr-idb 6, Capacitor 8, `@contextvm/sdk` 0.14 and current minor versions of the rest (Radix, React 19.3, Vite 8.3, Tailwind 4.3, mediabunny, nostr-tools, …).
+
+### Fixed
+
+- A `bunker://` login now tells the remote signer which app connects (name, URL, icon), so signer apps that read NIP-46 client metadata can label it, not only for a QR (`nostrconnect://`) pairing: the `connect` request carries the NIP-46 client metadata as its 4th param (`connectBunker` in `@nostube/core/nostr-connect-client`, used by `useLoginActions` and `useCurrentUser`). On a server instance both paths send the instance's name and, if one is uploaded, its own icon (`site.icon`) instead of nostube's. The QR and the bunker path build their metadata from the same `nostrConnectClient()`.
+
 ## [0.2.83] - 2026-11-19
 
 ### Added
@@ -301,7 +312,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Subscriptions and the home page's followed-creators shelf now find videos and shorts published only on creators' NIP-65 outbox relays. Relay-list lookups are batched and shared, with a five-minute cache; persisted lists and follow hints start requests immediately. Creators are grouped by relay, each relay is queried only for its associated authors, and pagination retains independent cursors. Configured read relays remain the fallback.
 
-## [Unreleased]
+## [0.2.84] - 2026-11-19
 
 ### Changed
 

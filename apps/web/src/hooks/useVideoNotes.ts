@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useAppContext, useReadRelays } from '@/hooks'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@nostube/core/video-event'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
+import { loadFromRelays } from '@nostube/core/relay-load'
 // const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
 
 /** A pubkey with optional relay hints extracted from p tags or nprofile links */
@@ -139,21 +139,20 @@ export function useVideoNotes() {
     // Load current user's published video events to build the set of already-published URLs
     const videoKinds = [21, 22, 34235, 34236]
     const videoLoader = user?.pubkey
-      ? createTimelineLoader(
-          pool,
-          readRelays,
-          [{ kinds: videoKinds, authors: [user.pubkey], limit: 500 }],
-          { eventStore }
-        )
+      ? () =>
+          loadFromRelays(
+            pool,
+            readRelays,
+            [{ kinds: videoKinds, authors: [user.pubkey], limit: 500 }],
+            { eventStore }
+          )
       : null
 
     // Load current user's Kind 1 notes
-    const notesLoader = createTimelineLoader(
-      pool,
-      readRelays,
-      [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
-      { eventStore }
-    )
+    const notesLoader = () =>
+      loadFromRelays(pool, readRelays, [{ kinds: [1], authors: [user.pubkey], limit: 100 }], {
+        eventStore,
+      })
 
     // Subscribe to current user's video events to build the published URL set
     if (videoLoader) {

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.85] - 2026-11-19
+
+### Fixed
+
+- A short opened from a link or a card shows even when the suggestion list never arrives. The shorts page put the requested short into the deck only through the relay suggestion stream (relay request → store timeline → trust filter), so a stream that stayed silent or failed left the deck empty and the page said "Video not found" although the event had loaded. The requested short now enters the deck on its own and the suggestions merge into it; an error in the suggestion stream is logged and ends the stream instead of leaving it without any list. A short opened while a deck from an earlier shorts visit is still in the store is inserted into that deck when it is not part of it instead of staying hidden, and "Video not found" needs a short that really did not resolve.
+
 ## [0.2.84] - 2026-11-19
 
 ### Changed

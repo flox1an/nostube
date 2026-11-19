@@ -220,6 +220,10 @@ export function ShortsVideoPage() {
     if (allVideos.length > 0 && loadSourceRef.current === null) {
       // Store already populated, don't load from relays
       loadSourceRef.current = 'store'
+      // A deck left over from an earlier shorts visit must not hide the short just opened.
+      if (!allVideos.some(v => v.id === initialVideo.id)) {
+        setVideos([initialVideo, ...allVideos], 0)
+      }
       return
     }
 
@@ -230,6 +234,12 @@ export function ShortsVideoPage() {
 
     // Otherwise, load from relays (original behavior)
     loadSourceRef.current = 'relays'
+    // Show the requested short now. The suggestion list below only merges into it, so a silent
+    // suggestion subscription can no longer turn a loaded short into "Video not found".
+    // Guarded: this effect re-runs on every deck change, and an unconditional set here loops.
+    if (!useShortsFeedStore.getState().videos.some(v => v.id === initialVideo.id)) {
+      setVideos([initialVideo], 0)
+    }
     setLoading(true)
 
     const filters = {
@@ -271,9 +281,18 @@ export function ShortsVideoPage() {
           )
         })
       )
-      .subscribe(videos => {
-        setCandidates(videos)
-        setLoading(false)
+      .subscribe({
+        next: videos => {
+          setCandidates(videos)
+          setLoading(false)
+        },
+        error: err => {
+          // A single unparsable event used to kill this subscription and leave `candidates`
+          // null forever, so the deck never got its first video.
+          console.error('Error processing shorts suggestions:', err)
+          setCandidates([])
+          setLoading(false)
+        },
       })
 
     return () => {
@@ -943,8 +962,8 @@ export function ShortsVideoPage() {
     )
   }
 
-  // Only show "not found" after loading is complete and we have no videos
-  if (!isLoadingVideos && !currentVideo && allVideos.length === 0) {
+  // Only show "not found" after loading is complete, nothing is loaded and no short was resolved
+  if (!initialVideo && !isLoadingVideos && !currentVideo && allVideos.length === 0) {
     return (
       <>
         {header}

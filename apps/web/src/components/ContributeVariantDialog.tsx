@@ -356,15 +356,9 @@ export function ContributeVariantDialog({
 
   const isBlocked = blockers.length > 0
   const selectedServers = blossomServers.filter(server => selectedServerUrls.has(server.url))
-  const initialServers = selectedServers
-    .filter(server => server.tags.includes('initial upload'))
-    .map(s => s.url)
-  const mirrorServers = selectedServers
-    .filter(server => server.tags.includes('mirror'))
-    .map(s => s.url)
-  const resolvedInitialServers =
-    initialServers.length > 0 ? initialServers : selectedServers.map(s => s.url)
-  const resolvedMirrorServers = initialServers.length > 0 ? mirrorServers : []
+  // One flat list: the upload strategy picks which servers get the file.
+  const resolvedInitialServers = selectedServers.map(server => server.url)
+  const resolvedMirrorServers: string[] = []
 
   const startContribution = () => {
     if (!sourceVariant || !video || !videoEvent) return
@@ -567,14 +561,6 @@ export function ContributeVariantDialog({
                   />
                   <div className="min-w-0 flex-1 text-sm">
                     <p className="font-medium">{domainFromUrl(server.url)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {server.tags.includes('initial upload') &&
-                        t('video.contribute.serverInitial')}
-                      {server.tags.includes('initial upload') && server.tags.includes('mirror')
-                        ? ' · '
-                        : ''}
-                      {server.tags.includes('mirror') && t('video.contribute.serverMirror')}
-                    </p>
                   </div>
                 </Label>
               ))}

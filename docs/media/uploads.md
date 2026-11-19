@@ -6,24 +6,24 @@ An upload in the Nostube web app goes through four stages: pick a file, optional
 
 ## The flow
 
-1. **Sign in and choose the source.** The upload page (`/upload`) needs a signed-in user. Choose **Upload File** or **From URL**. A file upload needs at least one hosting server tagged Primary (see [Blossom storage](/media/blossom#server-roles-in-the-web-app)). If none is set, the page offers to set them up first.
-2. **Optimise for Nostr (optional).** The browser analyses the file and suggests a conversion (see below). You can also upload the file unchanged.
+1. **Choose the source.** The upload page (`/upload`) needs a signed-in user. A file can be dropped anywhere on the page, or picked with **Select file**; a link goes into the URL field. You do not have to configure anything first: unless you already have a server list, the page fills in the instance's proxy or the free defaults. The storage card shows which servers will receive the file, and **Change** opens the list (see [Blossom storage](/media/blossom#your-server-list)). Existing drafts are listed below the form.
+2. **Optimise for Nostr.** As soon as a file is dropped, the browser starts converting it with the recommended settings (see below) and shows the progress rail; the details form is usable meanwhile. **Cancel** stops the conversion; after a cancel or a failure, the progress rail offers **Change settings**, which opens the full list of conversion options (including **Upload only** for the source file unchanged) and restarts from there. Without WebCodecs in the browser, the conversion settings appear first and wait for a click.
 3. **Upload to Blossom.** Every resulting file is uploaded from the browser to one server, and the other servers copy it from there (see the upload strategy below).
 4. **Details.** Add a title, description, tags, language, thumbnail, subtitles and an optional content warning while the upload runs. The draft is saved in the browser, so a reload does not lose it.
 5. **Publish.** Details and publishing share one page: the right column shows how the video will appear, what is still missing (processing, title, thumbnail) and the publish button. **Show all options** adds relay selection and the event preview. The web app builds a video event (kind `34235`, or `34236` for portrait video). It signs the event with your signer and sends it to your write relays. The event format is described in [NIP-71 video events](/developers/nip-71).
 
-With **From URL**, nothing is uploaded: the event points to the given URL. If the URL is a Blossom URL, the web app mirrors that blob to your Backup servers.
+With **From URL**, nothing is uploaded: the event points to the given URL. If the URL is a Blossom URL, the web app mirrors that blob to the rest of your server list.
 
 ## Blossom upload
 
-Primary and Backup servers together form one list; the web app decides per file which server gets the upload and which ones copy it:
+Your servers form one flat list — there are no roles to tag. The web app decides per file which server gets the upload and which ones copy it:
 
-- The **primary** is the first server in the list (Primary servers before Backup servers), unless another server was measured at least twice as fast from this browser. The browser only measures servers it uploads to on their own, so in practice this happens after a server took over from a failed primary.
+- The upload goes to the first server in the list, unless another server was measured at least twice as fast from this browser. The browser only measures servers it uploads to on their own, so in practice this happens after a server took over from a failed one.
 - Servers whose size limit the file exceeds are left out. Limits come from the server catalog or from an earlier `413` answer.
 - Every other server copies the file with `PUT /mirror`. A server known to have no mirror endpoint gets the file uploaded directly instead.
-- If the primary fails, the next server gets the upload and becomes the source for the copies. A server that answers a mirror with `404`, `405` or `501` (or blocks the request) gets the file uploaded directly. A mirror timeout or server error stays a failure that you can retry, since the copy may still finish on the server.
+- If that server fails, the next one gets the upload and becomes the source for the copies. A server that answers a mirror with `404`, `405` or `501` (or blocks the request) gets the file uploaded directly. A mirror timeout or server error stays a failure that you can retry, since the copy may still finish on the server.
 
-The browser remembers per server, for 30 days, whether it mirrors, its size limit and its upload speed. For an HLS conversion the strategy is chosen once for the whole job; a playlist or segment the primary rejects goes to the next server.
+The browser remembers per server, for 30 days, whether it mirrors, its size limit and its upload speed. For an HLS conversion the strategy is chosen once for the whole job; a playlist or segment the first server rejects goes to the next one.
 
 For each file, the web app:
 
@@ -33,7 +33,7 @@ For each file, the web app:
 4. uploads with `PUT /upload`. Files above 100 MB are first tried as a chunked `PATCH /upload` with 10 MB chunks, two at a time, the last chunk sent last. If the server does not support chunked uploads or the attempt fails, the file is sent with `PUT`;
 5. has every other server copy the uploaded blob with `PUT /mirror` (`{"url": "<uploaded blob URL>"}`), again skipping servers that already have the hash.
 
-The upload succeeds if at least one server accepts the file. The primary's URL becomes the event's `url`. The other copies become `fallback` URLs.
+The upload succeeds if at least one server accepts the file. The URL of the server that took the upload becomes the event's `url`. The other copies become `fallback` URLs.
 
 ### Progress and relay confirmations
 
@@ -97,4 +97,4 @@ The [Studio](/server/studio) of a Nostube Server uses the same transcoding code 
 
 ## Optional: transcoding with a DVM
 
-In the web app (not in a Nostube Server), a video above 1080p or with a codec that may not play everywhere (`hev1`, AV1, VP9) can also be converted by a hosted transform DVM, a Nostr Data Vending Machine (NIP-90, request kind `5207`). The web app lists the DVMs that announced themselves on your relays within the last 30 minutes. It sends the job and waits for the result, then mirrors the DVM's output to your Primary and Backup servers. This path is optional, and running your own DVM is not covered here. The protocol is described in [Transform DVM API](/developers/dvm-api).
+In the web app (not in a Nostube Server), a video above 1080p or with a codec that may not play everywhere (`hev1`, AV1, VP9) can also be converted by a hosted transform DVM, a Nostr Data Vending Machine (NIP-90, request kind `5207`). The web app lists the DVMs that announced themselves on your relays within the last 30 minutes. It sends the job and waits for the result, then mirrors the DVM's output to your server list. This path is optional, and running your own DVM is not covered here. The protocol is described in [Transform DVM API](/developers/dvm-api).

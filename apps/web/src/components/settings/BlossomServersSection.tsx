@@ -1,28 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppContext, useUserBlossomServers, useSelectedPreset } from '@/hooks'
+import { useAppContext, useCurrentUser, useNostrPublish, useUserBlossomServers } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
 import { ScrollArea } from '@nostube/widgets/components/scroll-area'
-import { Cog, XIcon } from 'lucide-react'
-import { type BlossomServer, type BlossomServerTag } from '@nostube/core'
-import { Badge } from '@nostube/widgets/components/badge'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from '@nostube/widgets/components/dropdown-menu'
+import { Loader2, XIcon } from 'lucide-react'
+import { type BlossomServer } from '@nostube/core'
 import { isBlossomServerBlocked } from '@/constants/relays'
-import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/useToast'
-import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
-
-const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
-
-function deriveServerName(url: string): string {
-  return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
-}
+import {
+  configuredServerUrls,
+  defaultBlossomServers,
+  deriveServerName,
+} from '@/lib/blossom-servers'
 
 function normalizeServerUrl(url: string): string {
   const trimmed = url.trim()
@@ -38,31 +28,30 @@ function normalizeBlossomServers(servers: unknown): BlossomServer[] {
 
   return servers
     .filter(
-      (server): server is { url?: unknown; name?: unknown; tags?: unknown } =>
+      (server): server is { url?: unknown; name?: unknown } =>
         typeof server === 'object' && server !== null
     )
     .map(server => {
-      const url = typeof server.url === 'string' ? normalizeServerUrl(server.url) : ''
+      const url = typeof server.url === 'string' ? server.url : ''
       const name =
-        typeof server.name === 'string' && server.name.trim().length > 0
-          ? server.name
-          : deriveServerName(url)
-      const tags = Array.isArray(server.tags)
-        ? server.tags.filter(
-            (tag): tag is BlossomServerTag => tag === 'mirror' || tag === 'initial upload'
-          )
-        : []
-
-      return { url, name, tags }
+        typeof server.name === 'string' && server.name ? server.name : deriveServerName(url)
+      return { url, name, tags: [] }
     })
     .filter(server => server.url.length > 0)
 }
 
+/**
+ * The user's Blossom servers as one flat list: every server is a candidate for the upload, the
+ * strategy picks which ones get the file. The list can be published to the profile (kind 10063),
+ * which other Nostr apps use to find the user's media.
+ */
 export function BlossomServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
-  const { presetContent } = useSelectedPreset()
+  const { user } = useCurrentUser()
+  const { publish } = useNostrPublish()
   const [newServerUrl, setNewServerUrl] = useState('')
+  const [isPublishing, setIsPublishing] = useState(false)
   const userBlossomServers = useUserBlossomServers()
   const blossomServers = useMemo(
     () => normalizeBlossomServers(config.blossomServers),
@@ -81,44 +70,32 @@ export function BlossomServersSection() {
     }
   }, [config.blossomServers, updateConfig])
 
-  /*
-  Would be good for initial load of the app, but not for the dialog
-  useEffect(() => {
-    if (
-      userBlossomServers.data &&
-      (config.blossomServers == undefined || config.blossomServers?.length == 0)
-    ) {
-      handleResetServers();
-    }
-  }, [userBlossomServers.data, config.blossomServers]);
-*/
-
   const handleAddServer = () => {
-    if (newServerUrl.trim()) {
-      const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
+    if (!newServerUrl.trim()) return
+    const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
+    setNewServerUrl('')
 
-      // Block servers that re-encode videos
-      if (isBlossomServerBlocked(normalizedUrl)) {
-        toast({
-          title: t('settings.blossom.blockedServer'),
-          description: t('settings.blossom.blockedServerDescription'),
-          variant: 'destructive',
-        })
-        setNewServerUrl('')
-        return
-      }
-
-      updateConfig(currentConfig => {
-        const servers = normalizeBlossomServers(currentConfig.blossomServers)
-        if (servers.some(s => s.url === normalizedUrl)) return currentConfig
-        const name = deriveServerName(normalizedUrl)
-        return {
-          ...currentConfig,
-          blossomServers: [...servers, { url: normalizedUrl, name, tags: [] }],
-        }
+    // Block servers that re-encode videos
+    if (isBlossomServerBlocked(normalizedUrl)) {
+      toast({
+        title: t('settings.blossom.blockedServer'),
+        description: t('settings.blossom.blockedServerDescription'),
+        variant: 'destructive',
       })
-      setNewServerUrl('')
+      return
     }
+
+    updateConfig(currentConfig => {
+      const servers = normalizeBlossomServers(currentConfig.blossomServers)
+      if (servers.some(s => s.url === normalizedUrl)) return currentConfig
+      return {
+        ...currentConfig,
+        blossomServers: [
+          ...servers,
+          { url: normalizedUrl, name: deriveServerName(normalizedUrl), tags: [] },
+        ],
+      }
+    })
   }
 
   const handleRemoveServer = (urlToRemove: string) => {
@@ -130,70 +107,55 @@ export function BlossomServersSection() {
     }))
   }
 
-  const handleResetServers = () => {
-    if (userBlossomServers.data && userBlossomServers.data?.length > 0) {
-      updateConfig(currentConfig => ({
-        ...currentConfig,
-        blossomServers: userBlossomServers.data
-          .filter(s => !isBlossomServerBlocked(s))
-          .map(s => ({
-            url: s,
-            name: s.replace(/^https?:\/\//, ''),
-            tags: [],
-          })),
-      }))
-    } else {
-      updateConfig(currentConfig => {
-        const servers: { url: string; name: string; tags: BlossomServerTag[] }[] = []
-        if (presetContent.defaultBlossomProxy) {
-          servers.push({
-            url: presetContent.defaultBlossomProxy,
-            name: deriveServerName(presetContent.defaultBlossomProxy),
-            tags: ['initial upload'] as BlossomServerTag[],
-          })
-        }
-        DEFAULT_UPLOAD_SERVERS.forEach(url => {
-          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
-          servers.push({
-            url,
-            name: deriveServerName(url),
-            tags: ['initial upload'],
-          })
-        })
-        DEFAULT_MIRROR_SERVERS.forEach(url => {
-          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
-          servers.push({
-            url,
-            name: deriveServerName(url),
-            tags: ['mirror'],
-          })
-        })
-        return {
-          ...currentConfig,
-          blossomServers: servers,
-        }
-      })
-    }
-  }
-
-  const handleToggleTag = (serverUrl: string, tag: BlossomServerTag) => {
+  /** Replace the list: the servers published on the profile when there are any, else defaults. */
+  const handleUseDefaults = () => {
+    const fromProfile = (userBlossomServers.data ?? []).filter(s => !isBlossomServerBlocked(s))
     updateConfig(currentConfig => ({
       ...currentConfig,
-      blossomServers: normalizeBlossomServers(currentConfig.blossomServers).map(s =>
-        s.url === serverUrl
-          ? {
-              ...s,
-              tags: s.tags.includes(tag) ? s.tags.filter(t => t !== tag) : [...s.tags, tag],
-            }
-          : s
-      ),
+      blossomServers:
+        fromProfile.length > 0
+          ? fromProfile.map(url => ({ url, name: deriveServerName(url), tags: [] }))
+          : defaultBlossomServers(),
     }))
   }
 
+  /** Publish the list as kind 10063 (BUD-03), replacing whatever the profile had. */
+  const handlePublishList = async () => {
+    if (blossomServers.length === 0) return
+    setIsPublishing(true)
+    try {
+      await publish({
+        event: {
+          kind: 10063,
+          content: '',
+          tags: blossomServers.map(server => ['server', server.url]),
+          created_at: Math.floor(Date.now() / 1000),
+        },
+        label: t('settings.blossom.publishButton', {
+          defaultValue: 'Publish list to Nostr profile',
+        }),
+      })
+      toast({ title: t('settings.blossom.publishDone'), duration: 3000 })
+    } catch (error) {
+      toast({
+        title: t('settings.blossom.publishFailed'),
+        description: error instanceof Error ? error.message : String(error),
+        variant: 'destructive',
+        duration: 5000,
+      })
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const profileUrls = userBlossomServers.data ?? []
+  const localUrls = configuredServerUrls(blossomServers)
+  const profileDiffers =
+    user?.pubkey != null &&
+    (profileUrls.length !== localUrls.length || localUrls.some(url => !profileUrls.includes(url)))
+
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{t('settings.blossom.description')}</p>
-
       <div>
         {blossomServers.length === 0 ? (
           <p className="text-muted-foreground">{t('settings.blossom.noServers')}</p>
@@ -201,54 +163,16 @@ export function BlossomServersSection() {
           <ScrollArea className="w-full rounded-md border p-4">
             <ul className="space-y-2">
               {blossomServers.map(server => (
-                <li key={server.url} className="flex items-center justify-between text-sm">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-2 mt-1">
-                      <span>{server.name || server.url}</span>
-                      {server.tags.map(tag => (
-                        <Badge
-                          key={tag}
-                          variant="default"
-                          className={cn(
-                            ['text-xs'],
-                            tag == 'mirror'
-                              ? 'bg-blue-500 hover:bg-blue-500/90'
-                              : 'bg-orange-500 hover:bg-orange-500/90'
-                          )}
-                        >
-                          {t(`settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label={t('auth.account.editTags')}>
-                          <span className="sr-only">{t('auth.account.editTags')}</span>
-                          <Cog className="h-6 w-6" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {availableTags.map(tag => (
-                          <DropdownMenuCheckboxItem
-                            key={tag}
-                            checked={server.tags.includes(tag)}
-                            onCheckedChange={() => handleToggleTag(server.url, tag)}
-                          >
-                            {t(`settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`)}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveServer(server.url)}
-                    >
-                      <XIcon className="h-6 w-6" />
-                    </Button>
-                  </div>
+                <li key={server.url} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{server.name || server.url}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveServer(server.url)}
+                    aria-label={t('settings.blossom.remove', { defaultValue: 'Remove server' })}
+                  >
+                    <XIcon className="h-6 w-6" />
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -270,9 +194,38 @@ export function BlossomServersSection() {
         <Button onClick={handleAddServer}>{t('settings.blossom.addButton')}</Button>
       </div>
 
-      <Button variant="outline" onClick={handleResetServers}>
-        {t('settings.blossom.resetButton')}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" onClick={handleUseDefaults}>
+          {t('settings.blossom.resetButton')}
+        </Button>
+        {user && (
+          <Button
+            variant="outline"
+            onClick={handlePublishList}
+            disabled={isPublishing || blossomServers.length === 0}
+          >
+            {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('settings.blossom.publishButton', {
+              defaultValue: 'Publish list to Nostr profile',
+            })}
+          </Button>
+        )}
+      </div>
+
+      {user && (
+        <p className="text-xs text-muted-foreground">
+          {profileDiffers
+            ? t('settings.blossom.profileDiffers', {
+                defaultValue:
+                  'Your profile lists other servers ({{count}}). Publish to replace that list.',
+                count: profileUrls.length,
+              })
+            : t('settings.blossom.profileMatches', {
+                defaultValue: 'Your profile lists these {{count}} servers.',
+                count: localUrls.length,
+              })}
+        </p>
+      )}
     </div>
   )
 }

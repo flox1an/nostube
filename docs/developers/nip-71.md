@@ -89,7 +89,7 @@ If the same author publishes the same `d` identifier as a regular and an address
 | `bitrate` | when known | Bits per second. |
 | `image` | when a thumbnail exists | Thumbnail URL. Several `image` entries in one `imeta` are fallbacks for the same picture. |
 | `blurhash` | web app | Placeholder while the thumbnail loads. |
-| `fallback` | when there are copies | More URLs of the same file (other Primary uploads and Backup mirrors). |
+| `fallback` | when there are copies | More URLs of the same file, one per server that holds a copy. |
 
 Write `fallback` for alternative URLs. Nostube also reads `mirror` entries from older events, but that is not part of NIP-92.
 

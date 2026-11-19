@@ -165,7 +165,10 @@
       "currentThumbnail": "Текущая миниатюра",
       "uploadingThumbnail": "Загрузка миниатюры...",
       "thumbnailSet": "Миниатюра обновлена!",
-      "autoCaptured": "Автоматически создано из видео — замените при желании"
+      "autoCaptured": "Автоматически создано из видео — замените при желании",
+      "prevFrame": "Предыдущий кадр",
+      "nextFrame": "Следующий кадр",
+      "pickAnotherFrame": "Выбрать другой кадр"
     },
     "videoTable": {
       "uploadedTo": "Загружено на",

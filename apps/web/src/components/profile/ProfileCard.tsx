@@ -34,7 +34,7 @@ import { displayNip05, verifyNip05 } from '@nostube/core/nip05'
 import { toast } from 'sonner'
 import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
-import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
+import { DEFAULT_UPLOAD_SERVERS, configuredServerUrls } from '@/lib/blossom-servers'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { Avatar, AvatarImage, AvatarFallback } from '@nostube/widgets/components/avatar'
 import { useTranslation } from 'react-i18next'
@@ -357,29 +357,20 @@ function EditProfileDialog({
     setForm(current => ({ ...current, [field]: value }))
   }
 
-  const configInitialServers =
-    config.blossomServers
-      ?.filter(server => server.tags.includes('initial upload'))
-      .map(server => server.url) || []
-  const configMirrorServers =
-    config.blossomServers
-      ?.filter(server => server.tags.includes('mirror'))
-      .map(server => server.url) || []
-  const initialServers = configInitialServers.length
-    ? configInitialServers
-    : userBlossomServers.slice(0, 1).concat(userBlossomServers.length ? [] : DEFAULT_UPLOAD_SERVERS)
-  const mirrorServers = configMirrorServers.length
-    ? configMirrorServers
-    : userBlossomServers
-        .filter(server => !initialServers.includes(server))
-        .concat(userBlossomServers.length ? [] : DEFAULT_MIRROR_SERVERS)
-  const canUpload = !!user && initialServers.length > 0
+  // One flat server list; the upload strategy picks which servers get the file.
+  const configuredServers = configuredServerUrls(config.blossomServers)
+  const servers = configuredServers.length
+    ? configuredServers
+    : userBlossomServers.length
+      ? userBlossomServers
+      : DEFAULT_UPLOAD_SERVERS
+  const canUpload = !!user && servers.length > 0
   const signer = user
     ? ((async draft => user.signer.signEvent(draft)) as Signer)
     : ((async draft => draft) as Signer)
   const fileUpload = useFileUpload({
-    initialServers,
-    mirrorServers,
+    initialServers: servers,
+    mirrorServers: [],
     signer,
   })
   const {

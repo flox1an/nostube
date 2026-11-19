@@ -165,7 +165,10 @@
       "currentThumbnail": "Miniature actuelle",
       "uploadingThumbnail": "Téléchargement de la miniature...",
       "thumbnailSet": "Miniature mise à jour !",
-      "autoCaptured": "Généré automatiquement à partir de la vidéo — remplacez-le si vous le souhaitez"
+      "autoCaptured": "Généré automatiquement à partir de la vidéo — remplacez-le si vous le souhaitez",
+      "prevFrame": "Image précédente",
+      "nextFrame": "Image suivante",
+      "pickAnotherFrame": "Choisir une autre image"
     },
     "videoTable": {
       "uploadedTo": "Téléchargé sur",

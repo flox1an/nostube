@@ -358,14 +358,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       if (!currentUser) throw new Error('User not logged in')
 
-      const uploadServers =
-        currentConfig.blossomServers
-          ?.filter(s => s.tags.includes('initial upload'))
-          .map(s => s.url) || []
-      const mirrorServers =
-        currentConfig.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+      // One flat list: a DVM's output is copied to every configured server.
+      const servers = currentConfig.blossomServers?.map(s => s.url) || []
 
-      if (uploadServers.length === 0 && mirrorServers.length === 0) {
+      if (servers.length === 0) {
         return video
       }
 
@@ -430,34 +426,24 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             ? {
                 phase: 'mirroring',
                 completed: 0,
-                total: sourceBlob.size * (uploadServers.length + mirrorServers.length),
+                total: sourceBlob.size * servers.length,
                 unit: 'bytes',
               }
             : { phase: 'mirroring' }
         )
         // Server failures settle into the activity; only cancellation throws.
-        if (uploadServers.length > 0) {
-          updatedVideo.uploadedBlobs = await activity.mirror(
-            sourceBlob,
-            uploadServers,
-            signal,
-            learnMirrorOutcome
-          )
-        }
-        if (mirrorServers.length > 0) {
-          updatedVideo.mirroredBlobs = await activity.mirror(
-            sourceBlob,
-            mirrorServers,
-            signal,
-            learnMirrorOutcome
-          )
-        }
+        updatedVideo.mirroredBlobs = await activity.mirror(
+          sourceBlob,
+          servers,
+          signal,
+          learnMirrorOutcome
+        )
         activity.finish()
 
-        const candidateBlobs = [...updatedVideo.uploadedBlobs, ...updatedVideo.mirroredBlobs]
+        const copiedBlobs = [...updatedVideo.uploadedBlobs, ...updatedVideo.mirroredBlobs]
         updatedVideo.placement = createBlobPlacement({
-          primaryBlob: updatedVideo.uploadedBlobs[0] ?? updatedVideo.mirroredBlobs[0],
-          candidateBlobs,
+          primaryBlob: copiedBlobs[0],
+          candidateBlobs: copiedBlobs,
           directUrl,
         })
         updatedVideo.url = updatedVideo.placement.primaryBlob?.url ?? directUrl

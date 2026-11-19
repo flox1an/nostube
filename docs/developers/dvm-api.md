@@ -155,4 +155,4 @@ The result's `content` is JSON, NIP-04 encrypted when the event has an `encrypte
 | `mimetype` | MIME type with codecs, used for the `m` field of the `imeta`. |
 | `duration`, `bitrate` | Optional; otherwise taken from the source video or computed from size and duration. |
 
-The web app then mirrors the output to the user's Primary and Backup Blossom servers and adds it as a new variant of the video. If the user returns while a job is still running, the client asks for an existing kind `6207` result (`limit: 1`) before waiting again.
+The web app then mirrors the output to every Blossom server in the user's list and adds it as a new variant of the video. If the user returns while a job is still running, the client asks for an existing kind `6207` result (`limit: 1`) before waiting again.

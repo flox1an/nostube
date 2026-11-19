@@ -165,7 +165,10 @@
       "currentThumbnail": "現在のサムネイル",
       "uploadingThumbnail": "サムネイルをアップロード中...",
       "thumbnailSet": "サムネイルを更新しました！",
-      "autoCaptured": "動画から自動生成 — 必要に応じて変更可能"
+      "autoCaptured": "動画から自動生成 — 必要に応じて変更可能",
+      "prevFrame": "前のフレーム",
+      "nextFrame": "次のフレーム",
+      "pickAnotherFrame": "別のフレームを選択"
     },
     "videoTable": {
       "uploadedTo": "アップロード先",

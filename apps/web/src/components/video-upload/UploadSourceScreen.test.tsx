@@ -21,6 +21,7 @@ const baseState: BrowserTranscodeState = {
 
 function makeProps(overrides: Partial<UploadSourceScreenProps> = {}): UploadSourceScreenProps {
   return {
+    servers: ['https://blossom.example'],
     draftId: 'draft-1',
     file: null,
     videoUrl: '',
@@ -34,15 +35,14 @@ function makeProps(overrides: Partial<UploadSourceScreenProps> = {}): UploadSour
     originalVideoInfo: undefined,
     deletingIndex: null,
     hasHlsVideo: false,
-    uploadServerCount: 1,
-    mirrorServerCount: 0,
+    onConfigureServers: noop,
+    onAddDefaultServers: noop,
     onFileDrop: noop,
     onUrlProcess: noop,
     onStartBackground: asyncNoop,
     onCancelBackground: noop,
     onBrowserTranscodeComplete: noop,
     onBrowserTranscodeSkip: noop,
-    onConfigureServers: noop,
     onRemoveVideo: noop,
     onAddAdditional: noop,
     onAddTranscodedVideo: noop,

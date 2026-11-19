@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Button } from '@nostube/widgets/components/button'
 import { FileDropzone } from '@nostube/widgets/components/FileDropzone'
 import { InputMethodSelector } from './InputMethodSelector'
 import { UrlInputSection } from './UrlInputSection'
@@ -10,6 +11,14 @@ import type { TranscodeStatus } from '@/hooks/useDvmTranscodeManager'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
 import type { UploadInfo } from '@/hooks/useVideoUpload'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
 
 export interface UploadSourceScreenProps {
   /** Pro mode: the video settings start open. */
@@ -27,8 +36,8 @@ export interface UploadSourceScreenProps {
   originalVideoInfo: OriginalVideoInfo | undefined
   deletingIndex: number | null
   hasHlsVideo: boolean
-  uploadServerCount: number
-  mirrorServerCount: number
+  /** Every configured Blossom server: the storage the next upload lands on. */
+  servers: string[]
   onFileDrop: (files: File[]) => void
   onUrlProcess: (url: string) => void
   onStartBackground: (
@@ -40,6 +49,7 @@ export interface UploadSourceScreenProps {
   onBrowserTranscodeComplete: (files: File[] | Map<string, File>) => void
   onBrowserTranscodeSkip: () => void
   onConfigureServers: () => void
+  onAddDefaultServers: () => void
   onRemoveVideo: (index: number) => void
   onAddAdditional: (files: File[]) => void
   onAddTranscodedVideo: (video: VideoVariant) => void
@@ -61,8 +71,7 @@ export function UploadSourceScreen({
   originalVideoInfo,
   deletingIndex,
   hasHlsVideo,
-  uploadServerCount,
-  mirrorServerCount,
+  servers,
   onFileDrop,
   onUrlProcess,
   onStartBackground,
@@ -70,6 +79,7 @@ export function UploadSourceScreen({
   onBrowserTranscodeComplete,
   onBrowserTranscodeSkip,
   onConfigureServers,
+  onAddDefaultServers,
   onRemoveVideo,
   onAddAdditional,
   onAddTranscodedVideo,
@@ -183,22 +193,33 @@ export function UploadSourceScreen({
         />
       )}
 
-      <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>
-          {t('upload.source.servers', {
-            defaultValue: 'Servers: {{upload}} upload · {{mirror}} mirror',
-            upload: uploadServerCount,
-            mirror: mirrorServerCount,
-          })}
-        </span>
-        <span>—</span>
-        <button
-          type="button"
-          onClick={onConfigureServers}
-          className="underline cursor-pointer hover:text-foreground"
-        >
-          {t('upload.source.configure', { defaultValue: 'Configure' })}
-        </button>
+      <div className="mt-4 rounded-md border p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">
+              {t('upload.storage.title', { defaultValue: 'Where your files are stored' })}
+            </p>
+            {servers.length > 0 ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {servers.map(hostOf).join(' · ')}
+              </p>
+            ) : (
+              <p className="text-xs text-destructive">
+                {t('upload.storage.none', {
+                  defaultValue: 'No server yet — choose one before uploading.',
+                })}
+              </p>
+            )}
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onConfigureServers}>
+            {t('upload.storage.change', { defaultValue: 'Change' })}
+          </Button>
+        </div>
+        {servers.length === 0 && (
+          <Button type="button" size="sm" className="mt-2" onClick={onAddDefaultServers}>
+            {t('upload.storage.addDefaults', { defaultValue: 'Use the free default servers' })}
+          </Button>
+        )}
       </div>
     </div>
   )

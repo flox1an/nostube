@@ -24,6 +24,7 @@ vi.mock('@/hooks', () => ({
     config: { blossomServers: [], relays: [] },
     updateConfig: vi.fn(),
   }),
+  useSelectedPreset: () => ({ presetContent: {} }),
 }))
 
 vi.mock('@/hooks/useUploadDrafts', () => ({
@@ -57,10 +58,6 @@ vi.mock('./video-upload/UploadPublishPanel', () => ({
   UploadPublishPanel: () => <div>Publish panel marker</div>,
 }))
 
-vi.mock('./video-upload/UploadOnboardingDialog', () => ({
-  UploadOnboardingDialog: () => null,
-}))
-
 vi.mock('./auth/AuthDialog', () => ({
   AuthDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Auth dialog marker</div> : null),
 }))
@@ -71,14 +68,6 @@ vi.mock('./video-upload/DeleteVideoDialog', () => ({
 
 vi.mock('./upload/DeleteDraftDialog', () => ({
   DeleteDraftDialog: () => null,
-}))
-
-vi.mock('./onboarding/BlossomOnboardingStep', () => ({
-  BlossomOnboardingStep: () => null,
-}))
-
-vi.mock('./onboarding/BlossomServerPicker', () => ({
-  BlossomServerPicker: () => null,
 }))
 
 const video: VideoVariant = {

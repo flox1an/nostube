@@ -165,7 +165,10 @@
       "currentThumbnail": "Aktuelles Vorschaubild",
       "uploadingThumbnail": "Vorschaubild wird hochgeladen...",
       "thumbnailSet": "Vorschaubild aktualisiert!",
-      "autoCaptured": "Automatisch aus Video generiert — bei Bedarf ersetzen"
+      "autoCaptured": "Automatisch aus Video generiert — bei Bedarf ersetzen",
+      "prevFrame": "Vorheriger Frame",
+      "nextFrame": "Nächster Frame",
+      "pickAnotherFrame": "Anderen Frame wählen"
     },
     "videoTable": {
       "uploadedTo": "Hochgeladen auf",

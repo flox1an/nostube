@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Button } from '@nostube/widgets/components/button'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import type { UploadDraft } from '@/types/upload-draft'
@@ -12,16 +11,10 @@ import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 interface DraftPickerProps {
   drafts: UploadDraft[]
   onSelectDraft: (draft: UploadDraft) => void
-  onNewUpload: () => void
   onDeleteDraft: (draftId: string) => void
 }
 
-export function DraftPicker({
-  drafts,
-  onSelectDraft,
-  onNewUpload,
-  onDeleteDraft,
-}: DraftPickerProps) {
+export function DraftPicker({ drafts, onSelectDraft, onDeleteDraft }: DraftPickerProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useCurrentUser()
@@ -106,12 +99,12 @@ export function DraftPicker({
 
   return (
     <>
-      <div className="container mx-auto py-8 max-w-4xl">
-        <h2 className="text-2xl font-bold mb-4">
+      <div className="mx-auto max-w-6xl px-4 pb-16">
+        <h2 className="mb-4 text-lg font-semibold">
           {t('upload.draft.yourDrafts', { count: drafts.length })}
         </h2>
 
-        <div className="space-y-4 mb-8">
+        <div className="space-y-4">
           {drafts.map(draft => (
             <DraftCard
               key={draft.id}
@@ -120,12 +113,6 @@ export function DraftPicker({
               onDelete={() => handleDeleteClick(draft)}
             />
           ))}
-        </div>
-
-        <div className="flex justify-center">
-          <Button onClick={onNewUpload} variant="secondary" size="lg">
-            + {t('upload.draft.newUpload')}
-          </Button>
         </div>
       </div>
 

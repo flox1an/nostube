@@ -165,7 +165,10 @@
       "currentThumbnail": "Current Thumbnail",
       "uploadingThumbnail": "Uploading thumbnail...",
       "thumbnailSet": "Thumbnail updated!",
-      "autoCaptured": "Auto-generated from video — replace if you like"
+      "autoCaptured": "Auto-generated from video — replace if you like",
+      "prevFrame": "Previous frame",
+      "nextFrame": "Next frame",
+      "pickAnotherFrame": "Pick another frame"
     },
     "videoTable": {
       "uploadedTo": "Uploaded to",

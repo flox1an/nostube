@@ -1,15 +1,14 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { useAppContext, useSelectedPreset, useUserBlossomServers } from '@/hooks'
+import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Input } from '@nostube/widgets/components/input'
 import { Label } from '@nostube/widgets/components/label'
 import { Button } from '@nostube/widgets/components/button'
 import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { Badge } from '@nostube/widgets/components/badge'
 import { XIcon, Cog, LoaderIcon, ChevronDown, ChevronRight, LockKeyhole } from 'lucide-react'
-import { normalizeRelayUrl, cn } from '@/lib/utils'
-import { isBlossomServerBlocked } from '@/constants/relays'
+import { normalizeRelayUrl } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,14 +16,9 @@ import {
   DropdownMenuCheckboxItem,
 } from '@nostube/widgets/components/dropdown-menu'
 import { toast } from '@/hooks/useToast'
-import {
-  type RelayTag,
-  type BlossomServer,
-  type BlossomServerTag,
-  type CachingServer,
-} from '@nostube/core'
-import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
+import { type RelayTag, type CachingServer } from '@nostube/core'
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
+import { BlossomServersSection } from './BlossomServersSection'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 import { normalizeBrowseRelay, relaySource } from '@/lib/relay-browsing'
@@ -43,29 +37,6 @@ function normalizeServerUrl(url: string): string {
     return trimmed
   }
   return `https://${trimmed}`
-}
-
-function normalizeBlossomServers(servers: unknown): BlossomServer[] {
-  if (!Array.isArray(servers)) return []
-  return servers
-    .filter(
-      (server): server is { url?: unknown; name?: unknown; tags?: unknown } =>
-        typeof server === 'object' && server !== null
-    )
-    .map(server => {
-      const url = typeof server.url === 'string' ? normalizeServerUrl(server.url) : ''
-      const name =
-        typeof server.name === 'string' && server.name.trim().length > 0
-          ? server.name
-          : deriveServerName(url)
-      const tags = Array.isArray(server.tags)
-        ? server.tags.filter(
-            (tag): tag is BlossomServerTag => tag === 'mirror' || tag === 'initial upload'
-          )
-        : []
-      return { url, name, tags }
-    })
-    .filter(server => server.url.length > 0)
 }
 
 function normalizeCachingServers(servers: unknown): CachingServer[] {
@@ -459,212 +430,6 @@ function PrivateRelaysSubSection() {
   )
 }
 
-// ─── Blossom ─────────────────────────────────────────
-
-const blossomAvailableTags: BlossomServerTag[] = ['mirror', 'initial upload']
-
-function BlossomSubSection() {
-  const { t } = useTranslation()
-  const { config, updateConfig } = useAppContext()
-  const { presetContent } = useSelectedPreset()
-  const [newServerUrl, setNewServerUrl] = useState('')
-  const userBlossomServers = useUserBlossomServers()
-  const blossomServers = useMemo(
-    () => normalizeBlossomServers(config.blossomServers),
-    [config.blossomServers]
-  )
-
-  // Self-heal malformed entries
-  useEffect(() => {
-    const current = config.blossomServers
-    if (!Array.isArray(current)) return
-    const normalized = normalizeBlossomServers(current)
-    const currentJson = JSON.stringify(current)
-    const normalizedJson = JSON.stringify(normalized)
-    if (currentJson !== normalizedJson) {
-      updateConfig(currentConfig => ({ ...currentConfig, blossomServers: normalized }))
-    }
-  }, [config.blossomServers, updateConfig])
-
-  const handleAddServer = () => {
-    if (newServerUrl.trim()) {
-      const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
-      if (isBlossomServerBlocked(normalizedUrl)) {
-        toast({
-          title: t('settings.blossom.blockedServer'),
-          description: t('settings.blossom.blockedServerDescription'),
-          variant: 'destructive',
-        })
-        setNewServerUrl('')
-        return
-      }
-      updateConfig(currentConfig => {
-        const servers = normalizeBlossomServers(currentConfig.blossomServers)
-        if (servers.some(s => s.url === normalizedUrl)) return currentConfig
-        return {
-          ...currentConfig,
-          blossomServers: [
-            ...servers,
-            { url: normalizedUrl, name: deriveServerName(normalizedUrl), tags: [] },
-          ],
-        }
-      })
-      setNewServerUrl('')
-    }
-  }
-
-  const handleRemoveServer = (urlToRemove: string) => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      blossomServers: normalizeBlossomServers(currentConfig.blossomServers).filter(
-        s => s.url !== urlToRemove
-      ),
-    }))
-  }
-
-  const handleResetServers = () => {
-    if (userBlossomServers.data && userBlossomServers.data?.length > 0) {
-      updateConfig(currentConfig => ({
-        ...currentConfig,
-        blossomServers: userBlossomServers.data
-          .filter(s => !isBlossomServerBlocked(s))
-          .map(s => ({
-            url: s,
-            name: s.replace(/^https?:\/\//, ''),
-            tags: [] as BlossomServerTag[],
-          })),
-      }))
-    } else {
-      updateConfig(currentConfig => {
-        const servers: BlossomServer[] = []
-        if (presetContent.defaultBlossomProxy) {
-          servers.push({
-            url: presetContent.defaultBlossomProxy,
-            name: deriveServerName(presetContent.defaultBlossomProxy),
-            tags: ['initial upload'] as BlossomServerTag[],
-          })
-        }
-        DEFAULT_UPLOAD_SERVERS.forEach(url => {
-          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
-          servers.push({
-            url,
-            name: deriveServerName(url),
-            tags: ['initial upload'],
-          })
-        })
-        DEFAULT_MIRROR_SERVERS.forEach(url => {
-          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
-          servers.push({
-            url,
-            name: deriveServerName(url),
-            tags: ['mirror'],
-          })
-        })
-        return { ...currentConfig, blossomServers: servers }
-      })
-    }
-  }
-
-  const handleToggleTag = (serverUrl: string, tag: BlossomServerTag) => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      blossomServers: normalizeBlossomServers(currentConfig.blossomServers).map(s =>
-        s.url === serverUrl
-          ? { ...s, tags: s.tags.includes(tag) ? s.tags.filter(t => t !== tag) : [...s.tags, tag] }
-          : s
-      ),
-    }))
-  }
-
-  return (
-    <>
-      {blossomServers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('settings.blossom.noServers')}</p>
-      ) : (
-        <ScrollArea className="w-full rounded-md border p-3">
-          <ul className="space-y-1.5">
-            {blossomServers.map(server => (
-              <li key={server.url} className="flex items-center justify-between text-sm gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="truncate">{server.name || server.url}</span>
-                  <div className="flex gap-1 shrink-0">
-                    {server.tags.map(tag => (
-                      <Badge
-                        key={tag}
-                        variant="default"
-                        className={cn(
-                          'text-[10px] px-1.5 py-0',
-                          tag === 'mirror' ? 'bg-blue-500' : 'bg-orange-500'
-                        )}
-                      >
-                        {t(`settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`)}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        aria-label={`${t('settings.blossom.editTags', { defaultValue: 'Edit tags' })}: ${server.name || server.url}`}
-                      >
-                        <Cog className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {blossomAvailableTags.map(tag => (
-                        <DropdownMenuCheckboxItem
-                          key={tag}
-                          checked={server.tags.includes(tag)}
-                          onCheckedChange={() => handleToggleTag(server.url, tag)}
-                        >
-                          {t(`settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`)}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleRemoveServer(server.url)}
-                    aria-label={t('settings.blossom.removeServer', {
-                      server: server.name || server.url,
-                      defaultValue: 'Remove {{server}}',
-                    })}
-                  >
-                    <XIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </ScrollArea>
-      )}
-      <div className="flex gap-2">
-        <Input
-          placeholder={t('settings.blossom.addPlaceholder')}
-          value={newServerUrl}
-          onChange={e => setNewServerUrl(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleAddServer()
-          }}
-          className="flex-1"
-        />
-        <Button onClick={handleAddServer} size="sm">
-          {t('settings.blossom.addButton')}
-        </Button>
-      </div>
-      <Button variant="outline" size="sm" onClick={handleResetServers}>
-        {t('settings.blossom.resetButton')}
-      </Button>
-    </>
-  )
-}
-
 // ─── Caching / Streaming ────────────────────────────
 
 type ServerStatus = 'checking' | 'online' | 'offline'
@@ -943,7 +708,7 @@ export function NetworkSettingsSection() {
         description={t('settings.blossom.description')}
         defaultOpen={activeSection === 'blossom'}
       >
-        <BlossomSubSection />
+        <BlossomServersSection />
       </CollapsibleSection>
 
       <CollapsibleSection

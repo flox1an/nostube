@@ -4,6 +4,7 @@ import { imageFileName } from '@nostube/core/image-encode'
 import { randomUUID } from '@nostube/core/random-uuid'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import { deleteBlobsFromServers, type ChunkedUploadProgress } from '@/lib/blossom-upload'
+import { configuredServerUrls } from '@/lib/blossom-servers'
 import { type BlobActivity, trackBlobActivity } from '@/lib/transcode-upload'
 import { useFileUpload } from './useFileUpload'
 import { type BlobDescriptor, type Signer } from '@/lib/blossom-auth'
@@ -18,6 +19,7 @@ import {
 } from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
 import { getPublishableDimension } from '@/lib/upload-media'
+import { encodableVideoCodecs, probeTranscodeSource } from '@/lib/codec-detection'
 import type {
   BrowserTranscodeState,
   OriginalVideoInfo,
@@ -32,7 +34,12 @@ import {
   startBrowserTranscodeUploadJob,
   subscribeToBrowserTranscodeUploads,
 } from '@/lib/browser-transcode-upload-manager'
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
+import {
+  isWebCodecsSupported,
+  recommendedVariants,
+  type BrowserTranscodeVariant,
+  type TranscodeSourceMeta,
+} from '@nostube/core/video-transcode'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import {
   detectLanguageFromFilename,
@@ -416,12 +423,8 @@ export function useVideoUpload(
   const { config } = useAppContext()
   const { publish, isPending: isNostrPublishPending } = useNostrPublish()
 
-  const blossomInitalUploadServers = config.blossomServers?.filter(server =>
-    server.tags.includes('initial upload')
-  )
-  const blossomMirrorServers = config.blossomServers?.filter(server =>
-    server.tags.includes('mirror')
-  )
+  // One flat list: `planUpload` picks which servers get the file and which copy it.
+  const uploadServers = configuredServerUrls(config.blossomServers)
 
   const signer = user
     ? async (draft: EventTemplate) => await user.signer.signEvent(draft)
@@ -429,8 +432,8 @@ export function useVideoUpload(
 
   const uploadSigner = signer || ((async d => d) as unknown as Signer)
   const fileUpload = useFileUpload({
-    initialServers: blossomInitalUploadServers?.map(s => s.url) || [],
-    mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
+    initialServers: uploadServers,
+    mirrorServers: [],
     signer: uploadSigner,
   })
 
@@ -488,13 +491,7 @@ export function useVideoUpload(
       const blossomInfo = parseBlossomUrl(url)
       let mirroredBlobs: BlobDescriptor[] = []
 
-      if (
-        blossomInfo.isBlossomUrl &&
-        blossomInfo.sha256 &&
-        user &&
-        blossomMirrorServers &&
-        blossomMirrorServers.length > 0
-      ) {
+      if (blossomInfo.isBlossomUrl && blossomInfo.sha256 && user && uploadServers.length > 0) {
         // No retry: a URL video's placement is built from these mirrors once, below.
         const activity = trackBlobActivity(url, async draft => await user.signer.signEvent(draft), {
           phase: 'mirroring',
@@ -508,10 +505,7 @@ export function useVideoUpload(
             uploaded: Date.now(),
           }
 
-          mirroredBlobs = await activity.mirror(
-            originalBlob,
-            blossomMirrorServers.map(s => s.url)
-          )
+          mirroredBlobs = await activity.mirror(originalBlob, uploadServers)
           activity.finish()
         } catch (error) {
           activity.finish(error)
@@ -534,7 +528,7 @@ export function useVideoUpload(
   }
 
   const handleThumbnailDrop = async (acceptedFiles: File[]) => {
-    if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return
+    if (!acceptedFiles[0] || uploadServers.length === 0 || !user) return
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true })
     try {
       const result = await fileUpload.upload(acceptedFiles[0], {
@@ -655,12 +649,7 @@ export function useVideoUpload(
   }
 
   const onDrop = async (acceptedFiles: File[]) => {
-    if (
-      !acceptedFiles[0] ||
-      !blossomInitalUploadServers ||
-      blossomInitalUploadServers.length === 0 ||
-      !user
-    ) {
+    if (!acceptedFiles[0] || uploadServers.length === 0 || !user) {
       return
     }
 
@@ -697,23 +686,35 @@ export function useVideoUpload(
         updatedAt: Date.now(),
       })
     }
+
+    // Start with the recommended settings right away: the upload page shows the
+    // progress rail and the form while the file is encoded, instead of a
+    // blocking "Optimise for Nostr" choice. BrowserTranscodeStep stays reachable
+    // for adjusting or restarting the job. Without WebCodecs (or a browser that
+    // reports no encodable resolution) the step keeps its explicit start button.
+    if (isWebCodecsSupported()) {
+      try {
+        const meta = await probeTranscodeSource(droppedFile)
+        const variants = recommendedVariants(meta, await encodableVideoCodecs())
+        if (variants.length > 0) {
+          startTranscodeJob(droppedFile, variants, meta)
+        }
+      } catch (error) {
+        console.warn('[useVideoUpload] Auto-start transcode failed:', error)
+      }
+    }
   }
 
-  const handleStartBrowserTranscodeUpload = async (
+  const startTranscodeJob = (
+    sourceFile: File,
     variants: BrowserTranscodeVariant[],
     sourceMeta: TranscodeSourceMeta,
     keepOriginal = false
   ) => {
-    if (
-      !file ||
-      !blossomInitalUploadServers ||
-      blossomInitalUploadServers.length === 0 ||
-      !user ||
-      !signer
-    ) {
+    if (uploadServers.length === 0 || !user || !signer) {
       console.warn('[useVideoUpload] Cannot start transcode upload. Missing requirements:', {
-        hasFile: !!file,
-        serverCount: blossomInitalUploadServers?.length ?? 0,
+        hasFile: true,
+        serverCount: uploadServers.length,
         hasUser: !!user,
         hasSigner: !!signer,
       })
@@ -727,16 +728,30 @@ export function useVideoUpload(
 
     void startBrowserTranscodeUploadJob({
       draftId,
-      file,
+      file: sourceFile,
       variants,
       sourceMeta,
       mode: browserTranscodeMode,
       keepOriginal,
-      initialServers: blossomInitalUploadServers.map(s => s.url),
-      mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
+      initialServers: uploadServers,
+      mirrorServers: [],
       signer,
       onMirrorRetry: mergeRetriedMirrors,
     })
+  }
+
+  const handleStartBrowserTranscodeUpload = async (
+    variants: BrowserTranscodeVariant[],
+    sourceMeta: TranscodeSourceMeta,
+    keepOriginal = false
+  ) => {
+    if (!file) {
+      console.warn('[useVideoUpload] Cannot start transcode upload: no source file')
+      setUploadState('initial')
+      return
+    }
+
+    startTranscodeJob(file, variants, sourceMeta, keepOriginal)
   }
 
   // Restarts the failed/cancelled job with the exact settings it last used.
@@ -820,7 +835,7 @@ export function useVideoUpload(
   }
 
   const handleBrowserTranscodeSkip = async () => {
-    if (!file || !blossomInitalUploadServers || blossomInitalUploadServers.length === 0 || !user) {
+    if (!file || uploadServers.length === 0 || !user) {
       setUploadState('initial')
       return
     }
@@ -880,13 +895,7 @@ export function useVideoUpload(
 
   // Handler to add another video
   const handleAddVideo = async (acceptedFiles: File[]) => {
-    if (
-      !acceptedFiles ||
-      !acceptedFiles[0] ||
-      !blossomInitalUploadServers ||
-      blossomInitalUploadServers.length === 0 ||
-      !user
-    ) {
+    if (!acceptedFiles || !acceptedFiles[0] || uploadServers.length === 0 || !user) {
       return
     }
 
@@ -965,7 +974,7 @@ export function useVideoUpload(
   // Handler for subtitle file drop
   const handleSubtitleDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (!blossomInitalUploadServers || blossomInitalUploadServers.length === 0 || !user) {
+      if (uploadServers.length === 0 || !user) {
         return
       }
 
@@ -1006,7 +1015,7 @@ export function useVideoUpload(
 
       setSubtitleUploading(false)
     },
-    [blossomInitalUploadServers, user, fileUpload, mergeRetriedMirrors]
+    [uploadServers, user, fileUpload, mergeRetriedMirrors]
   )
 
   // Handler to remove a subtitle
@@ -1429,8 +1438,7 @@ export function useVideoUpload(
     publishRelays,
     setPublishRelays,
     writeRelays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-    blossomInitalUploadServers,
-    blossomMirrorServers,
+    uploadServers,
     isPublishing:
       isNostrPublishPending ||
       workflowState?.phase === 'validating' ||

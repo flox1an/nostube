@@ -12,7 +12,7 @@ import {
   type TranscodeSourceMeta,
 } from '@nostube/core/video-transcode'
 import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
-import { probeTranscodeSource } from '@/lib/codec-detection'
+import { encodableVideoCodecs, probeTranscodeSource } from '@/lib/codec-detection'
 import { beginUploadWork } from '@/lib/active-work'
 
 export type VideoTranscodeStatus =
@@ -55,18 +55,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
   const [error, setError] = useState<string | null>(null)
   const supported = isWebCodecsSupported()
   const abortRef = useRef<AbortController | null>(null)
-  const supportedCodecsRef = useRef<Promise<string[]> | null>(null)
-
-  const getSupportedCodecs = useCallback(() => {
-    if (!supportedCodecsRef.current) {
-      supportedCodecsRef.current = import('mediabunny')
-        .then(({ getEncodableVideoCodecs }) => getEncodableVideoCodecs(['hevc', 'avc']))
-        .then(codecs => (codecs.length > 0 ? codecs : ['avc']))
-        .catch(() => ['avc'])
-    }
-
-    return supportedCodecsRef.current
-  }, [])
+  const getSupportedCodecs = useCallback(() => encodableVideoCodecs(), [])
 
   useEffect(() => {
     if (supported) void getSupportedCodecs()

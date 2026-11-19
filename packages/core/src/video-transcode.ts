@@ -240,6 +240,27 @@ export function buildVariants(
   })
 }
 
+/**
+ * The MP4 variants an upload starts with when the user picks nothing: the
+ * default-selected heights, codec policy applied, highest bitrate first so
+ * HLS and progress stay ordered.
+ */
+export function recommendedVariants(
+  meta: TranscodeSourceMeta,
+  supportedCodecs: string[]
+): BrowserTranscodeVariant[] {
+  const resolutions = availableResolutions(meta, supportedCodecs)
+  const heights = defaultSelectedTargetHeights(meta, resolutions)
+  const selected = assignMp4ResolutionCodecs(
+    resolutions.filter(r => heights.includes(r.height)),
+    supportedCodecs.includes('hevc')
+  )
+  return buildVariants(
+    selected.sort((a, b) => b.height - a.height),
+    'mp4'
+  )
+}
+
 /** @deprecated Use availableResolutions + buildVariants instead. */
 export function defaultVariants(
   meta: TranscodeSourceMeta,
@@ -423,9 +444,8 @@ export async function transcodeFile(
 ): Promise<File> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat } = await import(
-    'mediabunny'
-  )
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat } =
+    await import('mediabunny')
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
   const sink = await openTranscodeSink({ expectedBytes: estimateMp4ConversionBytes(sourceMeta) })
@@ -508,10 +528,20 @@ export async function transcodeToHls(
 ): Promise<Map<string, File>> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, HlsOutputFormat, CmafOutputFormat, PathedTarget } =
-    await import('mediabunny')
+  const {
+    Input,
+    Output,
+    Conversion,
+    ALL_FORMATS,
+    BlobSource,
+    HlsOutputFormat,
+    CmafOutputFormat,
+    PathedTarget,
+  } = await import('mediabunny')
 
-  const sink = await openTranscodeSink({ expectedBytes: estimateHlsOutputBytes(variants, sourceMeta) })
+  const sink = await openTranscodeSink({
+    expectedBytes: estimateHlsOutputBytes(variants, sourceMeta),
+  })
   /** Path → MIME type of every file the conversion writes. */
   const outputs = new Map<string, string>()
 

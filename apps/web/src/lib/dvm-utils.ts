@@ -1,5 +1,5 @@
 import type { NostrEvent } from 'nostr-tools'
-import type { VideoVariant } from './video-processing'
+import { generateQualityLabel, type VideoVariant } from './video-processing'
 
 /**
  * Available codecs for transcoding
@@ -40,8 +40,6 @@ export interface TranscodeRecommendation {
  */
 export function getTranscodeRecommendation(video: VideoVariant): TranscodeRecommendation {
   const codec = video.videoCodec?.toLowerCase() || ''
-  const [width, height] = video.dimension.split('x').map(Number)
-  const maxDim = Math.max(width || 0, height || 0)
 
   const problematicCodecs: Record<string, string> = {
     hev1: 'HEVC (hev1)',
@@ -59,10 +57,11 @@ export function getTranscodeRecommendation(video: VideoVariant): TranscodeRecomm
     }
   }
 
-  if (maxDim > 1080) {
-    const label = maxDim >= 2160 ? '4K' : '2K'
+  // Label from the short side: a 1280x720 file is 720p, not "2K".
+  const qualityLabel = generateQualityLabel(video.dimension)
+  if (qualityLabel === '1080p' || qualityLabel === '2K' || qualityLabel === '4K') {
     return {
-      message: `Your video is ${label} (${video.dimension}). Most viewers watch at 720p or lower — creating smaller versions saves bandwidth and loads faster.`,
+      message: `Your video is ${qualityLabel} (${video.dimension}). Most viewers watch at 720p or lower — creating smaller versions saves bandwidth and loads faster.`,
     }
   }
 

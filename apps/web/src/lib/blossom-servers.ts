@@ -2,6 +2,8 @@
  * Blossom server information and utilities for onboarding
  */
 import { DEFAULT_BLOSSOM_SERVERS, getInstanceConfig } from '@nostube/core/instance-config'
+import type { BlossomServer } from '@nostube/core'
+import { isBlossomServerBlocked } from '@nostube/core/blossom-url'
 
 export interface BlossomServerInfo {
   url: string
@@ -128,13 +130,24 @@ const instanceOrigin = getInstanceConfig()?.origin
 export const DEFAULT_UPLOAD_SERVERS = instanceOrigin ? [instanceOrigin] : DEFAULT_BLOSSOM_SERVERS
 
 /**
- * Default mirror servers for new users
- */
-export const DEFAULT_MIRROR_SERVERS: string[] = []
-
-/**
  * Derive a display name from a server URL
  */
 export function deriveServerName(url: string): string {
   return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+/**
+ * Every configured Blossom server, flat. The upload strategy (`planUpload`) decides which of
+ * them receive the file and which copy it, so the user never tags servers by hand.
+ */
+export function configuredServerUrls(servers?: BlossomServer[] | null): string[] {
+  return (servers ?? []).map(server => server.url)
+}
+
+/** The list a user starts with: the instance's Blossom proxy, else the public defaults. */
+export function defaultBlossomServers(proxyUrl?: string): BlossomServer[] {
+  const urls = proxyUrl ? [proxyUrl, ...DEFAULT_UPLOAD_SERVERS] : DEFAULT_UPLOAD_SERVERS
+  return [...new Set(urls)]
+    .filter(url => !isBlossomServerBlocked(url))
+    .map(url => ({ url, name: deriveServerName(url), tags: [] }))
 }

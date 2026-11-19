@@ -2,7 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Button } from '@nostube/widgets/components/button'
 import { FileDropzone } from './FileDropzone'
 import { useTranslation } from 'react-i18next'
-import { Trash2, Check, Link as LinkIcon, Upload as UploadIcon, Film, Loader2 } from 'lucide-react'
+import {
+  Trash2,
+  Check,
+  Link as LinkIcon,
+  Upload as UploadIcon,
+  Film,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import { Slider } from '@nostube/widgets/components/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 import { Input } from '@nostube/widgets/components/input'
@@ -47,6 +56,7 @@ export function ThumbnailSection({
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
+  const [framePickerOpen, setFramePickerOpen] = useState(false)
   const hasAutoCapturedRef = useRef(false)
 
   // URL Input State
@@ -103,6 +113,7 @@ export function ThumbnailSection({
         type: previewBlob.type,
       })
       onThumbnailDrop([thumbnailFile])
+      setFramePickerOpen(false)
     }
   }, [previewBlob, onThumbnailDrop])
 
@@ -173,7 +184,9 @@ export function ThumbnailSection({
   }
 
   const handleSeeked = () => {
-    if (!disabled && !hasAutoCapturedRef.current && onAutoCapture) {
+    // The first seek generates the default thumbnail; without an existing thumbnail the
+    // preview itself is enough, so capture once instead of twice.
+    if (!hasThumbnail && !disabled && !hasAutoCapturedRef.current && onAutoCapture) {
       hasAutoCapturedRef.current = true
       captureCurrentFrame(onAutoCapture)
       return
@@ -200,6 +213,98 @@ export function ThumbnailSection({
     if (!thumbnailBlob || !thumbnailSrc || uploadedThumbnailUrl) return
     return () => URL.revokeObjectURL(thumbnailSrc)
   }, [thumbnailBlob, thumbnailSrc, uploadedThumbnailUrl])
+
+  const FRAME_STEP = 1 / 30
+
+  const seekTo = (time: number) => {
+    const video = videoRef.current
+    if (!video) return
+    const max = videoDuration || video.duration || 0
+    const next = Math.min(Math.max(time, 0), max)
+    setCurrentVideoTime(next)
+    video.currentTime = next
+  }
+
+  const stepFrame = (direction: 1 | -1) => seekTo(currentVideoTime + direction * FRAME_STEP)
+
+  const framePicker = (
+    <div className="space-y-2">
+      {videoUrl ? (
+        <>
+          <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            onLoadedMetadata={handleLoadedMetadata}
+            onLoadedData={handleLoadedData}
+            onSeeked={handleSeeked}
+            preload="auto"
+            className="rounded border w-full max-h-80 object-contain bg-black"
+            muted
+            crossOrigin="anonymous"
+          />
+          <canvas ref={canvasRef} className="hidden" />
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => stepFrame(-1)}
+              disabled={disabled}
+              aria-label={t('upload.thumbnail.prevFrame', { defaultValue: 'Previous frame' })}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 space-y-1">
+              <Slider
+                value={[currentVideoTime]}
+                disabled={disabled}
+                max={videoDuration}
+                step={0.1}
+                onValueChange={handleSliderChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{formatTime(currentVideoTime)}</span>
+                <span>{formatTime(videoDuration)}</span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => stepFrame(1)}
+              disabled={disabled}
+              aria-label={t('upload.thumbnail.nextFrame', { defaultValue: 'Next frame' })}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            type="button"
+            onClick={handleSetThumbnail}
+            disabled={disabled || !previewBlob || thumbnailUploadInfo.uploading}
+          >
+            {thumbnailUploadInfo.uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t('upload.thumbnail.uploadingThumbnail')}
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                {t('upload.thumbnail.setAsThumbnail')}
+              </>
+            )}
+          </Button>
+        </>
+      ) : (
+        <div className="text-muted-foreground text-sm py-4 text-center border rounded-md border-dashed">
+          {t('upload.thumbnail.noVideoFile')}
+        </div>
+      )}
+    </div>
+  )
 
   if (hasThumbnail) {
     return (
@@ -246,7 +351,23 @@ export function ThumbnailSection({
 
           {/* Show upload server status for the existing thumbnail */}
           {hasUploadedThumbnail && serverStatus}
+
+          {videoUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 self-start"
+              onClick={() => setFramePickerOpen(open => !open)}
+              disabled={disabled}
+            >
+              <Film className="mr-2 h-4 w-4" />
+              {t('upload.thumbnail.pickAnotherFrame', { defaultValue: 'Pick another frame' })}
+            </Button>
+          )}
         </div>
+
+        {framePickerOpen && videoUrl && <div className="border-t pt-4">{framePicker}</div>}
       </div>
     )
   }
@@ -332,61 +453,7 @@ export function ThumbnailSection({
         </TabsContent>
 
         <TabsContent value="generated" className="mt-0">
-          {videoUrl ? (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
-
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                onLoadedMetadata={handleLoadedMetadata}
-                onLoadedData={handleLoadedData}
-                onSeeked={handleSeeked}
-                preload="auto"
-                className="rounded border w-full max-h-80 object-contain bg-black"
-                muted
-                crossOrigin="anonymous"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-
-              <div className="space-y-1 pt-2">
-                <Slider
-                  value={[currentVideoTime]}
-                  disabled={disabled}
-                  max={videoDuration}
-                  step={0.1}
-                  onValueChange={handleSliderChange}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{formatTime(currentVideoTime)}</span>
-                  <span>{formatTime(videoDuration)}</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                onClick={handleSetThumbnail}
-                disabled={disabled || !previewBlob || thumbnailUploadInfo.uploading}
-              >
-                {thumbnailUploadInfo.uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('upload.thumbnail.uploadingThumbnail')}
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    {t('upload.thumbnail.setAsThumbnail')}
-                  </>
-                )}
-              </Button>
-            </div>
-          ) : (
-            <div className="text-muted-foreground text-sm py-4 text-center border rounded-md border-dashed">
-              {t('upload.thumbnail.noVideoFile')}
-            </div>
-          )}
+          {framePicker}
         </TabsContent>
       </Tabs>
     </div>

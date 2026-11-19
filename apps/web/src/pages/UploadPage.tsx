@@ -3,7 +3,6 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { VideoUpload } from '@/components/VideoUpload'
 import { DraftPicker } from '@/components/upload/DraftPicker'
 import { useToast } from '@/hooks/useToast'
-import { MAX_DRAFTS } from '@/lib/draft-storage'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useCallback, useRef } from 'react'
@@ -24,7 +23,6 @@ export function UploadPage() {
     drafts,
     currentDraft,
     setCurrentDraft,
-    createDraft,
     createDraftInMemory,
     persistDraft,
     deleteDraft,
@@ -60,18 +58,17 @@ export function UploadPage() {
     }
   }, [drafts, currentDraft, searchParams, setCurrentDraft, setSearchParams])
 
-  // Auto-create an ephemeral (in-memory) draft when there are no drafts, or for a video
-  // shared into the app (?shared=1, see lib/shared-file.ts), which skips the draft picker.
-  // It won't be persisted to localStorage until the user takes a meaningful action
+  // The page always shows a fresh form with the saved drafts underneath, so a video can be
+  // dropped on arrival without picking a draft first. The form is an ephemeral (in-memory)
+  // draft; it is persisted once the user takes a meaningful action.
   useEffect(() => {
-    const shared = searchParams.has('shared') && drafts.length < MAX_DRAFTS
-    if ((drafts.length === 0 || shared) && !currentDraft && !searchParams.get('draft')) {
+    if (!currentDraft && !searchParams.get('draft')) {
       if (!ephemeralDraftRef.current) {
         ephemeralDraftRef.current = createDraftInMemory()
       }
       setCurrentDraft(ephemeralDraftRef.current)
     }
-  }, [drafts.length, currentDraft, createDraftInMemory, setCurrentDraft, searchParams])
+  }, [currentDraft, createDraftInMemory, setCurrentDraft, searchParams])
 
   // Persist an ephemeral draft to localStorage when user takes a meaningful action
   const handlePersist = useCallback(() => {
@@ -89,39 +86,29 @@ export function UploadPage() {
   // Handle back navigation with Nostr sync flush
   const handleBack = useCallback(async () => {
     await flushNostrSync() // Wait for pending Nostr saves to complete
+    ephemeralDraftRef.current = null // back starts a fresh form, the drafts stay listed below
     setCurrentDraft(null)
   }, [flushNostrSync, setCurrentDraft])
-
-  // Handle max drafts error
-  const handleNewUpload = () => {
-    try {
-      const newDraft = createDraft()
-      setCurrentDraft(newDraft)
-    } catch {
-      toast({
-        title: t('upload.draft.maxDraftsReached'),
-        variant: 'destructive',
-        duration: 5000,
-      })
-    }
-  }
 
   // Show loading state while auto-creating draft
   if ((!drafts || drafts.length === 0) && !currentDraft) {
     return null
   }
 
-  // Show draft picker if no draft is selected
   if (!currentDraft) {
-    return (
-      <DraftPicker
-        drafts={drafts}
-        onSelectDraft={setCurrentDraft}
-        onNewUpload={handleNewUpload}
-        onDeleteDraft={deleteDraft}
-      />
-    )
+    return null
   }
 
-  return <VideoUpload draft={currentDraft} onBack={handleBack} onPersist={handlePersist} />
+  return (
+    <>
+      <VideoUpload draft={currentDraft} onBack={handleBack} onPersist={handlePersist} />
+      {drafts.some(draft => draft.id !== currentDraft.id) && (
+        <DraftPicker
+          drafts={drafts.filter(draft => draft.id !== currentDraft.id)}
+          onSelectDraft={setCurrentDraft}
+          onDeleteDraft={deleteDraft}
+        />
+      )}
+    </>
+  )
 }

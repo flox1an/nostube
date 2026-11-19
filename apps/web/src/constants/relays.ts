@@ -1,14 +1,5 @@
-import {
-  type Relay,
-  type BlossomServer,
-  type BlossomServerTag,
-  type CachingServer,
-} from '@nostube/core'
-import {
-  DEFAULT_MIRROR_SERVERS,
-  DEFAULT_UPLOAD_SERVERS,
-  deriveServerName,
-} from '@/lib/blossom-servers'
+import { type Relay, type BlossomServer, type CachingServer } from '@nostube/core'
+import { DEFAULT_UPLOAD_SERVERS, deriveServerName } from '@/lib/blossom-servers'
 
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
@@ -74,12 +65,7 @@ export const presetBlossomServers: BlossomServer[] = [
   ...DEFAULT_UPLOAD_SERVERS.map(url => ({
     url,
     name: deriveServerName(url),
-    tags: ['initial upload' as BlossomServerTag],
-  })),
-  ...DEFAULT_MIRROR_SERVERS.map(url => ({
-    url,
-    name: deriveServerName(url),
-    tags: ['mirror' as BlossomServerTag],
+    tags: [],
   })),
 ]
 

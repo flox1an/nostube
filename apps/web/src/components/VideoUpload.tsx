@@ -1,12 +1,16 @@
-import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
+import { useCurrentUser, useVideoUpload, useAppContext, useSelectedPreset } from '@/hooks'
 import { buildVideoPath } from '@/utils/video-utils'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@nostube/widgets/components/card'
 import { Button } from '@nostube/widgets/components/button'
-import { Dialog, DialogContent } from '@nostube/widgets/components/dialog'
-import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
-import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
-import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@nostube/widgets/components/dialog'
+import { BlossomServersSection } from './settings/BlossomServersSection'
 import { AuthDialog } from './auth/AuthDialog'
 import { EmptyState } from './EmptyState'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
@@ -16,13 +20,11 @@ import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { deriveServerName } from '@/lib/blossom-servers'
+import { defaultBlossomServers } from '@/lib/blossom-servers'
 import { generateEventLink } from '@/lib/nostr'
-import type { BlossomServerTag } from '@nostube/core'
 import type { UploadDraft, BrowserTranscodeState } from '@/types/upload-draft'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@nostube/core/video-transcode'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
-import { isBetaUser } from '@/lib/beta-users'
 import { getBrowserTranscodeUploadDraft } from '@/lib/browser-transcode-upload-manager'
 import { takeSharedFile } from '@/lib/shared-file'
 import { UploadFlowFooter } from './video-upload/UploadFlowFooter'
@@ -142,8 +144,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     setPublishAt,
     uploadProgress,
     browserTranscodeState,
-    blossomInitalUploadServers,
-    blossomMirrorServers,
+    uploadServers,
     isPublishing,
     publishRelays,
     setPublishRelays,
@@ -481,47 +482,23 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   // ── Server config ─────────────────────────────────────────────────────────
 
-  const { config, updateConfig } = useAppContext()
-  const betaUser = isBetaUser(user?.pubkey)
-  const [onboardingSkipped, setOnboardingSkipped] = useState(false)
-  const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
-  const [showUploadPicker, setShowUploadPicker] = useState(false)
-  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
+  const { updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
+  const [showServerSettings, setShowServerSettings] = useState(false)
+  const openServerSettings = useCallback(() => setShowServerSettings(true), [])
 
-  const [uploadServers, setUploadServers] = useState<string[]>(
-    () =>
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-  )
-  const [mirrorServers, setMirrorServers] = useState<string[]>(
-    () => config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-  )
+  // Nobody starts without a server: seed the defaults once, the storage card shows them.
+  const addDefaultServers = useCallback(() => {
+    updateConfig(current => ({
+      ...current,
+      blossomServers: defaultBlossomServers(presetContent.defaultBlossomProxy),
+    }))
+  }, [updateConfig, presetContent.defaultBlossomProxy])
 
-  const openBlossomOnboarding = useCallback(() => {
-    setUploadServers(
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-    )
-    setMirrorServers(
-      config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-    )
-    setShowBlossomOnboarding(true)
-  }, [config.blossomServers])
-
-  const handleBlossomOnboardingComplete = useCallback(() => {
-    const blossomServers = [
-      ...uploadServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['initial upload'] as BlossomServerTag[],
-      })),
-      ...mirrorServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['mirror'] as BlossomServerTag[],
-      })),
-    ]
-    updateConfig(current => ({ ...current, blossomServers }))
-    setShowBlossomOnboarding(false)
-  }, [uploadServers, mirrorServers, updateConfig])
+  useEffect(() => {
+    if (uploadServers.length > 0 || !user) return
+    addDefaultServers()
+  }, [uploadServers.length, user, addDefaultServers])
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
@@ -562,7 +539,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           heading="h1"
           title={t('upload.signedOut.title', { defaultValue: 'Share your video with nostube' })}
           description={t('upload.signedOut.subtitle', {
-            defaultValue: 'Sign in to publish. Uploading takes three quick steps.',
+            defaultValue: 'Sign in to publish. Details and publishing are on one page.',
           })}
         >
           <ol className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
@@ -637,15 +614,15 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               originalVideoInfo={originalVideoInfo}
               deletingIndex={deletingIndex}
               hasHlsVideo={hasHlsVideo}
-              uploadServerCount={blossomInitalUploadServers?.length ?? 0}
-              mirrorServerCount={blossomMirrorServers?.length ?? 0}
+              servers={uploadServers}
               onFileDrop={wrappedOnDrop}
               onUrlProcess={wrappedOnUrlProcess}
               onStartBackground={wrappedOnStartBackground}
               onCancelBackground={handleCancelBrowserTranscodeUpload}
               onBrowserTranscodeComplete={handleBrowserTranscodeComplete}
               onBrowserTranscodeSkip={handleBrowserTranscodeSkip}
-              onConfigureServers={openBlossomOnboarding}
+              onConfigureServers={openServerSettings}
+              onAddDefaultServers={addDefaultServers}
               onRemoveVideo={handleRemoveVideo}
               onAddAdditional={wrappedOnAddAdditional}
               onAddTranscodedVideo={handleAddTranscodedVideo}
@@ -759,55 +736,16 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         </CardContent>
       </Card>
 
-      {/* Upload Onboarding Dialog */}
-      <UploadOnboardingDialog
-        open={
-          !onboardingSkipped &&
-          (!blossomInitalUploadServers || blossomInitalUploadServers.length === 0)
-        }
-        onComplete={() => {}}
-        onChooseOwn={() => openBlossomOnboarding()}
-        allowSkip={betaUser}
-        onSkip={() => setOnboardingSkipped(true)}
-      />
-
-      {/* Blossom Server Configuration Dialog */}
-      <Dialog open={showBlossomOnboarding} onOpenChange={setShowBlossomOnboarding}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <BlossomOnboardingStep
-            uploadServers={uploadServers}
-            mirrorServers={mirrorServers}
-            onRemoveUploadServer={url => setUploadServers(prev => prev.filter(s => s !== url))}
-            onRemoveMirrorServer={url => setMirrorServers(prev => prev.filter(s => s !== url))}
-            onComplete={handleBlossomOnboardingComplete}
-            onOpenUploadPicker={() => setShowUploadPicker(true)}
-            onOpenMirrorPicker={() => setShowMirrorPicker(true)}
-            allowEmpty={betaUser}
-          />
+      {/* Server settings: same editor as Settings → Network */}
+      <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('settings.blossom.title')}</DialogTitle>
+            <DialogDescription>{t('settings.blossom.description')}</DialogDescription>
+          </DialogHeader>
+          <BlossomServersSection />
         </DialogContent>
       </Dialog>
-
-      <BlossomServerPicker
-        open={showUploadPicker}
-        onOpenChange={setShowUploadPicker}
-        excludeServers={uploadServers}
-        onSelect={url => {
-          setUploadServers(prev => [...prev, url])
-          setShowUploadPicker(false)
-        }}
-        type="upload"
-      />
-
-      <BlossomServerPicker
-        open={showMirrorPicker}
-        onOpenChange={setShowMirrorPicker}
-        excludeServers={mirrorServers}
-        onSelect={url => {
-          setMirrorServers(prev => [...prev, url])
-          setShowMirrorPicker(false)
-        }}
-        type="mirror"
-      />
 
       {/* Delete Video Dialog */}
       <DeleteVideoDialog

@@ -62,8 +62,7 @@ export function makeVideoUploadState(
     publishRelays: null,
     setPublishRelays: noop,
     writeRelays: [],
-    blossomInitalUploadServers: [],
-    blossomMirrorServers: [],
+    uploadServers: [],
     isPublishing: false,
     thumbnailUrl: undefined,
     previewEvent: null,
@@ -142,8 +141,7 @@ export interface VideoUploadStateStub {
   publishRelays: string[] | null
   setPublishRelays: (v: string[] | null) => void
   writeRelays: string[]
-  blossomInitalUploadServers: Array<{ url: string; tags: string[] }> | undefined
-  blossomMirrorServers: Array<{ url: string; tags: string[] }> | undefined
+  uploadServers: string[]
   isPublishing: boolean
   thumbnailUrl: string | undefined
   previewEvent: null | object

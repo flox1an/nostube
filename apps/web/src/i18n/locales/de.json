@@ -479,7 +479,7 @@
       "optimiseUpload": "Optimise & Upload",
       "uploadOriginal": "Upload original",
       "transcoding": "Optimising video...",
-      "cancel": "Cancel - upload original",
+      "cancel": "Cancel",
       "errorTitle": "Transcode failed",
       "uploadOriginalOnly": "Nur hochladen",
       "generateHls": "HLS generieren und hochladen",
@@ -613,6 +613,12 @@
     "proMode": "Alle Optionen zeigen",
     "panel": {
       "previewTitle": "So erscheint es auf nostube"
+    },
+    "storage": {
+      "title": "Wo deine Dateien liegen",
+      "none": "Noch kein Server — wähle vor dem Upload einen.",
+      "change": "Ändern",
+      "addDefaults": "Kostenlose Standardserver verwenden"
     }
   },
   "settings": {

@@ -26,9 +26,7 @@ const instanceOverlay: Partial<AppConfig> | null = instance && {
       ? (['read', 'write'] as RelayTag[])
       : (['read'] as RelayTag[]),
   })),
-  blossomServers: [
-    { url: instance.origin, name: new URL(instance.origin).host, tags: ['initial upload'] },
-  ],
+  blossomServers: [{ url: instance.origin, name: new URL(instance.origin).host, tags: [] }],
   cachingServers: [],
   selectedPresetPubkey: null,
   viewTrackingEnabled: false,

@@ -303,6 +303,16 @@ async function tryParseFromRange(
   })
 }
 
+/** Codecs this browser can encode; H.264 when WebCodecs reports nothing (it can always encode H.264). */
+let encodableCodecsRef: Promise<string[]> | null = null
+export function encodableVideoCodecs(): Promise<string[]> {
+  encodableCodecsRef ??= import('mediabunny')
+    .then(({ getEncodableVideoCodecs }) => getEncodableVideoCodecs(['hevc', 'avc']))
+    .then(codecs => (codecs.length > 0 ? codecs : ['avc']))
+    .catch(() => ['avc'])
+  return encodableCodecsRef
+}
+
 export async function probeTranscodeSource(file: File): Promise<TranscodeSourceMeta> {
   const { width, height, duration } = await probeVideoDimensions(file)
 

@@ -104,70 +104,25 @@ describe('DraftPicker', () => {
     )
   })
 
-  it('renders "New Upload" button', () => {
-    render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={vi.fn()}
-        onNewUpload={vi.fn()}
-        onDeleteDraft={vi.fn()}
-      />,
-      { wrapper }
-    )
-    expect(screen.getByRole('button', { name: /New Upload/i })).toBeInTheDocument()
-  })
-
   it('displays correct draft count', () => {
-    render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={vi.fn()}
-        onNewUpload={vi.fn()}
-        onDeleteDraft={vi.fn()}
-      />,
-      { wrapper }
-    )
+    render(<DraftPicker drafts={mockDrafts} onSelectDraft={vi.fn()} onDeleteDraft={vi.fn()} />, {
+      wrapper,
+    })
     expect(screen.getByText('Your Drafts (2)')).toBeInTheDocument()
   })
 
   it('renders all draft cards', () => {
-    render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={vi.fn()}
-        onNewUpload={vi.fn()}
-        onDeleteDraft={vi.fn()}
-      />,
-      { wrapper }
-    )
+    render(<DraftPicker drafts={mockDrafts} onSelectDraft={vi.fn()} onDeleteDraft={vi.fn()} />, {
+      wrapper,
+    })
     expect(screen.getByText('Draft 1')).toBeInTheDocument()
     expect(screen.getByText('Draft 2')).toBeInTheDocument()
-  })
-
-  it('calls onNewUpload when New Upload clicked', () => {
-    const onNewUpload = vi.fn()
-    render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={vi.fn()}
-        onNewUpload={onNewUpload}
-        onDeleteDraft={vi.fn()}
-      />,
-      { wrapper }
-    )
-    fireEvent.click(screen.getByRole('button', { name: /New Upload/i }))
-    expect(onNewUpload).toHaveBeenCalledTimes(1)
   })
 
   it('calls onSelectDraft when draft card clicked', () => {
     const onSelectDraft = vi.fn()
     render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={onSelectDraft}
-        onNewUpload={vi.fn()}
-        onDeleteDraft={vi.fn()}
-      />,
+      <DraftPicker drafts={mockDrafts} onSelectDraft={onSelectDraft} onDeleteDraft={vi.fn()} />,
       { wrapper }
     )
     fireEvent.click(screen.getByText('Draft 1'))
@@ -177,12 +132,7 @@ describe('DraftPicker', () => {
   it('shows confirmation dialog and deletes draft', async () => {
     const onDeleteDraft = vi.fn()
     render(
-      <DraftPicker
-        drafts={mockDrafts}
-        onSelectDraft={vi.fn()}
-        onNewUpload={vi.fn()}
-        onDeleteDraft={onDeleteDraft}
-      />,
+      <DraftPicker drafts={mockDrafts} onSelectDraft={vi.fn()} onDeleteDraft={onDeleteDraft} />,
       { wrapper }
     )
 

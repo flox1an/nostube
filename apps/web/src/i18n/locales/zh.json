@@ -613,6 +613,12 @@
     "proMode": "显示所有选项",
     "panel": {
       "previewTitle": "在 nostube 上的显示效果"
+    },
+    "storage": {
+      "title": "文件存放位置",
+      "none": "尚未选择服务器，请在上传前选择。",
+      "change": "更改",
+      "addDefaults": "使用免费默认服务器"
     }
   },
   "settings": {

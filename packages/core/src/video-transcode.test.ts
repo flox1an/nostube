@@ -9,6 +9,7 @@ import {
   computeTargetDimensions,
   defaultContributeResolutions,
   defaultVariants,
+  recommendedVariants,
   repairDuplicateAvcNalHeadersInMp4,
   type TranscodeSourceMeta,
 } from './video-transcode'
@@ -331,5 +332,20 @@ describe('repairDuplicateAvcNalHeadersInMp4', () => {
       0xce,
     ])
     expect(new DataView(repaired.buffer).getUint32(0, false)).toBe(repaired.byteLength)
+  })
+})
+
+describe('recommendedVariants', () => {
+  it('starts a 1080p source as 720p + 480p, highest first, H.264 lowest', () => {
+    const variants = recommendedVariants({ ...baseMeta, sizeMB: 500 }, ['avc', 'hevc'])
+    expect(variants.map(v => v.targetHeight)).toEqual([720, 480])
+    expect(variants.map(v => v.codec)).toEqual(['hevc', 'avc'])
+    expect(variants.every(v => v.format === 'mp4' && v.qualityPreset === 'balanced')).toBe(true)
+  })
+
+  it('keeps a single top variant for a small source', () => {
+    const variants = recommendedVariants({ ...baseMeta, sizeMB: 20 }, ['avc'])
+    expect(variants).toHaveLength(1)
+    expect(variants[0]?.codec).toBe('avc')
   })
 })

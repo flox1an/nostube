@@ -19,19 +19,17 @@ The protocol is split into short documents called BUDs (Blossom Upgrade Document
 
 Files larger than 100 MB are first offered to the server as a chunked upload (`PATCH /upload`, announced by the server in its `OPTIONS /upload` response). This is not one of the BUDs above. Almond supports it. Any server that does not support it gets a single `PUT /upload` instead.
 
-## Server roles in the web app
+## Your server list
 
-The web app keeps its servers in **Settings → Network**. Every server in the list has zero or more tags:
+The web app keeps its servers in **Settings → Network**. Every hosting server is one flat list: each of them takes part in every upload, and the web app decides per file which server receives it and which ones copy it (see [the upload strategy](/media/uploads#blossom-upload)). There is nothing to tag, and you need at least one server before you can upload a file. A video's URL appears on all of them; playback asks each server for the blob and falls back to the next.
 
-| Role | Where to set it | What it does |
+| Kind | Where to set it | What it does |
 | --- | --- | --- |
-| Hosting, tagged **Primary** (`initial upload`) | Video Hosting | Takes part in every upload. You need at least one before you can upload a file. The first one is normally the server the browser uploads to; see [the upload strategy](/media/uploads#blossom-upload). |
-| Hosting, tagged **Backup** (`mirror`) | Video Hosting | Takes part in every upload like a Primary server, after the Primary servers in the list. |
-| Hosting, no tag | Video Hosting | Not used for uploads, but still asked for a video's hash during playback. |
+| Video Hosting | Video Hosting | Takes part in every upload. |
 | Streaming server (caching server) | Streaming Servers | Tried first during playback. It fetches blobs it does not have from the servers named in the URL. |
 | Image proxy | Service endpoints → Image Proxy URL | Produces resized WebP thumbnails. Default: `https://imgproxy.nostu.be`. |
 
-In the nostu.be build, new users start with `blossom.primal.net`, `nostr.download` and `almond.slidestr.net` as Primary servers, with no Backup servers and no streaming server. The browser uploads to `blossom.primal.net`; the other two copy the file from there. `cdn.nostrcheck.me` cannot be added: it re-encodes videos, so what it serves no longer matches the hash. For the same reason, URLs on `video.nostr.build`, `image.nostr.build` and `cdn.nostrcheck.me` are not treated as Blossom URLs.
+In the nostu.be build, new users start with `blossom.primal.net`, `nostr.download` and `almond.slidestr.net`. The upload page fills them in if the list is still empty, so nobody is asked to configure a server before the first upload. The browser uploads to the first server; the other two copy the file from there. `cdn.nostrcheck.me` cannot be added: it re-encodes videos, so what it serves no longer matches the hash. For the same reason, URLs on `video.nostr.build`, `image.nostr.build` and `cdn.nostrcheck.me` are not treated as Blossom URLs.
 
 None of this applies to a Nostube Server. Its site and Studio use the instance's own Blossom, plus the creator's server list for playback. They use no image proxy and no media discovery (see [Storage and S3](/server/storage)).
 
@@ -39,7 +37,7 @@ None of this applies to a Nostube Server. Its site and Studio use the instance's
 
 [BUD-03](https://github.com/hzrd149/blossom/blob/master/buds/03.md) defines a replaceable event, kind `10063`, that holds a user's Blossom servers in `server` tags. Nostube uses it in several places:
 
-- **Web app:** after you sign in, it reads your kind `10063` list and adds any server you don't have yet to Video Hosting, without tags. Tag a server as Primary or Backup to use it for uploads. The web app reads this list but never publishes it.
+- **Web app:** after you sign in, it reads your kind `10063` list and adds any server you don't have yet to Video Hosting. Settings → Network can publish the current list to your profile with one click, so other Nostr apps find your media servers.
 - **Embed player:** it fetches the author's kind `10063` list and uses those servers as playback fallbacks.
 - **Nostube Server:** the creator site uses the creator's kind `10063` list as playback fallbacks. With a managed channel identity, the server signs and publishes the channel's own list (see [Storage and S3](/server/storage)).
 
@@ -69,15 +67,15 @@ A server works well with Nostube if it:
 
 - serves blobs unchanged, so the bytes match the hash in the URL;
 - allows browser uploads through CORS: `PUT` and `HEAD` with the `Authorization` and `X-SHA-256` headers;
-- supports `PUT /mirror` if you want it as a Backup server;
+- supports `PUT /mirror`, so the other servers can copy from it;
 - answers range requests, so viewers can seek;
 - accepts your file sizes and keeps blobs long enough. Many public servers limit size or expire blobs, and some charge for storage.
 
-Use at least two servers, one Primary and one Backup, so every video is available from more than one URL from the start.
+Use at least two servers, so every video is available from more than one URL from the start.
 
 ## Running your own Blossom server
 
-[Almond](https://flox1an.github.io/almond/) is a Blossom server written in Rust by the Nostube author. It implements BUD-01, 02, 04, 06, 07, 09, 11 and 12, with resumable chunked uploads. It stores blobs on the filesystem or in an S3-compatible bucket, and offers age limits and size caps. Each write endpoint can be off, public, web of trust or DVM, plus an optional npub allowlist. Almond can also fetch missing blobs from upstream servers or from client hints. That makes it usable as a Primary or Backup server, and also as a streaming server.
+[Almond](https://flox1an.github.io/almond/) is a Blossom server written in Rust by the Nostube author. It implements BUD-01, 02, 04, 06, 07, 09, 11 and 12, with resumable chunked uploads. It stores blobs on the filesystem or in an S3-compatible bucket, and offers age limits and size caps. Each write endpoint can be off, public, web of trust or DVM, plus an optional npub allowlist. Almond can also fetch missing blobs from upstream servers or from client hints. That makes it usable as a hosting server, and also as a streaming server.
 
 - Getting started: [flox1an.github.io/almond/guide/getting-started](https://flox1an.github.io/almond/guide/getting-started)
 - Configuration: [flox1an.github.io/almond/configuration](https://flox1an.github.io/almond/configuration/)

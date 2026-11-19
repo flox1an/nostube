@@ -249,7 +249,6 @@ export function UploadDetailsScreen({
               uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
               uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
               mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
-              hasInitialUploadServers={true}
               forceShow={true}
             />
           }

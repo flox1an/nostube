@@ -165,7 +165,10 @@
       "currentThumbnail": "当前缩略图",
       "uploadingThumbnail": "正在上传缩略图...",
       "thumbnailSet": "缩略图已更新！",
-      "autoCaptured": "从视频自动生成 — 可按需替换"
+      "autoCaptured": "从视频自动生成 — 可按需替换",
+      "prevFrame": "上一帧",
+      "nextFrame": "下一帧",
+      "pickAnotherFrame": "选择其他帧"
     },
     "videoTable": {
       "uploadedTo": "已上传到",

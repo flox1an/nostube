@@ -613,6 +613,12 @@
     "proMode": "すべてのオプションを表示",
     "panel": {
       "previewTitle": "nostube での表示"
+    },
+    "storage": {
+      "title": "ファイルの保存先",
+      "none": "サーバーが未設定です。アップロード前に選択してください。",
+      "change": "変更",
+      "addDefaults": "無料の既定サーバーを使う"
     }
   },
   "settings": {

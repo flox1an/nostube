@@ -165,7 +165,10 @@
       "currentThumbnail": "Miniatura actual",
       "uploadingThumbnail": "Subiendo miniatura...",
       "thumbnailSet": "¡Miniatura actualizada!",
-      "autoCaptured": "Generado automáticamente del video — reemplácelo si lo desea"
+      "autoCaptured": "Generado automáticamente del video — reemplácelo si lo desea",
+      "prevFrame": "Fotograma anterior",
+      "nextFrame": "Fotograma siguiente",
+      "pickAnotherFrame": "Elegir otro fotograma"
     },
     "videoTable": {
       "uploadedTo": "Subido a",

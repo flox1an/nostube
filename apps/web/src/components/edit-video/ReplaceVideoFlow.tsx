@@ -5,6 +5,7 @@ import { Label } from '@nostube/widgets/components/label'
 import { Progress } from '@nostube/widgets/components/progress'
 import { type ChunkedUploadProgress } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from '@/lib/blossom-auth'
+import { configuredServerUrls } from '@/lib/blossom-servers'
 import {
   type VideoVariant,
   createBlobPlacement,
@@ -91,13 +92,8 @@ export function ReplaceVideoFlow({
   const [deleteOldFiles, setDeleteOldFiles] = useState(true)
   const [isConfirming, setIsConfirming] = useState(false)
 
-  const blossomInitialUploadServers = (
-    config.blossomServers?.filter(server => server.tags.includes('initial upload')) || []
-  ).map(s => s.url)
-
-  const blossomMirrorServers = (
-    config.blossomServers?.filter(server => server.tags.includes('mirror')) || []
-  ).map(s => s.url)
+  // One flat server list; the upload strategy picks which servers get the file.
+  const blossomServers = configuredServerUrls(config.blossomServers)
 
   const signer = useMemo(
     () =>
@@ -225,7 +221,7 @@ export function ReplaceVideoFlow({
 
         const uploadedBlobs = await activity.upload({
           file,
-          servers: blossomInitialUploadServers,
+          servers: blossomServers,
           options: {
             chunkSize: DEFAULT_CHUNK_SIZE,
             maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS,
@@ -246,23 +242,19 @@ export function ReplaceVideoFlow({
 
         // Step 3: Mirror
         let mirroredBlobs: BlobDescriptor[] = []
-        if (blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
+        if (blossomServers.length > 0 && uploadedBlobs[0]) {
           setStatus('mirroring')
-          setMirrorProgress({ completed: 0, total: blossomMirrorServers.length })
+          setMirrorProgress({ completed: 0, total: blossomServers.length })
           activity.set({
             phase: 'mirroring',
             completed: 0,
-            total: uploadedBlobs[0].size * blossomMirrorServers.length,
+            total: uploadedBlobs[0].size * blossomServers.length,
             unit: 'bytes',
           })
 
-          mirroredBlobs = await activity.mirror(
-            uploadedBlobs[0],
-            blossomMirrorServers,
-            controller.signal
-          )
+          mirroredBlobs = await activity.mirror(uploadedBlobs[0], blossomServers, controller.signal)
 
-          setMirrorProgress({ completed: mirroredBlobs.length, total: blossomMirrorServers.length })
+          setMirrorProgress({ completed: mirroredBlobs.length, total: blossomServers.length })
         }
 
         const finalVariant = withMirroredBlobs(videoVariant, mirroredBlobs)
@@ -283,7 +275,7 @@ export function ReplaceVideoFlow({
         throw err
       }
     },
-    [blossomInitialUploadServers, blossomMirrorServers, signer, mirrorRetryFor, resetUpload]
+    [blossomServers, signer, mirrorRetryFor, resetUpload]
   )
 
   const processUrl = useCallback(
@@ -305,7 +297,7 @@ export function ReplaceVideoFlow({
         const blossomInfo = parseBlossomUrl(url)
         let mirroredBlobs: BlobDescriptor[] = []
 
-        if (blossomInfo.isBlossomUrl && blossomInfo.sha256 && blossomMirrorServers.length > 0) {
+        if (blossomInfo.isBlossomUrl && blossomInfo.sha256 && blossomServers.length > 0) {
           activity = trackBlobActivity(url, signer!, {
             phase: 'mirroring',
             cancel: () => controller.abort(),
@@ -313,7 +305,7 @@ export function ReplaceVideoFlow({
           })
           try {
             setStatus('mirroring')
-            setMirrorProgress({ completed: 0, total: blossomMirrorServers.length })
+            setMirrorProgress({ completed: 0, total: blossomServers.length })
 
             const originalBlob: BlobDescriptor = {
               url,
@@ -323,15 +315,11 @@ export function ReplaceVideoFlow({
               uploaded: Date.now(),
             }
 
-            mirroredBlobs = await activity.mirror(
-              originalBlob,
-              blossomMirrorServers,
-              controller.signal
-            )
+            mirroredBlobs = await activity.mirror(originalBlob, blossomServers, controller.signal)
 
             setMirrorProgress({
               completed: mirroredBlobs.length,
-              total: blossomMirrorServers.length,
+              total: blossomServers.length,
             })
           } catch (mirrorErr) {
             if (isAbortError(mirrorErr)) throw mirrorErr
@@ -359,7 +347,7 @@ export function ReplaceVideoFlow({
         throw err
       }
     },
-    [blossomMirrorServers, signer, mirrorRetryFor, resetUpload]
+    [signer, mirrorRetryFor, resetUpload, blossomServers]
   )
 
   // Leaving the flow drops the replacement, so stop its transfers too.

@@ -80,13 +80,11 @@ export const SMALL_FILE_MAX_MB = 50
 
 /**
  * Whether dropping a file should start the browser optimisation on its own. Small files with a
- * playable codec (a phone short, say) and files that already play everywhere go up unchanged.
+ * playable codec (a phone short, say) go up unchanged; everything else is optimised, with the
+ * progress rail's "Adjust" to change the settings.
  */
 export function shouldAutoOptimise(meta: TranscodeSourceMeta): boolean {
-  if (meta.sizeMB > 0 && meta.sizeMB < SMALL_FILE_MAX_MB && isCompatibleCodec(meta.videoCodec)) {
-    return false
-  }
-  return assessTranscodeNeed(meta) !== 'none'
+  return !(meta.sizeMB > 0 && meta.sizeMB < SMALL_FILE_MAX_MB && isCompatibleCodec(meta.videoCodec))
 }
 
 export function computeTargetDimensions(

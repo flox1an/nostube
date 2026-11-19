@@ -42,10 +42,10 @@ describe('shouldAutoOptimise', () => {
     expect(shouldAutoOptimise({ ...baseMeta, sizeMB: 10, videoCodec: 'av01.0.04M.08' })).toBe(true)
   })
 
-  it('uploads a large file that already plays everywhere as is', () => {
+  it('optimises every file from 50 MB up, even one that already plays', () => {
     expect(
       shouldAutoOptimise({ ...baseMeta, sizeMB: 400, videoCodec: 'avc1.64001f', bitrateMbps: 5 })
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('optimises a large high-bitrate file', () => {

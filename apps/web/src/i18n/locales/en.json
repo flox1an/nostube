@@ -648,8 +648,9 @@
     "storage": {
       "title": "Where your files are stored",
       "none": "No server yet — choose one before uploading.",
-      "change": "Change",
-      "addDefaults": "Use the free default servers"
+      "addDefaults": "Use the free default servers",
+      "selectedOf": "{{count}} of {{total}}",
+      "choose": "Choose servers"
     }
   },
   "settings": {
@@ -753,7 +754,9 @@
       "mirror": "Backup",
       "initialUpload": "Primary",
       "blockedServer": "Server Blocked",
-      "blockedServerDescription": "This server re-encodes videos and serves low-quality content. It cannot be added."
+      "blockedServerDescription": "This server re-encodes videos and serves low-quality content. It cannot be added.",
+      "useForUploads": "Upload to {{server}}",
+      "uploadHint": "Checked servers get your uploads. Unchecked ones stay in the list so videos stored there are still found."
     },
     "caching": {
       "title": "Streaming Servers",

@@ -620,8 +620,9 @@
     "storage": {
       "title": "Où sont stockés tes fichiers",
       "none": "Aucun serveur pour le moment : choisis-en un avant l’envoi.",
-      "change": "Modifier",
-      "addDefaults": "Utiliser les serveurs gratuits par défaut"
+      "addDefaults": "Utiliser les serveurs gratuits par défaut",
+      "selectedOf": "{{count}} sur {{total}}",
+      "choose": "Choisir les serveurs"
     }
   },
   "settings": {
@@ -699,7 +700,9 @@
       "mirror": "Sauvegarde",
       "initialUpload": "Principal",
       "blockedServer": "Serveur bloqué",
-      "blockedServerDescription": "Ce serveur réencode les vidéos et fournit un contenu de mauvaise qualité. Il ne peut pas être ajouté."
+      "blockedServerDescription": "Ce serveur réencode les vidéos et fournit un contenu de mauvaise qualité. Il ne peut pas être ajouté.",
+      "useForUploads": "Envoyer vers {{server}}",
+      "uploadHint": "Les serveurs cochés reçoivent vos envois. Les autres restent dans la liste pour que les vidéos qui y sont stockées soient toujours trouvées."
     },
     "caching": {
       "title": "Serveurs de streaming",

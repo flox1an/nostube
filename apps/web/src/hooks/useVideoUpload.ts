@@ -4,7 +4,7 @@ import { imageFileName } from '@nostube/core/image-encode'
 import { randomUUID } from '@nostube/core/random-uuid'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import { deleteBlobsFromServers, type ChunkedUploadProgress } from '@/lib/blossom-upload'
-import { configuredServerUrls } from '@/lib/blossom-servers'
+import { uploadServerUrls } from '@/lib/blossom-servers'
 import { type BlobActivity, trackBlobActivity } from '@/lib/transcode-upload'
 import { useFileUpload } from './useFileUpload'
 import { type BlobDescriptor, type Signer } from '@/lib/blossom-auth'
@@ -424,8 +424,8 @@ export function useVideoUpload(
   const { config } = useAppContext()
   const { publish, isPending: isNostrPublishPending } = useNostrPublish()
 
-  // One flat list: `planUpload` picks which servers get the file and which copy it.
-  const uploadServers = configuredServerUrls(config.blossomServers)
+  // The servers switched on for uploads; `planUpload` picks which one gets the file first.
+  const uploadServers = uploadServerUrls(config.blossomServers)
 
   const signer = user
     ? async (draft: EventTemplate) => await user.signer.signEvent(draft)

@@ -2,81 +2,35 @@ import { useEffect } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
-import { type BlossomServerTag } from '@nostube/core'
-import { isBlossomServerBlocked } from '@/constants/relays'
+import { mergeProfileServers, normalizeBlossomServers } from '@/lib/blossom-servers'
+
+const signatureKey = (pubkey: string) => `nostube:blossom-profile-sync:${pubkey}`
 
 /**
- * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
- * This component must be rendered inside AccountsProvider hierarchy.
+ * Brings servers from the user's kind 10063 list (NIP-B7 / BUD-03) into the local list. It merges
+ * only when the profile list changed since the last merge, so removing a server locally sticks.
+ * Must be rendered inside the AccountsProvider hierarchy.
  */
 export function BlossomServerSync() {
   const { user } = useCurrentUser()
-  const userBlossomServers = useUserBlossomServers()
-  const { config, updateConfig } = useAppContext()
+  const { data: profileUrls } = useUserBlossomServers()
+  const { updateConfig } = useAppContext()
 
-  // Auto-load user's NIP-63 (kind 10063) blossom servers
   useEffect(() => {
-    console.debug('🌸 BlossomServerSync - useEffect triggered')
-    console.debug('  User pubkey:', user?.pubkey)
-    console.debug('  User blossom servers data:', userBlossomServers.data)
-    console.debug('  User blossom servers isLoading:', userBlossomServers.isLoading)
-    console.debug('  Current config blossom servers:', config.blossomServers)
+    const pubkey = user?.pubkey
+    if (!pubkey || profileUrls.length === 0) return
+    const key = signatureKey(pubkey)
+    updateConfig(currentConfig => {
+      const merged = mergeProfileServers(
+        normalizeBlossomServers(currentConfig.blossomServers),
+        profileUrls,
+        localStorage.getItem(key)
+      )
+      if (!merged) return currentConfig
+      localStorage.setItem(key, merged.signature)
+      return { ...currentConfig, blossomServers: merged.servers }
+    })
+  }, [user?.pubkey, profileUrls, updateConfig])
 
-    // Only proceed if user is logged in and has blossom servers
-    if (!user?.pubkey) {
-      console.debug('  ❌ No user pubkey - skipping')
-      return
-    }
-
-    if (!userBlossomServers.data?.length) {
-      console.debug('  ❌ No user blossom servers data - skipping')
-      return
-    }
-
-    console.debug('  ✅ User is logged in with blossom servers')
-
-    // Get current servers from config
-    const currentServers = config.blossomServers || []
-    const currentUrls = new Set(currentServers.map(s => s.url))
-    console.debug('  Current server URLs:', Array.from(currentUrls))
-
-    // Find new servers (not already in config, and not blocked)
-    const newServers = userBlossomServers.data
-      .filter(url => {
-        const exists = currentUrls.has(url)
-        const blocked = isBlossomServerBlocked(url)
-        console.debug(
-          `    Checking ${url}: ${exists ? 'already exists' : blocked ? 'BLOCKED' : 'NEW'}`
-        )
-        return !exists && !blocked
-      })
-      .map(url => ({
-        url,
-        name: url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
-        tags: [] as BlossomServerTag[], // Empty tags for user's 10063 servers
-      }))
-
-    console.debug('  New servers to add:', newServers)
-
-    // Only update if there are new servers to add
-    if (newServers.length > 0) {
-      console.debug('  📝 Updating config with new servers')
-      updateConfig(currentConfig => ({
-        ...currentConfig,
-        blossomServers: [...(currentConfig.blossomServers || []), ...newServers],
-      }))
-      console.debug('  ✅ Config update called')
-    } else {
-      console.debug('  ℹ️ No new servers to add')
-    }
-  }, [
-    user?.pubkey,
-    userBlossomServers.data,
-    userBlossomServers.isLoading,
-    config.blossomServers,
-    updateConfig,
-  ])
-
-  // This component doesn't render anything
   return null
 }

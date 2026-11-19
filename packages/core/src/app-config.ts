@@ -20,6 +20,11 @@ export interface BlossomServer {
   url: string
   name: string
   tags: BlossomServerTag[]
+  /**
+   * Whether uploads go to this server. Unset means yes. A server switched off stays in the list
+   * (and in the published kind 10063 list) so media stored there is still found.
+   */
+  upload?: boolean
 }
 
 export interface CachingServer {

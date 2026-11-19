@@ -22,7 +22,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks'
 import { useContributeVariant } from '@/hooks/useContributeVariant'
 import { isBlossomServerBlocked } from '@nostube/core/blossom-url'
-import { deriveServerName } from '@/lib/blossom-servers'
+import { deriveServerName, uploadServerUrls } from '@/lib/blossom-servers'
 import {
   availableResolutions,
   defaultContributeResolutions,
@@ -226,7 +226,7 @@ export function ContributeVariantDialog({
   useEffect(() => {
     if (!open) return
     setSourceVariant(mp4Variants[0] ?? null)
-    setSelectedServerUrls(new Set(blossomServers.map(server => server.url)))
+    setSelectedServerUrls(new Set(uploadServerUrls(blossomServers)))
     resetContribution()
   }, [blossomServers, mp4Variants, open, resetContribution])
 

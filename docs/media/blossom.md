@@ -21,7 +21,7 @@ Files larger than 100 MB are first offered to the server as a chunked upload (`P
 
 ## Your server list
 
-The web app keeps its servers in **Settings → Network**. Every hosting server is one flat list: each of them takes part in every upload, and the web app decides per file which server receives it and which ones copy it (see [the upload strategy](/media/uploads#blossom-upload)). There is nothing to tag, and you need at least one server before you can upload a file. A video's URL appears on all of them; playback asks each server for the blob and falls back to the next.
+The web app keeps its servers in **Settings → Network**. Every hosting server is one flat list with a checkbox per server: checked servers take part in every upload, and the web app decides per file which of them receives it and which ones copy it. An unchecked server gets no uploads but stays in the list (and in the published kind `10063` list), so videos stored there are still found. At least one server stays checked (see [the upload strategy](/media/uploads#blossom-upload)). There is nothing to tag, and you need at least one server before you can upload a file. A video's URL appears on all of them; playback asks each server for the blob and falls back to the next.
 
 | Kind | Where to set it | What it does |
 | --- | --- | --- |
@@ -37,7 +37,7 @@ None of this applies to a Nostube Server. Its site and Studio use the instance's
 
 [BUD-03](https://github.com/hzrd149/blossom/blob/master/buds/03.md) defines a replaceable event, kind `10063`, that holds a user's Blossom servers in `server` tags. Nostube uses it in several places:
 
-- **Web app:** after you sign in, it reads your kind `10063` list and adds any server you don't have yet to Video Hosting. Settings → Network can publish the current list to your profile with one click, so other Nostr apps find your media servers.
+- **Web app:** after you sign in, it reads your kind `10063` list and adds any server you don't have yet to Video Hosting. It does this only when the published list changed since the last time, so a server you removed locally stays removed. Settings → Network can publish the current list to your profile with one click, so other Nostr apps find your media servers.
 - **Embed player:** it fetches the author's kind `10063` list and uses those servers as playback fallbacks.
 - **Nostube Server:** the creator site uses the creator's kind `10063` list as playback fallbacks. With a managed channel identity, the server signs and publishes the channel's own list (see [Storage and S3](/server/storage)).
 

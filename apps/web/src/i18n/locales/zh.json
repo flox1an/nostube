@@ -620,8 +620,9 @@
     "storage": {
       "title": "文件存放位置",
       "none": "尚未选择服务器，请在上传前选择。",
-      "change": "更改",
-      "addDefaults": "使用免费默认服务器"
+      "addDefaults": "使用免费默认服务器",
+      "selectedOf": "{{total}} 个中的 {{count}} 个",
+      "choose": "选择服务器"
     }
   },
   "settings": {
@@ -699,7 +700,9 @@
       "mirror": "备份",
       "initialUpload": "主服务器",
       "blockedServer": "服务器已被屏蔽",
-      "blockedServerDescription": "此服务器重新编码视频并提供低质量内容。无法添加。"
+      "blockedServerDescription": "此服务器重新编码视频并提供低质量内容。无法添加。",
+      "useForUploads": "上传到 {{server}}",
+      "uploadHint": "勾选的服务器会接收你的上传。未勾选的仍保留在列表中，以便继续找到存放在那里的视频。"
     },
     "caching": {
       "title": "流媒体服务器",

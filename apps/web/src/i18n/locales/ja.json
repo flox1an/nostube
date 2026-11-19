@@ -620,8 +620,9 @@
     "storage": {
       "title": "ファイルの保存先",
       "none": "サーバーが未設定です。アップロード前に選択してください。",
-      "change": "変更",
-      "addDefaults": "無料の既定サーバーを使う"
+      "addDefaults": "無料の既定サーバーを使う",
+      "selectedOf": "{{total}} 件中 {{count}} 件",
+      "choose": "サーバーを選択"
     }
   },
   "settings": {
@@ -699,7 +700,9 @@
       "mirror": "バックアップ",
       "initialUpload": "プライマリ",
       "blockedServer": "サーバーブロック中",
-      "blockedServerDescription": "このサーバーは動画を再エンコードし、低品質のコンテンツを配信します。追加できません。"
+      "blockedServerDescription": "このサーバーは動画を再エンコードし、低品質のコンテンツを配信します。追加できません。",
+      "useForUploads": "{{server}} にアップロード",
+      "uploadHint": "チェックしたサーバーにアップロードされます。チェックしていないサーバーも一覧に残り、そこに保存された動画は引き続き見つかります。"
     },
     "caching": {
       "title": "ストリーミングサーバー",

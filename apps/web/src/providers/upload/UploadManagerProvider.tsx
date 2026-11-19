@@ -24,6 +24,7 @@ import {
 import { type EventTemplate } from 'nostr-tools'
 import type { UploadTask, TranscodeState } from '@/types/upload-manager'
 import type { UploadDraft } from '@/types/upload-draft'
+import { uploadServerUrls } from '@/lib/blossom-servers'
 import {
   getUploadTasks,
   saveUploadTasks,
@@ -358,8 +359,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       if (!currentUser) throw new Error('User not logged in')
 
-      // One flat list: a DVM's output is copied to every configured server.
-      const servers = currentConfig.blossomServers?.map(s => s.url) || []
+      // A DVM's output is copied to every server switched on for uploads.
+      const servers = uploadServerUrls(currentConfig.blossomServers)
 
       if (servers.length === 0) {
         return video

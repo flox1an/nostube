@@ -620,8 +620,9 @@
     "storage": {
       "title": "Wo deine Dateien liegen",
       "none": "Noch kein Server — wähle vor dem Upload einen.",
-      "change": "Ändern",
-      "addDefaults": "Kostenlose Standardserver verwenden"
+      "addDefaults": "Kostenlose Standardserver verwenden",
+      "selectedOf": "{{count}} von {{total}}",
+      "choose": "Server auswählen"
     }
   },
   "settings": {
@@ -725,7 +726,9 @@
       "mirror": "Backup",
       "initialUpload": "Primär",
       "blockedServer": "Server blockiert",
-      "blockedServerDescription": "Dieser Server konvertiert Videos neu und liefert minderwertige Qualität. Er kann nicht hinzugefügt werden."
+      "blockedServerDescription": "Dieser Server konvertiert Videos neu und liefert minderwertige Qualität. Er kann nicht hinzugefügt werden.",
+      "useForUploads": "Auf {{server}} hochladen",
+      "uploadHint": "Angehakte Server bekommen deine Uploads. Nicht angehakte bleiben in der Liste, damit dort gespeicherte Videos weiter gefunden werden."
     },
     "caching": {
       "title": "Streaming-Server",

@@ -620,8 +620,9 @@
     "storage": {
       "title": "Dónde se guardan tus archivos",
       "none": "Aún no hay servidor: elige uno antes de subir.",
-      "change": "Cambiar",
-      "addDefaults": "Usar los servidores gratuitos"
+      "addDefaults": "Usar los servidores gratuitos",
+      "selectedOf": "{{count}} de {{total}}",
+      "choose": "Elegir servidores"
     }
   },
   "settings": {
@@ -699,7 +700,9 @@
       "mirror": "Copia de seguridad",
       "initialUpload": "Principal",
       "blockedServer": "Servidor bloqueado",
-      "blockedServerDescription": "Este servidor recodifica los vídeos y ofrece contenido de baja calidad. No se puede añadir."
+      "blockedServerDescription": "Este servidor recodifica los vídeos y ofrece contenido de baja calidad. No se puede añadir.",
+      "useForUploads": "Subir a {{server}}",
+      "uploadHint": "Los servidores marcados reciben tus subidas. Los demás siguen en la lista para que los vídeos guardados allí se sigan encontrando."
     },
     "caching": {
       "title": "Servidores de streaming",

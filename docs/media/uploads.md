@@ -6,7 +6,7 @@ An upload in the Nostube web app goes through four stages: pick a file, optional
 
 ## The flow
 
-1. **Choose the source.** The upload page (`/upload`) needs a signed-in user. A file can be dropped anywhere on the page, or picked with **Select file**; a link goes into the URL field. You do not have to configure anything first: unless you already have a server list, the page fills in the instance's proxy or the free defaults. The storage card shows which servers will receive the file, and **Change** opens the list (see [Blossom storage](/media/blossom#your-server-list)). Existing drafts are listed below the form.
+1. **Choose the source.** The upload page (`/upload`) needs a signed-in user. A file can be dropped anywhere on the page, or picked with **Select file**; a link goes into the URL field. You do not have to configure anything first: unless you already have a server list, the page fills in the instance's proxy or the free defaults. The storage card shows which servers will receive the file (e.g. `2 of 5` when some are unchecked), and **Choose servers** opens the list, where a checkbox per server decides whether uploads go there (see [Blossom storage](/media/blossom#your-server-list)). Existing drafts are listed below the form.
 2. **Optimise for Nostr.** As soon as a file is dropped, nostube decides on its own. Files under 50 MB with an H.264 or H.265 video track (a phone short, say) are uploaded unchanged; converting them saves little. Anything else starts converting in the browser with the recommended settings (see below). The progress rail shows what is produced (e.g. `720p H.264`) and the details form is usable meanwhile. **Adjust** on the rail stops the conversion and opens the conversion options (resolutions, format, quality, **Upload only** for the source file unchanged); once the converted files are already uploading it asks first. The **×** button cancels; after a cancel or a failure the rail offers **Change settings**. Without WebCodecs in the browser, the conversion settings appear first and wait for a click.
 3. **Upload to Blossom.** Every resulting file is uploaded from the browser to one server, and the other servers copy it from there (see the upload strategy below).
 4. **Details.** Add a title, description, tags, language, thumbnail, subtitles and an optional content warning while the upload runs. The draft is saved in the browser, so a reload does not lose it.
@@ -16,7 +16,7 @@ With **From URL**, nothing is uploaded: the event points to the given URL. If th
 
 ## Blossom upload
 
-Your servers form one flat list — there are no roles to tag. The web app decides per file which server gets the upload and which ones copy it:
+Your servers form one flat list — there are no roles to tag, only a checkbox per server for whether uploads go there. Among the checked servers, the web app decides per file which one gets the upload and which ones copy it:
 
 - The upload goes to the first server in the list, unless another server was measured at least twice as fast from this browser. The browser only measures servers it uploads to on their own, so in practice this happens after a server took over from a failed one.
 - Servers whose size limit the file exceeds are left out. Limits come from the server catalog or from an earlier `413` answer.

@@ -482,7 +482,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   // ── Server config ─────────────────────────────────────────────────────────
 
-  const { updateConfig } = useAppContext()
+  const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const [showServerSettings, setShowServerSettings] = useState(false)
   const openServerSettings = useCallback(() => setShowServerSettings(true), [])
@@ -495,10 +495,12 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     }))
   }, [updateConfig, presetContent.defaultBlossomProxy])
 
+  // Checks the whole list, not just the servers switched on: seeding replaces the list.
+  const configuredServerCount = config.blossomServers?.length ?? 0
   useEffect(() => {
-    if (uploadServers.length > 0 || !user) return
+    if (configuredServerCount > 0 || !user) return
     addDefaultServers()
-  }, [uploadServers.length, user, addDefaultServers])
+  }, [configuredServerCount, user, addDefaultServers])
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
@@ -615,6 +617,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               deletingIndex={deletingIndex}
               hasHlsVideo={hasHlsVideo}
               servers={uploadServers}
+              serverCount={configuredServerCount}
               onFileDrop={wrappedOnDrop}
               onUrlProcess={wrappedOnUrlProcess}
               onStartBackground={wrappedOnStartBackground}

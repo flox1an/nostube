@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Upload server selection: each Blossom server in Settings → Network (and in the upload page's **Choose servers** dialog) has a checkbox for whether uploads go there. Unchecked servers stay in the list and in the published kind 10063 list, so media stored there is still found; uploads, DVM copies and the replace-video flow use only the checked ones (`uploadServerUrls` in `lib/blossom-servers.ts`). The last checked server cannot be unchecked, and removing it checks the first remaining one. The storage card shows e.g. `2 of 5`.
+
 ### Changed
 
 - Browser transcoding writes its output straight to the browser's private file system (OPFS) in the transcode worker instead of building it in memory, so a conversion no longer needs several times its output size in RAM (`transcode-sink` in `@nostube/core`). When OPFS is unavailable (older Safari, a denied write) or the free quota cannot hold the expected output, the conversion falls back to the in-memory buffer as before. Leftover output of a conversion that never finished is removed an hour later.
@@ -21,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The browser learns per server whether it mirrors, its size limit (413) and its upload speed (`lib/server-capabilities.ts`, kept 30 days, starting from the server catalog in `lib/blossom-servers.ts`). Upload and mirror errors keep their HTTP status for this.
 
 ### Fixed
+
+- Removing a Blossom server in settings had no effect when the server was on the profile's kind 10063 list: `BlossomServerSync` re-added it on the next render, at the end of the list. It now merges the profile list only when that list changed since the last merge (fingerprint per account in localStorage, `mergeProfileServers`), comparing URLs without trailing slashes.
 
 - Upload: dropping a file no longer fails with "Maximum 10 items allowed" when the draft list looked empty or short. Drafts older than 30 days are hidden from the list but still filled the 10 slots; they now make room for a new draft. When all 10 slots hold visible drafts, a notice says so and the upload continues without being saved as a draft.
 

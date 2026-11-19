@@ -36,8 +36,10 @@ export interface UploadSourceScreenProps {
   originalVideoInfo: OriginalVideoInfo | undefined
   deletingIndex: number | null
   hasHlsVideo: boolean
-  /** Every configured Blossom server: the storage the next upload lands on. */
+  /** The Blossom servers switched on for uploads: the next upload lands on all of them. */
   servers: string[]
+  /** How many servers the list holds in total, switched off ones included. */
+  serverCount?: number
   onFileDrop: (files: File[]) => void
   onUrlProcess: (url: string) => void
   onStartBackground: (
@@ -72,6 +74,7 @@ export function UploadSourceScreen({
   deletingIndex,
   hasHlsVideo,
   servers,
+  serverCount = servers.length,
   onFileDrop,
   onUrlProcess,
   onStartBackground,
@@ -202,6 +205,12 @@ export function UploadSourceScreen({
             {servers.length > 0 ? (
               <p className="truncate text-xs text-muted-foreground">
                 {servers.map(hostOf).join(' · ')}
+                {serverCount > servers.length &&
+                  ` (${t('upload.storage.selectedOf', {
+                    defaultValue: '{{count}} of {{total}}',
+                    count: servers.length,
+                    total: serverCount,
+                  })})`}
               </p>
             ) : (
               <p className="text-xs text-destructive">
@@ -212,7 +221,7 @@ export function UploadSourceScreen({
             )}
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onConfigureServers}>
-            {t('upload.storage.change', { defaultValue: 'Change' })}
+            {t('upload.storage.choose', { defaultValue: 'Choose servers' })}
           </Button>
         </div>
         {servers.length === 0 && (

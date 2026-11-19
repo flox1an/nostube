@@ -5,7 +5,7 @@ import { Label } from '@nostube/widgets/components/label'
 import { Progress } from '@nostube/widgets/components/progress'
 import { type ChunkedUploadProgress } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from '@/lib/blossom-auth'
-import { configuredServerUrls } from '@/lib/blossom-servers'
+import { uploadServerUrls } from '@/lib/blossom-servers'
 import {
   type VideoVariant,
   createBlobPlacement,
@@ -92,8 +92,8 @@ export function ReplaceVideoFlow({
   const [deleteOldFiles, setDeleteOldFiles] = useState(true)
   const [isConfirming, setIsConfirming] = useState(false)
 
-  // One flat server list; the upload strategy picks which servers get the file.
-  const blossomServers = configuredServerUrls(config.blossomServers)
+  // The servers switched on for uploads; the upload strategy orders them.
+  const blossomServers = uploadServerUrls(config.blossomServers)
 
   const signer = useMemo(
     () =>

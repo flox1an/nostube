@@ -742,7 +742,15 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
       {/* Server settings: same editor as Settings → Network */}
       <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
-        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-5">
+        <DialogContent
+          className="flex max-h-[90vh] max-w-lg flex-col gap-5"
+          // Escape in the add-server field closes that field, not the whole dialog.
+          onEscapeKeyDown={event => {
+            if ((event.target as HTMLElement | null)?.closest('[data-add-server-form]')) {
+              event.preventDefault()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>
               {t('upload.storage.choose', { defaultValue: 'Choose servers' })}

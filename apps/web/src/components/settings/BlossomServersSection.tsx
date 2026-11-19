@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useCurrentUser, useNostrPublish, useUserBlossomServers } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
@@ -39,6 +39,14 @@ export function BlossomServersSection() {
   const [newServerUrl, setNewServerUrl] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  // After the add form closes, focus goes back to its button instead of the dialog itself.
+  const returnFocusRef = useRef(false)
+  useEffect(() => {
+    if (addOpen || !returnFocusRef.current) return
+    returnFocusRef.current = false
+    addButtonRef.current?.focus()
+  }, [addOpen])
   const userBlossomServers = useUserBlossomServers()
   const blossomServers = useMemo(
     () => normalizeBlossomServers(config.blossomServers),
@@ -156,6 +164,7 @@ export function BlossomServersSection() {
   const closeAddForm = () => {
     setAddOpen(false)
     setNewServerUrl('')
+    returnFocusRef.current = true
   }
 
   return (
@@ -196,7 +205,7 @@ export function BlossomServersSection() {
                         {label}
                       </span>
                       {!active && (
-                        <span className="block truncate text-xs text-muted-foreground">
+                        <span className="block text-xs text-muted-foreground">
                           {t('settings.blossom.playbackOnly', {
                             defaultValue: 'No uploads, still used to find your videos',
                           })}
@@ -225,11 +234,13 @@ export function BlossomServersSection() {
 
         {addOpen ? (
           <form
+            // A surrounding dialog leaves Escape to this form (see `onEscapeKeyDown` there).
+            data-add-server-form
             className="flex flex-col gap-2 sm:flex-row"
             onSubmit={event => {
               event.preventDefault()
               handleAddServer()
-              setAddOpen(false)
+              closeAddForm()
             }}
           >
             <Input
@@ -239,11 +250,7 @@ export function BlossomServersSection() {
               value={newServerUrl}
               onChange={e => setNewServerUrl(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Escape') {
-                  // Close the form, not the dialog around it.
-                  e.stopPropagation()
-                  closeAddForm()
-                }
+                if (e.key === 'Escape') closeAddForm()
               }}
               aria-label={t('settings.blossom.addButton')}
             />
@@ -258,6 +265,7 @@ export function BlossomServersSection() {
           </form>
         ) : (
           <Button
+            ref={addButtonRef}
             type="button"
             variant="ghost"
             size="sm"

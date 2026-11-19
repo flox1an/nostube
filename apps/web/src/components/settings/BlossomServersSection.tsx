@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppContext, useCurrentUser, useNostrPublish, useUserBlossomServers } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
-import { ScrollArea } from '@nostube/widgets/components/scroll-area'
-import { Loader2, XIcon } from 'lucide-react'
+import { Loader2, Plus, XIcon } from 'lucide-react'
 import { isBlossomServerBlocked } from '@/constants/relays'
 import { toast } from '@/hooks/useToast'
 import { Checkbox } from '@nostube/widgets/components/checkbox'
@@ -39,6 +38,7 @@ export function BlossomServersSection() {
   const { publish } = useNostrPublish()
   const [newServerUrl, setNewServerUrl] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
   const userBlossomServers = useUserBlossomServers()
   const blossomServers = useMemo(
     () => normalizeBlossomServers(config.blossomServers),
@@ -153,104 +153,167 @@ export function BlossomServersSection() {
   const profileDiffers =
     user?.pubkey != null && serverListSignature(profileUrls) !== serverListSignature(localUrls)
 
+  const closeAddForm = () => {
+    setAddOpen(false)
+    setNewServerUrl('')
+  }
+
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          {t('settings.blossom.listHint', {
+            defaultValue: 'Your uploads go to every checked server.',
+          })}
+        </p>
+
         {blossomServers.length === 0 ? (
-          <p className="text-muted-foreground">{t('settings.blossom.noServers')}</p>
+          <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+            {t('settings.blossom.noServers')}
+          </p>
         ) : (
-          <>
-            <p className="mb-2 text-xs text-muted-foreground">
-              {t('settings.blossom.uploadHint', {
-                defaultValue:
-                  'Checked servers get your uploads. Unchecked ones stay in the list so videos stored there are still found.',
-              })}
-            </p>
-            <ScrollArea className="w-full rounded-md border p-4">
-              <ul className="space-y-2">
-                {blossomServers.map(server => (
-                  <li key={server.url} className="flex items-center justify-between gap-2 text-sm">
-                    <label className="flex min-w-0 cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={server.upload !== false}
-                        // The last active server stays on: an upload needs somewhere to go.
-                        disabled={server.upload !== false && activeCount === 1}
-                        onCheckedChange={checked =>
-                          handleToggleUpload(server.url, checked === true)
-                        }
-                        aria-label={t('settings.blossom.useForUploads', {
-                          defaultValue: 'Upload to {{server}}',
-                          server: server.name || server.url,
-                        })}
-                      />
+          <ul className="divide-y overflow-hidden rounded-md border">
+            {blossomServers.map(server => {
+              const active = server.upload !== false
+              const label = server.name || server.url
+              return (
+                <li key={server.url} className="group flex items-center gap-1 pr-1">
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50">
+                    <Checkbox
+                      checked={active}
+                      // The last active server stays on: an upload needs somewhere to go.
+                      disabled={active && activeCount === 1}
+                      onCheckedChange={checked => handleToggleUpload(server.url, checked === true)}
+                      aria-label={t('settings.blossom.useForUploads', {
+                        defaultValue: 'Upload to {{server}}',
+                        server: label,
+                      })}
+                    />
+                    <span className="min-w-0">
                       <span
-                        className={`truncate ${server.upload === false ? 'text-muted-foreground' : ''}`}
+                        className={`block truncate text-sm ${active ? 'font-medium' : 'text-muted-foreground'}`}
                       >
-                        {server.name || server.url}
+                        {label}
                       </span>
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveServer(server.url)}
-                      aria-label={t('settings.blossom.remove', { defaultValue: 'Remove server' })}
-                    >
-                      <XIcon className="h-6 w-6" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          </>
-        )}
-      </div>
-
-      <div className="flex w-full space-x-2">
-        <Input
-          placeholder={t('settings.blossom.addPlaceholder')}
-          value={newServerUrl}
-          onChange={e => setNewServerUrl(e.target.value)}
-          onKeyPress={e => {
-            if (e.key === 'Enter') {
-              handleAddServer()
-            }
-          }}
-        />
-        <Button onClick={handleAddServer}>{t('settings.blossom.addButton')}</Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={handleUseDefaults}>
-          {t('settings.blossom.resetButton')}
-        </Button>
-        {user && (
-          <Button
-            variant="outline"
-            onClick={handlePublishList}
-            disabled={isPublishing || blossomServers.length === 0}
-          >
-            {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('settings.blossom.publishButton', {
-              defaultValue: 'Publish list to Nostr profile',
+                      {!active && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {t('settings.blossom.playbackOnly', {
+                            defaultValue: 'No uploads, still used to find your videos',
+                          })}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRemoveServer(server.url)}
+                    aria-label={t('settings.blossom.removeServer', {
+                      defaultValue: 'Remove {{server}}',
+                      server: label,
+                    })}
+                    title={t('settings.blossom.remove', { defaultValue: 'Remove server' })}
+                  >
+                    <XIcon />
+                  </Button>
+                </li>
+              )
             })}
+          </ul>
+        )}
+
+        {addOpen ? (
+          <form
+            className="flex flex-col gap-2 sm:flex-row"
+            onSubmit={event => {
+              event.preventDefault()
+              handleAddServer()
+              setAddOpen(false)
+            }}
+          >
+            <Input
+              autoFocus
+              inputMode="url"
+              placeholder={t('settings.blossom.addPlaceholder')}
+              value={newServerUrl}
+              onChange={e => setNewServerUrl(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  // Close the form, not the dialog around it.
+                  e.stopPropagation()
+                  closeAddForm()
+                }
+              }}
+              aria-label={t('settings.blossom.addButton')}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" variant="secondary" disabled={!newServerUrl.trim()}>
+                {t('common.add', { defaultValue: 'Add' })}
+              </Button>
+              <Button type="button" variant="ghost" onClick={closeAddForm}>
+                {t('common.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setAddOpen(true)}
+          >
+            <Plus />
+            {t('settings.blossom.addButton')}
           </Button>
         )}
       </div>
 
-      {user && (
-        <p className="text-xs text-muted-foreground">
-          {profileDiffers
-            ? t('settings.blossom.profileDiffers', {
-                defaultValue:
-                  'Your profile lists other servers ({{count}}). Publish to replace that list.',
-                count: profileUrls.length,
-              })
-            : t('settings.blossom.profileMatches', {
-                defaultValue: 'Your profile lists these {{count}} servers.',
-                count: localUrls.length,
+      <div className="space-y-3 border-t pt-4">
+        {user && (
+          <p className="text-xs text-muted-foreground">
+            {profileUrls.length === 0
+              ? t('settings.blossom.profileEmpty', {
+                  defaultValue:
+                    'Your Nostr profile has no server list yet. Publishing it lets other apps find your videos.',
+                })
+              : profileDiffers
+                ? t('settings.blossom.profileDiffers', {
+                    defaultValue:
+                      'Your profile lists other servers ({{count}}). Publish to replace that list.',
+                    count: profileUrls.length,
+                  })
+                : t('settings.blossom.profileMatches', {
+                    defaultValue: 'Your profile lists these {{count}} servers.',
+                    count: localUrls.length,
+                  })}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePublishList}
+              disabled={isPublishing || blossomServers.length === 0 || !profileDiffers}
+            >
+              {isPublishing && <Loader2 className="animate-spin" />}
+              {t('settings.blossom.publishButton', {
+                defaultValue: 'Publish list to Nostr profile',
               })}
-        </p>
-      )}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={handleUseDefaults}
+          >
+            {t('settings.blossom.resetButton')}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

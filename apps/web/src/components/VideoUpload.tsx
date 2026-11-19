@@ -6,6 +6,7 @@ import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -741,12 +742,25 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
       {/* Server settings: same editor as Settings → Network */}
       <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-5">
           <DialogHeader>
-            <DialogTitle>{t('settings.blossom.title')}</DialogTitle>
-            <DialogDescription>{t('settings.blossom.description')}</DialogDescription>
+            <DialogTitle>
+              {t('upload.storage.choose', { defaultValue: 'Choose servers' })}
+            </DialogTitle>
+            <DialogDescription>
+              {t('upload.storage.dialogDescription', {
+                defaultValue: 'Your videos are stored on Blossom servers, not by nostube.',
+              })}
+            </DialogDescription>
           </DialogHeader>
-          <BlossomServersSection />
+          <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+            <BlossomServersSection />
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setShowServerSettings(false)}>
+              {t('common.done', { defaultValue: 'Done' })}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

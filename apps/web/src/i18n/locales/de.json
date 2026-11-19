@@ -622,7 +622,8 @@
       "none": "Noch kein Server — wähle vor dem Upload einen.",
       "addDefaults": "Kostenlose Standardserver verwenden",
       "selectedOf": "{{count}} von {{total}}",
-      "choose": "Server auswählen"
+      "choose": "Server auswählen",
+      "dialogDescription": "Deine Videos liegen auf Blossom-Servern, nicht bei nostube."
     }
   },
   "settings": {
@@ -720,7 +721,7 @@
       "title": "Video-Hosting",
       "description": "Server verwalten, auf denen deine Videos gespeichert werden.",
       "noServers": "Keine Hosting-Server konfiguriert. Füge unten welche hinzu oder setze auf Standard zurück.",
-      "addPlaceholder": "Server-URL hinzufügen (z.B. https://blossom.primal.net)",
+      "addPlaceholder": "z. B. blossom.band",
       "addButton": "Server hinzufügen",
       "resetButton": "Auf Standard zurücksetzen",
       "mirror": "Backup",
@@ -728,7 +729,10 @@
       "blockedServer": "Server blockiert",
       "blockedServerDescription": "Dieser Server konvertiert Videos neu und liefert minderwertige Qualität. Er kann nicht hinzugefügt werden.",
       "useForUploads": "Auf {{server}} hochladen",
-      "uploadHint": "Angehakte Server bekommen deine Uploads. Nicht angehakte bleiben in der Liste, damit dort gespeicherte Videos weiter gefunden werden."
+      "listHint": "Deine Uploads gehen an jeden angehakten Server.",
+      "playbackOnly": "Keine Uploads, wird weiter zum Finden deiner Videos genutzt",
+      "removeServer": "{{server}} entfernen",
+      "profileEmpty": "Dein Nostr-Profil hat noch keine Serverliste. Veröffentlichst du sie, finden andere Apps deine Videos."
     },
     "caching": {
       "title": "Streaming-Server",

@@ -622,7 +622,8 @@
       "none": "尚未选择服务器，请在上传前选择。",
       "addDefaults": "使用免费默认服务器",
       "selectedOf": "{{total}} 个中的 {{count}} 个",
-      "choose": "选择服务器"
+      "choose": "选择服务器",
+      "dialogDescription": "你的视频存储在 Blossom 服务器上，而不是 nostube。"
     }
   },
   "settings": {
@@ -694,7 +695,7 @@
       "title": "视频托管",
       "description": "管理存储视频的服务器。",
       "noServers": "未配置托管服务器。请在下方添加或重置为默认值。",
-      "addPlaceholder": "添加服务器 URL（例如 https://blossom.primal.net）",
+      "addPlaceholder": "例如 blossom.band",
       "addButton": "添加服务器",
       "resetButton": "重置为默认值",
       "mirror": "备份",
@@ -702,7 +703,10 @@
       "blockedServer": "服务器已被屏蔽",
       "blockedServerDescription": "此服务器重新编码视频并提供低质量内容。无法添加。",
       "useForUploads": "上传到 {{server}}",
-      "uploadHint": "勾选的服务器会接收你的上传。未勾选的仍保留在列表中，以便继续找到存放在那里的视频。"
+      "listHint": "你的上传会发送到每个已勾选的服务器。",
+      "playbackOnly": "不上传，仍用于查找你的视频",
+      "removeServer": "移除 {{server}}",
+      "profileEmpty": "你的 Nostr 资料中还没有服务器列表。发布后，其他应用就能找到你的视频。"
     },
     "caching": {
       "title": "流媒体服务器",

@@ -622,7 +622,8 @@
       "none": "Aucun serveur pour le moment : choisis-en un avant l’envoi.",
       "addDefaults": "Utiliser les serveurs gratuits par défaut",
       "selectedOf": "{{count}} sur {{total}}",
-      "choose": "Choisir les serveurs"
+      "choose": "Choisir les serveurs",
+      "dialogDescription": "Vos vidéos sont stockées sur des serveurs Blossom, pas chez nostube."
     }
   },
   "settings": {
@@ -694,7 +695,7 @@
       "title": "Hébergement vidéo",
       "description": "Gérez les serveurs où vos vidéos sont stockées.",
       "noServers": "Aucun serveur d'hébergement configuré. Ajoutez-en ci-dessous ou réinitialisez aux valeurs par défaut.",
-      "addPlaceholder": "Ajouter l'URL du serveur (ex: https://blossom.primal.net)",
+      "addPlaceholder": "ex. blossom.band",
       "addButton": "Ajouter un serveur",
       "resetButton": "Réinitialiser",
       "mirror": "Sauvegarde",
@@ -702,7 +703,10 @@
       "blockedServer": "Serveur bloqué",
       "blockedServerDescription": "Ce serveur réencode les vidéos et fournit un contenu de mauvaise qualité. Il ne peut pas être ajouté.",
       "useForUploads": "Envoyer vers {{server}}",
-      "uploadHint": "Les serveurs cochés reçoivent vos envois. Les autres restent dans la liste pour que les vidéos qui y sont stockées soient toujours trouvées."
+      "listHint": "Vos envois vont vers chaque serveur coché.",
+      "playbackOnly": "Aucun envoi, sert encore à retrouver vos vidéos",
+      "removeServer": "Retirer {{server}}",
+      "profileEmpty": "Votre profil Nostr n'a pas encore de liste de serveurs. La publier permet aux autres applis de trouver vos vidéos."
     },
     "caching": {
       "title": "Serveurs de streaming",

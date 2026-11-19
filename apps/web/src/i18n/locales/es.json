@@ -622,7 +622,8 @@
       "none": "Aún no hay servidor: elige uno antes de subir.",
       "addDefaults": "Usar los servidores gratuitos",
       "selectedOf": "{{count}} de {{total}}",
-      "choose": "Elegir servidores"
+      "choose": "Elegir servidores",
+      "dialogDescription": "Tus vídeos se guardan en servidores Blossom, no en nostube."
     }
   },
   "settings": {
@@ -694,7 +695,7 @@
       "title": "Alojamiento de vídeos",
       "description": "Administrar servidores donde se almacenan tus vídeos.",
       "noServers": "No hay servidores de alojamiento configurados. Añade algunos abajo o restablece los valores predeterminados.",
-      "addPlaceholder": "Añadir URL del servidor (ej: https://blossom.primal.net)",
+      "addPlaceholder": "p. ej. blossom.band",
       "addButton": "Añadir servidor",
       "resetButton": "Restablecer",
       "mirror": "Copia de seguridad",
@@ -702,7 +703,10 @@
       "blockedServer": "Servidor bloqueado",
       "blockedServerDescription": "Este servidor recodifica los vídeos y ofrece contenido de baja calidad. No se puede añadir.",
       "useForUploads": "Subir a {{server}}",
-      "uploadHint": "Los servidores marcados reciben tus subidas. Los demás siguen en la lista para que los vídeos guardados allí se sigan encontrando."
+      "listHint": "Tus subidas van a cada servidor marcado.",
+      "playbackOnly": "Sin subidas, se sigue usando para encontrar tus vídeos",
+      "removeServer": "Quitar {{server}}",
+      "profileEmpty": "Tu perfil de Nostr aún no tiene lista de servidores. Publicarla permite que otras apps encuentren tus vídeos."
     },
     "caching": {
       "title": "Servidores de streaming",

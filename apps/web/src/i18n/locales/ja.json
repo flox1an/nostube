@@ -622,7 +622,8 @@
       "none": "サーバーが未設定です。アップロード前に選択してください。",
       "addDefaults": "無料の既定サーバーを使う",
       "selectedOf": "{{total}} 件中 {{count}} 件",
-      "choose": "サーバーを選択"
+      "choose": "サーバーを選択",
+      "dialogDescription": "動画は nostube ではなく Blossom サーバーに保存されます。"
     }
   },
   "settings": {
@@ -694,7 +695,7 @@
       "title": "動画ホスティング",
       "description": "動画が保存されるサーバーを管理します。",
       "noServers": "ホスティングサーバーが設定されていません。以下で追加するか、デフォルトにリセットしてください。",
-      "addPlaceholder": "サーバー URL を追加（例：https://blossom.primal.net）",
+      "addPlaceholder": "例: blossom.band",
       "addButton": "サーバーを追加",
       "resetButton": "デフォルトにリセット",
       "mirror": "バックアップ",
@@ -702,7 +703,10 @@
       "blockedServer": "サーバーブロック中",
       "blockedServerDescription": "このサーバーは動画を再エンコードし、低品質のコンテンツを配信します。追加できません。",
       "useForUploads": "{{server}} にアップロード",
-      "uploadHint": "チェックしたサーバーにアップロードされます。チェックしていないサーバーも一覧に残り、そこに保存された動画は引き続き見つかります。"
+      "listHint": "チェックしたすべてのサーバーにアップロードされます。",
+      "playbackOnly": "アップロードなし。動画の検索には引き続き使用",
+      "removeServer": "{{server}} を削除",
+      "profileEmpty": "Nostr プロフィールにはまだサーバー一覧がありません。公開すると他のアプリが動画を見つけられます。"
     },
     "caching": {
       "title": "ストリーミングサーバー",

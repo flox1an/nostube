@@ -131,7 +131,13 @@ export function useLiveStreams() {
       streams
         .filter(watchable)
         .map(stream => ({ stream, ...playback(stream) }))
-        .filter(item => item.playback !== 'hidden'),
+        .filter(item => item.playback !== 'hidden')
+        // Streamers re-announce every minute (new created_at), so order by the fixed start time, address as tiebreak.
+        .sort(
+          (a, b) =>
+            (b.stream.starts ?? 0) - (a.stream.starts ?? 0) ||
+            a.stream.address.localeCompare(b.stream.address)
+        ),
     [streams, playback]
   )
   return { streams: visible, isLoading, error }

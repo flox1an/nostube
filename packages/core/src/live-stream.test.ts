@@ -49,9 +49,11 @@ describe('parseLiveStream', () => {
     expect(safeLiveRelay('wss://[::1]')).toBe(false)
   })
 
-  it('ends stale live events and rejects future-dated or malformed ones', () => {
-    expect(parseLiveStream(live([]), NOW)?.status).toBe('live')
-    expect(parseLiveStream(live([], NOW - 3601), NOW)?.status).toBe('ended')
+  it('trusts live for 2h, marks it stale up to 12h, ends it after; rejects future-dated or malformed ones', () => {
+    const at = (age: number) => parseLiveStream(live([], NOW - age), NOW)
+    expect(at(60)).toMatchObject({ status: 'live', stale: false })
+    expect(at(2 * 3600 + 1)).toMatchObject({ status: 'live', stale: true })
+    expect(at(12 * 3600 + 1)).toMatchObject({ status: 'ended', stale: false })
     expect(parseLiveStream(live([], NOW + 61), NOW)).toBeNull()
     expect(parseLiveStream({ ...live([]), pubkey: 'npub1x' }, NOW)).toBeNull()
     expect(

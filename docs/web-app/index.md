@@ -33,7 +33,7 @@ While a stream is live, its zap goal ([NIP-75](https://github.com/nostr-protocol
 
 Creators who are live show a LIVE tag and a **Live now** section on their profile, a LIVE badge in header search results, and their stream at the top of the suggestions on their video pages.
 
-Streams are read from the configured read relays plus `relay.damus.io`, `nos.lol`, `relay.primal.net` and `relay.zap.stream`, and from the public `wss://` relay hints of a stream link. Discovery covers the last 24 hours (150 announcements); chat shows the newest 300 entries. An announcement still marked live after an hour without update counts as ended. `Host` tags are shown, not verified. Blocklists, mutes and NSFW settings apply. Server-instance builds have no live routes and query no public live relays.
+Streams are read from the configured read relays plus `relay.damus.io`, `nos.lol`, `relay.primal.net` and `relay.zap.stream`, and from the public `wss://` relay hints of a stream link. Discovery covers the last 24 hours (500 announcements per relay); chat shows the newest 300 entries. A stream marked live counts as live for 2 hours after its last update. Between 2 and 12 hours without update, nostube loads its playlist once every 5 minutes: it stays live while the playlist answers, otherwise it counts as ended (many services stop updating the announcement during a broadcast). After 12 hours without update it counts as ended. `Host` tags are shown, not verified. Blocklists, mutes and NSFW settings apply. Server-instance builds have no live routes and query no public live relays.
 
 Playback is limited to public HTTPS HLS/MP4 URLs; MoQ, RTMP and audio spaces are not supported. An ended stream plays its recording when it has one. Provider CORS, codec and availability restrictions can still prevent playback.
 
@@ -88,13 +88,13 @@ curl http://localhost:8080/health   # healthy
 
 The server answers:
 
-| Route                                          | Response                                                                                                                                                                           |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /v/<id>`, `/short/<id>`, `/playlist/<id>` | The app, with the event's title, description and thumbnail as Open Graph and Twitter card tags in the `<head>`; videos also get a Twitter player card and an oEmbed discovery link |
-| `GET /oembed?url=<page-url>`                   | oEmbed JSON, see [oEmbed](/embed/oembed)                                                                                                                                           |
-| `GET /health`                                  | `healthy`                                                                                                                                                                          |
-| `GET /assets/*`                                | Build files, `Cache-Control: public, max-age=31536000, immutable`; a missing file is a 404, never the app                                                                          |
-| Any other path                                 | The file from `dist/` if it exists, else `index.html`                                                                                                                              |
+| Route                                                           | Response                                                                                                                                                                                                                            |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v/<id>`, `/short/<id>`, `/playlist/<id>`, `/live/<naddr>` | The app, with the event's title, description and thumbnail as Open Graph and Twitter card tags in the `<head>`; videos and live streams also get a Twitter player card and an oEmbed discovery link. Live pages are cached for 60 s |
+| `GET /oembed?url=<page-url>`                                    | oEmbed JSON, see [oEmbed](/embed/oembed)                                                                                                                                                                                            |
+| `GET /health`                                                   | `healthy`                                                                                                                                                                                                                           |
+| `GET /assets/*`                                                 | Build files, `Cache-Control: public, max-age=31536000, immutable`; a missing file is a 404, never the app                                                                                                                           |
+| Any other path                                                  | The file from `dist/` if it exists, else `index.html`                                                                                                                                                                               |
 
 `<id>` is a `nevent1…`, `naddr1…` or `note1…` identifier. For `/v/`, `/short/` and `/playlist/` the server looks up the event on the relays in the identifier plus `wss://relay.nostu.be`, `wss://relay.divine.video`, `wss://relay.primal.net` and `wss://nos.lol` (4 s timeout). If it finds nothing, it serves the plain app.
 

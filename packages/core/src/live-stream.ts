@@ -19,6 +19,11 @@ export interface LiveStream {
   streamingUrls: string[]
   recordingUrl?: string
   status: 'live' | 'planned' | 'ended'
+  /**
+   * `live` without an update for longer than {@link STALE_LIVE_SECONDS}: many publishers stop
+   * refreshing the announcement, so whether it still runs must be checked against the stream.
+   */
+  stale: boolean
   starts?: number
   participants?: number
   relays: string[]
@@ -28,7 +33,10 @@ export interface LiveStream {
 }
 
 const LIVE_KIND = 30311
-const STALE_LIVE_SECONDS = 60 * 60
+/** NIP-53 lets clients treat `live` without updates as ended; until then the status is trusted. */
+export const STALE_LIVE_SECONDS = 2 * 60 * 60
+/** Past this, a `live` announcement counts as ended without checking the stream. */
+const ENDED_LIVE_SECONDS = 12 * 60 * 60
 const MAX_FUTURE_SKEW_SECONDS = 60
 const HEX_PUBKEY = /^[0-9a-f]{64}$/
 const MAX_RELAYS = 10
@@ -105,7 +113,9 @@ export function parseLiveStream(
   const rawStatus = tag('status')?.trim().toLowerCase()
   let status: LiveStream['status'] =
     rawStatus === 'live' || rawStatus === 'planned' ? rawStatus : 'ended'
-  if (status === 'live' && nowSeconds - event.created_at > STALE_LIVE_SECONDS) status = 'ended'
+  const age = nowSeconds - event.created_at
+  if (status === 'live' && age > ENDED_LIVE_SECONDS) status = 'ended'
+  const stale = status === 'live' && age > STALE_LIVE_SECONDS
 
   const host = event.tags.find(
     t => t[0] === 'p' && t[3]?.trim().toLowerCase() === 'host' && HEX_PUBKEY.test(t[1] ?? '')
@@ -152,6 +162,7 @@ export function parseLiveStream(
     streamingUrls,
     recordingUrl: playbackUrl(tag('recording')),
     status,
+    stale,
     starts: positiveInt(tag('starts')),
     participants: positiveInt(tag('current_participants')),
     relays,

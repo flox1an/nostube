@@ -9,12 +9,16 @@ import {
   log,
   type PageType,
 } from './nostr.js'
-import { extractVideoMeta, buildMetaTags } from './meta.js'
+import { extractVideoMeta, extractLiveMeta, buildMetaTags } from './meta.js'
 import { buildOEmbed } from './oembed.js'
 import { injectMeta } from './template.js'
 
 /** Hard timeout for the entire request handler (ms) */
 const REQUEST_TIMEOUT_MS = 8000
+/** Live announcements change often (status, title, image): previews must follow within a minute. */
+const LIVE_CACHE_SECONDS = 60
+const VIDEO_CACHE_SECONDS = 600
+const LIVE_KIND = 30311
 
 export function createApp() {
   const app = new Hono()
@@ -83,7 +87,9 @@ export function createApp() {
     log('handlePage:event found', { eventId: event.id, kind: event.kind })
 
     const baseUrl = getBaseUrl(c)
-    const meta = extractVideoMeta(event)
+    const live = type === 'live'
+    if (live && event.kind !== LIVE_KIND) return respondRaw()
+    const meta = live ? extractLiveMeta(event) : extractVideoMeta(event)
 
     const pageUrl = buildPageUrl(baseUrl, type, identifier)
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
@@ -129,6 +135,17 @@ export function createApp() {
     )
   })
 
+  // Live stream page (the chat-only `/live/:naddr/chat` stays a plain SPA route)
+  app.get('/live/:naddr', async c => {
+    return handlePage(
+      c,
+      c.req.param('naddr'),
+      'live',
+      html => c.html(html, 200, { 'Cache-Control': `public, max-age=${LIVE_CACHE_SECONDS}` }),
+      () => c.html(getIndexHtml())
+    )
+  })
+
   // oEmbed endpoint
   app.get('/oembed', async c => {
     const url = c.req.query('url')
@@ -158,18 +175,20 @@ export function createApp() {
       ),
     ])
 
-    if (!event) {
+    const live = parsed.type === 'live'
+    if (!event || (live && event.kind !== LIVE_KIND)) {
       return c.json({ error: 'Event not found' }, 404)
     }
 
     const baseUrl = getBaseUrl(c)
-    const meta = extractVideoMeta(event)
+    const meta = live ? extractLiveMeta(event) : extractVideoMeta(event)
+    const cacheSeconds = live ? LIVE_CACHE_SECONDS : VIDEO_CACHE_SECONDS
 
     const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
-    const oembed = buildOEmbed(meta, embedUrl, url)
+    const oembed = buildOEmbed(meta, embedUrl, url, cacheSeconds)
 
     log('oembed:success', { title: meta.title })
-    return c.json(oembed, 200, { 'Cache-Control': 'public, max-age=600' })
+    return c.json(oembed, 200, { 'Cache-Control': `public, max-age=${cacheSeconds}` })
   })
 
   return app

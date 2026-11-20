@@ -44,20 +44,20 @@ This is the real player, served from nostu.be. Autoplay is off, so playback star
 
 ## URL parameters
 
-| Parameter | Value | Default | Effect |
-| --- | --- | --- | --- |
-| `v` | `nevent1…`, `naddr1…` or `note1…` | required | The video to play. |
-| `t` | whole seconds | `0` | Start position, e.g. `t=90` starts at 1:30. |
-| `autoplay` | `1` | off | Try to start playback automatically. Browsers may require `muted=1`. |
-| `muted` | `1` | off | Start with sound muted; the viewer can unmute. |
-| `controls` | `0` | on | Hide the control bar. Click/tap and keyboard playback controls still work. |
-| `branding` | `0` | on | Hide the link to watch the video on the site. Does not hide safety notices. |
-| `quality` | `auto`, `1080p`, `720p`, `480p`, `360p`, etc. | `auto` | Select a matching video variant or HLS quality initially; unavailable qualities keep the player's default. DASH stays adaptive. Viewers can still change quality. |
-| `loop` | `1` | off | Loop the video. Without it, the viewer's own loop setting in the player applies. |
-| `title` | `0` | on | `0` hides the title and author overlay. |
-| `zaps` | `0` | on | `0` hides the zap markers on the progress bar. |
-| `color` | six hex digits, no `#` | `8b5cf6` | Accent colour of the buttons on the content warning and sensitive content screens. |
-| `relays` | comma-separated `wss://` URLs | none | Extra relays to look up the video on, asked first. |
+| Parameter  | Value                                         | Default  | Effect                                                                                                                                                            |
+| ---------- | --------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`        | `nevent1…`, `naddr1…` or `note1…`             | required | The video to play, or the `naddr1…` of a live stream (kind `30311`): it plays while live, the recording once ended, and shows the start time while planned.       |
+| `t`        | whole seconds                                 | `0`      | Start position, e.g. `t=90` starts at 1:30.                                                                                                                       |
+| `autoplay` | `1`                                           | off      | Try to start playback automatically. Browsers may require `muted=1`.                                                                                              |
+| `muted`    | `1`                                           | off      | Start with sound muted; the viewer can unmute.                                                                                                                    |
+| `controls` | `0`                                           | on       | Hide the control bar. Click/tap and keyboard playback controls still work.                                                                                        |
+| `branding` | `0`                                           | on       | Hide the link to watch the video on the site. Does not hide safety notices.                                                                                       |
+| `quality`  | `auto`, `1080p`, `720p`, `480p`, `360p`, etc. | `auto`   | Select a matching video variant or HLS quality initially; unavailable qualities keep the player's default. DASH stays adaptive. Viewers can still change quality. |
+| `loop`     | `1`                                           | off      | Loop the video. Without it, the viewer's own loop setting in the player applies.                                                                                  |
+| `title`    | `0`                                           | on       | `0` hides the title and author overlay.                                                                                                                           |
+| `zaps`     | `0`                                           | on       | `0` hides the zap markers on the progress bar.                                                                                                                    |
+| `color`    | six hex digits, no `#`                        | `8b5cf6` | Accent colour of the buttons on the content warning and sensitive content screens.                                                                                |
+| `relays`   | comma-separated `wss://` URLs                 | none     | Extra relays to look up the video on, asked first.                                                                                                                |
 
 Example: start at 30 seconds, loop, no overlay, red buttons:
 
@@ -80,15 +80,15 @@ Example: start at 30 seconds, loop, no overlay, red buttons:
 
 **Keyboard.** When the player has focus:
 
-| Key | Action |
-| --- | --- |
-| Space, K | Play or pause |
-| M | Mute or unmute |
-| ← / → | Back or forward 5 seconds |
-| J / L | Back or forward 10 seconds |
-| F | Fullscreen |
-| P | Picture-in-picture |
-| 0 to 9 | Jump to 0 % to 90 % of the video |
+| Key      | Action                           |
+| -------- | -------------------------------- |
+| Space, K | Play or pause                    |
+| M        | Mute or unmute                   |
+| ← / →    | Back or forward 5 seconds        |
+| J / L    | Back or forward 10 seconds       |
+| F        | Fullscreen                       |
+| P        | Picture-in-picture               |
+| 0 to 9   | Jump to 0 % to 90 % of the video |
 
 **Sources.** The player plays the video variants listed in the event, including HLS and DASH streams. If a URL fails, it tries the other variants and the Blossom servers in the author's server list (kind 10063).
 
@@ -150,18 +150,18 @@ To turn a pasted video link into a player automatically, use the [oEmbed endpoin
 
 ## Troubleshooting
 
-| Message or symptom | Cause and fix |
-| --- | --- |
-| **Missing required parameter: v (video ID)** | Add `v=`. |
-| **Invalid video ID format…** / **Invalid video ID** | `v` is not a valid `nevent1…`, `naddr1…` or `note1…`. Copy it again from the video's address. |
-| **Event not found on any relay** | None of the relays answered with the event within 6 seconds. Add a relay that has it: `&relays=wss://relay.example.com`. |
-| **This video was deleted by its author** | The author published a deletion for this event. |
-| **This video is not available** | The author or event is on the moderation preset's block list. |
-| **Failed to parse video event** | The identifier points at an event that is not a video. |
-| **No video sources found** | The event lists no playable video URL. |
-| **Video unavailable - all sources failed** | No URL in the event and no server in the author's Blossom list returned the file. |
-| **Sensitive content** / **Couldn't verify this video** | See [Content warnings and NSFW](#content-warnings-and-nsfw). |
-| The Nostube app loads instead of the player | The URL uses `/embed?v=`; use `/embed.html?v=`. |
-| The video does not start by itself | Add `autoplay=1&muted=1` and `allow="autoplay"` on the iframe. The browser may still block autoplay. |
-| The iframe stays blank | Your page's Content Security Policy blocks the frame; add the embed origin to `frame-src`. |
-| A link preview shows no player | The site is statically hosted; link previews need the [Docker image](/web-app/#docker). |
+| Message or symptom                                     | Cause and fix                                                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| **Missing required parameter: v (video ID)**           | Add `v=`.                                                                                                                |
+| **Invalid video ID format…** / **Invalid video ID**    | `v` is not a valid `nevent1…`, `naddr1…` or `note1…`. Copy it again from the video's address.                            |
+| **Event not found on any relay**                       | None of the relays answered with the event within 6 seconds. Add a relay that has it: `&relays=wss://relay.example.com`. |
+| **This video was deleted by its author**               | The author published a deletion for this event.                                                                          |
+| **This video is not available**                        | The author or event is on the moderation preset's block list.                                                            |
+| **Failed to parse video event**                        | The identifier points at an event that is not a video.                                                                   |
+| **No video sources found**                             | The event lists no playable video URL.                                                                                   |
+| **Video unavailable - all sources failed**             | No URL in the event and no server in the author's Blossom list returned the file.                                        |
+| **Sensitive content** / **Couldn't verify this video** | See [Content warnings and NSFW](#content-warnings-and-nsfw).                                                             |
+| The Nostube app loads instead of the player            | The URL uses `/embed?v=`; use `/embed.html?v=`.                                                                          |
+| The video does not start by itself                     | Add `autoplay=1&muted=1` and `allow="autoplay"` on the iframe. The browser may still block autoplay.                     |
+| The iframe stays blank                                 | Your page's Content Security Policy blocks the frame; add the embed origin to `frame-src`.                               |
+| A link preview shows no player                         | The site is statically hosted; link previews need the [Docker image](/web-app/#docker).                                  |

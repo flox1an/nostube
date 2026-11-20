@@ -12,7 +12,7 @@ export const FALLBACK_RELAYS = [
 
 export const FETCH_TIMEOUT_MS = 4000
 
-export type PageType = 'video' | 'short' | 'playlist'
+export type PageType = 'video' | 'short' | 'playlist' | 'live'
 
 /** Extract page type and nip19 identifier from a nostube URL path */
 export function parsePageUrl(pathname: string): { type: PageType; identifier: string } | null {
@@ -20,12 +20,13 @@ export function parsePageUrl(pathname: string): { type: PageType; identifier: st
   if (parts[1] === 'v' && parts[2]) return { type: 'video', identifier: parts[2] }
   if (parts[1] === 'short' && parts[2]) return { type: 'short', identifier: parts[2] }
   if (parts[1] === 'playlist' && parts[2]) return { type: 'playlist', identifier: parts[2] }
+  if (parts[1] === 'live' && parts[2]) return { type: 'live', identifier: parts[2] }
   return null
 }
 
 /** Build the canonical user-facing page URL (avoids Vercel rewrite query params) */
 export function buildPageUrl(baseUrl: string, type: PageType, identifier: string): string {
-  const typePath = type === 'short' ? 'short' : type === 'playlist' ? 'playlist' : 'v'
+  const typePath = type === 'short' ? 'short' : type === 'video' ? 'v' : type
   return `${baseUrl}/${typePath}/${identifier}`
 }
 

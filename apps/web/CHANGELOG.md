@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.90] - 2026-11-20
+
+### Added
+
+- oEmbed and link previews for live streams. `/oembed?url=…/live/<naddr>` returns the 640×360 player with the stream title (`🔴` in front while live) and its image; `/live/<naddr>` pages get Open Graph tags, a Twitter player card and oEmbed discovery. Both are cached for 60 s instead of 600 s, so a changed title, image or status shows within a minute.
+- The embed player (`embed.html?v=<naddr>`) plays live streams (kind `30311`): the HLS stream while live, the recording once ended, the start time while planned; same moderation as the live pages.
+
+### Fixed
+
+- Live streams whose service stops updating the announcement (v4v, for example) no longer show as ended after an hour while they still broadcast. A live announcement counts as live for 2 hours after its last update; from 2 to 12 hours nostube loads its playlist (once per 5 minutes per URL) and keeps it live while the playlist answers; after 12 hours it is ended (`STALE_LIVE_SECONDS`, `stale` in `@nostube/core/live-stream`). Live discovery asks for 500 announcements per relay instead of 150, because a stream that stopped updating fell behind 150 fresh announcements of other streams on busy days.
+
 ## [0.2.89] - 2026-11-20
 
 ### Added

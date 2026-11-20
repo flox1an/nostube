@@ -15,8 +15,13 @@ export interface OEmbedResponse {
   cache_age: number
 }
 
-/** Video oEmbed response (fixed 640x360 player), documented in docs/embed/oembed.md. */
-export function buildOEmbed(meta: VideoMeta, embedUrl: string, pageUrl: string): OEmbedResponse {
+/** Video and live stream oEmbed response (fixed 640x360 player), documented in docs/embed/oembed.md. */
+export function buildOEmbed(
+  meta: VideoMeta,
+  embedUrl: string,
+  pageUrl: string,
+  cacheSeconds = 600
+): OEmbedResponse {
   const providerUrl = new URL(pageUrl).origin
   return {
     version: '1.0',
@@ -30,6 +35,6 @@ export function buildOEmbed(meta: VideoMeta, embedUrl: string, pageUrl: string):
     html: `<iframe src="${embedUrl}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>`,
     width: 640,
     height: 360,
-    cache_age: 600,
+    cache_age: cacheSeconds,
   }
 }

@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { EmbedApp, type EmbedPlayback } from './EmbedApp'
+import { LiveEmbed } from './LiveEmbed'
+import { getLiveStreamPlayback, parseLiveStream, type LiveStream } from '@nostube/core/live-stream'
 import { EmbedAppProvider } from './EmbedAppProvider'
 import { parseURLParams, validateParams } from './lib/url-params'
 import { neutralizeBranding } from './lib/branding'
@@ -20,7 +22,7 @@ import {
 } from '@nostube/core/content-safety'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { getCachedPreset, LOAD_TIMEOUT } from '@/lib/preset-storage'
-import { METADATA_RELAYS, presetRelays } from '@/constants/relays'
+import { LIVE_RELAYS, METADATA_RELAYS, presetRelays } from '@/constants/relays'
 import {
   DEFAULT_PRESET_PUBKEY,
   PRESET_D_TAG,
@@ -31,6 +33,7 @@ import { getPresetPubkey } from '@nostube/core/preset'
 import '@/i18n/config'
 import './embed.css'
 
+const LIVE_KIND = 30311
 interface EmbedState {
   video: VideoEvent | null
   /** Missing means not decided yet; rendered as 'hidden' (fail closed). */
@@ -39,6 +42,8 @@ interface EmbedState {
   error: string | null
   isLoading: boolean
   authorBlossomServers: string[]
+  /** Set instead of `video` for a NIP-53 live stream (kind 30311). */
+  live?: { stream: LiveStream; warning?: string }
 }
 
 /**
@@ -166,9 +171,10 @@ async function initEmbed(): Promise<void> {
     // defaults, and no nostube moderation preset from public relays (the preset gate is off
     // there). The relay constants cannot be used here: they were evaluated before the config.
     const hintRelays = identifier.type === 'event' ? identifier.data.relays : identifier.data.relays
+    const isLive = identifier.type === 'address' && identifier.data.kind === LIVE_KIND
     const relays = instance
       ? instanceRelays(instance)
-      : buildRelayList(hintRelays, params.customRelays)
+      : buildRelayList(isLive ? [...hintRelays, ...LIVE_RELAYS] : hintRelays, params.customRelays)
 
     // The moderation preset loads in parallel with the video event.
     const viewer = readViewerSettings()
@@ -188,6 +194,47 @@ async function initEmbed(): Promise<void> {
         isLoading: false,
         authorBlossomServers: [],
       })
+      return
+    }
+    if (event.kind === LIVE_KIND) {
+      const stream = parseLiveStream(event)
+      // ponytail: a live stream on a server instance would link to nostu.be; instances have no live pages
+      if (!stream || instance) {
+        client.closeAll()
+        renderApp(reactRoot, params, {
+          video: null,
+          profile: null,
+          error: 'This live stream is not available',
+          isLoading: false,
+          authorBlossomServers: [],
+        })
+        return
+      }
+      const viewer = readViewerSettings()
+      const moderated = getLiveStreamPlayback(stream, {
+        nsfwFilter: viewer.nsfwFilter,
+        nsfwPubkeys: preset?.nsfwPubkeys ?? [],
+        blockedPubkeys: Object.fromEntries((preset?.blockedPubkeys ?? []).map(k => [k, true])),
+        blockedEvents: preset?.blockedEvents ?? [],
+      })
+      // Same fail-closed rule as videos: no preset, no verdict on NSFW hosts.
+      const playback: EmbedPlayback = !NSFW_SAFETY_ENABLED
+        ? 'play'
+        : !preset
+          ? 'unverified'
+          : moderated.playback
+      const state = {
+        video: null,
+        playback,
+        error: null,
+        isLoading: false,
+        authorBlossomServers: [],
+        live: { stream, warning: moderated.warning },
+      }
+      renderApp(reactRoot, params, { ...state, profile: null })
+      const profile = await new ProfileFetcher(client).fetchProfile(stream.hostPubkey, relays)
+      renderApp(reactRoot, params, { ...state, profile })
+      client.closeAll()
       return
     }
     const video = processEvent(event, relays, undefined, preset?.nsfwPubkeys)
@@ -273,14 +320,24 @@ function renderApp(
     <StrictMode>
       <EmbedAppProvider authorBlossomServers={state.authorBlossomServers}>
         <TooltipProvider>
-          <EmbedApp
-            params={params}
-            video={state.video}
-            playback={state.playback ?? 'hidden'}
-            profile={state.profile}
-            error={state.error}
-            isLoading={state.isLoading}
-          />
+          {state.live ? (
+            <LiveEmbed
+              params={params}
+              stream={state.live.stream}
+              warning={state.live.warning}
+              playback={state.playback ?? 'hidden'}
+              profile={state.profile}
+            />
+          ) : (
+            <EmbedApp
+              params={params}
+              video={state.video}
+              playback={state.playback ?? 'hidden'}
+              profile={state.profile}
+              error={state.error}
+              isLoading={state.isLoading}
+            />
+          )}
         </TooltipProvider>
       </EmbedAppProvider>
     </StrictMode>

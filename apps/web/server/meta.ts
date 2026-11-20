@@ -95,12 +95,31 @@ export function extractVideoMeta(event: NostrEvent): VideoMeta {
   }
 }
 
+/** Preview metadata of a NIP-53 live event: the stable `image` before the current-frame `thumb`. */
+export function extractLiveMeta(event: NostrEvent): VideoMeta {
+  const getTag = (name: string) => event.tags.find(t => t[0] === name)?.[1]?.trim()
+  const status = getTag('status')
+  const title = getTag('title') || 'Live stream'
+  const candidateThumbnails = [getTag('image'), getTag('thumb')].filter((u): u is string => !!u)
+  return {
+    title: status === 'live' ? `🔴 ${title}` : title,
+    description: getTag('summary') || '',
+    thumbnail: candidateThumbnails[0] ?? null,
+    videoUrl: null,
+    mimeType: null,
+    width: 640,
+    height: 360,
+    authorNpub: npubEncode(event.pubkey),
+    candidateThumbnails,
+  }
+}
+
 export function buildMetaTags(
   meta: VideoMeta,
   pageUrl: string,
   embedUrl: string,
   oembedUrl: string,
-  type: 'video' | 'short' | 'playlist',
+  type: 'video' | 'short' | 'playlist' | 'live',
   siteOrigin: string = 'https://nostu.be'
 ): string {
   const lines: string[] = []
@@ -127,8 +146,8 @@ export function buildMetaTags(
     if (meta.height) lines.push(`<meta property="og:video:height" content="${meta.height}" />`)
   }
 
-  // Twitter Player Card
-  if (meta.videoUrl && type !== 'playlist') {
+  // Twitter Player Card (live streams always: the embed plays their HLS URL itself)
+  if ((meta.videoUrl && type !== 'playlist') || type === 'live') {
     lines.push(`<meta name="twitter:card" content="player" />`)
     lines.push(`<meta name="twitter:player" content="${esc(embedUrl)}" />`)
     if (meta.width) lines.push(`<meta name="twitter:player:width" content="${meta.width}" />`)
@@ -141,7 +160,7 @@ export function buildMetaTags(
   lines.push(`<meta name="twitter:description" content="${esc(meta.description.slice(0, 200))}" />`)
   lines.push(`<meta name="twitter:image" content="${esc(imageUrl)}" />`)
 
-  // oEmbed discovery (the endpoint serves videos only)
+  // oEmbed discovery (videos, shorts and live streams)
   if (type !== 'playlist') {
     lines.push(`<link rel="alternate" type="application/json+oembed" href="${esc(oembedUrl)}" />`)
   }

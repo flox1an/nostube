@@ -168,3 +168,63 @@ describe('video page oEmbed discovery', () => {
     expect(html).not.toContain('application/json+oembed')
   })
 })
+
+describe('live stream oEmbed', () => {
+  const liveEvent: NostrEvent = {
+    ...event,
+    kind: 30311,
+    content: '',
+    tags: [
+      ['d', 'show'],
+      ['status', 'live'],
+      ['title', 'Bitfest'],
+      ['summary', 'Live from the venue'],
+      ['image', 'https://cdn.example/cover.png'],
+      ['thumb', 'https://cdn.example/frame.webp'],
+      ['streaming', 'https://cdn.example/live.m3u8'],
+    ],
+  }
+  const naddr = naddrEncode({ kind: 30311, pubkey: event.pubkey, identifier: 'show' })
+  const liveUrl = `${origin}/live/${naddr}`
+
+  it('returns the player with a one-minute cache for a live page', async () => {
+    vi.mocked(fetchEvent).mockResolvedValue(liveEvent)
+    const response = await createApp().request(requestUrl(liveUrl))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+    expect(await response.json()).toMatchObject({
+      type: 'video',
+      title: '🔴 Bitfest',
+      thumbnail_url: 'https://cdn.example/cover.png',
+      html: `<iframe src="${origin}/embed.html?v=${naddr}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>`,
+      cache_age: 60,
+    })
+  })
+
+  it('drops the live marker once the stream is not live', async () => {
+    vi.mocked(fetchEvent).mockResolvedValue({
+      ...liveEvent,
+      tags: liveEvent.tags.map(t => (t[0] === 'status' ? ['status', 'ended'] : t)),
+    })
+    const body = await (await createApp().request(requestUrl(liveUrl))).json()
+    expect(body.title).toBe('Bitfest')
+  })
+
+  it('returns 404 when a live URL names an event of another kind', async () => {
+    const response = await createApp().request(requestUrl(liveUrl))
+    expect(response.status).toBe(404)
+  })
+
+  it('injects a player card and oEmbed discovery into the live page, cached briefly', async () => {
+    vi.mocked(fetchEvent).mockResolvedValue(liveEvent)
+    const response = await createApp().request(liveUrl)
+    const html = await response.text()
+
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+    expect(html).toContain('<meta name="twitter:card" content="player" />')
+    expect(html).toContain(`content="${origin}/embed.html?v=${naddr}"`)
+    expect(html).toContain('application/json+oembed')
+    expect(html).not.toContain('og:video"')
+  })
+})

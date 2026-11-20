@@ -17,7 +17,9 @@ import { useSelectedPreset } from './useSelectedPreset'
 
 const LOAD_TIMEOUT_MS = 8000
 const DISCOVERY_WINDOW_SECONDS = 24 * 60 * 60
-const DISCOVERY_LIMIT = 150
+// ponytail: relays cap REQs at 500, ~330 kB per relay; a live announcement that stopped updating
+// sinks behind fresh ones of other streams, so 150 missed busy days. Paginate if 500 runs short.
+const DISCOVERY_LIMIT = 500
 
 /**
  * Keeps one REQ open on `hints` (sanitized) + read relays + LIVE_RELAYS, feeding the EventStore.
@@ -80,8 +82,18 @@ function useStreamQuery(filters: Filter[] | null, hints?: string[]) {
     () => (filters ? eventStore.timeline(filters) : undefined),
     [eventStore, filters]
   )
-  // ponytail: stale-live (>1h) is re-evaluated only when events change; add a clock tick if pages idle long
-  const streams = useMemo(() => parseStreams(filters ? events : undefined), [events, filters])
+  // ponytail: the 2h/12h age rule is re-evaluated only when events change; add a clock tick if pages idle long
+  const parsed = useMemo(() => parseStreams(filters ? events : undefined), [events, filters])
+  const probes = useStaleProbes(parsed)
+  const streams = useMemo(
+    () =>
+      parsed.map(stream =>
+        stream.stale && probes[stream.streamingUrls[0]] !== true
+          ? { ...stream, status: 'ended' as const }
+          : stream
+      ),
+    [parsed, probes]
+  )
   return { streams, isLoading, error, relays }
 }
 
@@ -90,6 +102,47 @@ function parseStreams(events: NostrEvent[] | undefined): LiveStream[] {
   return (events ?? [])
     .map(event => parseLiveStream(event, now))
     .filter((stream): stream is LiveStream => stream !== null)
+}
+
+const PROBE_TTL_MS = 5 * 60_000
+const PROBE_TIMEOUT_MS = 5000
+const probeCache = new Map<string, { at: number; result: Promise<boolean> }>()
+
+/**
+ * Whether a stream URL still answers: an HLS playlist that loads, or an MP4 that responds. One
+ * request per URL every 5 minutes, shared by every hook. CORS failures count as down.
+ */
+function probeStream(url: string): Promise<boolean> {
+  const cached = probeCache.get(url)
+  if (cached && Date.now() - cached.at < PROBE_TTL_MS) return cached.result
+  const result = fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS), cache: 'no-store' })
+    .then(async res => {
+      if (!res.ok) return false
+      if (!/\.m3u8$/i.test(new URL(url).pathname)) return true
+      return (await res.text()).trimStart().startsWith('#EXTM3U')
+    })
+    .catch(() => false)
+  probeCache.set(url, { at: Date.now(), result })
+  return result
+}
+
+/** Probe results for the first stream URL of every stale live stream; missing until answered. */
+function useStaleProbes(streams: LiveStream[]): Record<string, boolean> {
+  const [results, setResults] = useState<Record<string, boolean>>({})
+  const urls = streams.filter(s => s.stale && s.streamingUrls[0]).map(s => s.streamingUrls[0])
+  const key = [...new Set(urls)].sort().join('\n')
+  useEffect(() => {
+    if (!key) return
+    let active = true
+    for (const url of key.split('\n'))
+      void probeStream(url).then(up => {
+        if (active) setResults(prev => (prev[url] === up ? prev : { ...prev, [url]: up }))
+      })
+    return () => {
+      active = false
+    }
+  }, [key])
+  return results
 }
 
 const watchable = (stream: LiveStream) =>
@@ -119,7 +172,8 @@ export function useLiveStreamPlayback(feed: boolean) {
 
 /**
  * Discovery: streams with `status` from the last 24h of announcements, moderated. Live ones need
- * a stream URL; stale live announcements count as ended (see parseLiveStream).
+ * a stream URL; a live announcement older than 2h only stays live while its stream answers
+ * (see useStreamQuery), one older than 12h is ended (see parseLiveStream).
  */
 export function useLiveStreams(status: LiveStream['status'] = 'live') {
   const since = useMemo(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS, [])

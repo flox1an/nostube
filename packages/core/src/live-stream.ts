@@ -74,6 +74,11 @@ function playbackUrl(value: string | undefined): string | undefined {
   return url && /\.(m3u8|mp4)$/i.test(url.pathname) ? url.href : undefined
 }
 
+/** Whether nostube can play this `streaming`/`recording` URL (public https HLS or MP4). */
+export function isPlayableLiveUrl(value: string): boolean {
+  return playbackUrl(value) !== undefined
+}
+
 function positiveInt(value: string | undefined): number | undefined {
   if (!value || !/^\d+$/.test(value.trim())) return undefined
   const n = Number(value)
@@ -152,6 +157,87 @@ export function parseLiveStream(
     relays,
     goalId: HEX_PUBKEY.test(tag('goal') ?? '') ? tag('goal') : undefined,
     contentWarning: warning ? warning[1]?.trim() || 'NSFW' : undefined,
+  }
+}
+
+/** The parts of a kind 30311 event the owner edits; every other tag is kept as it is. */
+export interface LiveEventFields {
+  status: LiveStream['status']
+  title: string
+  summary: string
+  image: string
+  streaming: string[]
+  recording: string
+  /** Unix seconds. */
+  starts?: number
+  hashtags: string[]
+  /** Undefined: no `content-warning` tag. */
+  contentWarning?: string
+}
+
+const EDITED_TAGS: Record<string, true> = {
+  status: true,
+  title: true,
+  summary: true,
+  image: true,
+  streaming: true,
+  recording: true,
+  starts: true,
+  t: true,
+  'content-warning': true,
+}
+
+/** Form values for an event as published (raw tags, no sanitizing, so nothing is lost on save). */
+export function liveEventFields(event: NostrEvent): LiveEventFields {
+  const tag = (name: string) => event.tags.find(t => t[0] === name)?.[1]
+  const status = tag('status')?.trim().toLowerCase()
+  const warning = event.tags.find(t => t[0] === 'content-warning')
+  return {
+    status: status === 'live' || status === 'planned' ? status : 'ended',
+    title: tag('title') ?? '',
+    summary: tag('summary') ?? '',
+    image: tag('image') ?? '',
+    streaming: event.tags.filter(t => t[0] === 'streaming' && t[1]).map(t => t[1]),
+    recording: tag('recording') ?? '',
+    starts: positiveInt(tag('starts')),
+    hashtags: event.tags.filter(t => t[0] === 't' && t[1]).map(t => t[1]),
+    contentWarning: warning ? (warning[1] ?? '') : undefined,
+  }
+}
+
+/**
+ * The replacement for `event` with `fields` applied. Unedited tags (`d`, `p`, `relays`, `goal`,
+ * participants, ...) and content stay; `created_at` is above the old one so relays replace it.
+ * Going live without a past start time starts now.
+ */
+export function updateLiveEvent(
+  event: NostrEvent,
+  fields: LiveEventFields,
+  nowSeconds = Math.floor(Date.now() / 1000)
+) {
+  const starts =
+    fields.status === 'live' && (!fields.starts || fields.starts > nowSeconds)
+      ? nowSeconds
+      : fields.starts
+  const text = (name: string, value: string) => (value.trim() ? [[name, value.trim()]] : [])
+  return {
+    kind: LIVE_KIND,
+    created_at: Math.max(nowSeconds, event.created_at + 1),
+    content: event.content,
+    tags: [
+      ...event.tags.filter(t => !EDITED_TAGS[t[0]]),
+      ['status', fields.status],
+      ...text('title', fields.title),
+      ...text('summary', fields.summary),
+      ...text('image', fields.image),
+      ...fields.streaming.flatMap(url => text('streaming', url)),
+      ...text('recording', fields.recording),
+      ...(starts ? [['starts', String(starts)]] : []),
+      ...[...new Set(fields.hashtags.map(t => t.trim()).filter(Boolean))].map(t => ['t', t]),
+      ...(fields.contentWarning !== undefined
+        ? [['content-warning', fields.contentWarning.trim() || 'NSFW']]
+        : []),
+    ],
   }
 }
 

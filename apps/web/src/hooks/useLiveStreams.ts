@@ -117,8 +117,11 @@ export function useLiveStreamPlayback(feed: boolean) {
   )
 }
 
-/** Discovery: streams live right now, from the last 24h of announcements, moderated. */
-export function useLiveStreams() {
+/**
+ * Discovery: streams with `status` from the last 24h of announcements, moderated. Live ones need
+ * a stream URL; stale live announcements count as ended (see parseLiveStream).
+ */
+export function useLiveStreams(status: LiveStream['status'] = 'live') {
   const since = useMemo(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS, [])
   const filters = useMemo<Filter[]>(
     () => [{ kinds: [kinds.LiveEvent], since, limit: DISCOVERY_LIMIT }],
@@ -129,16 +132,19 @@ export function useLiveStreams() {
   const visible = useMemo(
     () =>
       streams
-        .filter(watchable)
+        .filter(stream => (status === 'live' ? watchable(stream) : stream.status === status))
         .map(stream => ({ stream, ...playback(stream) }))
         .filter(item => item.playback !== 'hidden')
-        // Streamers re-announce every minute (new created_at), so order by the fixed start time, address as tiebreak.
+        // Streamers re-announce every minute (new created_at), so order by the fixed start time,
+        // address as tiebreak. Planned: next start first, unknown start last.
         .sort(
           (a, b) =>
-            (b.stream.starts ?? 0) - (a.stream.starts ?? 0) ||
+            (status === 'planned'
+              ? (a.stream.starts ?? Infinity) - (b.stream.starts ?? Infinity)
+              : (b.stream.starts ?? 0) - (a.stream.starts ?? 0)) ||
             a.stream.address.localeCompare(b.stream.address)
         ),
-    [streams, playback]
+    [streams, playback, status]
   )
   return { streams: visible, isLoading, error }
 }

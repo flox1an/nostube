@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.89] - 2026-11-20
+
+### Added
+
+- Live page tabs **Live now**, **Scheduled** and **Ended** for the streams of the last 24 hours (`?status=planned|ended`). Scheduled streams show their start time on the card and are sorted by the next start; ended ones by start time, newest first.
+- **Edit stream** on a stream page for the account that published it: a dialog that sets the status (live, planned with a start time, ended), title, description, image, stream URLs, recording URL, hashtags and content warning, with a preview of the changed tags. It publishes a new version of the announcement that keeps every other tag (`updateLiveEvent` in `@nostube/core/live-stream`) to the stream's relays, the user's write relays and the live relays.
+
 ## [0.2.88] - 2026-11-20
 
 ### Fixed

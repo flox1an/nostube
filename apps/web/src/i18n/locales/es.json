@@ -1325,7 +1325,29 @@
     "invalidHint": "Abre una dirección de transmisión NIP-53 (naddr, kind 30311).",
     "all": "Todas las transmisiones en directo",
     "loadingStream": "Cargando transmisión…",
-    "notFound": "Transmisión no encontrada"
+    "notFound": "Transmisión no encontrada",
+    "startsAt": "Empieza {{date}}"
+  },
+  "liveEdit": {
+    "button": "Editar transmisión",
+    "title": "Editar transmisión en directo",
+    "description": "Los cambios se publican en Nostr como una nueva versión del anuncio de esta transmisión.",
+    "status": "Estado",
+    "statusLive": "En directo",
+    "statusPlanned": "Programada",
+    "statusEnded": "Finalizada",
+    "plannedHint": "Los espectadores ven que la transmisión no ha empezado; indica una hora de inicio para anunciar cuándo empieza.",
+    "endedHint": "Los espectadores ven la grabación si existe. Puedes volver a ponerla en directo más tarde.",
+    "liveHint": "Si tu servicio de streaming sigue publicando actualizaciones, puede volver a cambiar el estado.",
+    "starts": "Hora de inicio",
+    "image": "URL de la imagen",
+    "streaming": "URLs de la transmisión (una por línea)",
+    "unplayable": "nostube solo reproduce enlaces https públicos HLS (.m3u8) o MP4; otras apps pueden usarlos igualmente.",
+    "recording": "URL de la grabación",
+    "changedMeanwhile": "Llegó una versión más reciente de esta transmisión mientras editabas. Al guardar se conservan sus otros cambios y se aplican los campos de arriba.",
+    "save": "Publicar cambios",
+    "success": "Transmisión actualizada",
+    "error": "No se pudo actualizar la transmisión"
   },
   "liveChat": {
     "anonymous": "Anónimo",

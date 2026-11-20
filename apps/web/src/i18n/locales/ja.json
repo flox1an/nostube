@@ -1324,7 +1324,29 @@
     "invalidHint": "NIP-53 のライブ配信アドレス（naddr、kind 30311）を開いてください。",
     "all": "すべてのライブ配信",
     "loadingStream": "ライブ配信を読み込み中…",
-    "notFound": "ライブ配信が見つかりません"
+    "notFound": "ライブ配信が見つかりません",
+    "startsAt": "{{date}} 開始"
+  },
+  "liveEdit": {
+    "button": "配信を編集",
+    "title": "ライブ配信を編集",
+    "description": "変更はこの配信告知の新しいバージョンとして Nostr に公開されます。",
+    "status": "ステータス",
+    "statusLive": "ライブ",
+    "statusPlanned": "予定",
+    "statusEnded": "終了",
+    "plannedHint": "視聴者には配信がまだ始まっていないと表示されます。開始時刻を設定すると開始予定を告知できます。",
+    "endedHint": "録画があれば視聴者に表示されます。後でもう一度ライブにできます。",
+    "liveHint": "配信サービスが更新を公開し続けると、ステータスが元に戻ることがあります。",
+    "starts": "開始時刻",
+    "image": "画像 URL",
+    "streaming": "配信 URL（1 行に 1 つ）",
+    "unplayable": "nostube が再生できるのは公開 https の HLS (.m3u8) か MP4 のリンクだけです。他のアプリでは使える場合があります。",
+    "recording": "録画 URL",
+    "changedMeanwhile": "編集中にこの配信の新しいバージョンが届きました。保存すると、その他の変更は残したまま上の項目が反映されます。",
+    "save": "変更を公開",
+    "success": "ライブ配信を更新しました",
+    "error": "ライブ配信を更新できませんでした"
   },
   "liveChat": {
     "anonymous": "匿名",

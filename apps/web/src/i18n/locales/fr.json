@@ -1325,7 +1325,29 @@
     "invalidHint": "Ouvrez une adresse de stream NIP-53 (naddr, kind 30311).",
     "all": "Tous les streams en direct",
     "loadingStream": "Chargement du stream…",
-    "notFound": "Stream introuvable"
+    "notFound": "Stream introuvable",
+    "startsAt": "Commence {{date}}"
+  },
+  "liveEdit": {
+    "button": "Modifier le stream",
+    "title": "Modifier le stream en direct",
+    "description": "Les modifications sont publiées sur Nostr comme nouvelle version de l’annonce de ce stream.",
+    "status": "Statut",
+    "statusLive": "En direct",
+    "statusPlanned": "Prévu",
+    "statusEnded": "Terminé",
+    "plannedHint": "Les spectateurs voient que le stream n’a pas commencé ; indiquez une heure de début pour annoncer quand il commence.",
+    "endedHint": "Les spectateurs voient l’enregistrement s’il existe. Vous pourrez remettre le stream en direct plus tard.",
+    "liveHint": "Si votre service de streaming continue de publier des mises à jour, il peut rétablir le statut.",
+    "starts": "Heure de début",
+    "image": "URL de l’image",
+    "streaming": "URL du stream (une par ligne)",
+    "unplayable": "nostube ne lit que les liens https publics HLS (.m3u8) ou MP4 ; d’autres apps peuvent quand même les utiliser.",
+    "recording": "URL de l’enregistrement",
+    "changedMeanwhile": "Une version plus récente de ce stream est arrivée pendant la modification. L’enregistrement conserve ses autres changements et applique les champs ci-dessus.",
+    "save": "Publier les modifications",
+    "success": "Stream mis à jour",
+    "error": "Impossible de mettre à jour le stream"
   },
   "liveChat": {
     "anonymous": "Anonyme",

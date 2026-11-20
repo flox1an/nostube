@@ -1,22 +1,47 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Radio } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { LiveStream } from '@nostube/core/live-stream'
 import { pageTitle } from '@nostube/core/instance-config'
+import { Tabs, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 import { useLiveStreams } from '@/hooks/useLiveStreams'
 import { LiveCard } from '@/components/live/LiveCard'
 
-/** NIP-53 discovery: streams live right now across Nostr. */
+const STATUSES: LiveStream['status'][] = ['live', 'planned', 'ended']
+
+/** NIP-53 discovery: streams live, scheduled or ended in the last 24h across Nostr. */
 export function LivePage() {
   const { t } = useTranslation()
-  const { streams, isLoading, error } = useLiveStreams()
+  const [params, setParams] = useSearchParams()
+  const status = STATUSES.find(s => s === params.get('status')) ?? 'live'
+  const { streams, isLoading, error } = useLiveStreams(status)
   useEffect(() => {
     document.title = pageTitle(t('live.title', 'Live'))
   }, [t])
+  const labels = {
+    live: t('live.now', 'Live now'),
+    planned: t('live.scheduled', 'Scheduled'),
+    ended: t('live.offline', 'Ended'),
+  }
   return (
     <div className="mx-auto max-w-560 sm:p-4">
-      <h1 className="mb-4 px-4 pt-2 text-2xl font-bold sm:px-2 sm:pt-0">
-        {t('live.now', 'Live now')}
-      </h1>
+      <Tabs
+        value={status}
+        onValueChange={value =>
+          setParams(value === 'live' ? {} : { status: value }, { replace: true })
+        }
+        className="mb-4 px-4 pt-2 sm:px-2 sm:pt-0"
+      >
+        <TabsList>
+          {STATUSES.map(s => (
+            <TabsTrigger key={s} value={s} className="min-h-9">
+              {labels[s]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <h1 className="sr-only">{labels[status]}</h1>
       {error && (
         <p role="status" className="mb-4 px-4 text-sm text-muted-foreground sm:px-2">
           {error}

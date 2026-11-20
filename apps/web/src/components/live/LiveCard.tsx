@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
-import { LiveBadge } from './LiveBadge'
+import { LiveBadge, LiveStatusBadge } from './LiveBadge'
 import { useImageCascadeChain } from '@nostube/widgets/hooks/useImageCascade'
 
 /** Grid card for a live stream; `warning` covers the thumbnail. */
@@ -37,8 +37,12 @@ export function LiveCard({ stream, warning }: { stream: LiveStream; warning: boo
             {t('live.contentWarning', 'Content warning')}
           </span>
         )}
-        <LiveBadge className="absolute bottom-2 right-2" />
-        {stream.participants !== undefined && (
+        {stream.status === 'live' ? (
+          <LiveBadge className="absolute bottom-2 right-2" />
+        ) : (
+          <LiveStatusBadge stream={stream} className="absolute bottom-2 right-2" />
+        )}
+        {stream.participants !== undefined && stream.status === 'live' && (
           <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded bg-black/75 px-2 py-1 text-xs text-white">
             <Users className="h-3 w-3" aria-hidden="true" />
             {stream.participants.toLocaleString()}

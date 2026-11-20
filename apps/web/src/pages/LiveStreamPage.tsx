@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { kinds, nip19 } from 'nostr-tools'
-import { Radio, Users } from 'lucide-react'
+import { Pencil, Radio, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { pageTitle } from '@nostube/core/instance-config'
 import { buildShareLinks } from '@nostube/core/share-links'
 import { hasLightningAddress } from '@nostube/core/zap-utils'
 import { VideoPlayer } from '@nostube/widgets/player'
+import { Button } from '@nostube/widgets/components/button'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { PublicationStatusButton } from '@nostube/widgets/components/PublicationStatus'
 import ShareButton from '@nostube/widgets/components/ShareButton'
@@ -18,7 +19,9 @@ import { RichTextContent } from '@/components/RichTextContent'
 import { FollowButton } from '@/components/FollowButton'
 import { ZapButton } from '@/components/ZapButton'
 import { LiveChat } from '@/components/live/LiveChat'
-import { LiveBadge } from '@/components/live/LiveBadge'
+import { LiveBadge, LiveStatusBadge } from '@/components/live/LiveBadge'
+import { EditLiveStreamDialog } from '@/components/live/EditLiveStreamDialog'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ZapGoalBar } from '@/components/live/ZapGoalBar'
 import { useStreamZapGoal } from '@/hooks/useZapGoals'
 
@@ -46,6 +49,9 @@ function StreamViewer({
   const name = profile?.display_name || profile?.name || stream.hostPubkey.slice(0, 12)
   const [playbackFailed, setPlaybackFailed] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  // Only the author can replace the event; a `p` host (zap.stream provider setups) cannot.
+  const isOwner = useCurrentUser().user?.pubkey === stream.authorPubkey
   const shareUrl = `${window.location.origin}/live/${stream.naddr}`
   const shareLinks = useMemo(
     () => buildShareLinks(shareUrl, shareUrl, stream.title, stream.image ?? ''),
@@ -101,6 +107,16 @@ function StreamViewer({
                     ? t('live.planned', 'This stream has not started yet')
                     : t('live.ended', 'This stream has ended')}
                 </h1>
+                {stream.status === 'planned' &&
+                  stream.starts &&
+                  stream.starts * 1000 > Date.now() && (
+                    <p className="text-sm">
+                      {t('live.startsAt', {
+                        defaultValue: 'Starts {{date}}',
+                        date: new Date(stream.starts * 1000).toLocaleString(),
+                      })}
+                    </p>
+                  )}
                 <p className="text-sm text-white/70">
                   {t('live.waitHint', 'Status updates arrive automatically from Nostr.')}
                 </p>
@@ -142,11 +158,10 @@ function StreamViewer({
                 {stream.status === 'live' ? (
                   <LiveBadge />
                 ) : (
-                  <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-                    {stream.status === 'planned'
-                      ? t('live.scheduled', 'Scheduled')
-                      : t('live.offline', 'Ended')}
-                  </span>
+                  <LiveStatusBadge
+                    stream={stream}
+                    className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground"
+                  />
                 )}
                 {stream.participants !== undefined && stream.status === 'live' && (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
@@ -176,6 +191,12 @@ function StreamViewer({
                 <span className="truncate font-medium">{name}</span>
               </Link>
               <div className="flex flex-wrap items-center gap-2">
+                {isOwner && (
+                  <Button variant="outline" className="h-11" onClick={() => setEditOpen(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {t('liveEdit.button', 'Edit stream')}
+                  </Button>
+                )}
                 <FollowButton pubkey={stream.hostPubkey} className="h-11" />
                 {hasLightningAddress(profile) && (
                   <ZapButton
@@ -222,6 +243,9 @@ function StreamViewer({
           </div>
         </aside>
       </div>
+      {isOwner && (
+        <EditLiveStreamDialog stream={stream} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </div>
   )
 }

@@ -1324,7 +1324,29 @@
     "invalidHint": "请打开 NIP-53 直播地址（naddr，kind 30311）。",
     "all": "所有直播",
     "loadingStream": "正在加载直播…",
-    "notFound": "未找到直播"
+    "notFound": "未找到直播",
+    "startsAt": "{{date}} 开始"
+  },
+  "liveEdit": {
+    "button": "编辑直播",
+    "title": "编辑直播",
+    "description": "更改会作为此直播公告的新版本发布到 Nostr。",
+    "status": "状态",
+    "statusLive": "直播中",
+    "statusPlanned": "已计划",
+    "statusEnded": "已结束",
+    "plannedHint": "观众会看到直播尚未开始；设置开始时间即可告知何时开始。",
+    "endedHint": "如有录像，观众会看到录像。之后你可以重新开始直播。",
+    "liveHint": "如果你的直播服务持续发布更新，可能会把状态改回去。",
+    "starts": "开始时间",
+    "image": "图片 URL",
+    "streaming": "直播 URL（每行一个）",
+    "unplayable": "nostube 只播放公开的 https HLS (.m3u8) 或 MP4 链接；其他应用仍可能使用这些链接。",
+    "recording": "录像 URL",
+    "changedMeanwhile": "编辑期间收到了此直播的新版本。保存时会保留其其他更改，并应用上面的字段。",
+    "save": "发布更改",
+    "success": "直播已更新",
+    "error": "无法更新直播"
   },
   "liveChat": {
     "anonymous": "匿名",

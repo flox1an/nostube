@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { NostrEvent } from 'nostr-tools'
-import { parseLiveStream, safeLiveRelay } from './live-stream'
+import { liveEventFields, parseLiveStream, safeLiveRelay, updateLiveEvent } from './live-stream'
 
 const AUTHOR = 'a'.repeat(64)
 const HOST = 'b'.repeat(64)
@@ -94,5 +94,62 @@ describe('parseLiveStream', () => {
     expect(b.status).toBe('ended')
     expect(a.contentWarning).toBe('NSFW')
     expect(b.contentWarning).toBeUndefined()
+  })
+})
+
+describe('updateLiveEvent', () => {
+  const original = live(
+    [
+      ['title', 'Old'],
+      ['p', HOST, '', 'host'],
+      ['relays', 'wss://relay.example'],
+      ['t', 'bitcoin'],
+      ['streaming', 'https://cdn.example/a.m3u8'],
+      ['current_participants', '12'],
+      ['starts', String(NOW - 600)],
+    ],
+    NOW - 5
+  )
+
+  it('changes only the edited fields and keeps every other tag', () => {
+    const fields = { ...liveEventFields(original), status: 'planned' as const, title: ' New ' }
+    const next = updateLiveEvent(original, fields, NOW)
+    const tag = (name: string) => next.tags.filter(t => t[0] === name)
+    expect(tag('status')).toEqual([['status', 'planned']])
+    expect(tag('title')).toEqual([['title', 'New']])
+    expect(tag('d')).toEqual([['d', 'show']])
+    expect(tag('p')).toEqual([['p', HOST, '', 'host']])
+    expect(tag('relays')).toEqual([['relays', 'wss://relay.example']])
+    expect(tag('current_participants')).toEqual([['current_participants', '12']])
+    expect(tag('t')).toEqual([['t', 'bitcoin']])
+    expect(tag('starts')).toEqual([['starts', String(NOW - 600)]])
+  })
+
+  it('replaces the event on relays even when the clock is behind it', () => {
+    const next = updateLiveEvent(original, liveEventFields(original), NOW - 100)
+    expect(next.created_at).toBe(NOW - 4)
+  })
+
+  it('going live with a future or missing start time starts now', () => {
+    const fields = { ...liveEventFields(original), status: 'live' as const }
+    const start = (starts?: number) =>
+      updateLiveEvent(original, { ...fields, starts }, NOW).tags.find(t => t[0] === 'starts')?.[1]
+    expect(start(NOW + 3600)).toBe(String(NOW))
+    expect(start(undefined)).toBe(String(NOW))
+    expect(start(NOW - 600)).toBe(String(NOW - 600))
+  })
+
+  it('drops emptied fields and keeps a scheduled start for planned', () => {
+    const fields = {
+      ...liveEventFields(original),
+      status: 'planned' as const,
+      streaming: [''],
+      starts: NOW + 3600,
+      contentWarning: '',
+    }
+    const next = updateLiveEvent(original, fields, NOW)
+    expect(next.tags.some(t => t[0] === 'streaming')).toBe(false)
+    expect(next.tags.find(t => t[0] === 'starts')?.[1]).toBe(String(NOW + 3600))
+    expect(next.tags.find(t => t[0] === 'content-warning')).toEqual(['content-warning', 'NSFW'])
   })
 })

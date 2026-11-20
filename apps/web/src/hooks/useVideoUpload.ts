@@ -58,6 +58,8 @@ import {
   type PublishedVideo,
   type WorkflowState,
 } from '@/lib/video-publishing-workflow'
+import { useTranslation } from 'react-i18next'
+import { describeUploadError } from '@/lib/upload-error'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -318,6 +320,9 @@ export function useVideoUpload(
 
   // Index of the video variant currently being deleted from servers
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
+  const { t } = useTranslation()
+  // Why the last direct upload failed, in plain words; the processing rail shows it.
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // Use ref to store callback to prevent infinite loop
   const onDraftChangeRef = useRef(onDraftChange)
@@ -351,7 +356,14 @@ export function useVideoUpload(
           setBrowserTranscodeState(undefined)
           clearBrowserTranscodeUpload(draftId)
         }
-        setUploadState(uploadInfo.videos.length > 0 ? 'finished' : file ? 'transcoding' : 'initial')
+        // A failed job is over: "transcoding" here made the checklist claim it still ran.
+        setUploadState(
+          uploadInfo.videos.length > 0
+            ? 'finished'
+            : backgroundStatus === 'cancelled' && file
+              ? 'transcoding'
+              : 'initial'
+        )
         setUploadProgress(null)
       }
     })
@@ -607,48 +619,6 @@ export function useVideoUpload(
     setThumbnailSource('upload')
   }
 
-  const showVideoUploadError = (error: unknown) => {
-    if (error instanceof Error) {
-      if (error.name === 'NotReadableError' || error.message.includes('NotReadableError')) {
-        alert(
-          `Upload failed: File cannot be read by browser.\n\n` +
-            `This usually happens with very large files (>2GB) or corrupted files.\n\n` +
-            `Solutions:\n` +
-            `- Try reducing file size\n` +
-            `- Use Chrome browser (better large file support)\n` +
-            `- Check if file is corrupted\n` +
-            `- Close other browser tabs to free memory\n\n` +
-            `Error: ${error.message}`
-        )
-      } else if (error.message.includes('File too large for browser')) {
-        alert(
-          `Upload failed: File too large for browser to process.\n\n` +
-            `Try:\n` +
-            `- Reducing file size\n` +
-            `- Using Chrome browser\n` +
-            `- Closing other browser tabs\n\n` +
-            `Error: ${error.message}`
-        )
-      } else if (error.message.includes('does not support PATCH chunked uploads')) {
-        alert(
-          `Upload failed: Server does not support BUD-10 PATCH chunked uploads.\n\n${error.message}\n\nTry using a different server that supports BUD-10 specification.`
-        )
-      } else if (error.message.includes('BUD-10 PATCH chunked upload failed')) {
-        alert(
-          `Upload failed: BUD-10 PATCH upload failed.\n\n${error.message}\n\nThis server may not be BUD-10 compliant. Try a different server.`
-        )
-      } else if (error.message.includes('OPTIONS /upload failed')) {
-        alert(
-          `Upload failed: Server capabilities negotiation failed.\n\n${error.message}\n\nThis server may not support BUD-10. Try a different server.`
-        )
-      } else {
-        alert(`Upload failed: ${error.message}`)
-      }
-    } else {
-      alert('Upload failed due to an unknown error. Please try again.')
-    }
-  }
-
   const onDrop = async (acceptedFiles: File[]) => {
     if (!acceptedFiles[0] || uploadServers.length === 0 || !user) {
       return
@@ -656,6 +626,7 @@ export function useVideoUpload(
 
     const droppedFile = acceptedFiles[0]
     clearBrowserTranscodeUpload(draftId)
+    setUploadError(null)
     setBrowserTranscodeMode('replace')
     setBrowserTranscodeState(undefined)
     setOriginalVideoInfo(undefined)
@@ -727,6 +698,7 @@ export function useVideoUpload(
 
     lastTranscodeRequestRef.current = { variants, sourceMeta, keepOriginal }
     setUploadState('transcoding')
+    setUploadError(null)
     setUploadProgress(null)
 
     void startBrowserTranscodeUploadJob({
@@ -763,8 +735,13 @@ export function useVideoUpload(
   // source file to retry against, e.g. a draft reopened after a reload.
   const handleRetryBrowserTranscodeUpload = () => {
     const lastRequest = lastTranscodeRequestRef.current
-    if (!file || !lastRequest) {
-      console.warn('[useVideoUpload] Cannot retry transcode: missing source file or settings')
+    if (!file) {
+      console.warn('[useVideoUpload] Cannot retry: missing source file')
+      return
+    }
+    // A direct upload that failed has no transcode settings: send the file again as it is.
+    if (!lastRequest) {
+      void uploadOriginal(file)
       return
     }
     void handleStartBrowserTranscodeUpload(
@@ -803,6 +780,7 @@ export function useVideoUpload(
 
   const handleBrowserTranscodeComplete = async (transcodedFiles: File[] | Map<string, File>) => {
     setUploadState('uploading')
+    setUploadError(null)
     setUploadProgress(null)
 
     let activity: BlobActivity | undefined
@@ -829,7 +807,9 @@ export function useVideoUpload(
       setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
       if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
       setUploadProgress(null)
-      if (!(error instanceof Error && error.name === 'AbortError')) showVideoUploadError(error)
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        setUploadError(describeUploadError(error, t))
+      }
       return
     }
 
@@ -847,6 +827,7 @@ export function useVideoUpload(
     }
 
     setUploadState('uploading')
+    setUploadError(null)
     setUploadProgress(null)
 
     try {
@@ -859,7 +840,9 @@ export function useVideoUpload(
       setUploadState(mode === 'append' ? 'finished' : 'initial')
       if (mode === 'replace') setUploadInfo({ videos: [] })
       setUploadProgress(null)
-      if (!(error instanceof Error && error.name === 'AbortError')) showVideoUploadError(error)
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        setUploadError(describeUploadError(error, t))
+      }
       return
     }
 
@@ -1438,6 +1421,7 @@ export function useVideoUpload(
     publishAt,
     setPublishAt,
     uploadProgress,
+    uploadError,
     workflowState,
     browserTranscodeState,
     publishSummary,

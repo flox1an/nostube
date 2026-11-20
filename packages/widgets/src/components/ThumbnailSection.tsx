@@ -328,7 +328,7 @@ export function ThumbnailSection({
                 type="button"
                 variant="destructive"
                 size="icon"
-                className="absolute top-2 right-2 shadow-sm"
+                className="absolute top-2 right-2 size-9 border border-white/30 bg-black/60 text-white shadow-sm backdrop-blur-sm hover:bg-destructive"
                 onClick={handleDelete}
                 aria-label={t('upload.subtitles.remove', { defaultValue: 'Remove' })}
                 disabled={disabled || isDeleting}

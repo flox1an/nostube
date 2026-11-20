@@ -523,6 +523,9 @@
       "eta": "Voraussichtlich {{eta}}",
       "adjust": "Anpassen",
       "adjustConfirmBody": "Der Upload läuft bereits. Einstellungen ändern und neu starten?",
+      "keepOpen": "Lass diesen Tab offen, bis alles fertig ist. Dein Signer fragt eventuell nach einer Bestätigung.",
+      "adjustConfirmProcessing": "Die Verarbeitung läuft schon. Einstellungen ändern und neu starten?",
+      "uploadFailed": "Upload fehlgeschlagen",
       "uploadingUnchanged": "Wird unverändert hochgeladen..."
     },
     "review": {
@@ -615,6 +618,8 @@
     "upload": "Hochladen",
     "proMode": "Alle Optionen zeigen",
     "panel": {
+      "videoFailed": "Upload fehlgeschlagen",
+      "signerHint": "Dein Signer bittet dich, die Veröffentlichung zu bestätigen.",
       "previewTitle": "So erscheint es auf nostube"
     },
     "storage": {
@@ -622,8 +627,19 @@
       "none": "Noch kein Server — wähle vor dem Upload einen.",
       "addDefaults": "Kostenlose Standardserver verwenden",
       "selectedOf": "{{count}} von {{total}}",
+      "summary": "{{host}} und {{count}} weitere",
       "choose": "Server auswählen",
       "dialogDescription": "Deine Videos liegen auf Blossom-Servern, nicht bei nostube."
+    },
+    "error": {
+      "anyServer": "Der Server",
+      "notReadable": "Der Browser kann diese Datei nicht lesen. Sehr große oder beschädigte Dateien verursachen das; probiere eine andere Datei oder einen anderen Browser.",
+      "fileTooLarge": "Diese Datei ist zu groß für die Verarbeitung im Browser. Nimm eine kleinere Datei oder schließe andere Tabs.",
+      "serverTooLarge": "{{server}} nimmt keine so großen Dateien an. Wähle einen anderen Server oder eine kleinere Datei.",
+      "refused": "{{server}} hat den Upload abgelehnt. Eventuell braucht er ein Konto oder akzeptiert deinen Schlüssel nicht.",
+      "timeout": "{{server}} hat nicht rechtzeitig geantwortet. Versuche es erneut oder wähle einen anderen Server.",
+      "chunked": "{{server}} unterstützt keine großen Uploads. Wähle einen anderen Server.",
+      "unreachable": "{{server}} ist nicht erreichbar. Prüfe deine Verbindung oder wähle einen anderen Server."
     }
   },
   "settings": {
@@ -729,8 +745,10 @@
       "blockedServer": "Server blockiert",
       "blockedServerDescription": "Dieser Server konvertiert Videos neu und liefert minderwertige Qualität. Er kann nicht hinzugefügt werden.",
       "useForUploads": "Auf {{server}} hochladen",
-      "listHint": "Deine Uploads gehen an jeden angehakten Server.",
+      "listHint": "Jeder angehakte Server bekommt eine Kopie deines Videos. Kostenlose Server können Größenlimits haben und Dateien löschen; nostube speichert selbst nichts.",
       "playbackOnly": "Keine Uploads, wird weiter zum Finden deiner Videos genutzt",
+      "lastServer": "Wird gebraucht: Uploads brauchen mindestens einen Server",
+      "moreTitle": "Für andere Apps und Zurücksetzen",
       "removeServer": "{{server}} entfernen",
       "profileEmpty": "Dein Nostr-Profil hat noch keine Serverliste. Veröffentlichst du sie, finden andere Apps deine Videos."
     },

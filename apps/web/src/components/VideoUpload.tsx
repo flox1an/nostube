@@ -144,6 +144,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     publishAt,
     setPublishAt,
     uploadProgress,
+    uploadError,
     browserTranscodeState,
     uploadServers,
     isPublishing,
@@ -183,7 +184,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   // ── Screen state ─────────────────────────────────────────────────────────
 
-  // Pro mode: every optional section open, relay choice and event preview. Remembered.
+  // Pro mode: relay choice and event preview. Remembered.
   const [proMode, setProMode] = useLocalStorage<boolean>('nostube_upload_pro_mode', false)
   const handleProModeChange = useCallback(
     (enabled: boolean) => {
@@ -514,6 +515,11 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const browserJobActive =
     !!browserTranscodeState &&
     ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
+  // No video file and the last attempt failed: the checklist and the mobile bar say so too.
+  const uploadFailed =
+    uploadInfo.videos.length === 0 &&
+    !browserJobActive &&
+    (browserTranscodeState?.status === 'error' || !!uploadError)
 
   // Continue gating per screen
   const continueDisabled = uploadInfo.videos.length === 0
@@ -637,7 +643,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           )}
 
           {screen === 'details' && (
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <div className="grid grid-cols-1 gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:pb-0">
               <UploadDetailsScreen
                 pro={proMode}
                 title={title}
@@ -664,6 +670,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 onSubtitleLanguageChange={handleSubtitleLanguageChange}
                 subtitleUploading={subtitleUploading}
                 publishAt={publishAt}
+                uploadError={uploadError}
                 setPublishAt={setPublishAt}
                 contentWarningEnabled={contentWarningEnabled}
                 setContentWarningEnabled={setContentWarningEnabled}
@@ -722,6 +729,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                   previewEvent={previewEvent}
                   onJump={jumpTo}
                   pro={proMode}
+                  uploadFailed={uploadFailed}
                   uploadInProgress={uploadState === 'transcoding' || uploadState === 'uploading'}
                 />
               </div>

@@ -551,6 +551,9 @@
       "eta": "ETA {{eta}}",
       "adjust": "Adjust",
       "adjustConfirmBody": "The upload is already running. Change the settings and start over?",
+      "keepOpen": "Keep this tab open until it is done. Your signer may ask you to approve the upload.",
+      "adjustConfirmProcessing": "Processing is under way. Change the settings and start over?",
+      "uploadFailed": "Upload failed",
       "uploadingUnchanged": "Uploading unchanged..."
     },
     "review": {
@@ -643,6 +646,8 @@
     "upload": "Upload",
     "proMode": "Show all options",
     "panel": {
+      "videoFailed": "Upload failed",
+      "signerHint": "Your signer will ask you to approve publishing.",
       "previewTitle": "How it will appear on nostube"
     },
     "storage": {
@@ -650,8 +655,19 @@
       "none": "No server yet — choose one before uploading.",
       "addDefaults": "Use the free default servers",
       "selectedOf": "{{count}} of {{total}}",
+      "summary": "{{host}} and {{count}} more",
       "choose": "Choose servers",
       "dialogDescription": "Your videos are stored on Blossom servers, not by nostube."
+    },
+    "error": {
+      "anyServer": "The server",
+      "notReadable": "The browser cannot read this file. Very large or damaged files cause this; try another file or browser.",
+      "fileTooLarge": "This file is too large for the browser to process. Try a smaller file or close other tabs.",
+      "serverTooLarge": "{{server}} does not accept files this large. Choose another server or a smaller file.",
+      "refused": "{{server}} refused the upload. It may need an account or not accept your key.",
+      "timeout": "{{server}} did not respond in time. Try again or choose another server.",
+      "chunked": "{{server}} does not support large uploads. Choose another server.",
+      "unreachable": "{{server}} could not be reached. Check your connection or choose another server."
     }
   },
   "settings": {
@@ -757,8 +773,10 @@
       "blockedServer": "Server Blocked",
       "blockedServerDescription": "This server re-encodes videos and serves low-quality content. It cannot be added.",
       "useForUploads": "Upload to {{server}}",
-      "listHint": "Your uploads go to every checked server.",
+      "listHint": "Each checked server gets a copy of your video. Free servers can have size limits and may remove files; nostube stores nothing itself.",
       "playbackOnly": "No uploads, still used to find your videos",
+      "lastServer": "Needed: uploads need at least one server",
+      "moreTitle": "For other apps and resetting",
       "removeServer": "Remove {{server}}",
       "profileEmpty": "Your Nostr profile has no server list yet. Publishing it lets other apps find your videos."
     },

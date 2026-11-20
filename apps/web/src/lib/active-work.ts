@@ -19,16 +19,27 @@ export function hasActiveUploadWork(): boolean {
   return running > 0
 }
 
+/** Browsers show their own generic "leave site?" prompt; the text cannot be customised. */
+function warnBeforeUnload(event: BeforeUnloadEvent): void {
+  event.preventDefault()
+}
+
 /** Marks one job as running. Call the returned function once the job ends (any outcome). */
 export function beginUploadWork(): () => void {
   running++
-  if (running === 1) void syncWakeLock()
+  if (running === 1) {
+    void syncWakeLock()
+    window.addEventListener('beforeunload', warnBeforeUnload)
+  }
   let ended = false
   return () => {
     if (ended) return
     ended = true
     running--
-    if (running === 0) void syncWakeLock()
+    if (running === 0) {
+      void syncWakeLock()
+      window.removeEventListener('beforeunload', warnBeforeUnload)
+    }
   }
 }
 

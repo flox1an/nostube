@@ -953,17 +953,22 @@ async function uploadToServersChunked({
   throwIfAborted(signal)
 
   // Surface the first real error when all servers fail so callers see why instead of
-  // receiving a silent empty array.
+  // receiving a silent empty array. The message starts with the server's host so the UI can
+  // name it; name, status and cause stay those of the original error.
   if (successful.length === 0 && results.length > 0) {
-    const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
-    const reason = firstFailure?.reason
-    throw reason instanceof Error
-      ? reason
-      : new Error(
-          reason != null
-            ? String(reason)
-            : `Upload failed: all ${results.length} server(s) rejected`
-        )
+    const failedAt = results.findIndex(r => r.status === 'rejected')
+    const failed = results[failedAt]
+    const reason: unknown = failed?.status === 'rejected' ? failed.reason : undefined
+    if (!(reason instanceof Error)) {
+      throw new Error(
+        reason != null ? String(reason) : `Upload failed: all ${results.length} server(s) rejected`
+      )
+    }
+    // `cause` keeps the HTTP status reachable through `httpStatusOf`.
+    throw Object.assign(
+      new Error(`${extractServerDomain(normalizeServerUrl(servers[failedAt]))}: ${reason.message}`),
+      { name: reason.name, cause: reason }
+    )
   }
 
   return successful

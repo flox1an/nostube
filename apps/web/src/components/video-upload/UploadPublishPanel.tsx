@@ -6,6 +6,8 @@ import type { BrowserTranscodeState, OriginalVideoInfo } from '@/types/upload-dr
 import type { ThumbnailUploadInfo } from '@/hooks/useVideoUpload'
 import { useUploadManager } from '@/providers/upload'
 import { EventPreview } from './EventPreview'
+import { Button } from '@nostube/widgets/components/button'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { PublishButton } from './PublishButton'
 
 interface PreviewEvent {
@@ -42,6 +44,8 @@ export interface UploadPublishPanelProps {
   pro: boolean
   /** A direct upload or URL import is running (not a background browser or DVM job). */
   uploadInProgress: boolean
+  /** The upload or processing failed and no video file exists yet. */
+  uploadFailed: boolean
 }
 
 function formatDuration(seconds: number): string {
@@ -114,6 +118,7 @@ export function UploadPublishPanel({
   onJump,
   pro,
   uploadInProgress,
+  uploadFailed,
 }: UploadPublishPanelProps) {
   const { t } = useTranslation()
   const uploadManager = useUploadManager()
@@ -139,6 +144,27 @@ export function UploadPublishPanel({
 
   const rawDuration = originalVideoInfo?.duration ?? videos[0]?.duration
   const durationLabel = rawDuration != null ? formatDuration(rawDuration) : undefined
+
+  // What still stands between the user and Publish: shown on the mobile bar.
+  const { scrollDirection, isAtTop } = useScrollDirection()
+  // The bottom navigation slides away while scrolling down; the bar follows it.
+  const navHidden = scrollDirection === 'down' && !isAtTop
+  const titleSet = title.trim().length > 0
+  const nextStep: { label: string; target?: 'processing' | 'title' | 'thumbnail' } = uploadFailed
+    ? {
+        label: t('upload.panel.videoFailed', { defaultValue: 'Upload failed' }),
+        target: 'processing',
+      }
+    : videoProcessing
+      ? { label: t('upload.review.checklist.videoProcessing', { defaultValue: 'Processing...' }) }
+      : videos.length === 0
+        ? { label: t('upload.draft.status.addVideo'), target: 'processing' }
+        : !titleSet
+          ? { label: t('upload.draft.status.addTitle'), target: 'title' }
+          : !hasThumbnailSet
+            ? { label: t('upload.draft.status.addThumbnail'), target: 'thumbnail' }
+            : { label: t('upload.draft.status.ready') }
+  const nextTarget = nextStep.target
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
@@ -189,9 +215,11 @@ export function UploadPublishPanel({
           processing={videoProcessing}
           label={t('upload.review.checklist.video', { defaultValue: 'Video files' })}
           hint={
-            videoProcessing
-              ? t('upload.review.checklist.videoProcessing', { defaultValue: 'Processing...' })
-              : undefined
+            uploadFailed
+              ? t('upload.panel.videoFailed', { defaultValue: 'Upload failed' })
+              : videoProcessing
+                ? t('upload.review.checklist.videoProcessing', { defaultValue: 'Processing...' })
+                : undefined
           }
           onJump={() => onJump('processing')}
         />
@@ -215,8 +243,34 @@ export function UploadPublishPanel({
         onSelectedRelaysChange={setPublishRelays}
         showRelayPicker={pro}
       />
+      <p className="-mt-2 text-xs text-muted-foreground">
+        {t('upload.panel.signerHint', {
+          defaultValue: 'Your signer will ask you to approve publishing.',
+        })}
+      </p>
 
       {pro && <EventPreview event={previewEvent} />}
+
+      {/* Small screens: the column above sits below the whole form, so the next step and the
+          publish button stay in reach here, above the bottom navigation. */}
+      <div
+        className={`fixed inset-x-0 z-40 flex items-center gap-3 border-t bg-background/95 px-4 py-2 backdrop-blur-sm transition-[bottom] duration-300 motion-reduce:transition-none lg:hidden ${
+          navHidden ? 'bottom-0' : 'bottom-[calc(4rem+env(safe-area-inset-bottom,0px))]'
+        }`}
+      >
+        <p className="min-w-0 flex-1 text-sm">
+          <span className="block truncate font-medium">{nextStep.label}</span>
+        </p>
+        {nextTarget ? (
+          <Button type="button" variant="outline" onClick={() => onJump(nextTarget)}>
+            {t('common.edit', { defaultValue: 'Edit' })}
+          </Button>
+        ) : (
+          <Button type="submit" disabled={isPublishing || !canPublish || videoProcessing}>
+            {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
+          </Button>
+        )}
+      </div>
     </form>
   )
 }

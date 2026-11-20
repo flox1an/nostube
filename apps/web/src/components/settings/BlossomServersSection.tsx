@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppContext, useCurrentUser, useNostrPublish, useUserBlossomServers } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
-import { Loader2, Plus, XIcon } from 'lucide-react'
+import { ChevronRight, Loader2, Plus, XIcon } from 'lucide-react'
 import { isBlossomServerBlocked } from '@/constants/relays'
 import { toast } from '@/hooks/useToast'
 import { Checkbox } from '@nostube/widgets/components/checkbox'
@@ -172,7 +172,8 @@ export function BlossomServersSection() {
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
           {t('settings.blossom.listHint', {
-            defaultValue: 'Your uploads go to every checked server.',
+            defaultValue:
+              'Each checked server gets a copy of your video. Free servers can have size limits and may remove files; nostube stores nothing itself.',
           })}
         </p>
 
@@ -208,6 +209,13 @@ export function BlossomServersSection() {
                         <span className="block text-xs text-muted-foreground">
                           {t('settings.blossom.playbackOnly', {
                             defaultValue: 'No uploads, still used to find your videos',
+                          })}
+                        </span>
+                      )}
+                      {active && activeCount === 1 && (
+                        <span className="block text-xs text-muted-foreground">
+                          {t('settings.blossom.lastServer', {
+                            defaultValue: 'Needed: uploads need at least one server',
                           })}
                         </span>
                       )}
@@ -278,50 +286,56 @@ export function BlossomServersSection() {
         )}
       </div>
 
-      <div className="space-y-3 border-t pt-4">
-        {user && (
-          <p className="text-xs text-muted-foreground">
-            {profileUrls.length === 0
-              ? t('settings.blossom.profileEmpty', {
-                  defaultValue:
-                    'Your Nostr profile has no server list yet. Publishing it lets other apps find your videos.',
-                })
-              : profileDiffers
-                ? t('settings.blossom.profileDiffers', {
-                    defaultValue:
-                      'Your profile lists other servers ({{count}}). Publish to replace that list.',
-                    count: profileUrls.length,
-                  })
-                : t('settings.blossom.profileMatches', {
-                    defaultValue: 'Your profile lists these {{count}} servers.',
-                    count: localUrls.length,
-                  })}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
+      <details className="group border-t pt-4">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+          {t('settings.blossom.moreTitle', { defaultValue: 'For other apps and resetting' })}
+        </summary>
+        <div className="mt-3 space-y-3">
           {user && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePublishList}
-              disabled={isPublishing || blossomServers.length === 0 || !profileDiffers}
-            >
-              {isPublishing && <Loader2 className="animate-spin" />}
-              {t('settings.blossom.publishButton', {
-                defaultValue: 'Publish list to Nostr profile',
-              })}
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              {profileUrls.length === 0
+                ? t('settings.blossom.profileEmpty', {
+                    defaultValue:
+                      'Your Nostr profile has no server list yet. Publishing it lets other apps find your videos.',
+                  })
+                : profileDiffers
+                  ? t('settings.blossom.profileDiffers', {
+                      defaultValue:
+                        'Your profile lists other servers ({{count}}). Publish to replace that list.',
+                      count: profileUrls.length,
+                    })
+                  : t('settings.blossom.profileMatches', {
+                      defaultValue: 'Your profile lists these {{count}} servers.',
+                      count: localUrls.length,
+                    })}
+            </p>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={handleUseDefaults}
-          >
-            {t('settings.blossom.resetButton')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePublishList}
+                disabled={isPublishing || blossomServers.length === 0 || !profileDiffers}
+              >
+                {isPublishing && <Loader2 className="animate-spin" />}
+                {t('settings.blossom.publishButton', {
+                  defaultValue: 'Publish list to Nostr profile',
+                })}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleUseDefaults}
+            >
+              {t('settings.blossom.resetButton')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   )
 }

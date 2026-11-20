@@ -73,7 +73,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className="font-medium truncate">{draft.title || t('upload.draft.untitled')}</h3>
-          <p className="text-sm text-muted-foreground mt-1">{qualityInfo || '—'}</p>
+          {qualityInfo && <p className="text-sm text-muted-foreground mt-1">{qualityInfo}</p>}
           <p className="text-sm text-muted-foreground mt-1">{t(smartStatus)}</p>
           <p className="text-xs text-muted-foreground mt-2">{timeText}</p>
         </div>

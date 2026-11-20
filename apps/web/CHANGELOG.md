@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.86] - 2026-11-20
+
+### Changed
+
+- Upload review fixes. A failed upload or conversion now reads the same everywhere: the progress rail names the cause and the server ("blossom.primal.net could not be reached") instead of "Failed to fetch", the publish checklist shows "Upload failed" instead of a spinner, and Retry also sends a file again that failed as a direct upload. The seven English `alert()` pop-ups of the upload hook are replaced by that inline message in all languages (`lib/upload-error.ts`). A failed conversion no longer leaves the upload state on "transcoding".
+- The browser asks before the tab is closed or reloaded while an upload or conversion runs (`beforeunload` in `lib/active-work.ts`). The progress rail says to keep the tab open and that the signer may ask for approval, and the publish column says the signer will ask to approve publishing. **Adjust** asks before it throws away encoded progress.
+- **Show all options** no longer opens every optional section; it adds relay selection and the event preview, and sections open on their own once they hold data.
+- Small screens get a bar above the bottom navigation with the next missing step (video, title, thumbnail) and the publish button, because the publish column sits below the whole form there.
+- Server dialog: one sentence says each checked server gets a copy, that free servers can have limits and may remove files, and that nostube stores nothing. The last checked server says why it cannot be unchecked. Publishing the list to the Nostr profile and resetting moved into a collapsed section so **Done** stays the main action. The storage card shows `host and N more` instead of a cut-off host list.
+- Draft cards no longer show a dash when there is no quality yet, and the thumbnail delete button is readable on bright frames.
+
+### Fixed
+
+- A failed upload no longer hides behind a "Processing… 100 %" spinner. The background job's throttled progress update could fire after the job had failed and set its status back to "transcoding", so the rail never showed the error and Retry never appeared. The update now only applies while the job is still transcoding (`browser-transcode-upload-manager.ts`).
+
 ## [0.2.85] - 2026-11-19
 
 ### Fixed

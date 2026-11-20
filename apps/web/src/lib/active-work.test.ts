@@ -93,3 +93,23 @@ describe('wake lock', () => {
     expect(hasActiveUploadWork()).toBe(false)
   })
 })
+
+describe('leave-page warning', () => {
+  it('asks before the tab closes only while work runs', () => {
+    const asked = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    expect(asked()).toBe(false)
+
+    const first = beginUploadWork()
+    const second = beginUploadWork()
+    expect(asked()).toBe(true)
+
+    first()
+    expect(asked()).toBe(true) // the second job still runs
+    second()
+    expect(asked()).toBe(false)
+  })
+})

@@ -81,8 +81,10 @@ export interface UploadDetailsScreenProps {
   onAddTranscodedVideo: (video: VideoVariant) => void
   onStatusChange: (status: TranscodeStatus) => void
   onChangeSettings: () => void
-  /** Pro mode: every optional section open. */
+  /** Pro mode: relay choice and event preview (the optional sections open on their own). */
   pro?: boolean
+  /** Plain-language reason the last upload failed. */
+  uploadError?: string | null
   onRetryProcessing: () => void
   hasSourceFile: boolean
   onCancelProcessing: () => void
@@ -151,6 +153,7 @@ export function UploadDetailsScreen({
   onBrowserTranscodeComplete,
   onBrowserTranscodeSkip,
   pro = false,
+  uploadError,
 }: UploadDetailsScreenProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
@@ -213,6 +216,7 @@ export function UploadDetailsScreen({
             onAdjust={handleAdjust}
             onChangeSettings={onChangeSettings}
             onRetry={onRetryProcessing}
+            error={uploadError}
             hasSourceFile={hasSourceFile}
             onRemoveVideo={onRemoveVideo}
             onAddAdditional={onAddAdditional}
@@ -263,12 +267,8 @@ export function UploadDetailsScreen({
       </div>
 
       {/* Collapsible sections */}
-      <Accordion
-        // Pro mode opens every section; remounting keeps the uncontrolled default simple.
-        key={pro ? 'pro' : 'default'}
-        type="multiple"
-        defaultValue={pro ? ['subtitles', 'schedule', 'attribution'] : defaultOpenSections}
-      >
+      {/* Sections open only when they already hold data; Pro mode does not force them open. */}
+      <Accordion type="multiple" defaultValue={defaultOpenSections}>
         {/* Subtitles */}
         <AccordionItem value="subtitles">
           <AccordionTrigger>

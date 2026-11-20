@@ -203,14 +203,20 @@ export function UploadSourceScreen({
               {t('upload.storage.title', { defaultValue: 'Where your files are stored' })}
             </p>
             {servers.length > 0 ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {servers.map(hostOf).join(' · ')}
+              <p className="text-xs text-muted-foreground">
+                {servers.length === 1
+                  ? hostOf(servers[0])
+                  : t('upload.storage.summary', {
+                      host: hostOf(servers[0]),
+                      count: servers.length - 1,
+                      defaultValue: '{{host}} and {{count}} more',
+                    })}
                 {serverCount > servers.length &&
-                  ` (${t('upload.storage.selectedOf', {
+                  ` · ${t('upload.storage.selectedOf', {
                     defaultValue: '{{count}} of {{total}}',
                     count: servers.length,
                     total: serverCount,
-                  })})`}
+                  })}`}
               </p>
             ) : (
               <p className="text-xs text-destructive">

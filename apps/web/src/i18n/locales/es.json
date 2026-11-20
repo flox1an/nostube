@@ -523,6 +523,9 @@
       "eta": "Tiempo restante {{eta}}",
       "adjust": "Ajustar",
       "adjustConfirmBody": "La subida ya está en curso. ¿Cambiar los ajustes y empezar de nuevo?",
+      "keepOpen": "Mantén esta pestaña abierta hasta que termine. Tu firmante puede pedirte que apruebes la subida.",
+      "adjustConfirmProcessing": "El procesamiento está en curso. ¿Cambiar los ajustes y empezar de nuevo?",
+      "uploadFailed": "Error al subir",
       "uploadingUnchanged": "Subiendo sin cambios..."
     },
     "review": {
@@ -615,6 +618,8 @@
     "upload": "Subir",
     "proMode": "Mostrar todas las opciones",
     "panel": {
+      "videoFailed": "Error al subir",
+      "signerHint": "Tu firmante te pedirá que apruebes la publicación.",
       "previewTitle": "Así se verá en nostube"
     },
     "storage": {
@@ -622,8 +627,19 @@
       "none": "Aún no hay servidor: elige uno antes de subir.",
       "addDefaults": "Usar los servidores gratuitos",
       "selectedOf": "{{count}} de {{total}}",
+      "summary": "{{host}} y {{count}} más",
       "choose": "Elegir servidores",
       "dialogDescription": "Tus vídeos se guardan en servidores Blossom, no en nostube."
+    },
+    "error": {
+      "anyServer": "El servidor",
+      "notReadable": "El navegador no puede leer este archivo. Los archivos muy grandes o dañados lo causan; prueba con otro archivo u otro navegador.",
+      "fileTooLarge": "Este archivo es demasiado grande para que el navegador lo procese. Prueba con uno más pequeño o cierra otras pestañas.",
+      "serverTooLarge": "{{server}} no acepta archivos tan grandes. Elige otro servidor o un archivo más pequeño.",
+      "refused": "{{server}} rechazó la subida. Puede que necesite una cuenta o que no acepte tu clave.",
+      "timeout": "{{server}} no respondió a tiempo. Inténtalo de nuevo o elige otro servidor.",
+      "chunked": "{{server}} no admite subidas grandes. Elige otro servidor.",
+      "unreachable": "No se pudo conectar con {{server}}. Revisa tu conexión o elige otro servidor."
     }
   },
   "settings": {
@@ -703,8 +719,10 @@
       "blockedServer": "Servidor bloqueado",
       "blockedServerDescription": "Este servidor recodifica los vídeos y ofrece contenido de baja calidad. No se puede añadir.",
       "useForUploads": "Subir a {{server}}",
-      "listHint": "Tus subidas van a cada servidor marcado.",
+      "listHint": "Cada servidor marcado recibe una copia de tu vídeo. Los servidores gratuitos pueden tener límites de tamaño y borrar archivos; nostube no guarda nada.",
       "playbackOnly": "Sin subidas, se sigue usando para encontrar tus vídeos",
+      "lastServer": "Necesario: las subidas necesitan al menos un servidor",
+      "moreTitle": "Para otras apps y restablecer",
       "removeServer": "Quitar {{server}}",
       "profileEmpty": "Tu perfil de Nostr aún no tiene lista de servidores. Publicarla permite que otras apps encuentren tus vídeos."
     },

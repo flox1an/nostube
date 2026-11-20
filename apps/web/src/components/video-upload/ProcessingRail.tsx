@@ -12,6 +12,7 @@ import {
 import { Button } from '@nostube/widgets/components/button'
 import { Progress } from '@nostube/widgets/components/progress'
 import { estimateRemainingSeconds, formatEtaSeconds } from '@/lib/transcode-progress'
+import { describeUploadError } from '@/lib/upload-error'
 import { VideoFilesPanel } from './VideoFilesPanel'
 import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscodeManager'
@@ -31,6 +32,8 @@ export interface ProcessingRailProps {
   onChangeSettings: () => void
   onRetry: () => void
   hasSourceFile: boolean
+  /** Plain-language reason the last upload or job failed, from the shared status in VideoUpload. */
+  error?: string | null
   onRemoveVideo: (index: number) => void
   onAddAdditional: (files: File[]) => void
   onAddTranscodedVideo: (video: VideoVariant) => void
@@ -50,6 +53,7 @@ export function ProcessingRail({
   onChangeSettings,
   onRetry,
   hasSourceFile,
+  error,
   onRemoveVideo,
   onAddAdditional,
   onAddTranscodedVideo,
@@ -63,8 +67,11 @@ export function ProcessingRail({
     ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
   const uploadOnlyActive = uploadState === 'uploading' && !browserTranscodeState
   const complete = browserTranscodeState?.status === 'complete' || uploadState === 'finished'
+  // A direct upload that failed after other files were already uploaded keeps the file list.
   const failed =
-    browserTranscodeState?.status === 'error' || browserTranscodeState?.status === 'cancelled'
+    browserTranscodeState?.status === 'error' ||
+    browserTranscodeState?.status === 'cancelled' ||
+    (!!error && !complete)
 
   const progress = useMemo(() => {
     if (browserTranscodeState?.status === 'uploading') {
@@ -122,18 +129,31 @@ export function ProcessingRail({
     // What the job produces, e.g. "720p H.264 · 480p H.264", so the settings are never a mystery.
     const outputSummary = browserTranscodeState?.variants.map(variant => variant.label).join(' · ')
 
-    // Once the encoded files are uploading, stopping throws away finished work: ask first.
-    const confirmDiscard = (key: 'cancelConfirmBody' | 'adjustConfirmBody') =>
-      browserTranscodeState?.status !== 'uploading' ||
-      window.confirm(
-        key === 'adjustConfirmBody'
+    // Stopping throws away finished work: ask first. A deliberate cancel only asks once the
+    // encoded files are uploading; Adjust also asks while encoding, once progress exists.
+    const uploading = browserTranscodeState?.status === 'uploading'
+    const confirmDiscard = (key: 'cancelConfirmBody' | 'adjustConfirmBody') => {
+      if (key === 'cancelConfirmBody') {
+        return (
+          !uploading ||
+          window.confirm(
+            t('upload.rail.cancelConfirmBody', {
+              defaultValue: 'Upload is in progress. Cancel processing anyway?',
+            })
+          )
+        )
+      }
+      if (progress === 0) return true
+      return window.confirm(
+        uploading
           ? t('upload.rail.adjustConfirmBody', {
               defaultValue: 'The upload is already running. Change the settings and start over?',
             })
-          : t('upload.rail.cancelConfirmBody', {
-              defaultValue: 'Upload is in progress. Cancel processing anyway?',
+          : t('upload.rail.adjustConfirmProcessing', {
+              defaultValue: 'Processing is under way. Change the settings and start over?',
             })
       )
+    }
 
     const handleCancel = () => {
       if (confirmDiscard('cancelConfirmBody')) onCancel()
@@ -184,9 +204,17 @@ export function ProcessingRail({
           ) : null}
           {browserTranscodeState && (
             <>
-              <Button type="button" variant="outline" size="sm" onClick={handleAdjust}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAdjust}
+                aria-label={t('upload.rail.adjust', { defaultValue: 'Adjust' })}
+              >
                 <SlidersHorizontal className="h-4 w-4" />
-                {t('upload.rail.adjust', { defaultValue: 'Adjust' })}
+                <span className="hidden sm:inline">
+                  {t('upload.rail.adjust', { defaultValue: 'Adjust' })}
+                </span>
               </Button>
               <Button
                 type="button"
@@ -201,6 +229,13 @@ export function ProcessingRail({
             </>
           )}
         </div>
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t('upload.rail.keepOpen', {
+            defaultValue:
+              'Keep this tab open until it is done. Your signer may ask you to approve the upload.',
+          })}
+        </p>
 
         {expanded && browserTranscodeState?.variants.length ? (
           <div className="mt-3 space-y-2 border-t pt-3">
@@ -219,10 +254,16 @@ export function ProcessingRail({
     )
   }
 
-  if (failed && browserTranscodeState) {
-    const isError = browserTranscodeState.status === 'error'
+  if (failed) {
+    const isError = browserTranscodeState?.status !== 'cancelled'
+    const title = browserTranscodeState
+      ? t(`upload.rail.${browserTranscodeState.status}`, {
+          defaultValue: isError ? 'Processing failed' : 'Processing cancelled',
+        })
+      : t('upload.rail.uploadFailed', { defaultValue: 'Upload failed' })
     return (
       <div
+        role="alert"
         className={`rounded-md border p-3 ${
           isError
             ? 'border-destructive/40 bg-destructive/10'
@@ -236,13 +277,12 @@ export function ProcessingRail({
             <XCircle className="mt-0.5 h-4 w-4 text-amber-600 shrink-0" />
           )}
           <div className="min-w-0 flex-1 space-y-2">
-            <p className="text-sm font-medium">
-              {t(`upload.rail.${browserTranscodeState.status}`, {
-                defaultValue: isError ? 'Processing failed' : 'Processing cancelled',
-              })}
-            </p>
+            <p className="text-sm font-medium">{title}</p>
             <p className="text-sm text-muted-foreground">
-              {browserTranscodeState.error ?? browserTranscodeState.message}
+              {error ??
+                (browserTranscodeState?.error
+                  ? describeUploadError(browserTranscodeState.error, t)
+                  : browserTranscodeState?.message)}
             </p>
             {!hasSourceFile && (
               <p className="text-sm text-muted-foreground">
@@ -262,7 +302,7 @@ export function ProcessingRail({
                   {t('upload.rail.reselectFile', { defaultValue: 'Reselect file' })}
                 </Button>
               )}
-              {hasSourceFile && (
+              {hasSourceFile && browserTranscodeState && (
                 <Button type="button" variant="ghost" size="sm" onClick={onChangeSettings}>
                   {t('upload.rail.changeSettings', { defaultValue: 'Change settings' })}
                 </Button>
@@ -277,6 +317,14 @@ export function ProcessingRail({
   if (complete) {
     return (
       <div className="space-y-3">
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+          >
+            {error}
+          </p>
+        )}
         <div className="flex items-center gap-2 rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           <span>

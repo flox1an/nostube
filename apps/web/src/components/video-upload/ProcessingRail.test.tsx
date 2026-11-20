@@ -94,14 +94,50 @@ describe('ProcessingRail', () => {
     expect(onCancel).not.toHaveBeenCalled()
   })
 
-  it('shows what the job produces and offers Adjust while processing', () => {
+  it('shows what the job produces and asks before Adjust throws encoded progress away', () => {
     const onAdjust = vi.fn()
-    const confirm = vi.spyOn(window, 'confirm')
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderRail({ onAdjust })
     expect(screen.getByText('720p')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /adjust/i }))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(onAdjust).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the settings when Adjust is declined', () => {
+    const onAdjust = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderRail({ onAdjust })
+    fireEvent.click(screen.getByRole('button', { name: /adjust/i }))
+    expect(onAdjust).not.toHaveBeenCalled()
+  })
+
+  it('adjusts without asking before any progress exists', () => {
+    const onAdjust = vi.fn()
+    const confirm = vi.spyOn(window, 'confirm')
+    renderRail({
+      browserTranscodeState: {
+        ...baseState,
+        variants: [{ label: '720p', progress: 0, status: 'active' }],
+      },
+      onAdjust,
+    })
+    fireEvent.click(screen.getByRole('button', { name: /adjust/i }))
     expect(confirm).not.toHaveBeenCalled()
     expect(onAdjust).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a plain-language error with Retry when a direct upload failed', () => {
+    const onRetry = vi.fn()
+    renderRail({
+      browserTranscodeState: undefined,
+      uploadState: 'initial',
+      error: 'blossom.example could not be reached.',
+      onRetry,
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('blossom.example could not be reached.')
+    fireEvent.click(screen.getByRole('button', { name: /^retry$/i }))
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 
   it('cancels transcoding without confirmation', () => {

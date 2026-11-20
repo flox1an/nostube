@@ -523,6 +523,9 @@
       "eta": "ETA {{eta}}",
       "adjust": "Ajuster",
       "adjustConfirmBody": "L'envoi est déjà en cours. Modifier les réglages et recommencer ?",
+      "keepOpen": "Gardez cet onglet ouvert jusqu'à la fin. Votre signataire peut vous demander d'approuver l'envoi.",
+      "adjustConfirmProcessing": "Le traitement est en cours. Modifier les réglages et recommencer ?",
+      "uploadFailed": "Échec de l'envoi",
       "uploadingUnchanged": "Envoi sans modification..."
     },
     "review": {
@@ -615,6 +618,8 @@
     "upload": "Upload",
     "proMode": "Afficher toutes les options",
     "panel": {
+      "videoFailed": "Échec de l'envoi",
+      "signerHint": "Votre signataire vous demandera d'approuver la publication.",
       "previewTitle": "Aperçu sur nostube"
     },
     "storage": {
@@ -622,8 +627,19 @@
       "none": "Aucun serveur pour le moment : choisis-en un avant l’envoi.",
       "addDefaults": "Utiliser les serveurs gratuits par défaut",
       "selectedOf": "{{count}} sur {{total}}",
+      "summary": "{{host}} et {{count}} de plus",
       "choose": "Choisir les serveurs",
       "dialogDescription": "Vos vidéos sont stockées sur des serveurs Blossom, pas chez nostube."
+    },
+    "error": {
+      "anyServer": "Le serveur",
+      "notReadable": "Le navigateur ne peut pas lire ce fichier. Les fichiers très volumineux ou endommagés en sont la cause ; essayez un autre fichier ou navigateur.",
+      "fileTooLarge": "Ce fichier est trop volumineux pour être traité par le navigateur. Essayez un fichier plus petit ou fermez d'autres onglets.",
+      "serverTooLarge": "{{server}} n'accepte pas des fichiers aussi volumineux. Choisissez un autre serveur ou un fichier plus petit.",
+      "refused": "{{server}} a refusé l'envoi. Il peut exiger un compte ou ne pas accepter votre clé.",
+      "timeout": "{{server}} n'a pas répondu à temps. Réessayez ou choisissez un autre serveur.",
+      "chunked": "{{server}} ne prend pas en charge les gros envois. Choisissez un autre serveur.",
+      "unreachable": "{{server}} est injoignable. Vérifiez votre connexion ou choisissez un autre serveur."
     }
   },
   "settings": {
@@ -703,8 +719,10 @@
       "blockedServer": "Serveur bloqué",
       "blockedServerDescription": "Ce serveur réencode les vidéos et fournit un contenu de mauvaise qualité. Il ne peut pas être ajouté.",
       "useForUploads": "Envoyer vers {{server}}",
-      "listHint": "Vos envois vont vers chaque serveur coché.",
+      "listHint": "Chaque serveur coché reçoit une copie de votre vidéo. Les serveurs gratuits peuvent limiter la taille et supprimer des fichiers ; nostube ne stocke rien.",
       "playbackOnly": "Aucun envoi, sert encore à retrouver vos vidéos",
+      "lastServer": "Nécessaire : l'envoi exige au moins un serveur",
+      "moreTitle": "Pour d'autres applis et réinitialisation",
       "removeServer": "Retirer {{server}}",
       "profileEmpty": "Votre profil Nostr n'a pas encore de liste de serveurs. La publier permet aux autres applis de trouver vos vidéos."
     },

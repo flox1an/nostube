@@ -357,16 +357,20 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
 
     let lastProgressTime = 0
     const throttledUpdateProgress = throttle((progress: number) => {
-      updateBrowserState(draftId, state => ({
-        ...state,
-        status: 'transcoding',
-        updatedAt: Date.now(),
-        variants: state.variants.map(v => ({
-          ...v,
-          progress,
-          status: 'active',
-        })),
-      }))
+      updateBrowserState(draftId, state => {
+        // A flush that fires after the job moved on (uploading, failed, cancelled) must not
+        // pull the status back to "transcoding": that hid a failed job behind a spinner.
+        if (state.status !== 'transcoding') return state
+        return {
+          ...state,
+          updatedAt: Date.now(),
+          variants: state.variants.map(v => ({
+            ...v,
+            progress,
+            status: 'active',
+          })),
+        }
+      })
     }, 500)
 
     const transcodedFiles =

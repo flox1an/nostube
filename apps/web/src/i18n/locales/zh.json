@@ -523,6 +523,9 @@
       "eta": "预计 {{eta}}",
       "adjust": "调整",
       "adjustConfirmBody": "上传已在进行中。要更改设置并重新开始吗？",
+      "keepOpen": "完成前请保持此标签页打开。签名器可能会请你批准上传。",
+      "adjustConfirmProcessing": "正在处理。要更改设置并重新开始吗？",
+      "uploadFailed": "上传失败",
       "uploadingUnchanged": "正在原样上传..."
     },
     "review": {
@@ -615,6 +618,8 @@
     "upload": "上传",
     "proMode": "显示所有选项",
     "panel": {
+      "videoFailed": "上传失败",
+      "signerHint": "发布时签名器会请你批准。",
       "previewTitle": "在 nostube 上的显示效果"
     },
     "storage": {
@@ -622,8 +627,19 @@
       "none": "尚未选择服务器，请在上传前选择。",
       "addDefaults": "使用免费默认服务器",
       "selectedOf": "{{total}} 个中的 {{count}} 个",
+      "summary": "{{host}} 等另外 {{count}} 个",
       "choose": "选择服务器",
       "dialogDescription": "你的视频存储在 Blossom 服务器上，而不是 nostube。"
+    },
+    "error": {
+      "anyServer": "服务器",
+      "notReadable": "浏览器无法读取此文件。文件过大或已损坏会导致这种情况；请换一个文件或浏览器。",
+      "fileTooLarge": "此文件太大，浏览器无法处理。请使用更小的文件或关闭其他标签页。",
+      "serverTooLarge": "{{server}} 不接受这么大的文件。请选择其他服务器或更小的文件。",
+      "refused": "{{server}} 拒绝了上传。它可能需要账户，或不接受你的密钥。",
+      "timeout": "{{server}} 未及时响应。请重试或选择其他服务器。",
+      "chunked": "{{server}} 不支持大文件上传。请选择其他服务器。",
+      "unreachable": "无法连接到 {{server}}。请检查网络连接或选择其他服务器。"
     }
   },
   "settings": {
@@ -703,8 +719,10 @@
       "blockedServer": "服务器已被屏蔽",
       "blockedServerDescription": "此服务器重新编码视频并提供低质量内容。无法添加。",
       "useForUploads": "上传到 {{server}}",
-      "listHint": "你的上传会发送到每个已勾选的服务器。",
+      "listHint": "每个已勾选的服务器都会收到你视频的一份副本。免费服务器可能有大小限制，也可能删除文件；nostube 本身不存储任何内容。",
       "playbackOnly": "不上传，仍用于查找你的视频",
+      "lastServer": "必需：上传至少需要一个服务器",
+      "moreTitle": "供其他应用使用及重置",
       "removeServer": "移除 {{server}}",
       "profileEmpty": "你的 Nostr 资料中还没有服务器列表。发布后，其他应用就能找到你的视频。"
     },

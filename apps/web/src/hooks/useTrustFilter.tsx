@@ -65,7 +65,9 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     localStorage.setItem('trustFilter.enabled', String(enabled))
   }, [enabled])
   const { followedPubkeys } = useFollowSet()
-  const { user } = useCurrentUser()
+  // useCurrentUser builds a new `user` object on every render; depend on the string only, or
+  // filteredVideos changes identity each render and effects keyed on it loop.
+  const userPubkey = useCurrentUser().user?.pubkey
 
   const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])
 
@@ -83,13 +85,13 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     return videos.filter(v =>
       passesTrustFilter({
         authorPubkey: v.pubkey,
-        currentUserPubkey: user?.pubkey,
+        currentUserPubkey: userPubkey,
         followedPubkeys: followedSet,
         personalScore: personalScores.get(v.pubkey),
         globalScore: globalScores.get(v.pubkey),
       })
     )
-  }, [videos, enabled, personalScores, globalScores, followedSet, user])
+  }, [videos, enabled, personalScores, globalScores, followedSet, userPubkey])
 
   // Nothing passes yet but scores are still loading: callers should keep showing
   // skeletons, otherwise the empty grid flashes and infinite scroll pages on.

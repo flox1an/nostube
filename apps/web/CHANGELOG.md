@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.88] - 2026-11-20
+
+### Fixed
+
+- Opening a short from a link no longer crashes with React error #185 (maximum update depth) when signed in. `useTrustFilter` listed the `user` object of `useCurrentUser` as a memo dependency, and that object is new on every render, so `filteredVideos` changed identity each render. The shorts page re-sets its deck whenever the trusted suggestions change, which re-rendered and looped. The memo now depends on the user's pubkey (`hooks/useTrustFilter.tsx`).
+
 ## [0.2.87] - 2026-11-20
 
 ### Fixed

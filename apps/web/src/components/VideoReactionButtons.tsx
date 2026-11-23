@@ -316,7 +316,7 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'rounded px-1 text-sm font-medium leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
@@ -333,7 +333,7 @@ export function VideoReactionButtons({
           <button
             type="button"
             className={cn(
-              'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'rounded px-1 text-sm font-medium leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               totalReactions > 0 && 'cursor-pointer hover:underline'
             )}
             onClick={handleCountClick}
@@ -380,7 +380,7 @@ export function VideoReactionButtons({
         <button
           type="button"
           className={cn(
-            'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'rounded px-1 text-sm font-medium leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             totalReactions > 0 && 'cursor-pointer hover:underline'
           )}
           onClick={handleCountClick}
@@ -409,7 +409,7 @@ export function VideoReactionButtons({
         <button
           type="button"
           className={cn(
-            'min-h-11 min-w-11 rounded text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'rounded px-1 text-sm font-medium leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             totalReactions > 0 && 'cursor-pointer hover:underline'
           )}
           onClick={handleCountClick}

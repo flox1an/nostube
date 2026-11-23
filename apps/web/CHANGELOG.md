@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.91] - 2026-11-23
+
+### Fixed
+
+- The comment, share, report and mute buttons of the shorts action rail take taps again, across the whole 44 px circle. The gradient info bar spans the full width and painted after the rail with pointer events on, so it covered the rail's lower buttons; their taps went to the deck's play/pause handler instead, and tapping the speaker paused the video. The bar now passes taps through except on its links and buttons, and taps on the rail's gaps stay out of the play/pause handler.
+- The reaction counts under like and dislike in shorts sit as close to their circle as the zap and comment counts. The count buttons carried `min-h-11`, a 44 px box around a 20 px line.
+
 ## [0.2.90] - 2026-11-20
 
 ### Added

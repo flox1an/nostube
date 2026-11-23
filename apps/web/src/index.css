@@ -168,6 +168,12 @@
 .short-actions > * {
   flex-shrink: 0;
 }
+
+/* The info bar's gradient spans the full width and paints after the action rail, so it must not
+   swallow taps aimed at the rail's lower buttons. Its own controls stay clickable. */
+.short-info :where(a, button, [role='button']) {
+  pointer-events: auto;
+}
 @media (max-width: 767px) {
   .media-header {
     border-bottom: 0;

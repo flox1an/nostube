@@ -141,9 +141,11 @@ export const ShortVideoOverlay = memo(
 
     return (
       <div className="relative w-full h-full pointer-events-none text-white">
-        {/* Action sidebar — right rail, TikTok-style */}
+        {/* Action sidebar — right rail, TikTok-style. data-no-drag keeps taps on the rail's
+            gaps from reaching the deck's tap-to-play handler. */}
         <div
           className="short-actions absolute flex flex-col items-center gap-3 pointer-events-auto text-white"
+          data-no-drag
           style={{
             right: 'calc(1rem + env(safe-area-inset-right, 0px))',
             bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))',
@@ -216,7 +218,7 @@ export const ShortVideoOverlay = memo(
 
         {/* Bottom info bar */}
         <div
-          className="short-info absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/90 via-black/60 to-transparent pointer-events-auto"
+          className="short-info absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/90 via-black/60 to-transparent pointer-events-none"
           style={{
             paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
             paddingRight: 'calc(5rem + env(safe-area-inset-right, 0px))',

@@ -69,6 +69,7 @@ A server works well with Nostube if it:
 - allows browser uploads through CORS: `PUT` and `HEAD` with the `Authorization` and `X-SHA-256` headers;
 - supports `PUT /mirror`, so the other servers can copy from it;
 - answers range requests, so viewers can seek;
+- serves media with its real `Content-Type` (`video/mp4`, `application/vnd.apple.mpegurl`, `video/mp2t`) and answers `GET` from any origin with CORS, so a Chromecast can play HLS from it. TVs and AirPlay receivers fetch the URL themselves, without the browser's cookies, headers or fallback logic;
 - accepts your file sizes and keeps blobs long enough. Many public servers limit size or expire blobs, and some charge for storage.
 
 Use at least two servers, so every video is available from more than one URL from the start.

@@ -70,7 +70,17 @@
     "auto": "Auto",
     "unknown": "Unknown",
     "off": "Off",
-    "nextChapter": "Skip to: {{title}}"
+    "nextChapter": "Skip to: {{title}}",
+    "airplay": "AirPlay",
+    "cast": "Cast",
+    "castTo": "Cast to {{device}}",
+    "castConnecting": "Connecting…",
+    "stopCasting": "Stop casting",
+    "castingOn": "Playing on {{device}}",
+    "castingOnDevice": "Playing on another device",
+    "castErrorConnect": "Could not connect to the device. Check that it is on the same network and try again.",
+    "castErrorLoad": "The device could not load this video. Its server may not allow playback from TVs, or the format is not supported there.",
+    "castErrorPlayback": "Playback on the device stopped with an error. The video continues here."
   },
   "contentSafety": {
     "warning": {

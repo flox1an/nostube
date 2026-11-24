@@ -70,7 +70,17 @@
     "auto": "Automatique",
     "unknown": "Inconnue",
     "off": "Désactivés",
-    "nextChapter": "Aller à : {{title}}"
+    "nextChapter": "Aller à : {{title}}",
+    "airplay": "AirPlay",
+    "cast": "Caster",
+    "castTo": "Caster sur {{device}}",
+    "castConnecting": "Connexion…",
+    "stopCasting": "Arrêter la diffusion",
+    "castingOn": "Lecture sur {{device}}",
+    "castingOnDevice": "Lecture sur un autre appareil",
+    "castErrorConnect": "Impossible de se connecter à l'appareil. Vérifiez qu'il est sur le même réseau et réessayez.",
+    "castErrorLoad": "L'appareil n'a pas pu charger cette vidéo. Son serveur n'autorise peut-être pas la lecture sur téléviseur, ou le format n'y est pas pris en charge.",
+    "castErrorPlayback": "La lecture sur l'appareil s'est arrêtée sur une erreur. La vidéo continue ici."
   },
   "contentSafety": {
     "warning": {

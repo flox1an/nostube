@@ -70,7 +70,17 @@
     "auto": "Automatisch",
     "unknown": "Unbekannt",
     "off": "Aus",
-    "nextChapter": "Weiter zu: {{title}}"
+    "nextChapter": "Weiter zu: {{title}}",
+    "airplay": "AirPlay",
+    "cast": "Streamen",
+    "castTo": "Auf {{device}} streamen",
+    "castConnecting": "Verbinde…",
+    "stopCasting": "Streamen beenden",
+    "castingOn": "Läuft auf {{device}}",
+    "castingOnDevice": "Läuft auf einem anderen Gerät",
+    "castErrorConnect": "Keine Verbindung zum Gerät. Prüfe, ob es im selben Netzwerk ist, und versuche es erneut.",
+    "castErrorLoad": "Das Gerät konnte dieses Video nicht laden. Der Server erlaubt die Wiedergabe auf Fernsehern eventuell nicht, oder das Format wird dort nicht unterstützt.",
+    "castErrorPlayback": "Die Wiedergabe auf dem Gerät wurde mit einem Fehler beendet. Das Video läuft hier weiter."
   },
   "contentSafety": {
     "warning": {

@@ -70,7 +70,17 @@
     "auto": "Automática",
     "unknown": "Desconocida",
     "off": "Desactivados",
-    "nextChapter": "Ir a: {{title}}"
+    "nextChapter": "Ir a: {{title}}",
+    "airplay": "AirPlay",
+    "cast": "Enviar",
+    "castTo": "Enviar a {{device}}",
+    "castConnecting": "Conectando…",
+    "stopCasting": "Dejar de enviar",
+    "castingOn": "Reproduciendo en {{device}}",
+    "castingOnDevice": "Reproduciendo en otro dispositivo",
+    "castErrorConnect": "No se pudo conectar con el dispositivo. Comprueba que esté en la misma red e inténtalo de nuevo.",
+    "castErrorLoad": "El dispositivo no pudo cargar este vídeo. Puede que su servidor no permita la reproducción en televisores o que el formato no sea compatible.",
+    "castErrorPlayback": "La reproducción en el dispositivo se detuvo por un error. El vídeo continúa aquí."
   },
   "contentSafety": {
     "warning": {

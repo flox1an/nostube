@@ -92,6 +92,14 @@ Example: start at 30 seconds, loop, no overlay, red buttons:
 
 **Sources.** The player plays the video variants listed in the event, including HLS and DASH streams. If a URL fails, it tries the other variants and the Blossom servers in the author's server list (kind 10063).
 
+**Casting.** The control bar shows an AirPlay button in Safari and a Cast button in Chrome and other Chromium browsers that support Google Cast, each only while a receiver is on the network. The receiver fetches the video straight from the media server; nothing is mirrored from the screen or relayed through Nostube.
+
+- **What can be cast:** MP4 and HLS videos. DASH streams, WebM, audio-only posts and videos whose only servers are `localhost`, `127.0.0.1` or `.fips` addresses show no cast button. Live streams cast as live.
+- **AirPlay** uses Safari's own device picker, which is also where AirPlay is turned off. For HLS played through hls.js, the player adds the playlist URL as a second source so Safari can hand it to the receiver.
+- **Google Cast** uses Google's Default Media Receiver. Casting starts at the current position; the local video pauses and the controls (play, pause, seek, volume, mute) drive the TV. **Stop casting**, or losing the receiver, continues playback here from the TV's last position. If the receiver cannot load the video, it tries up to two other servers that hold the same file, then shows an error and leaves local playback alone. A session started on another Nostube page keeps running: a player showing the same video takes over its controls, another video is not replaced until you press Cast.
+- **Privacy:** Google Cast needs Google's sender script from `www.gstatic.com`. It is loaded only in Chromium browsers, once per page, when a video that can be cast is shown; the CSP of the web app and embed allows exactly that path. If the script is blocked, the Cast button stays hidden and playback is unaffected. The receiver gets the video URL, title and thumbnail, nothing about the viewer's Nostr account. AirPlay loads no third-party code.
+- **Server requirements:** the receiver needs to reach the media URL on its own, without cookies or headers. Google Cast also needs CORS headers on HLS playlists and segments, and works best with H.264 video and AAC audio. See [Blossom](/media/blossom#choosing-a-server).
+
 **Chapters.** Timestamps in the video description (`0:00 Intro`) show as chapter markers on the progress bar.
 
 ## Content warnings and NSFW

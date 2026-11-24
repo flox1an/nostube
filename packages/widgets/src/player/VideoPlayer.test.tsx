@@ -26,6 +26,8 @@ vi.mock('../hooks/useMediaUrls', () => ({
   useMediaUrls: ({ urls }: { urls: string[] }) => ({
     ladder: {
       currentUrl: urls[0] ?? null,
+      urls,
+      isFailed: () => false,
       hasMore: ladder.hasMore,
       failedUrls: ['https://mirror.example/failed.mp4'],
       tryNext: ladder.tryNext,

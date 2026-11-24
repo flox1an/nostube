@@ -26,6 +26,9 @@ import { PlayPauseOverlay } from '../components/PlayPauseOverlay'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
 import { useDesktopPlayerControls, usePlatform } from '../platform'
 import type { VideoChapter } from '@nostube/core/video-chapters'
+import { HLS_CAST_CONTENT_TYPE, resolveCastSource } from '@nostube/core/cast-source'
+import { useCasting } from './casting/useCasting'
+import { CastButtons, CastErrorNotice, CastingOverlay } from './casting/CastControls'
 // import { BulletComments } from './BulletComments' // disabled for now
 
 interface VideoPlayerProps {
@@ -343,9 +346,37 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     onTimeUpdate,
   })
 
+  // Casting hands the receiver the URL playing here (or a known-good mirror of the same
+  // blob), never the element's blob: URL. DASH has no cast path.
+  const castSource = useMemo(
+    () =>
+      isAudioOnly || isDash
+        ? undefined
+        : resolveCastSource({
+            urls: [videoUrl, ...videoUrlLadder.urls.filter(url => !videoUrlLadder.isFailed(url))],
+            mime: isHls ? HLS_CAST_CONTENT_TYPE : mime,
+            title,
+            thumbnailUrl: poster,
+            live: isLive,
+          }),
+    [isAudioOnly, isDash, isHls, isLive, mime, poster, title, videoUrl, videoUrlLadder]
+  )
+  const casting = useCasting({
+    videoRef,
+    source: castSource,
+    // The desktop shell's webview has no Cast support.
+    googleCastEnabled: !nativeWindow,
+  })
+  // During a Google Cast session the receiver is the player; the controls drive it.
+  const { remote } = casting
+  const playback = useMemo(
+    () => (remote ? { ...playerState, ...remote, bufferedPercentage: 0 } : playerState),
+    [playerState, remote]
+  )
+
   // Controls visibility
   const { isVisible: controlsVisible, showControls } = useControlsVisibility({
-    isPlaying: playerState.isPlaying,
+    isPlaying: playback.isPlaying,
     isSeeking,
     hideDelay: 2000,
   })
@@ -358,14 +389,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Seek accumulator for arrow keys and touch
   const handleAccumulatedSeek = useCallback(
     (deltaSeconds: number) => {
-      const video = videoRef.current
-      if (video) {
-        const targetTime = video.currentTime + deltaSeconds
-        const clampedTime = Math.max(0, Math.min(video.duration || Infinity, targetTime))
-        playerState.seek(clampedTime)
-      }
+      const targetTime = playback.currentTime + deltaSeconds
+      playback.seek(Math.max(0, Math.min(playback.duration || Infinity, targetTime)))
     },
-    [playerState]
+    [playback]
   )
 
   const { addSeek, accumulatedTime, isAccumulating, direction } = useSeekAccumulator({
@@ -988,16 +1015,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         case 'K':
           e.preventDefault()
           userInitiatedRef.current = true
-          if (playerState.isPlaying) {
-            playerState.pause()
+          if (playback.isPlaying) {
+            playback.pause()
           } else {
-            playerState.play()
+            playback.play()
           }
           break
         case 'm':
         case 'M':
           e.preventDefault()
-          playerState.toggleMute()
+          playback.toggleMute()
           break
         case 'ArrowLeft':
           e.preventDefault()
@@ -1042,10 +1069,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           break
         default: {
           const digit = parseInt(e.key, 10)
-          if (!isNaN(digit) && e.key >= '0' && e.key <= '9' && playerState.duration > 0) {
+          if (!isNaN(digit) && e.key >= '0' && e.key <= '9' && playback.duration > 0) {
             e.preventDefault()
             showControls()
-            playerState.seek((digit / 10) * playerState.duration)
+            playback.seek((digit / 10) * playback.duration)
           }
           break
         }
@@ -1055,7 +1082,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
-    playerState,
+    playback,
     addSeek,
     showControls,
     toggleFullscreen,
@@ -1067,23 +1094,23 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   const handleTogglePlay = useCallback(() => {
     userInitiatedRef.current = true
-    if (playerState.isPlaying) {
-      playerState.pause()
+    if (playback.isPlaying) {
+      playback.pause()
     } else {
-      playerState.play()
+      playback.play()
     }
-  }, [playerState])
+  }, [playback])
 
   // Memoized play/pause handlers for ControlBar
   const handlePlay = useCallback(() => {
     userInitiatedRef.current = true
-    playerState.play()
-  }, [playerState])
+    playback.play()
+  }, [playback])
 
   const handlePause = useCallback(() => {
     userInitiatedRef.current = true
-    playerState.pause()
-  }, [playerState])
+    playback.pause()
+  }, [playback])
 
   // Mouse move handler for showing controls
   // Skip on mobile - touch interactions are handled by TouchOverlay
@@ -1118,13 +1145,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     title,
     artist: authorName,
     artwork: posterUrl ?? undefined,
-    isPlaying: playerState.isPlaying,
-    currentTime: playerState.currentTime,
-    duration: playerState.duration,
-    playbackRate: playerState.playbackRate,
-    play: playerState.play,
-    pause: playerState.pause,
-    seek: playerState.seek,
+    isPlaying: playback.isPlaying,
+    currentTime: playback.currentTime,
+    duration: playback.duration,
+    playbackRate: playback.playbackRate,
+    play: playback.play,
+    pause: playback.pause,
+    seek: playback.seek,
     onPreviousTrack,
     onNextTrack,
   })
@@ -1139,8 +1166,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const showContentWarning = !!contentWarning && revealedEventId !== (eventId ?? '')
   useEffect(() => {
     // Playback started another way (keyboard, media keys): drop the overlay.
-    if (playerState.isPlaying) setRevealedEventId(eventId ?? '')
-  }, [playerState.isPlaying, eventId])
+    if (playback.isPlaying) setRevealedEventId(eventId ?? '')
+  }, [playback.isPlaying, eventId])
   const handleRevealAndPlay = useCallback(() => {
     setRevealedEventId(eventId ?? '')
     handlePlay()
@@ -1202,7 +1229,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           : style
       }
       className={`relative bg-black overflow-hidden ${className || ''} ${
-        !controlsVisibleForRender && playerState.isPlaying ? 'cursor-none' : ''
+        !controlsVisibleForRender && playback.isPlaying ? 'cursor-none' : ''
       } ${effectiveCinemaMode && !isFullscreen ? 'flex items-center justify-center' : ''}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {}}
@@ -1224,7 +1251,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
               type="button"
               className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
               onClick={handleTogglePlay}
-              aria-label={playerState.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
+              aria-label={playback.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
             >
               <img src={posterUrl} alt="" className="h-full w-full object-contain" />
             </button>
@@ -1234,7 +1261,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
               type="button"
               className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
               onClick={handleTogglePlay}
-              aria-label={playerState.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
+              aria-label={playback.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
             >
               <img src={audioFallback} alt="" className="h-full w-full object-contain" />
             </button>
@@ -1277,7 +1304,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       )}
 
       {/* Loading spinner */}
-      <LoadingSpinner isVisible={showBufferingSpinner} />
+      <LoadingSpinner isVisible={showBufferingSpinner && !casting.castingThis} />
+
+      {casting.castingThis && (
+        <CastingOverlay
+          deviceName={casting.googleCast.state.deviceName}
+          buffering={casting.googleCast.state.playback === 'buffering'}
+          poster={posterUrl}
+        />
+      )}
+      {casting.error && <CastErrorNotice error={casting.error} />}
 
       {/* Bullet comments (danmaku) - disabled for now
       <BulletComments
@@ -1311,21 +1347,21 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       {controls && (
         <ControlBar
           isVisible={controlsVisibleForRender}
-          isPlaying={playerState.isPlaying}
-          currentTime={playerState.currentTime}
+          isPlaying={playback.isPlaying}
+          currentTime={playback.currentTime}
           isLive={isLive}
-          duration={playerState.duration}
-          bufferedPercentage={playerState.bufferedPercentage}
+          duration={playback.duration}
+          bufferedPercentage={playback.bufferedPercentage}
           onPlay={handlePlay}
           onPause={handlePause}
-          onSeek={playerState.seek}
+          onSeek={playback.seek}
           onSeekingChange={handleSeekingChange}
-          volume={playerState.volume}
-          isMuted={playerState.isMuted}
-          onVolumeChange={playerState.setVolume}
-          onToggleMute={playerState.toggleMute}
-          playbackRate={playerState.playbackRate}
-          onPlaybackRateChange={playerState.setPlaybackRate}
+          volume={playback.volume}
+          isMuted={playback.isMuted}
+          onVolumeChange={playback.setVolume}
+          onToggleMute={playback.toggleMute}
+          playbackRate={playback.playbackRate}
+          onPlaybackRateChange={playback.setPlaybackRate}
           qualityOptions={engine.qualityOptions}
           selectedQuality={engine.selectedQuality}
           activeQualityLabel={engine.activeQualityLabel}
@@ -1350,7 +1386,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           showTimelineMarkers={showTimelineMarkers}
           loopEnabled={loopEnabled}
           onToggleLoop={toggleLoop}
-        />
+        >
+          <CastButtons airPlay={casting.airPlay} googleCast={casting.googleCast} />
+        </ControlBar>
       )}
 
       {showContentWarning && (

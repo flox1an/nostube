@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.92] - 2026-11-24
+
+### Added
+
+- AirPlay and Google Cast in the player. The control bar shows an AirPlay button in Safari and a Cast button in Chromium browsers with Google Cast, each only while a receiver is on the network and only for MP4 and HLS videos. The receiver loads the video straight from the media server, never a `blob:` URL; Google Cast tries up to two other servers with the same file if the first fails. During a Google Cast session the controls, keyboard and media keys drive the TV and a "Playing on …" screen covers the paused local video; stopping or losing the receiver continues playback here from its last position. For HLS through hls.js the player adds the playlist as a second `<source>`, so Safari can hand it to an AirPlay receiver.
+- Google's Cast sender script loads only in Chromium browsers, once per page, when a castable video is shown; the CSP of the web app and embed allows its `www.gstatic.com` paths. Blocked, it leaves the Cast button hidden and playback unaffected.
+
 ## [0.2.91] - 2026-11-23
 
 ### Fixed

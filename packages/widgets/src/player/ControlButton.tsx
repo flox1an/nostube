@@ -8,6 +8,7 @@ interface ControlButtonProps {
   label: string
   shortcut?: string
   active?: boolean
+  disabled?: boolean
 }
 
 /**
@@ -19,6 +20,7 @@ export const ControlButton = memo(function ControlButton({
   label,
   shortcut,
   active = false,
+  disabled = false,
 }: ControlButtonProps) {
   return (
     <Tooltip delayDuration={0}>
@@ -26,7 +28,8 @@ export const ControlButton = memo(function ControlButton({
         <button
           type="button"
           onClick={onClick}
-          className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-black/40 ${
+          disabled={disabled}
+          className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-black/40 disabled:cursor-default disabled:hover:bg-transparent ${
             active ? 'text-primary' : 'text-white'
           }`}
           aria-label={label}

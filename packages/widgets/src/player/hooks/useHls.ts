@@ -3,6 +3,7 @@ import Hls from 'hls.js'
 import { useNostubeHostSafe } from '../../host'
 import { createBlossomHlsLoader } from '@nostube/core/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@nostube/core/hls-failover-debug'
+import { isRemotelyPlayableUrl } from '@nostube/core/cast-source'
 import type { BlossomServer, CachingServer } from '@nostube/core'
 import type { PlaybackUrlLadder } from '@nostube/core/playback-url-ladder'
 
@@ -53,6 +54,43 @@ function formatBitrate(bitsPerSecond?: number) {
 function logHlsJson(label: string, details: Record<string, unknown>) {
   if (!isHlsDebugEnabled()) return
   console.info(`[HLS:JSON] ${label} ${JSON.stringify(details)}`)
+}
+
+const AIRPLAY_SOURCE_ATTR = 'data-airplay-source'
+
+/**
+ * Safari plays hls.js through ManagedMediaSource as a `<source>` child holding a
+ * blob URL, which an AirPlay receiver cannot fetch. A second `<source>` with the
+ * playlist URL lets Safari hand that URL to the receiver
+ * (https://webkit.org/blog/15036/). hls.js disables remote playback for
+ * ManagedMediaSource unless such an alternative exists, so re-enable it here.
+ * With plain MSE (a `src` attribute) there is nothing to add.
+ */
+function addAirPlaySource(video: HTMLMediaElement, playlistUrl: string) {
+  if (!video.querySelector('source') || !isRemotelyPlayableUrl(playlistUrl)) return
+  if (video.querySelector(`source[${AIRPLAY_SOURCE_ATTR}]`)) return
+  const source = document.createElement('source')
+  source.type = 'application/vnd.apple.mpegurl'
+  source.src = playlistUrl
+  source.setAttribute(AIRPLAY_SOURCE_ATTR, '')
+  video.appendChild(source)
+  video.disableRemotePlayback = false
+}
+
+/**
+ * Drops the AirPlay alternative. If AirPlay switched the element to it, hls.js left
+ * the element alone on destroy; clear every source so the revoked blob does not
+ * load and fail.
+ */
+function removeAirPlaySource(video: HTMLMediaElement) {
+  const source = video.querySelector<HTMLSourceElement>(`source[${AIRPLAY_SOURCE_ATTR}]`)
+  if (!source) return
+  if (video.currentSrc !== source.src) {
+    source.remove()
+    return
+  }
+  video.querySelectorAll('source').forEach(child => child.remove())
+  video.load()
 }
 
 /**
@@ -158,6 +196,8 @@ export function useHls(
     hlsRef.current = hls
 
     hls.loadSource(src)
+    // Runs after hls.js has set its own source, also when it re-attaches during error recovery.
+    hls.on(Hls.Events.MEDIA_ATTACHING, () => addAirPlaySource(video, src))
     hls.attachMedia(video)
 
     const logAutoState = (label: string, extra?: Record<string, unknown>) => {
@@ -382,6 +422,7 @@ export function useHls(
       video.removeEventListener('stalled', releaseStartupAutoFloorForBufferPressure)
       hls.destroy()
       hlsRef.current = null
+      removeAirPlaySource(video)
     }
   }, [
     videoRef,

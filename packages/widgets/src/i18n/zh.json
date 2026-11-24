@@ -70,7 +70,17 @@
     "auto": "自动",
     "unknown": "未知",
     "off": "关闭",
-    "nextChapter": "跳到：{{title}}"
+    "nextChapter": "跳到：{{title}}",
+    "airplay": "AirPlay",
+    "cast": "投屏",
+    "castTo": "投屏到 {{device}}",
+    "castConnecting": "正在连接…",
+    "stopCasting": "停止投屏",
+    "castingOn": "正在 {{device}} 上播放",
+    "castingOnDevice": "正在其他设备上播放",
+    "castErrorConnect": "无法连接到设备。请确认它在同一网络中，然后重试。",
+    "castErrorLoad": "设备无法加载此视频。其服务器可能不允许在电视上播放，或设备不支持该格式。",
+    "castErrorPlayback": "设备上的播放因错误停止。视频将在此处继续播放。"
   },
   "contentSafety": {
     "warning": {

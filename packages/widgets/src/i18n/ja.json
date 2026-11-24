@@ -70,7 +70,17 @@
     "auto": "自動",
     "unknown": "不明",
     "off": "オフ",
-    "nextChapter": "スキップ: {{title}}"
+    "nextChapter": "スキップ: {{title}}",
+    "airplay": "AirPlay",
+    "cast": "キャスト",
+    "castTo": "{{device}} にキャスト",
+    "castConnecting": "接続中…",
+    "stopCasting": "キャストを停止",
+    "castingOn": "{{device}} で再生中",
+    "castingOnDevice": "別のデバイスで再生中",
+    "castErrorConnect": "デバイスに接続できませんでした。同じネットワークにあるか確認して、もう一度お試しください。",
+    "castErrorLoad": "デバイスがこの動画を読み込めませんでした。サーバーがテレビでの再生を許可していないか、形式に対応していない可能性があります。",
+    "castErrorPlayback": "デバイスでの再生がエラーで停止しました。動画はこちらで再生を続けます。"
   },
   "contentSafety": {
     "warning": {

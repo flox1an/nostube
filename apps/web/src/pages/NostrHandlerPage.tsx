@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
@@ -9,19 +9,24 @@ import { Button } from '@nostube/widgets/components/button'
 import { EmptyState } from '@/components/EmptyState'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useReadRelays } from '@/hooks/useReadRelays'
+import NotFound from '@/pages/NotFound'
 import { routeForKind, routeNostrUri, type NostrHandlerRoute } from '@/lib/nostr-handler'
 
 const LOAD_TIMEOUT_MS = 10_000
 
-/** `/nostr-handler?uri=web+nostr:<nip19>`: the PWA protocol handler, redirects to the matching page. */
+/**
+ * Opens a NIP-19 identifier on the page for its kind: `/<nip19>` (the NIP-89 handler URL)
+ * or `/nostr-handler?uri=web+nostr:<nip19>` (the PWA protocol handler).
+ */
 export function NostrHandlerPage() {
   const { t } = useTranslation()
+  const { nip19: pathIdentifier } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const eventStore = useEventStore()
   const { pool } = useAppContext()
   const readRelays = useReadRelays()
-  const uri = searchParams.get('uri') ?? ''
+  const uri = pathIdentifier ?? searchParams.get('uri') ?? ''
   const [invalid, setInvalid] = useState(false)
 
   useEffect(() => {
@@ -59,6 +64,8 @@ export function NostrHandlerPage() {
   }, [uri, navigate, eventStore, pool, readRelays])
 
   if (invalid) {
+    // `/<anything>` that is no NIP-19 identifier is an ordinary unknown page.
+    if (pathIdentifier !== undefined) return <NotFound />
     return (
       <EmptyState
         heading="h1"

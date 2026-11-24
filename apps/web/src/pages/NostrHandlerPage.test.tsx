@@ -51,4 +51,24 @@ describe('NostrHandlerPage', () => {
     renderHandler(`web+nostr:${note}`)
     expect(await screen.findByText(`at /short/${note}`)).toBeInTheDocument()
   })
+
+  it('opens a root identifier as the handler URL and leaves other paths a 404', async () => {
+    const naddr = nip19.naddrEncode({ kind: 30311, pubkey: 'a'.repeat(64), identifier: 's' })
+    const routes = (path: string) => (
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/:nip19" element={<NostrHandlerPage />} />
+          <Route path="/live/:naddr" element={<Where />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const { unmount } = render(routes(`/${naddr}`))
+    expect(await screen.findByText(`at /live/${naddr}`)).toBeInTheDocument()
+    unmount()
+
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(routes('/no-such-page'))
+    expect(await screen.findByText('Oops! Page not found')).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
 })

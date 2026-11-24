@@ -478,6 +478,15 @@ export function AppRouter() {
                 </Suspense>
               }
             />
+            {/* NIP-89 handler URL `https://nostu.be/<nip19>`: redirects by kind. Static routes win. */}
+            <Route
+              path="/:nip19"
+              element={
+                <Suspense fallback={null}>
+                  <NostrHandlerPage />
+                </Suspense>
+              }
+            />
           </Route>
           <Route
             path="/desktop/player/:nevent"

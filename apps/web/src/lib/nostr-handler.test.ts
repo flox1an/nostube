@@ -46,6 +46,13 @@ describe('routeNostrUri', () => {
     })
   })
 
+  it('opens the live page for a livestream address', () => {
+    expect(routeNostrUri(`web+nostr:${naddr(30311)}`)).toEqual({
+      type: 'navigate',
+      to: `/live/${naddr(30311)}`,
+    })
+  })
+
   it('sends non-video events to njump.me', () => {
     expect(routeNostrUri(`web+nostr:${nevent(1)}`)).toEqual({
       type: 'external',

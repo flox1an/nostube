@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.93] - 2026-11-24
+
+### Added
+
+- `https://nostu.be/<nip19>` opens any `nevent`, `naddr` or `note` on the page for its kind: videos (`21`, `34235`) on `/v/`, shorts (`22`, `34236`) on `/short/`, livestreams (`30311`) on `/live/`, other kinds on njump.me; `npub`/`nprofile` open the profile. Identifiers that carry their kind redirect without a relay request. This is the URL of Nostube's NIP-89 app handler (kind `31990`, `d` = `nostube`), so clients that look up handlers can open videos, shorts and livestreams in Nostube. Root paths that are no NIP-19 identifier stay a 404.
+
+### Fixed
+
+- `web+nostr:` links to a livestream (`naddr` of kind `30311`) open its live page instead of njump.me.
+
 ## [0.2.92] - 2026-11-24
 
 ### Added

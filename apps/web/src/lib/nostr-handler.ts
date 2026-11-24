@@ -1,3 +1,4 @@
+import { kinds } from 'nostr-tools'
 import type { EventPointer } from 'nostr-tools/nip19'
 import { decodeNip19 } from '@nostube/core/nip19'
 import { getTypeForKind } from '@nostube/core/video-types'
@@ -11,8 +12,9 @@ export type NostrHandlerRoute =
   | { type: 'load'; identifier: string; pointer: EventPointer }
   | { type: 'invalid' }
 
-/** NIP-71 videos and shorts open here; every other kind opens on njump.me. */
+/** NIP-71 videos, shorts and NIP-53 livestreams open here; every other kind opens on njump.me. */
 export function routeForKind(identifier: string, kind: number | undefined): NostrHandlerRoute {
+  if (kind === kinds.LiveEvent) return { type: 'navigate', to: `/live/${identifier}` }
   const type = kind === undefined ? 'all' : getTypeForKind(kind)
   if (type === 'videos') return { type: 'navigate', to: buildVideoPath(identifier, 'video') }
   if (type === 'shorts') return { type: 'navigate', to: buildVideoPath(identifier, 'shorts') }

@@ -86,7 +86,7 @@ export function MainLayout() {
             sticky bars on other pages (category bar, settings nav) start sticking. */}
         <main
           className={cn(
-            'flex-1 bg-background w-full',
+            'flex-1 w-full',
             isLivePage
               ? 'min-h-0 overflow-hidden'
               : isVideoPage

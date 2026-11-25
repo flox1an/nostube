@@ -56,9 +56,10 @@ export function Header({ transparent = false }: HeaderProps) {
   // shows through. Scrolled, the regular background returns so content never runs under
   // bare text.
   const blendWithPage = isVideoPage && isAtTop && !transparent
-  // Light theme: a very light gray tint over the page; dark theme: the page color.
-  const barBackground =
-    'bg-sidebar/90 supports-[backdrop-filter]:bg-sidebar/80 dark:bg-background/90 dark:supports-[backdrop-filter]:bg-background/80'
+  // Floats over the page's light field: see-through at the top, frosted once content scrolls under.
+  const barBackground = isAtTop
+    ? 'border-transparent bg-transparent'
+    : 'border-border/50 bg-background/70 supports-[backdrop-filter]:bg-background/55'
 
   if (isSearchExpanded) {
     return (
@@ -94,7 +95,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`mobile-header sticky top-0 z-50 ${isShortPlayer ? 'border-b md:border-b-0' : 'border-b'} transition-[translate,transform,background-color,border-color] duration-300 motion-reduce:transition-none focus-within:translate-y-0 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
+      className={`mobile-header sticky top-0 z-50 ${isShortPlayer ? 'border-b md:border-b-0' : 'border-b'} transition-[translate,transform,background-color,border-color] duration-300 motion-reduce:transition-none focus-within:translate-y-0 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'media-header border-transparent bg-linear-to-b from-black/75 to-transparent text-white' : barBackground} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
         shouldHide && !transparent ? '-translate-y-full' : 'translate-y-0'
       }`}
       style={{
@@ -129,7 +130,7 @@ export function Header({ transparent = false }: HeaderProps) {
           <Link
             to="/"
             className={cn(
-              'text-xl font-bold flex flex-row gap-2 items-center',
+              '[font-family:system-ui,-apple-system,sans-serif] text-xl font-bold flex flex-row gap-2 items-center',
               transparent ? 'text-white' : 'text-foreground',
               transparent && 'max-md:hidden'
             )}

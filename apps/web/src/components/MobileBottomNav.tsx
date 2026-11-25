@@ -43,12 +43,19 @@ export function MobileBottomNav() {
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex h-16 w-full flex-col items-center justify-center gap-1 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-ring',
-                isActive
-                  ? 'text-primary bg-primary/5'
-                  : 'text-muted-foreground hover:text-foreground'
+                isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <span
+                className={cn(
+                  'flex h-7 w-12 items-center justify-center rounded-full border transition-colors',
+                  isActive
+                    ? 'border-white/30 bg-primary text-primary-foreground'
+                    : 'border-transparent'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+              </span>
               <span className="text-xs font-medium">{item.label}</span>
             </Link>
           )
@@ -60,10 +67,19 @@ export function MobileBottomNav() {
           onClick={() => setIsMoreOpen(true)}
           className={cn(
             'flex h-16 w-full flex-col items-center justify-center gap-1 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-ring',
-            isMoreOpen ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+            isMoreOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          <MoreHorizontal className="h-5 w-5" />
+          <span
+            className={cn(
+              'flex h-7 w-12 items-center justify-center rounded-full border transition-colors',
+              isMoreOpen
+                ? 'border-white/30 bg-primary text-primary-foreground'
+                : 'border-transparent'
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </span>
           <span className="text-xs font-medium">{t('navigation.more')}</span>
         </button>
       </nav>

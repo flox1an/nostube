@@ -18,9 +18,9 @@ export function LiveCard({ stream, warning }: { stream: LiveStream; warning: boo
   return (
     <Link
       to={`/live/${stream.naddr}`}
-      className="group block min-w-0 rounded-xl p-2 hover:bg-accent/55 focus-visible:outline-2 focus-visible:outline-ring"
+      className="group block min-w-0 rounded-xl p-2 focus-visible:outline-2 focus-visible:outline-ring"
     >
-      <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+      <div className="thumb-frame aspect-video bg-muted">
         {thumbnail.src && !warning && (
           <img
             src={thumbnail.src}
@@ -43,7 +43,7 @@ export function LiveCard({ stream, warning }: { stream: LiveStream; warning: boo
           <LiveStatusBadge stream={stream} className="absolute bottom-2 right-2" />
         )}
         {stream.participants !== undefined && stream.status === 'live' && (
-          <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded bg-black/75 px-2 py-1 text-xs text-white">
+          <span className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full border border-white/30 bg-black/60 px-2 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm">
             <Users className="h-3 w-3" aria-hidden="true" />
             {stream.participants.toLocaleString()}
           </span>

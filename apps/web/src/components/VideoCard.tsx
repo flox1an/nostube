@@ -156,12 +156,12 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'group rounded-xl px-1 pt-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2 sm:pt-2',
+        'group rounded-2xl px-1 pt-1 pb-6 sm:px-2 sm:pt-2',
         fullBleed && 'rounded-none pt-0 sm:rounded-xl sm:pt-2',
         fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
         overlayMeta && 'p-0 sm:pt-2 sm:pb-6'
       )}
-      style={{ contain: 'layout style paint' }}
+      style={{ contain: 'layout style' }}
     >
       <div>
         <DesktopVideoLink
@@ -177,8 +177,8 @@ export const VideoCard = React.memo(function VideoCard({
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
             className={cn(
-              'w-full overflow-hidden relative bg-muted rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10',
-              fullBleed && 'rounded-none ring-0 shadow-none sm:rounded-xl sm:ring-1 sm:shadow-sm',
+              'thumb-frame w-full bg-muted',
+              fullBleed && 'max-sm:rounded-none max-sm:after:hidden',
               aspectRatio
             )}
           >
@@ -263,7 +263,7 @@ export const VideoCard = React.memo(function VideoCard({
             {video.duration > 0 && (
               <div
                 className={cn(
-                  'absolute bottom-2 right-2 bg-black/50 text-white px-1 rounded text-sm',
+                  'absolute bottom-2 right-2 z-20 rounded-full border border-white/30 bg-black/60 px-2 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm',
                   overlayMeta && 'max-sm:top-2 max-sm:bottom-auto'
                 )}
               >
@@ -364,8 +364,8 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
     >
       <Skeleton
         className={cn(
-          'w-full rounded-xl ring-1 ring-inset ring-black/10 dark:ring-white/10',
-          fullBleed && 'rounded-none ring-0 sm:rounded-xl sm:ring-1',
+          'w-full rounded-2xl ring-1 ring-inset ring-foreground/15',
+          fullBleed && 'max-sm:rounded-none max-sm:ring-0',
           aspectRatio
         )}
       />

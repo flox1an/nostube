@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.94] - 2026-11-25
+
+### Changed
+
+- New look: controls are drawn with thin outlines instead of grey fills. Category chips, tabs, the search field, secondary buttons, settings navigation and radio rows sit on a hairline border; the active chip, tab and navigation item are filled with a deeper, more saturated violet (white text on it at 7:1). Buttons are pills.
+- Every video thumbnail (grid, suggestions, live streams) shares one frame: a hairline outline over the image that turns violet with a soft glow and a slight lift on hover. Duration, viewer count and live badges are outlined pills. Loading placeholders use the same corner radius as the loaded cards.
+- The page sits on a faint fixed violet light field; the header is see-through at the top of the page and frosted once content scrolls under it. On desktop the compact sidebar is a floating rounded rail; on mobile the active bottom-nav item sits in a violet pill.
+- The interface font is Instrument Sans (self-hosted); the nostube wordmark keeps the system font.
+
+### Fixed
+
+- Card hover glow is no longer clipped at the card edge (the cards' `contain: paint` cut it off).
+- Violet text and icons in the dark theme are readable (lighter violet step, 7.9:1 instead of 2.75:1).
+- The highlight on a comment opened from a link shows again; it used an `hsl()` colour that no longer resolved after the switch to oklch tokens.
+
 ## [0.2.93] - 2026-11-24
 
 ### Added

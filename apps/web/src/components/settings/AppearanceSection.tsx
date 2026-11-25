@@ -41,21 +41,21 @@ export function AppearanceSection() {
         >
           <Label
             htmlFor="appearance-theme-light"
-            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+            className="flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-2 font-normal cursor-pointer hover:border-foreground/15 has-[[data-state=checked]]:border-foreground/25 has-[[data-state=checked]]:bg-foreground/5"
           >
             <RadioGroupItem value="light" id="appearance-theme-light" />
             {t('settings.general.light')}
           </Label>
           <Label
             htmlFor="appearance-theme-dark"
-            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+            className="flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-2 font-normal cursor-pointer hover:border-foreground/15 has-[[data-state=checked]]:border-foreground/25 has-[[data-state=checked]]:bg-foreground/5"
           >
             <RadioGroupItem value="dark" id="appearance-theme-dark" />
             {t('settings.general.dark')}
           </Label>
           <Label
             htmlFor="appearance-theme-system"
-            className="flex min-h-11 items-center gap-3 rounded-lg px-2 font-normal cursor-pointer hover:bg-accent has-[[data-state=checked]]:bg-accent"
+            className="flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-2 font-normal cursor-pointer hover:border-foreground/15 has-[[data-state=checked]]:border-foreground/25 has-[[data-state=checked]]:bg-foreground/5"
           >
             <RadioGroupItem value="system" id="appearance-theme-system" />
             {t('settings.general.system')}

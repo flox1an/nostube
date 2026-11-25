@@ -51,8 +51,8 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
             className={cn(
               'relative h-10 shrink-0 rounded-full px-4 after:absolute after:inset-x-0 after:-inset-y-0.5',
               !activeSlug
-                ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
-                : 'border border-transparent bg-secondary/70 hover:border-border'
+                ? 'border border-white/30 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                : 'border border-foreground/25 bg-transparent hover:border-foreground hover:bg-transparent'
             )}
             onClick={() => navigate({ pathname: '/', search })}
             aria-pressed={!activeSlug}
@@ -70,8 +70,8 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
                 className={cn(
                   'relative h-10 shrink-0 rounded-full px-4 after:absolute after:inset-x-0 after:-inset-y-0.5',
                   isActive
-                    ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
-                    : 'border border-transparent bg-secondary/70 hover:border-border'
+                    ? 'border border-white/30 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                    : 'border border-foreground/25 bg-transparent hover:border-foreground hover:bg-transparent'
                 )}
                 onClick={() => navigate({ pathname: `/category/${category.slug}`, search })}
                 aria-pressed={isActive}

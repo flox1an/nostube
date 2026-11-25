@@ -9,7 +9,7 @@ export function LiveBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] leading-4 font-bold tracking-wide text-white',
+        'relative z-20 inline-flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-red-600 px-2 py-0.5 text-[10px] leading-4 font-bold tracking-wide text-white',
         className
       )}
     >
@@ -41,7 +41,7 @@ export function LiveStatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded bg-black/75 px-1.5 py-0.5 text-[10px] leading-4 font-semibold text-white',
+        'relative z-20 inline-flex shrink-0 items-center rounded-full border border-white/30 bg-black/60 px-2 py-0.5 text-[10px] leading-4 font-semibold text-white backdrop-blur-sm',
         className
       )}
     >

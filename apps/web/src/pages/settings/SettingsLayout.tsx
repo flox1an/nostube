@@ -133,13 +133,13 @@ function SettingsSidebar() {
               to={`/settings/${cat.id}`}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'justify-start gap-3 h-auto py-2.5 px-3 text-sm font-normal rounded-lg inline-flex items-center',
+                'justify-start gap-3 h-auto py-2.5 px-3 text-sm font-normal rounded-xl border inline-flex items-center transition-colors',
                 isActive
-                  ? 'bg-accent text-accent-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  ? 'border-foreground/25 bg-foreground/5 text-foreground font-medium'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/15'
               )}
             >
-              <cat.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : '')} />
+              <cat.icon className="h-4 w-4 shrink-0" />
               <div className="text-left leading-tight min-w-0">
                 <span className="block truncate">{t(cat.labelKey)}</span>
                 <span className="block truncate text-[11px] text-muted-foreground font-normal">

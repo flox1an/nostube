@@ -25,8 +25,8 @@ export function AuthorLiveSuggestion({ pubkey, relays }: { pubkey?: string; rela
       className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       data-author-live-suggestion
     >
-      <div className="relative flex gap-3 rounded-xl px-2 py-1.5 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
-        <div className="relative w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
+      <div className="relative flex gap-3 px-2 py-1.5">
+        <div className="thumb-frame w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 bg-muted">
           {!cascade.loaded && <Skeleton className="w-full h-full absolute inset-0" />}
           {cascade.src && (
             <img

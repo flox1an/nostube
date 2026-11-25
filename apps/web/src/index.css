@@ -2,6 +2,7 @@
 @source '../../../packages/widgets/src';
 
 @import '@nostube/widgets/theme.css';
+@import '@fontsource-variable/instrument-sans/wdth.css';
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -24,6 +25,44 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* A fixed light field the whole UI floats on: violet light falling in from the top left, the
+     far corner sinking into shadow. Fixed, so it stays put while the grid scrolls over it. */
+  body {
+    background-image:
+      radial-gradient(
+        100% 60% at 30% -15%,
+        color-mix(in oklch, var(--primary) 8%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        90% 70% at 100% 110%,
+        color-mix(in oklch, var(--primary) 4%, transparent),
+        transparent 65%
+      );
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(
+        100% 60% at 30% -15%,
+        color-mix(in oklch, var(--primary) 15%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(130% 110% at 85% 115%, oklch(0 0 0 / 0.55), transparent 62%);
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 55%, transparent);
+    color: var(--foreground);
+  }
+
+  html {
+    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+    accent-color: var(--primary);
+    caret-color: var(--primary);
   }
 
   /* Content and controls reserve their own safe areas; media reaches the viewport edge. */
@@ -277,10 +316,10 @@
 
 @keyframes highlight-fade {
   0% {
-    background-color: hsl(var(--primary) / 0.3);
+    background-color: color-mix(in oklch, var(--primary) 30%, transparent);
   }
   70% {
-    background-color: hsl(var(--primary) / 0.2);
+    background-color: color-mix(in oklch, var(--primary) 20%, transparent);
   }
   100% {
     background-color: transparent;

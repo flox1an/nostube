@@ -132,7 +132,7 @@ function VideoPageLoader() {
         <div className="w-full p-2 md:p-0 space-y-3 mt-4 lg:mt-0">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex gap-2">
-              <Skeleton className="w-40 2xl:w-56 aspect-video rounded-lg shrink-0" />
+              <Skeleton className="w-40 2xl:w-56 aspect-video rounded-2xl shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-3 w-24" />

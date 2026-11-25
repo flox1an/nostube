@@ -53,7 +53,7 @@ export function VideoGridSkeleton({ count = 8 }: { count?: number }) {
     <ul className={GRID_CLASSES} aria-busy="true" aria-label={t('video.grid.loading')}>
       {Array.from({ length: count }, (_, i) => (
         <li key={i} className="flex flex-col gap-2">
-          <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />
+          <Skeleton className="aspect-video w-full rounded-none sm:rounded-2xl" />
           <Skeleton className="mx-4 h-4 w-4/5 sm:mx-0" />
           <Skeleton className="mx-4 h-3 w-1/3 sm:mx-0" />
         </li>

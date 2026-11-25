@@ -276,7 +276,7 @@ export function GlobalSearchBar({
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className={cn('h-11 pl-10 pr-12 md:h-10', inputClassName)}
+          className={cn('h-11 rounded-full pl-10 pr-12 md:h-10', inputClassName)}
           aria-label="Search"
           placeholder="Search videos and creators..."
           enterKeyHint="search"

@@ -388,13 +388,13 @@ fn embed_url(p: &Public, link: &str) -> String {
 
 /// `2026-10-12T08:30:00Z` (W3C datetime, as sitemaps and schema.org take it).
 fn iso_datetime(secs: u64) -> Option<String> {
-    let at = time::OffsetDateTime::from_unix_timestamp(secs as i64).ok()?;
+    let at = time::OffsetDateTime::from_unix_timestamp(i64::try_from(secs).ok()?).ok()?;
     Some(format!("{}T{:02}:{:02}:{:02}Z", at.date(), at.hour(), at.minute(), at.second()))
 }
 
 /// `Sun, 12 Oct 2026 08:30:00 GMT` (RFC 822 as RSS takes it).
 fn rfc2822(secs: u64) -> Option<String> {
-    let at = time::OffsetDateTime::from_unix_timestamp(secs as i64).ok()?;
+    let at = time::OffsetDateTime::from_unix_timestamp(i64::try_from(secs).ok()?).ok()?;
     let (day, month) = (at.weekday().to_string(), at.month().to_string());
     Some(format!("{}, {:02} {} {} {:02}:{:02}:{:02} GMT", &day[..3], at.day(), &month[..3], at.year(), at.hour(), at.minute(), at.second()))
 }
@@ -717,5 +717,46 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn descriptions_are_one_line_and_cut_on_characters_not_bytes() {
+        assert_eq!(clip("  two\n\nlines\tand  gaps "), "two lines and gaps");
+        let exact = "ä".repeat(DESCRIPTION_MAX);
+        assert_eq!(clip(&exact), exact, "the limit itself is not cut");
+        let long = format!("{} tail", "ü".repeat(DESCRIPTION_MAX));
+        let cut = clip(&long);
+        assert_eq!(cut.chars().count(), DESCRIPTION_MAX + 1);
+        assert!(cut.ends_with('…'));
+        // A cut right after a space drops the space before the ellipsis.
+        let words = format!("{} next", "a".repeat(DESCRIPTION_MAX - 1));
+        assert_eq!(clip(&words), format!("{}…", "a".repeat(DESCRIPTION_MAX - 1)));
+    }
+
+    #[test]
+    fn dates_follow_w3c_and_rfc_822() {
+        assert_eq!(iso_datetime(1_760_257_800).as_deref(), Some("2025-10-12T08:30:00Z"));
+        assert_eq!(rfc2822(1_760_257_800).as_deref(), Some("Sun, 12 Oct 2025 08:30:00 GMT"));
+        assert_eq!(rfc2822(0).as_deref(), Some("Thu, 01 Jan 1970 00:00:00 GMT"));
+        assert_eq!(iso_datetime(u64::MAX), None, "out of range is no date, not a panic");
+        assert_eq!(rfc2822(u64::MAX), None);
+    }
+
+    #[test]
+    fn the_head_replaces_the_placeholder_title_or_lands_before_the_end_of_head() {
+        assert_eq!(inject(SHELL, "<title>X</title>"), SHELL.replace("<title>Loading…</title>", "<title>X</title>"));
+        let untitled = "<html><head><meta charset=\"UTF-8\" /></head><body></body></html>";
+        assert_eq!(inject(untitled, "<title>X</title>"), "<html><head><meta charset=\"UTF-8\" /><title>X</title></head><body></body></html>");
+        // A `</title>` before `<title>` is no title to replace.
+        let odd = "<head></title><title></head>";
+        assert_eq!(inject(odd, "H"), "<head></title><title>H</head>");
+    }
+
+    #[test]
+    fn escaping_covers_html_text_and_both_quotes_and_keeps_unicode() {
+        assert_eq!(Esc(r#"<a href="x">Tom & 'Jerry' – ü</a>"#).to_string(), "&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39; – ü&lt;/a&gt;");
+        assert_eq!(Esc("").to_string(), "");
+        assert_eq!(Esc("&&").to_string(), "&amp;&amp;");
+        assert_eq!(script_json(r#"{"t":"</script><script>"}"#), r#"{"t":"\u003c/script>\u003cscript>"}"#);
     }
 }

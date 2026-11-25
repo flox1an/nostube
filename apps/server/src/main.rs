@@ -1134,4 +1134,135 @@ mod tests {
         assert_eq!(migration.status().await["state"], "completed");
         std::fs::remove_dir_all(&dir).ok();
     }
+
+    /// A minimal running instance: no admin router, empty relay, the embedded web build.
+    async fn site_app(name: &str) -> (App, PathBuf) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static N: AtomicUsize = AtomicUsize::new(0);
+        let dir = std::env::temp_dir().join(format!("nostube-dispatch-{name}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://instance.example".into());
+        cfg.storage_min_free = 0;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
+            writers: vec![], name: "test".into(), description: "test".into(), mirror_relays: vec![],
+        }).unwrap();
+        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let app = App {
+            blossom: almond::create_app(state), relay,
+            branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "boot-1".into(), admin: None, outbox, signer: Default::default(),
+        };
+        (app, dir)
+    }
+
+    async fn get(app: &App, method: Method, uri: &str) -> Response {
+        dispatch(State(app.clone()), Request::builder().method(method).uri(uri).body(Body::empty()).unwrap()).await
+    }
+
+    async fn body(res: Response) -> String {
+        String::from_utf8(axum::body::to_bytes(res.into_body(), 1 << 22).await.unwrap().to_vec()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn the_api_answers_config_and_health_uncached_and_nothing_else() {
+        let (app, dir) = site_app("api").await;
+        let res = get(&app, Method::GET, "/api/config").await;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "application/json");
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
+        assert_eq!(body(res).await.as_bytes(), &app.branding.public_config()[..]);
+
+        let res = get(&app, Method::GET, "/api/health").await;
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
+        let health: serde_json::Value = serde_json::from_str(&body(res).await).unwrap();
+        assert_eq!(health["ok"], true);
+        assert_eq!(health["boot"], "boot-1");
+
+        assert_eq!(get(&app, Method::GET, "/api/unknown").await.status(), StatusCode::NOT_FOUND);
+        assert_eq!(get(&app, Method::POST, "/api/config").await.status(), StatusCode::NOT_FOUND);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn without_a_working_admin_the_admin_paths_are_unavailable_and_never_fall_to_the_site() {
+        let (app, dir) = site_app("admin").await;
+        for path in ["/admin", "/admin/login", "/api/admin/config"] {
+            assert_eq!(get(&app, Method::GET, path).await.status(), StatusCode::SERVICE_UNAVAILABLE, "{path}");
+        }
+        // `/administrator` is a site route, not the admin area.
+        assert_eq!(get(&app, Method::GET, "/administrator").await.status(), StatusCode::OK);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn the_site_serves_files_its_shell_for_routes_and_refuses_writes() {
+        let (app, dir) = site_app("site").await;
+        // Any client route gets the app shell, revalidated on every load.
+        let res = get(&app, Method::GET, "/v/some-video").await;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "text/html; charset=utf-8");
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+        assert!(body(res).await.contains("</html>"));
+        // A real hashed asset is cached for good; a missing one is a 404, never the shell.
+        let asset = Web::iter().find(|f| f.starts_with("assets/") && f.ends_with(".js")).expect("built assets");
+        let res = get(&app, Method::GET, &format!("/{asset}")).await;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
+        assert!(res.headers()[header::CONTENT_TYPE].to_str().unwrap().contains("javascript"));
+        assert_eq!(get(&app, Method::GET, "/assets/gone-1234.js").await.status(), StatusCode::NOT_FOUND);
+        // Root files keep their type and are revalidated.
+        let res = get(&app, Method::GET, "/embed.html").await;
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+        // Only reads reach the site.
+        for method in [Method::POST, Method::PUT, Method::DELETE] {
+            assert_eq!(get(&app, method.clone(), "/about").await.status(), StatusCode::METHOD_NOT_ALLOWED, "{method}");
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn the_studio_is_its_own_app_under_its_base_path() {
+        let (app, dir) = site_app("studio").await;
+        let shell = |res: Response| async move {
+            assert_eq!(res.status(), StatusCode::OK);
+            assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+            body(res).await
+        };
+        let studio = std::str::from_utf8(&Web::get("studio/index.html").unwrap().data).unwrap().to_owned();
+        // `/studio`, `/studio/` and deep studio routes all get the studio's shell, not the site's.
+        for path in ["/studio", "/studio/", "/studio/videos/upload"] {
+            assert_eq!(shell(get(&app, Method::GET, path).await).await, studio, "{path}");
+        }
+        let asset = Web::iter().find(|f| f.starts_with("studio/assets/")).expect("built studio assets");
+        let res = get(&app, Method::GET, &format!("/{asset}")).await;
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
+        assert_eq!(get(&app, Method::GET, "/studio/assets/gone.js").await.status(), StatusCode::NOT_FOUND);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn blossom_gets_uploads_blobs_and_lists_but_not_site_paths() {
+        let hash = "ab".repeat(32);
+        let blob = format!("/{hash}.mp4");
+        for (method, path) in [
+            (Method::PUT, "/upload"), (Method::PUT, "/mirror"), (Method::PATCH, "/upload"),
+            (Method::HEAD, "/upload"), (Method::OPTIONS, "/mirror"),
+            (Method::GET, "/list/npub1x"),
+            (Method::GET, blob.as_str()), (Method::HEAD, blob.as_str()),
+            (Method::DELETE, blob.as_str()), (Method::OPTIONS, blob.as_str()),
+        ] {
+            assert!(is_blossom(&method, path), "{method} {path}");
+        }
+        for (method, path) in [
+            (Method::GET, "/upload"), (Method::PATCH, "/mirror"), (Method::POST, "/upload"),
+            (Method::PUT, blob.as_str()), (Method::GET, "/feed.xml"), (Method::GET, "/"),
+            (Method::DELETE, "/upload"), (Method::GET, "/list"), (Method::PUT, "/report"),
+        ] {
+            assert!(!is_blossom(&method, path), "{method} {path}");
+        }
+    }
 }

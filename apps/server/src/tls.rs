@@ -587,4 +587,77 @@ mod tests {
         assert!(leaf_is_current(&pem, &n, now + 240 * 86_400));
         assert!(!leaf_is_current(&pem, &n, now + 245 * 86_400));
     }
+
+    #[test]
+    fn only_private_v4_and_ula_v6_count_as_lan() {
+        for ip in ["10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.0.1", "fd00::1", "fdff::2"] {
+            assert!(is_lan(ip.parse().unwrap()), "{ip}");
+        }
+        // Public, loopback, link-local and CGNAT addresses fall outside the CA's name constraints.
+        for ip in ["8.8.8.8", "172.32.0.1", "127.0.0.1", "169.254.1.1", "100.64.0.1", "::1", "fe80::1", "fc00::1", "2001:db8::1"] {
+            assert!(!is_lan(ip.parse().unwrap()), "{ip}");
+        }
+    }
+
+    #[test]
+    fn covered_hosts_lists_every_san_the_leaf_carries() {
+        let n = names(&["192.168.1.10", "fd12::1"]);
+        assert_eq!(covered_hosts(&n), ["test-host.local", "nostube.home.arpa", "192.168.1.10", "fd12::1"]);
+        let bare = LocalNames { router_name: None, ..names(&[]) };
+        assert_eq!(covered_hosts(&bare), ["test-host.local"]);
+        assert_eq!(n.sans(), covered_hosts(&n).into_iter().collect());
+    }
+
+    #[tokio::test]
+    async fn port_80_serves_the_ca_and_redirects_everything_else_to_https() {
+        use tower::ServiceExt;
+        let dir = tmp("onboarding");
+        let ca = local_ca(&dir, &names(&["192.168.1.10"])).await.unwrap();
+        let router = onboarding_router(&ca, "https://test-host.local:8443/".into());
+        let call = |uri: &str| {
+            let req = axum::http::Request::builder().uri(uri).body(axum::body::Body::empty()).unwrap();
+            let router = router.clone();
+            async move {
+                let res = router.oneshot(req).await.unwrap();
+                let (parts, body) = res.into_parts();
+                (parts, String::from_utf8(axum::body::to_bytes(body, 1 << 20).await.unwrap().to_vec()).unwrap())
+            }
+        };
+
+        let (parts, pem) = call("/ca.pem").await;
+        assert_eq!(parts.status, StatusCode::OK);
+        assert_eq!(parts.headers[header::CONTENT_TYPE], "application/x-x509-ca-cert");
+        assert_eq!(pem, ca.ca_pem);
+
+        let (parts, page) = call("/ca").await;
+        assert_eq!(parts.headers[header::CONTENT_TYPE], "text/html; charset=utf-8");
+        assert!(page.contains(&ca.fingerprint_sha256), "the page shows the fingerprint to compare");
+
+        // The profile carries exactly the CA's DER and valid, distinct payload UUIDs.
+        let (parts, profile) = call("/ca.mobileconfig").await;
+        assert_eq!(parts.headers[header::CONTENT_TYPE], "application/x-apple-aspen-config");
+        let data = profile.split("<data>").nth(1).and_then(|s| s.split("</data>").next()).unwrap();
+        use base64::Engine;
+        let der = base64::engine::general_purpose::STANDARD.decode(data).unwrap();
+        assert_eq!(fingerprint(&der), ca.fingerprint_sha256);
+        let uuids: Vec<&str> = profile.match_indices("<key>PayloadUUID</key><string>")
+            .map(|(i, m)| &profile[i + m.len()..i + m.len() + 36]).collect();
+        assert_eq!(uuids.len(), 2);
+        assert_ne!(uuids[0], uuids[1]);
+        assert!(uuids.iter().all(|u| u.split('-').map(str::len).eq([8, 4, 4, 4, 12])), "{uuids:?}");
+
+        // Everything else keeps its path and query on the HTTPS origin.
+        let (parts, _) = call("/v/abc?t=30").await;
+        assert_eq!(parts.status, StatusCode::MOVED_PERMANENTLY);
+        assert_eq!(parts.headers[header::LOCATION], "https://test-host.local:8443/v/abc?t=30");
+        let (parts, _) = call("/").await;
+        assert_eq!(parts.headers[header::LOCATION], "https://test-host.local:8443/");
+    }
+
+    #[test]
+    fn the_onboarding_page_escapes_the_origin() {
+        let page = ca_page("AA:BB", "https://x.local/\"><script>");
+        assert!(!page.contains("<script>"), "{page}");
+        assert!(page.contains("&quot;&gt;&lt;script&gt;"), "{page}");
+    }
 }

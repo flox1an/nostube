@@ -159,4 +159,21 @@ mod tests {
         assert_eq!(describe(MAX_WAIT), "15 minutes");
         assert_eq!(describe(Duration::from_millis(300)), "1 second");
     }
+
+    #[test]
+    fn the_wait_never_overflows_and_a_stale_block_is_lifted_with_the_count() {
+        // Far past the shift width of u64: capped, no panic.
+        for failures in [64, 65, 200, u32::MAX] {
+            assert_eq!(wait_after(failures), MAX_WAIT, "{failures}");
+        }
+        let t0 = Instant::now();
+        let mut guard = LoginGuard::default();
+        for _ in 0..10 {
+            guard.record_failure(t0);
+        }
+        assert!(guard.check(t0).is_err());
+        // An hour after the last wrong password the count and its block are gone together.
+        assert!(guard.check(t0 + FORGET_AFTER).is_ok());
+        assert_eq!(guard.failures(), 0);
+    }
 }

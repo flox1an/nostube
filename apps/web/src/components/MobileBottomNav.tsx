@@ -1,4 +1,4 @@
-import { Download, MoreHorizontal } from 'lucide-react'
+import { Download, MoreHorizontal, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,7 @@ export function MobileBottomNav() {
   return (
     <>
       <nav
+        aria-label={t('navigation.primary', { defaultValue: 'Primary navigation' })}
         className={cn(
           'fixed bottom-0 left-0 right-0 z-50 flex items-start justify-around border-t border-border bg-background/95 backdrop-blur-sm transition-transform duration-300 motion-reduce:transition-none focus-within:translate-y-0 lg:hidden',
           shouldHide ? 'translate-y-full' : 'translate-y-0'
@@ -92,7 +93,19 @@ export function MobileBottomNav() {
           <SheetHeader className="mb-2 pr-12">
             <SheetTitle className="text-lg">{t('navigation.more')}</SheetTitle>
           </SheetHeader>
-          <nav className="space-y-1">
+          <nav aria-label={t('navigation.more')} className="space-y-1">
+            <Link
+              to="/upload"
+              onClick={() => setIsMoreOpen(false)}
+              aria-current={location.pathname === '/upload' ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-4 rounded-lg px-3 py-3 transition-colors',
+                location.pathname === '/upload' ? 'bg-accent' : 'hover:bg-accent'
+              )}
+            >
+              <Upload className="h-5 w-5" />
+              <span className="font-medium">{t('header.upload')}</span>
+            </Link>
             {mobileMoreItems.map(item => {
               const isActive = location.pathname === item.href.split('?')[0]
               return (

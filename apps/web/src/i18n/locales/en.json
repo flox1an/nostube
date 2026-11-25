@@ -176,8 +176,11 @@
     },
     "suggestionsHeading": {
       "fromCreator": "More from {{name}}",
-      "general": "You might also like"
+      "general": "You might also like",
+      "explore": "Keep exploring"
     },
+    "untitledByAuthor": "Video by {{author}}",
+    "untitledOnDate": "Video from {{date}}",
     "comments": {
       "title": "Comments",
       "signInToComment": "Sign in to comment",
@@ -668,10 +671,26 @@
       "timeout": "{{server}} did not respond in time. Try again or choose another server.",
       "chunked": "{{server}} does not support large uploads. Choose another server.",
       "unreachable": "{{server}} could not be reached. Check your connection or choose another server."
+    },
+    "signedOut": {
+      "title": "Share your video with nostube",
+      "subtitle": "Sign in to publish. Details and publishing are on one page.",
+      "stepChoose": "Choose video",
+      "stepDetails": "Add details",
+      "stepPublish": "Publish",
+      "cta": "Sign in to upload",
+      "trustNote": "Your account signs your post; your video file is stored on a hosting server you choose.",
+      "howItWorksTitle": "How publishing & hosting work",
+      "howHosting": "nostube has no central storage. You choose a storage server — public servers work for getting started, or use your own.",
+      "howBrowser": "Your video is prepared right in your browser, so keep this tab open until processing finishes."
     }
   },
   "settings": {
     "title": "Settings",
+    "groups": {
+      "app": "App",
+      "nostr": "Nostr & network"
+    },
     "selectSection": "Select a section",
     "selectSectionDescription": "Choose a settings category from the menu",
     "presets": {
@@ -911,6 +930,8 @@
       "helper": "Create your first playlist to organize videos",
       "noPublicPlaylists": "No public playlists found."
     },
+    "videoCount_one": "{{count}} video",
+    "videoCount_other": "{{count}} videos",
     "removeVideo": {
       "title": "Remove Video",
       "description": "Are you sure you want to remove this video from the playlist?",
@@ -938,13 +959,23 @@
       "noVideos": "No videos found.",
       "noMore": "No more videos to load.",
       "trustFilterOn": "Trust filter on — hiding low-score authors",
+      "trustFilterOnCount": "Trust filter on — {{count}} videos from low-score authors hidden",
       "trustFilterOff": "Trust filter off — showing all videos",
       "trustFilterOnShort": "Trust filter on",
       "trustFilterOffShort": "Trust filter off",
+      "trustFilterTitle": "Trust filter",
+      "trustFilterHint": "Hides videos from unknown or low-score authors. Creators you follow always show.",
+      "trustFilterHintCount": "Hiding {{count}} videos from low-score authors.",
       "groupPerDayOn": "One video per creator per day — click to show all videos",
       "groupPerDayOff": "Showing all videos — click to group to one per creator per day",
       "groupPerDayOnShort": "Grouped",
-      "groupPerDayOffShort": "Ungrouped"
+      "groupPerDayOffShort": "Ungrouped",
+      "groupPerDayTitle": "One per creator per day",
+      "groupPerDayHint": "Keeps prolific creators from crowding the feed.",
+      "feedFilters": "Feed filters",
+      "emptyTrustHint": "{{count}} videos are currently hidden by the trust filter.",
+      "showAllVideos": "Show all videos",
+      "backToDefaultFeed": "Back to default feed"
     },
     "shorts": {
       "noShorts": "No shorts found.",
@@ -1365,6 +1396,7 @@
     "loading": "Finding live streams…",
     "empty": "No live streams found",
     "emptyHint": "New streams appear here as their announcements arrive.",
+    "viewEnded": "View recent ended streams",
     "contentWarning": "Content warning",
     "planned": "This stream has not started yet",
     "ended": "This stream has ended",
@@ -1508,6 +1540,8 @@
     "noResults": "No relay found.",
     "myFeed": "My feed",
     "myFeedDescription": "All your read relays ({{count}})",
+    "defaultFeed": "Default feed",
+    "defaultFeedDescription": "Default relays ({{count}})",
     "unavailable": "Source unavailable",
     "openTyped": "Open this relay",
     "readRelaysHeading": "Your read relays",

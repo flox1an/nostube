@@ -152,6 +152,13 @@
     "updatedAgo": "actualizado hace {{time}}",
     "publishedAt": "Publicado {{date}}",
     "updatedAt": "Actualizado {{date}}",
+    "suggestionsHeading": {
+      "fromCreator": "Más de {{name}}",
+      "general": "También podría gustarte",
+      "explore": "Seguir explorando"
+    },
+    "untitledByAuthor": "Video de {{author}}",
+    "untitledOnDate": "Video del {{date}}",
     "comments": {
       "title": "Comentarios",
       "addComment": "Agregar un comentario...",
@@ -640,10 +647,26 @@
       "timeout": "{{server}} no respondió a tiempo. Inténtalo de nuevo o elige otro servidor.",
       "chunked": "{{server}} no admite subidas grandes. Elige otro servidor.",
       "unreachable": "No se pudo conectar con {{server}}. Revisa tu conexión o elige otro servidor."
+    },
+    "signedOut": {
+      "title": "Comparte tu video en nostube",
+      "subtitle": "Inicia sesión para publicar. Los detalles y la publicación están en una sola página.",
+      "stepChoose": "Elegir video",
+      "stepDetails": "Añadir detalles",
+      "stepPublish": "Publicar",
+      "cta": "Inicia sesión para subir",
+      "trustNote": "Tu cuenta firma la publicación; el archivo de video se guarda en el servidor de alojamiento que elijas.",
+      "howItWorksTitle": "Cómo funcionan la publicación y el alojamiento",
+      "howHosting": "nostube no tiene almacenamiento central. Tú eliges un servidor: los servidores públicos sirven para empezar, o puedes usar el tuyo.",
+      "howBrowser": "Tu video se prepara directamente en el navegador; mantén esta pestaña abierta hasta que termine el proceso."
     }
   },
   "settings": {
     "title": "Ajustes",
+    "groups": {
+      "app": "Aplicación",
+      "nostr": "Nostr y red"
+    },
     "selectSection": "Seleccionar sección",
     "selectSectionDescription": "Elija una categoría de configuración del menú",
     "presets": {
@@ -855,8 +878,10 @@
     },
     "emptyState": {
       "helper": "Create your first playlist to organize videos",
-      "noPublicPlaylists": "No public playlists found."
+      "noPublicPlaylists": "No se encontraron listas públicas."
     },
+    "videoCount_one": "{{count}} video",
+    "videoCount_other": "{{count}} videos",
     "removeVideo": {
       "title": "Remove Video",
       "description": "Are you sure you want to remove this video from the playlist?",
@@ -890,7 +915,17 @@
       "groupPerDayOn": "Un vídeo por creador y día: clic para mostrar todos",
       "groupPerDayOff": "Mostrando todos los vídeos: clic para agrupar en uno por creador y día",
       "groupPerDayOnShort": "Agrupado",
-      "groupPerDayOffShort": "Sin agrupar"
+      "groupPerDayOffShort": "Sin agrupar",
+      "trustFilterOnCount": "Filtro de confianza activado — {{count}} videos de autores con puntuación baja ocultos",
+      "trustFilterTitle": "Filtro de confianza",
+      "trustFilterHint": "Oculta videos de autores desconocidos o con puntuación baja. Los creadores que sigues siempre aparecen.",
+      "trustFilterHintCount": "Ocultando {{count}} videos de autores con puntuación baja.",
+      "groupPerDayTitle": "Uno por creador y día",
+      "groupPerDayHint": "Evita que los creadores muy activos saturen el feed.",
+      "feedFilters": "Filtros del feed",
+      "emptyTrustHint": "Actualmente hay {{count}} videos ocultos por el filtro de confianza.",
+      "showAllVideos": "Mostrar todos los videos",
+      "backToDefaultFeed": "Volver al feed predeterminado"
     },
     "shorts": {
       "noShorts": "No se encontraron shorts.",
@@ -1311,6 +1346,7 @@
     "loading": "Buscando transmisiones en directo…",
     "empty": "No se encontraron transmisiones en directo",
     "emptyHint": "Las nuevas transmisiones aparecerán aquí a medida que lleguen sus anuncios.",
+    "viewEnded": "Ver transmisiones finalizadas",
     "contentWarning": "Advertencia de contenido",
     "planned": "Esta transmisión aún no ha comenzado",
     "ended": "Esta transmisión ha finalizado",
@@ -1440,7 +1476,11 @@
     "searchPlaceholder": "Buscar relays o escribir URL...",
     "addCustom": "Añadir relay personalizado",
     "invalidUrl": "URL de relay inválida",
-    "noResults": "No se encontró ningún relay."
+    "noResults": "No se encontró ningún relay.",
+    "myFeed": "Mi feed",
+    "myFeedDescription": "Todos tus relays de lectura ({{count}})",
+    "defaultFeed": "Feed predeterminado",
+    "defaultFeedDescription": "Relays predeterminados ({{count}})"
   },
   "player": {
     "nextChapter": "Ir a: {{title}}"

@@ -106,7 +106,7 @@ Priority: **P0** = blocks LAN/offline, **P1** = wrong or unsafe behaviour, **P2*
 
 ### B2 – The web app depends on public relay constants (P1, web app)
 
-**Evidence:** `apps/web/src/constants/relays.ts`: `presetRelays` (nostu.be, divine, primal, nos.lol, offchain.pub, nostr.wine), `METADATA_RELAYS` (purplepag), `INDEXER_RELAYS` (noswhere, snort), `ZAP_RELAYS`, `LIVE_RELAYS`, `DEFAULT_VIEW_TRACKING_RELAYS`. `apps/web/src/nostr/core.ts` builds `DEFAULT_RELAYS` from them and creates the client with that default. `NostubeHostBridge` sets `indexer`, `metadata` and `zap` to these constants, regardless of `config.relays`. `useBatchedProfileLoader` uses `readRelays` **plus** `metadata`.
+**Evidence:** `apps/web/src/constants/relays.ts`: `presetRelays` (nostu.be, divine, primal, nos.lol, offchain.pub, nostr.wine), `METADATA_RELAYS` (purplepag), `INDEXER_RELAYS` (noswhere, snort), `ZAP_RELAYS`, `LIVE_RELAYS`, `DEFAULT_VIEW_TRACKING_RELAYS`. `apps/web/src/nostr/core.ts` builds `DEFAULT_RELAYS` from them and creates the client with that default. `NostubeHostBridge` sets `indexer`, `metadata` and `zap` to these constants, regardless of `config.relays`. Profiles are loaded by the store's event loader on `DEFAULT_RELAYS`; hint relays of a video are only requested when they are outside that set.
 
 **Effect:** even with only local relays in the settings, the app connects to purplepag (metadata), noswhere/snort (indexer), primal/nos.lol (zaps) and the preset relays (nostu.be, divine, primal, nos.lol, offchain.pub, nostr.wine). Profiles are looked up publicly.
 

@@ -1,3 +1,7 @@
+import { UNTITLED_VIDEO_FALLBACK } from '@nostube/core/video-event'
+import { formatDate, type Locale } from 'date-fns'
+import type { TFunction } from 'i18next'
+
 /**
  * Video utility functions
  */
@@ -149,3 +153,52 @@ export function buildShareUrl(
 }
 
 export { buildShareLinks } from '@nostube/core/share-links'
+
+const URL_IN_DESCRIPTION_REGEX = /https?:\/\/[^\s)]+/g
+
+/**
+ * Returns a readable display title for a video.
+ * Replaces missing or generic `UNTITLED_VIDEO_FALLBACK` titles with the first text line
+ * of the description, then falls back to author or publish date so untitled items stay distinct.
+ */
+export function formatVideoTitle(
+  title: string | undefined,
+  options: {
+    description?: string
+    authorName?: string
+    hideAuthor?: boolean
+    publishDate?: number
+    dateLocale?: Locale
+    t: TFunction
+  }
+): string {
+  const trimmed = title?.trim()
+  if (trimmed && trimmed !== UNTITLED_VIDEO_FALLBACK) return trimmed
+
+  if (options.description) {
+    const firstLine = options.description
+      .split(/\r?\n/)
+      .map(line => line.replace(URL_IN_DESCRIPTION_REGEX, ' ').replace(/\s+/g, ' ').trim())
+      .find(Boolean)
+    if (firstLine) return firstLine
+  }
+
+  if (!options.hideAuthor && options.authorName) {
+    return options.t('video.untitledByAuthor', {
+      author: options.authorName,
+      defaultValue: 'Video by {{author}}',
+    })
+  }
+
+  if (options.publishDate) {
+    const date = formatDate(new Date(options.publishDate * 1000), 'PP', {
+      locale: options.dateLocale,
+    })
+    return options.t('video.untitledOnDate', {
+      date,
+      defaultValue: 'Video from {{date}}',
+    })
+  }
+
+  return options.t('video.untitled', { defaultValue: UNTITLED_VIDEO_FALLBACK })
+}

@@ -41,3 +41,35 @@ export function filterVideoSuggestions(videos: VideoEvent[], options: FilterOpti
 
   return filtered
 }
+
+export const MAX_SAME_CREATOR_SUGGESTIONS = 3
+export const MAX_PER_CREATOR_GENERAL_SUGGESTIONS = 2
+
+/**
+ * Splits suggestions into a capped "More from creator" section and a diverse discovery section
+ * capped per creator so a single prolific channel cannot crowd the watch sidebar.
+ */
+export function partitionSuggestions<T extends { pubkey: string }>(
+  videos: T[],
+  authorPubkey?: string,
+  maxSameCreator = MAX_SAME_CREATOR_SUGGESTIONS,
+  maxPerGeneralCreator = MAX_PER_CREATOR_GENERAL_SUGGESTIONS
+): { sameCreator: T[]; general: T[] } {
+  const sameCreator: T[] = []
+  const general: T[] = []
+  const counts = new Map<string, number>()
+
+  for (const video of videos) {
+    if (authorPubkey && video.pubkey === authorPubkey) {
+      if (sameCreator.length < maxSameCreator) sameCreator.push(video)
+      continue
+    }
+    const seen = counts.get(video.pubkey) ?? 0
+    if (seen < maxPerGeneralCreator) {
+      counts.set(video.pubkey, seen + 1)
+      general.push(video)
+    }
+  }
+
+  return { sameCreator, general }
+}

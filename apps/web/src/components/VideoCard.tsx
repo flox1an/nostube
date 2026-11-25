@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type VideoEvent, getPublishDate } from '@nostube/core/video-event'
-import { buildVideoPath, buildVideoUrlObject } from '@/utils/video-utils'
+import { buildVideoPath, buildVideoUrlObject, formatVideoTitle } from '@/utils/video-utils'
 import { formatDuration } from '@nostube/core/formatDuration'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,8 @@ interface VideoCardProps {
   priority?: boolean
   /** Mounted virtual-grid neighbour: start the small preview without racing the raw source. */
   preload?: boolean
+  /** Heading tag for the video title; defaults to h2 directly under a page h1. */
+  headingLevel?: 'h2' | 'h3'
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -58,8 +60,10 @@ export const VideoCard = React.memo(function VideoCard({
   fullBleed = false,
   priority = false,
   preload = false,
+  headingLevel = 'h2',
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
+  const TitleTag = headingLevel
   const relayHints = useMemo(() => extractRelaysFromNip19(video.link), [video.link])
   const metadata = useProfile({ pubkey: video.pubkey, relays: relayHints })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
@@ -69,6 +73,19 @@ export const VideoCard = React.memo(function VideoCard({
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
+  const publishDate = getPublishDate(video)
+  const displayTitle = useMemo(
+    () =>
+      formatVideoTitle(video.title, {
+        description: video.description,
+        authorName: name,
+        hideAuthor,
+        publishDate,
+        dateLocale,
+        t,
+      }),
+    [video.title, video.description, name, hideAuthor, publishDate, dateLocale, t]
+  )
 
   const authorProfileUrl = useMemo(
     () => buildProfileUrlFromPubkey(video.pubkey, relayHints),
@@ -169,6 +186,8 @@ export const VideoCard = React.memo(function VideoCard({
           onClick={handleShortsClick}
           desktopCoordinator={desktopWindowCoordinator}
           desktopRoute={desktopPlayerRoute}
+          tabIndex={overlayMeta ? undefined : -1}
+          aria-hidden={overlayMeta ? undefined : true}
           className={cn(
             'block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             fullBleed && 'rounded-none sm:rounded-xl'
@@ -229,7 +248,7 @@ export const VideoCard = React.memo(function VideoCard({
                   loading={priority || preload ? 'eager' : 'lazy'}
                   fetchPriority={priority ? 'high' : 'auto'}
                   decoding="async"
-                  alt={video.title}
+                  alt={displayTitle}
                   referrerPolicy="no-referrer"
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
@@ -253,7 +272,7 @@ export const VideoCard = React.memo(function VideoCard({
             {overlayMeta && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/75 via-black/35 to-transparent px-2 pt-10 pb-2 text-white sm:hidden">
                 <p className="line-clamp-2 break-words text-[13px] font-semibold leading-4 drop-shadow">
-                  {video.title}
+                  {displayTitle}
                 </p>
                 {!hideAuthor && <p className="mt-0.5 truncate text-xs text-white/80">{name}</p>}
               </div>
@@ -282,6 +301,8 @@ export const VideoCard = React.memo(function VideoCard({
             {!hideAuthor && format !== 'vertical' && (
               <Link
                 to={authorProfileUrl}
+                tabIndex={-1}
+                aria-hidden="true"
                 className="relative shrink-0 after:absolute after:-inset-0.5"
               >
                 <UserAvatar
@@ -300,9 +321,9 @@ export const VideoCard = React.memo(function VideoCard({
                 desktopRoute={desktopPlayerRoute}
                 className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <h3 className="line-clamp-2 break-words text-[15px] font-semibold leading-5 tracking-[-0.01em]">
-                  {video.title}
-                </h3>
+                <TitleTag className="line-clamp-2 break-words text-[15px] font-semibold leading-5 tracking-[-0.01em]">
+                  {displayTitle}
+                </TitleTag>
               </DesktopVideoLink>
               <div className="mt-1 flex min-w-0 items-center text-[13px] leading-5 text-muted-foreground">
                 {!hideAuthor && (

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.95] - 2026-11-25
+
+### Added
+
+- Feeds on phones keep their header row to one line: the relay source and the trust filter fold into a filter popover next to the source picker, together with the per-day grouping switch where the feed has one. Desktop keeps the buttons in the row.
+- A feed that shows nothing says why and offers a way out: when the trust filter hides every video, its toggle is right there; when a custom relay source is empty, one action returns to the default feed. The same actions appear in the empty state of the video grid.
+- The watch page's suggestions split into "More from <creator>" — at most three videos of the same creator — and "Keep exploring" for everyone else, so one prolific creator no longer fills the whole list.
+- Signed-out visitors on the upload page get a short explanation of who signs the post and where the file is stored, plus an expandable "How publishing & hosting work" section.
+- The live page has a retry button when its relay query fails and an empty state with retry instead of a bare message.
+- The empty public-playlists page offers a "Browse videos" button. Settings are grouped under "App" and "Nostr & network" headings, and the mobile "More" menu gains the upload entry.
+
+### Changed
+
+- A video without a title shows the same derived title everywhere: the first line of its description, else "Video by <author>", else "Video from <date>". Cards, the watch page heading, the player, share text, the browser tab and the shorts tab all use it; before, the watch page showed "Untitled video" for a note whose description carried the title.
+- Category chips fade at both scroll edges: the left fade returns once the row is scrolled, and both fades appear in the middle, instead of only ever fading the right edge.
+- Card and suggestion metadata reads better to screen readers: the author avatar is decorative, the redundant inner link is hidden, the author name truncates, and card headings follow the page's heading level.
+- Sidebar labels are 11 px instead of 10 px on a slightly wider rail; the BETA badge next to the wordmark is 11 px instead of 8 px.
+- Signed out, the relay source picker says "Default feed" and "Default relays (n)" instead of "My feed" and "Your read relays".
+- Profiles cost far fewer relay requests. Each card used to fire its own kind-0 request to its video's relay hints and an app-wide loader fired another; now the cards that share a relay set send one batched request, and a request for the same author from the same set is not repeated for five minutes. Authors whose profiles sit only on relays outside the index are still fetched through their hints.
+- Instance builds never show the trust filter toggle or its counts; the server decides which videos are shown.
+
+### Removed
+
+- The Red palette. A saved selection falls back to the default palette.
+
 ## [0.2.94] - 2026-11-25
 
 ### Changed

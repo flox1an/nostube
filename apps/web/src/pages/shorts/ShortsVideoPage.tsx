@@ -17,7 +17,7 @@ import { processEvent, processEvents, type VideoEvent } from '@nostube/core/vide
 import { getVideoPlayback } from '@nostube/core/content-safety'
 import { ContentSafetyGate } from '@/components/ContentSafetyGate'
 import { getAppHeight } from '@/lib/app-height'
-import { buildVideoPath } from '@/utils/video-utils'
+import { buildVideoPath, formatVideoTitle } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import {
@@ -880,16 +880,24 @@ export function ShortsVideoPage() {
     }
   }, [])
 
+  const shortTitle = useMemo(
+    () =>
+      currentVideo
+        ? formatVideoTitle(currentVideo.title, { description: currentVideo.description, t })
+        : '',
+    [currentVideo, t]
+  )
+
   useEffect(() => {
-    if (currentVideo?.title) {
-      document.title = pageTitle(`${currentVideo.title}`)
+    if (shortTitle) {
+      document.title = pageTitle(shortTitle)
     } else {
       document.title = appTitle()
     }
     return () => {
       document.title = appTitle()
     }
-  }, [currentVideo?.title])
+  }, [shortTitle])
 
   // Update URL when video changes (debounced and non-blocking)
   // Uses startTransition to avoid blocking interactions

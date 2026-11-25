@@ -300,61 +300,8 @@ export const monochromeTheme: Theme = {
   },
 }
 
-// YouTube type theme
-export const youtubeTheme: Theme = {
-  id: 'red',
-  name: 'Red',
-  appTitle: {
-    text: 'NosTube',
-    imageUrl: '/red.svg',
-  },
-  colors: {
-    light: {
-      background: 'oklch(0.99 0 0)',
-      foreground: 'oklch(0.15 0 0)',
-      card: 'oklch(1 0 0)',
-      cardForeground: 'oklch(0.15 0 0)',
-      popover: 'oklch(1 0 0)',
-      popoverForeground: 'oklch(0.15 0 0)',
-      primary: 'oklch(0.55 0.22 29)',
-      primaryForeground: 'oklch(0.98 0 0)',
-      secondary: 'oklch(0.96 0 0)',
-      secondaryForeground: 'oklch(0.2 0 0)',
-      muted: 'oklch(0.96 0 0)',
-      mutedForeground: 'oklch(0.5 0 0)',
-      accent: 'oklch(0.96 0 0)',
-      accentForeground: 'oklch(0.2 0 0)',
-      destructive: 'oklch(0.55 0.22 25)',
-      border: 'oklch(0.91 0 0)',
-      input: 'oklch(0.91 0 0)',
-      ring: 'oklch(0.55 0.22 29)',
-    },
-    dark: {
-      background: 'oklch(0.14 0 0)', // YouTube dark background (#0F0F0F)
-      foreground: 'oklch(0.98 0 0)',
-      card: 'oklch(0.17 0 0)', // YouTube card background (#212121)
-      cardForeground: 'oklch(0.98 0 0)',
-      popover: 'oklch(0.17 0 0)',
-      popoverForeground: 'oklch(0.98 0 0)',
-      primary: 'oklch(0.60 0.24 29)', // YouTube Red (brighter for dark mode)
-      primaryForeground: 'oklch(0.98 0 0)',
-      secondary: 'oklch(0.22 0 0)', // YouTube secondary dark (#272727)
-      secondaryForeground: 'oklch(0.98 0 0)',
-      muted: 'oklch(0.22 0 0)',
-      mutedForeground: 'oklch(0.68 0 0)', // YouTube muted text (#AAAAAA)
-      accent: 'oklch(0.22 0 0)',
-      accentForeground: 'oklch(0.98 0 0)',
-      destructive: 'oklch(0.65 0.20 25)',
-      border: 'oklch(1 0 0 / 8%)', // Subtle borders
-      input: 'oklch(1 0 0 / 12%)',
-      ring: 'oklch(0.60 0.24 29)',
-    },
-  },
-}
-
 export const availableThemes: Theme[] = [
   nostubeTheme,
-  youtubeTheme,
   oceanTheme,
   forestTheme,
   sunsetTheme,

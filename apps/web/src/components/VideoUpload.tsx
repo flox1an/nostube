@@ -36,7 +36,7 @@ import { UploadPublishPanel } from './video-upload/UploadPublishPanel'
 import { Switch } from '@nostube/widgets/components/switch'
 import { Label } from '@nostube/widgets/components/label'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { Film, ListChecks, UploadCloud } from 'lucide-react'
+import { ChevronDown, Film, ListChecks, UploadCloud } from 'lucide-react'
 
 // ── Screen derivation ────────────────────────────────────────────────────────
 
@@ -574,6 +574,41 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           <Button className="h-11 px-6" onClick={() => setAuthDialogOpen(true)}>
             {t('upload.signedOut.cta', { defaultValue: 'Sign in to upload' })}
           </Button>
+          <div className="mt-2 flex max-w-md flex-col items-center gap-2 text-center">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t('upload.signedOut.trustNote', {
+                defaultValue:
+                  'Your account signs your post; your video file is stored on a hosting server you choose.',
+              })}
+            </p>
+            <details className="group w-full rounded-xl border border-border/60 bg-card/50 text-left text-xs text-muted-foreground">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 font-medium text-foreground/90 select-none [&::-webkit-details-marker]:hidden">
+                <span>
+                  {t('upload.signedOut.howItWorksTitle', {
+                    defaultValue: 'How publishing & hosting work',
+                  })}
+                </span>
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <ul className="space-y-1.5 border-t border-border/50 px-3.5 py-3 leading-relaxed">
+                <li>
+                  {t('upload.signedOut.howHosting', {
+                    defaultValue:
+                      'nostube has no central storage. You choose a storage server — public servers work for getting started, or use your own.',
+                  })}
+                </li>
+                <li>
+                  {t('upload.signedOut.howBrowser', {
+                    defaultValue:
+                      'Your video is prepared right in your browser, so keep this tab open until processing finishes.',
+                  })}
+                </li>
+              </ul>
+            </details>
+          </div>
         </EmptyState>
         <AuthDialog
           isOpen={authDialogOpen}

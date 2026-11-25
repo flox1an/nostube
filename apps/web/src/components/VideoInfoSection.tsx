@@ -12,6 +12,7 @@ import { badgeVariants } from '@nostube/widgets/components/badge-variants'
 import { Separator } from '@nostube/widgets/components/separator'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
+import { formatVideoTitle } from '@/utils/video-utils'
 import { useAppContext, useMuteUser, useNostrPublish } from '@/hooks'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -193,6 +194,21 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
 
+  // Same title ladder as the feed cards: description first line, then author, then date.
+  const displayTitle = useMemo(
+    () =>
+      video
+        ? formatVideoTitle(video.title, {
+            description: video.description,
+            authorName,
+            publishDate: getPublishDate(video),
+            dateLocale,
+            t,
+          })
+        : '',
+    [video, authorName, dateLocale, t]
+  )
+
   const pinFilters = useMemo(
     () => [{ kinds: [10001], authors: userPubkey ? [userPubkey] : [] }],
     [userPubkey]
@@ -373,10 +389,10 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   return (
     <>
       <div className="flex flex-col gap-3 px-4 md:px-0 min-w-0">
-        {((!hideTitle && video?.title) || expirationDate) && (
+        {((!hideTitle && displayTitle) || expirationDate) && (
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
-              {!hideTitle && video?.title && (
+              {!hideTitle && displayTitle && (
                 <h1
                   ref={titleRef}
                   id="video-page-title"
@@ -385,7 +401,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     !titleExpanded && 'line-clamp-2'
                   )}
                 >
-                  {video.title}
+                  {displayTitle}
                 </h1>
               )}
               {expirationDate && !isExpired && (
@@ -469,7 +485,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               <AddToPlaylistButton
                 videoId={video.id}
                 videoKind={video.kind}
-                videoTitle={video.title}
+                videoTitle={displayTitle}
                 videoPubkey={video.pubkey}
                 videoIdentifier={video.identifier}
               />
@@ -478,7 +494,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               shareOpen={shareOpen}
               setShareOpen={setShareOpen}
               shareUrl={shareUrl}
-              shareTitle={video.title}
+              shareTitle={displayTitle}
               includeTimestamp={includeTimestamp}
               setIncludeTimestamp={setIncludeTimestamp}
               shareLinks={shareLinks}
@@ -505,7 +521,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                       <AddToPlaylistButton
                         videoId={video.id}
                         videoKind={video.kind}
-                        videoTitle={video.title}
+                        videoTitle={displayTitle}
                         asMenuItem
                       />
                     )}

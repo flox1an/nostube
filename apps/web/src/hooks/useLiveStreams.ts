@@ -38,11 +38,12 @@ export function useLiveRelayFeed(filters: Filter[] | null, hints: string[] = [])
   ].join(',')
   const relays = useMemo(() => relaysKey.split(','), [relaysKey])
   const filtersKey = filters && JSON.stringify(filters)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => setAttempt(a => a + 1), [])
   const [state, setState] = useState<{ isLoading: boolean; error: string | null }>({
     isLoading: !!filters,
     error: null,
   })
-
   useEffect(() => {
     if (!filtersKey) {
       setState({ isLoading: false, error: null })
@@ -69,15 +70,15 @@ export function useLiveRelayFeed(filters: Filter[] | null, hints: string[] = [])
       clearTimeout(timer)
       sub.unsubscribe()
     }
-  }, [filtersKey, relays, pool, eventStore])
+  }, [filtersKey, relays, pool, eventStore, attempt])
 
-  return { ...state, relays }
+  return { ...state, relays, retry }
 }
 
 /** Subscribes to `filters` and returns the parsed kind 30311 streams in the store. */
 function useStreamQuery(filters: Filter[] | null, hints?: string[]) {
   const eventStore = useEventStore()
-  const { isLoading, error, relays } = useLiveRelayFeed(filters, hints)
+  const { isLoading, error, relays, retry } = useLiveRelayFeed(filters, hints)
   const events = use$(
     () => (filters ? eventStore.timeline(filters) : undefined),
     [eventStore, filters]
@@ -94,7 +95,7 @@ function useStreamQuery(filters: Filter[] | null, hints?: string[]) {
       ),
     [parsed, probes]
   )
-  return { streams, isLoading, error, relays }
+  return { streams, isLoading, error, relays, retry }
 }
 
 function parseStreams(events: NostrEvent[] | undefined): LiveStream[] {
@@ -181,7 +182,7 @@ export function useLiveStreams(status: LiveStream['status'] = 'live') {
     () => [{ kinds: [kinds.LiveEvent], since, limit: DISCOVERY_LIMIT }],
     [since]
   )
-  const { streams, isLoading, error } = useStreamQuery(filters)
+  const { streams, isLoading, error, retry } = useStreamQuery(filters)
   const playback = useLiveStreamPlayback(true)
   const visible = useMemo(
     () =>
@@ -200,7 +201,7 @@ export function useLiveStreams(status: LiveStream['status'] = 'live') {
         ),
     [streams, playback, status]
   )
-  return { streams: visible, isLoading, error }
+  return { streams: visible, isLoading, error, retry }
 }
 
 /**

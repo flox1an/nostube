@@ -9,7 +9,7 @@ import {
   isAudioVideo,
   isYouTubeVideo,
 } from '@nostube/core/video-event'
-import { buildDesktopPlayerUrl, buildVideoPath } from '@/utils/video-utils'
+import { buildDesktopPlayerUrl, buildVideoPath, formatVideoTitle } from '@/utils/video-utils'
 import { getKindsForType, type VideoType } from '@nostube/core/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
@@ -19,7 +19,11 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
-import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
+import {
+  filterVideoSuggestions,
+  MAX_SAME_CREATOR_SUGGESTIONS,
+  partitionSuggestions,
+} from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { passesTrustFilter } from '@/hooks/useTrustFilter'
@@ -55,11 +59,18 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   const { t, i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
-  const name = metadata?.name || video.pubkey.slice(0, 8)
+  const name = metadata?.display_name || metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
   const isAudio = video.mediaType === 'audio'
   const desktopWindowCoordinator = useDesktopWindowCoordinator()
-
+  const publishDate = getPublishDate(video)
+  const displayTitle = formatVideoTitle(video.title, {
+    description: video.description,
+    authorName: name,
+    publishDate,
+    dateLocale,
+    t,
+  })
   const cascade = useImageCascade({
     src: video.images?.[0],
     videoUrl: video.urls?.[0],
@@ -122,7 +133,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             <img
               src={displaySrc}
               loading="lazy"
-              alt={video.title}
+              alt={displayTitle}
               referrerPolicy="no-referrer"
               className={cn('w-full h-full object-cover', blurred && 'blur-lg')}
               onError={cascade.onError}
@@ -143,16 +154,18 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
         </div>
         <div className="relative min-w-0 flex-1">
           <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-3">
-            {video.title}
+            {displayTitle}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5">
-            <UserAvatar
-              picture={authorPicture}
-              pubkey={video.pubkey}
-              name={name}
-              className="h-4 w-4"
-            />
-            <div className="text-xs text-muted-foreground">{name}</div>
+            <span aria-hidden="true" className="shrink-0">
+              <UserAvatar
+                picture={authorPicture}
+                pubkey={video.pubkey}
+                name={name}
+                className="h-4 w-4"
+              />
+            </span>
+            <div className="text-xs text-muted-foreground truncate">{name}</div>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
@@ -176,13 +189,18 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   const { t, i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
-  const name = metadata?.name || video.pubkey.slice(0, 8)
+  const name = metadata?.display_name || metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
   const primaryImage = video.thumbnailVariants?.[0]?.url ?? video.images?.[0]
   const videoUrl = video.urls?.[0]
   const isAudio = video.mediaType === 'audio'
   const desktopWindowCoordinator = useDesktopWindowCoordinator()
-
+  const displayTitle = formatVideoTitle(video.title, {
+    authorName: name,
+    publishDate: video.published_at ?? video.created_at,
+    dateLocale,
+    t,
+  })
   const cascade = useImageCascade({
     src: primaryImage,
     videoUrl,
@@ -241,7 +259,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
             <img
               src={displaySrc}
               loading="lazy"
-              alt={video.title}
+              alt={displayTitle}
               referrerPolicy="no-referrer"
               className={cn('w-full h-full object-cover', blurred && 'blur-lg')}
               onError={cascade.onError}
@@ -262,16 +280,18 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
         </div>
         <div className="relative min-w-0 flex-1">
           <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-3">
-            {video.title}
+            {displayTitle}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5">
-            <UserAvatar
-              picture={authorPicture}
-              pubkey={video.pubkey}
-              name={name}
-              className="h-4 w-4"
-            />
-            <div className="text-xs text-muted-foreground">{name}</div>
+            <span aria-hidden="true" className="shrink-0">
+              <UserAvatar
+                picture={authorPicture}
+                pubkey={video.pubkey}
+                name={name}
+                className="h-4 w-4"
+              />
+            </span>
+            <div className="text-xs text-muted-foreground truncate">{name}</div>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(publishDate * 1000), new Date(), {
@@ -302,23 +322,10 @@ function VideoSuggestionItemSkeleton() {
 
 function SuggestionsHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sm:col-span-2 lg:col-span-1 px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h2 className="sm:col-span-2 lg:col-span-1 px-2 pt-4 first:pt-1 pb-1.5 text-sm font-semibold tracking-tight text-foreground/90">
       {children}
-    </div>
+    </h2>
   )
-}
-
-/** Split a suggestion list into same-creator and general/mixed groups, so the
- * UI can label each group by why it's actually being shown. */
-function partitionByAuthor<T extends { pubkey: string }>(
-  videos: T[],
-  authorPubkey?: string
-): { sameCreator: T[]; general: T[] } {
-  if (!authorPubkey) return { sameCreator: [], general: videos }
-  return {
-    sameCreator: videos.filter(v => v.pubkey === authorPubkey),
-    general: videos.filter(v => v.pubkey !== authorPubkey),
-  }
 }
 
 interface VideoSuggestionsProps {
@@ -537,11 +544,12 @@ function VideoSuggestionsContent({
     filteredAuthor.sort((a, b) => getPublishDate(b) - getPublishDate(a))
     filteredGlobal.sort((a, b) => getPublishDate(b) - getPublishDate(a))
 
-    // Combine: author videos first, then global (excluding duplicates)
-    const seenIds = new Set(filteredAuthor.map(v => v.id))
+    // Combine: cap same-creator videos so they never starve general discovery
+    const cappedAuthor = filteredAuthor.slice(0, MAX_SAME_CREATOR_SUGGESTIONS)
+    const seenIds = new Set(cappedAuthor.map(v => v.id))
     const uniqueGlobal = filteredGlobal.filter(v => !seenIds.has(v.id))
 
-    return [...filteredAuthor, ...uniqueGlobal].slice(0, 30)
+    return [...cappedAuthor, ...uniqueGlobal].slice(0, 30)
   }, [
     authorSuggestions,
     globalSuggestions,
@@ -620,11 +628,11 @@ function VideoSuggestionsContent({
   // Use service results when available, fall back to relay-based suggestions
   const useServiceResults = filteredServiceVideos !== null
 
-  const { sameCreator: sameCreatorService, general: generalService } = partitionByAuthor(
+  const { sameCreator: sameCreatorService, general: generalService } = partitionSuggestions(
     trustedServiceVideos ?? [],
     authorPubkey
   )
-  const { sameCreator: sameCreatorRelay, general: generalRelay } = partitionByAuthor(
+  const { sameCreator: sameCreatorRelay, general: generalRelay } = partitionSuggestions(
     filteredSuggestions,
     authorPubkey
   )
@@ -662,7 +670,7 @@ function VideoSuggestionsContent({
             ))}
             {generalService.length > 0 && (
               <SuggestionsHeading>
-                {t('video.suggestionsHeading.general', { defaultValue: 'You might also like' })}
+                {t('video.suggestionsHeading.explore', { defaultValue: 'Keep exploring' })}
               </SuggestionsHeading>
             )}
             {generalService.map(video => (
@@ -702,7 +710,7 @@ function VideoSuggestionsContent({
           ))}
           {generalRelay.length > 0 && (
             <SuggestionsHeading>
-              {t('video.suggestionsHeading.general', { defaultValue: 'You might also like' })}
+              {t('video.suggestionsHeading.explore', { defaultValue: 'Keep exploring' })}
             </SuggestionsHeading>
           )}
           {generalRelay.map(video => (

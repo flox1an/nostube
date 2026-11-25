@@ -3,7 +3,6 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { kinds } from 'nostr-tools'
 import { getProfileContent } from 'applesauce-core/helpers/profile'
 import { lnurlFromProfile, resolveZapEndpoint, type ZapEndpoint } from '@nostube/core/lnurl-pay'
-import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 
 /** Recipient pubkey -> LNURL endpoint from their own profile, for zaps that can be verified. */
 export function useZapEndpoints(recipients: string[]): ReadonlyMap<string, ZapEndpoint> {
@@ -14,7 +13,6 @@ export function useZapEndpoints(recipients: string[]): ReadonlyMap<string, ZapEn
   useEffect(() => {
     const controller = new AbortController()
     const subscriptions = (key ? key.split(',') : []).map(pubkey => {
-      requestProfile(pubkey)
       return eventStore.replaceable(kinds.Metadata, pubkey).subscribe(profile => {
         const lnurl = profile && lnurlFromProfile(getProfileContent(profile) ?? {})
         if (!lnurl) return

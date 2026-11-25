@@ -152,6 +152,13 @@
     "updatedAgo": "{{time}} 前に更新",
     "publishedAt": "公開日時：{{date}}",
     "updatedAt": "更新日時：{{date}}",
+    "suggestionsHeading": {
+      "fromCreator": "{{name}} の他の動画",
+      "general": "こちらもおすすめ",
+      "explore": "さらに見つける"
+    },
+    "untitledByAuthor": "{{author}} の動画",
+    "untitledOnDate": "{{date}} の動画",
     "comments": {
       "title": "コメント",
       "addComment": "コメントを追加...",
@@ -640,10 +647,26 @@
       "timeout": "{{server}} から時間内に応答がありませんでした。もう一度試すか、別のサーバーを選んでください。",
       "chunked": "{{server}} は大きなアップロードに対応していません。別のサーバーを選んでください。",
       "unreachable": "{{server}} に接続できません。接続を確認するか、別のサーバーを選んでください。"
+    },
+    "signedOut": {
+      "title": "nostube で動画を共有しよう",
+      "subtitle": "公開するにはサインインしてください。詳細入力と公開は1つのページで行えます。",
+      "stepChoose": "動画を選択",
+      "stepDetails": "詳細を入力",
+      "stepPublish": "公開",
+      "cta": "サインインしてアップロード",
+      "trustNote": "投稿はあなたのアカウントで署名され、動画ファイルは選択したホスティングサーバーに保存されます。",
+      "howItWorksTitle": "公開とホスティングの仕組み",
+      "howHosting": "nostube に中央ストレージはありません。保存先サーバーを自分で選びます（試すだけなら無料の公開サーバー、または自分のサーバーを使えます）。",
+      "howBrowser": "動画はブラウザ内で処理されるため、処理が完了するまでこのタブを開いたままにしてください。"
     }
   },
   "settings": {
     "title": "設定",
+    "groups": {
+      "app": "アプリ",
+      "nostr": "Nostr とネットワーク"
+    },
     "selectSection": "セクションを選択",
     "selectSectionDescription": "メニューから設定カテゴリを選択",
     "presets": {
@@ -855,8 +878,10 @@
     },
     "emptyState": {
       "helper": "最初のプレイリストを作成して動画を整理",
-      "noPublicPlaylists": "No public playlists found."
+      "noPublicPlaylists": "公開プレイリストが見つかりません。"
     },
+    "videoCount_one": "{{count}} 本の動画",
+    "videoCount_other": "{{count}} 本の動画",
     "removeVideo": {
       "title": "動画を削除",
       "description": "この動画をプレイリストから削除してもよろしいですか？",
@@ -890,7 +915,17 @@
       "groupPerDayOn": "クリエイターごとに1日1本表示中 — クリックですべて表示",
       "groupPerDayOff": "すべての動画を表示中 — クリックでクリエイターごとに1日1本にまとめる",
       "groupPerDayOnShort": "グループ化",
-      "groupPerDayOffShort": "グループ解除"
+      "groupPerDayOffShort": "グループ解除",
+      "trustFilterOnCount": "信頼フィルターオン — スコアの低い投稿者の動画 {{count}} 件を非表示中",
+      "trustFilterTitle": "信頼フィルター",
+      "trustFilterHint": "未知またはスコアの低い投稿者の動画を非表示にします。フォロー中のクリエイターは常に表示されます。",
+      "trustFilterHintCount": "スコアの低い投稿者の動画 {{count}} 件を非表示にしています。",
+      "groupPerDayTitle": "クリエイターごとに1日1本",
+      "groupPerDayHint": "投稿数の多いクリエイターがフィードを埋め尽くすのを防ぎます。",
+      "feedFilters": "フィードフィルター",
+      "emptyTrustHint": "現在 {{count}} 件の動画が信頼フィルターで非表示になっています。",
+      "showAllVideos": "すべての動画を表示",
+      "backToDefaultFeed": "デフォルトフィードに戻る"
     },
     "shorts": {
       "noShorts": "ショートが見つかりません。",
@@ -1311,6 +1346,7 @@
     "loading": "ライブ配信を検索中…",
     "empty": "ライブ配信が見つかりません",
     "emptyHint": "新しい配信は告知が届くとここに表示されます。",
+    "viewEnded": "終了した配信を見る",
     "contentWarning": "コンテンツ警告",
     "planned": "この配信はまだ始まっていません",
     "ended": "この配信は終了しました",
@@ -1439,7 +1475,11 @@
     "searchPlaceholder": "リレーを検索するか URL を入力...",
     "addCustom": "カスタムリレーを追加",
     "invalidUrl": "無効なリレー URL",
-    "noResults": "リレーが見つかりません。"
+    "noResults": "リレーが見つかりません。",
+    "myFeed": "マイフィード",
+    "myFeedDescription": "すべての読み込みリレー（{{count}}）",
+    "defaultFeed": "デフォルトフィード",
+    "defaultFeedDescription": "デフォルトリレー（{{count}}）"
   },
   "player": {
     "nextChapter": "スキップ: {{title}}"

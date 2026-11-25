@@ -140,7 +140,7 @@ export function Header({ transparent = false }: HeaderProps) {
               {appTitle.text}
               <span
                 className={cn(
-                  'absolute -top-1 -right-6 text-[0.5rem] font-semibold',
+                  'absolute -top-1.5 -right-7 text-[0.6875rem] leading-none font-semibold',
                   transparent ? 'text-white/70' : 'text-muted-foreground'
                 )}
               >
@@ -170,12 +170,19 @@ export function Header({ transparent = false }: HeaderProps) {
           )}
 
           {user && !isShortPlayer && (
-            <Link to="/upload" className="hidden lg:block">
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                {t('header.upload')}
+            <>
+              <Button variant="ghost" size="icon" className="size-11 lg:hidden" asChild>
+                <Link to="/upload" aria-label={t('header.upload')}>
+                  <Upload className="h-5 w-5" />
+                </Link>
               </Button>
-            </Link>
+              <Link to="/upload" className="hidden lg:block">
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('header.upload')}
+                </Button>
+              </Link>
+            </>
           )}
 
           <PublicationStatusButton />

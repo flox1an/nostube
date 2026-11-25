@@ -41,7 +41,9 @@ it('fades hidden categories, reveals the final category, and updates when the li
   // Browsers can leave a fractional remainder at the end of the list.
   categories.scrollLeft = 799.5
   fireEvent.scroll(categories)
-  expect(categories.style.maskImage).toBe('')
+  // The right fade is gone, the left one stays: the list can still scroll back.
+  expect(categories.style.maskImage).not.toContain('100% - 40px')
+  expect(categories.style.maskImage).toContain('transparent')
 
   categories.scrollLeft = 400
   fireEvent.scroll(categories)

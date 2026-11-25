@@ -1,13 +1,13 @@
+import { useMemo } from 'react'
 import { kinds } from 'nostr-tools'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { type ProfileContent } from 'applesauce-core/helpers/profile'
 import { type ProfilePointer } from 'nostr-tools/nip19'
 import { type Model } from 'applesauce-core'
 import { defer, EMPTY, merge, of } from 'rxjs'
-import { requestProfile } from './useBatchedProfiles'
+import { requestHintProfile } from './hint-profile-batch'
 import { useNostubeHost } from '../host'
 import { type RelayPool } from 'applesauce-relay'
-import { loadFromRelays } from '@nostube/core/relay-load'
 
 /**
  * Module-level model factory.
@@ -33,20 +33,11 @@ function ProfileQuery(
       defer(() => {
         if (events.hasReplaceable(kinds.Metadata, pubkey)) return EMPTY
 
-        // Index/metadata relays always (batched); hint relays on top, so a profile
-        // that only lives on a private server still resolves.
-        requestProfile(pubkey)
+        // `events.profile()` below goes through the store's event loader, which
+        // already asks the lookup relays for a missing kind 0. Only hint relays
+        // outside that set need their own request.
         if (relays && relays.length > 0) {
-          loadFromRelays(
-            pool,
-            relays,
-            { kinds: [kinds.Metadata], authors: [pubkey] },
-            { eventStore: events, limit: 1 }
-          ).subscribe({
-            error: err => {
-              console.error('[Profile Loader] Error loading profile from hint relays:', err)
-            },
-          })
+          requestHintProfile(pool, events, relays, pubkey)
         }
         return EMPTY
       }),
@@ -64,15 +55,26 @@ ProfileQuery.getKey = (_pool: RelayPool, pubkey?: string, relays?: string[]) =>
 
 export function useProfile(user?: ProfilePointer): ProfileContent | undefined {
   const eventStore = useEventStore()
-  const { pool } = useNostubeHost()
+  const { pool, relays: hostRelays } = useNostubeHost()
 
   const pubkey = user?.pubkey && user.pubkey.trim() !== '' ? user.pubkey : undefined
   // Callers pass inline pointer literals, so depend on primitives only —
   // an unstable dep here makes `use$` resubscribe on every render.
   const relaysKey = user?.relays?.length ? user.relays.join(',') : undefined
+  // Hints are usually relays the feed already queries (the video was seen on
+  // them). Asking those again is a second REQ for the same profile; the
+  // index/metadata request below covers them.
+  const indexKey = `${hostRelays.read.join(',')}|${hostRelays.metadata.join(',')}`
+  const hintsKey = useMemo(() => {
+    if (!relaysKey) return undefined
+    const indexed = new Set([...hostRelays.read, ...hostRelays.metadata])
+    const hints = relaysKey.split(',').filter(relay => !indexed.has(relay))
+    return hints.length > 0 ? hints.join(',') : undefined
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- indexKey is the stable string form
+  }, [relaysKey, indexKey])
 
   return use$(() => {
-    const relays = relaysKey ? relaysKey.split(',') : undefined
+    const relays = hintsKey ? hintsKey.split(',') : undefined
     return eventStore.model(ProfileQuery, pool, pubkey, relays)
-  }, [eventStore, pool, pubkey, relaysKey])
+  }, [eventStore, pool, pubkey, hintsKey])
 }

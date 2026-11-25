@@ -152,6 +152,13 @@
     "updatedAgo": "aktualisiert vor {{time}}",
     "publishedAt": "Veröffentlicht {{date}}",
     "updatedAt": "Aktualisiert {{date}}",
+    "suggestionsHeading": {
+      "fromCreator": "Mehr von {{name}}",
+      "general": "Das könnte dir auch gefallen",
+      "explore": "Weiter entdecken"
+    },
+    "untitledByAuthor": "Video von {{author}}",
+    "untitledOnDate": "Video vom {{date}}",
     "comments": {
       "title": "Kommentare",
       "addComment": "Kommentar hinzufügen...",
@@ -640,10 +647,26 @@
       "timeout": "{{server}} hat nicht rechtzeitig geantwortet. Versuche es erneut oder wähle einen anderen Server.",
       "chunked": "{{server}} unterstützt keine großen Uploads. Wähle einen anderen Server.",
       "unreachable": "{{server}} ist nicht erreichbar. Prüfe deine Verbindung oder wähle einen anderen Server."
+    },
+    "signedOut": {
+      "title": "Teile dein Video auf nostube",
+      "subtitle": "Melde dich an, um zu veröffentlichen. Details und Veröffentlichung liegen auf einer Seite.",
+      "stepChoose": "Video wählen",
+      "stepDetails": "Details ergänzen",
+      "stepPublish": "Veröffentlichen",
+      "cta": "Zum Hochladen anmelden",
+      "trustNote": "Dein Konto signiert deinen Beitrag; deine Videodatei liegt bei einem Speicheranbieter deiner Wahl.",
+      "howItWorksTitle": "Wie Veröffentlichung & Speicherung funktionieren",
+      "howHosting": "nostube hat keinen zentralen Speicher. Du wählst einen Speicherserver — kostenlose öffentliche Server reichen zum Ausprobieren, oder du nutzt deinen eigenen.",
+      "howBrowser": "Dein Video wird direkt im Browser aufbereitet. Lass diesen Tab geöffnet, bis die Verarbeitung abgeschlossen ist."
     }
   },
   "settings": {
     "title": "Einstellungen",
+    "groups": {
+      "app": "App",
+      "nostr": "Nostr & Netzwerk"
+    },
     "selectSection": "Bereich auswählen",
     "selectSectionDescription": "Wählen Sie eine Einstellungskategorie aus dem Menü",
     "presets": {
@@ -880,9 +903,11 @@
       "confirm": "Delete Playlist"
     },
     "emptyState": {
-      "helper": "Create your first playlist to organize videos",
-      "noPublicPlaylists": "No public playlists found."
+      "helper": "Erstelle deine erste Playlist, um Videos zu ordnen",
+      "noPublicPlaylists": "Keine öffentlichen Playlists gefunden."
     },
+    "videoCount_one": "{{count}} Video",
+    "videoCount_other": "{{count}} Videos",
     "removeVideo": {
       "title": "Remove Video",
       "description": "Are you sure you want to remove this video from the playlist?",
@@ -910,13 +935,23 @@
       "noVideos": "Keine Videos gefunden.",
       "noMore": "Keine weiteren Videos zum Laden.",
       "trustFilterOn": "Vertrauensfilter an — Autoren mit niedrigem Score ausgeblendet",
+      "trustFilterOnCount": "Vertrauensfilter an — {{count}} Videos von Autoren mit niedrigem Score ausgeblendet",
       "trustFilterOff": "Vertrauensfilter aus — alle Videos angezeigt",
       "trustFilterOnShort": "Vertrauensfilter an",
       "trustFilterOffShort": "Vertrauensfilter aus",
+      "trustFilterTitle": "Vertrauensfilter",
+      "trustFilterHint": "Blendet Videos von unbekannten Autoren mit niedrigem Score aus. Gefolgte Creator werden immer gezeigt.",
+      "trustFilterHintCount": "{{count}} Videos von Autoren mit niedrigem Score ausgeblendet.",
       "groupPerDayOn": "Ein Video pro Creator und Tag – klicken, um alle Videos zu zeigen",
       "groupPerDayOff": "Alle Videos werden gezeigt – klicken, um auf ein Video pro Creator und Tag zu gruppieren",
       "groupPerDayOnShort": "Gruppiert",
-      "groupPerDayOffShort": "Ungruppiert"
+      "groupPerDayOffShort": "Ungruppiert",
+      "groupPerDayTitle": "Ein Video pro Creator & Tag",
+      "groupPerDayHint": "Verhindert, dass einzelne Creator den Feed dominieren.",
+      "feedFilters": "Feed-Filter",
+      "emptyTrustHint": "{{count}} Videos sind aktuell durch den Vertrauensfilter ausgeblendet.",
+      "showAllVideos": "Alle Videos anzeigen",
+      "backToDefaultFeed": "Zurück zum Standard-Feed"
     },
     "shorts": {
       "noShorts": "Keine Shorts gefunden.",
@@ -929,7 +964,7 @@
       "confirmTitle": "Wiedergabeverlauf löschen?",
       "confirmMessage": "Dies löscht dauerhaft deinen gesamten Wiedergabeverlauf. Diese Aktion kann nicht rückgängig gemacht werden.",
       "emptyState": "Dein Wiedergabeverlauf ist leer. Beginne Videos anzuschauen, um sie hier zu sehen.",
-      "browseButton": "Browse Videos"
+      "browseButton": "Videos entdecken"
     },
     "likedVideos": {
       "title": "Gemochte Videos",
@@ -1337,6 +1372,7 @@
     "loading": "Suche nach Livestreams…",
     "empty": "Keine Livestreams gefunden",
     "emptyHint": "Neue Streams erscheinen hier, sobald ihre Ankündigungen eintreffen.",
+    "viewEnded": "Beendete Streams ansehen",
     "contentWarning": "Inhaltswarnung",
     "planned": "Dieser Stream hat noch nicht begonnen",
     "ended": "Dieser Stream ist beendet",
@@ -1478,6 +1514,8 @@
     "noResults": "Kein Relay gefunden.",
     "myFeed": "Mein Feed",
     "myFeedDescription": "Alle deine Lese-Relays ({{count}})",
+    "defaultFeed": "Standard-Feed",
+    "defaultFeedDescription": "Standard-Relays ({{count}})",
     "unavailable": "Quelle nicht verfügbar",
     "openTyped": "Dieses Relay öffnen",
     "readRelaysHeading": "Deine Lese-Relays",

@@ -8,13 +8,13 @@ import { RelayBrowseStatus } from '@/components/RelayBrowseStatus'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
+import { FeedEmptyAction, MobileFeedFilterPopover } from '@/components/FeedFilterMenu'
 import { getKindsForType } from '@nostube/core/video-types'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function ShortsPage() {
   const { t } = useTranslation()
-  const { source } = useRelayBrowsing()
-
+  const { source, selectSource } = useRelayBrowsing()
   useEffect(() => {
     document.title = pageTitle(`${t('navigation.shorts')}`)
     return () => {
@@ -47,17 +47,29 @@ export function ShortsPage() {
     filters: timelineFilter,
     directMode: !!source,
   })
-  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
+  const {
+    filteredVideos,
+    filterButton,
+    enabled: trustEnabled,
+    hiddenCount: trustHiddenCount,
+    toggle: toggleTrust,
+    pending: trustPending,
+  } = useTrustFilter(videos)
 
   return (
     <div className="max-w-560 mx-auto">
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-4">
+      <div className="mb-2 flex items-center justify-between gap-x-2 px-4 sm:flex-wrap sm:gap-x-4">
         <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
           {t('navigation.shorts')}
         </h1>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-x-2 sm:flex-initial sm:justify-end">
           <RelaySourcePicker />
-          {filterButton}
+          <div className="hidden items-center gap-x-2 sm:flex">{filterButton}</div>
+          <MobileFeedFilterPopover
+            trustEnabled={trustEnabled}
+            trustHiddenCount={trustHiddenCount}
+            onToggleTrust={toggleTrust}
+          />
         </div>
       </div>
       <RelayBrowseStatus />
@@ -72,6 +84,15 @@ export function ShortsPage() {
           onPrefetch={prefetchMore}
           layoutMode="vertical"
           emptyMessage={t('pages.shorts.noShorts')}
+          emptyAction={
+            <FeedEmptyAction
+              trustEnabled={trustEnabled}
+              trustHiddenCount={trustHiddenCount}
+              onToggleTrust={toggleTrust}
+              hasCustomSource={Boolean(source)}
+              onResetSource={() => selectSource(null)}
+            />
+          }
           loadingMessage={t('pages.shorts.loadingMore')}
           exhaustedMessage={t('pages.shorts.noMore')}
           error={phase === 'error'}

@@ -21,7 +21,6 @@ import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 import 'applesauce-common'
 import { DEFAULT_RELAYS, eventStore, relayPool } from '@/nostr/core'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
-import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
 import { usePlaylists } from '@/hooks/usePlaylist'
@@ -120,11 +119,6 @@ function AccountRestoreInit() {
   return null
 }
 
-function BatchedProfileLoaderInit() {
-  useBatchedProfileLoader()
-  return null
-}
-
 function TrustScoreProviderInit() {
   useTrustScoreProvider()
   return null
@@ -191,7 +185,6 @@ export function App() {
                             {/* Instance build: the user's NIP-65 never widens the relays. */}
                             {!instance && <UserRelaySync />}
                             <RelayPoolSync />
-                            <BatchedProfileLoaderInit />
                             {!instance && <TrustScoreProviderInit />}
                             <LoginTimeTrackingInit />
                             <ViewEventSweeperInit />

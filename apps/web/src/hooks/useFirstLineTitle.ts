@@ -5,7 +5,6 @@ import { use$, useEventStore } from 'applesauce-react/hooks'
 import { nip19, kinds } from 'nostr-tools'
 import { genUserName } from '@/lib/genUserName'
 import { useAppContext } from '@/hooks/useAppContext'
-import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 import type { VideoNote } from '@/hooks/useVideoNotes'
 import { loadFromRelays } from '@nostube/core/relay-load'
 
@@ -77,8 +76,6 @@ export function useFirstLineTitle(note: VideoNote | null): string {
             { eventStore, limit: 1 }
           )
         loader().subscribe({ error: err => console.error('[useFirstLineTitle]', err) })
-      } else {
-        requestProfile(pubkey)
       }
     }
     // mentionKey is the stable string-keyed dep for mentions

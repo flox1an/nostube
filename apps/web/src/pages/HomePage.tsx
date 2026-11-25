@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 import { applyDailyGrouping } from '@/lib/daily-grouping'
 import { useGroupPerDay } from '@/hooks/useGroupPerDay'
 import { GroupPerDayButton } from '@/components/GroupPerDayButton'
+import { FeedEmptyAction, MobileFeedFilterPopover } from '@/components/FeedFilterMenu'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { getKindsForType } from '@nostube/core/video-types'
@@ -53,6 +54,7 @@ function HomeShelf({
                 video={video}
                 format="horizontal"
                 containThumbnail={video.type === 'shorts'}
+                headingLevel="h3"
               />
             </div>
           ))}
@@ -64,8 +66,7 @@ function HomeShelf({
 
 export function HomePage() {
   const { t } = useTranslation()
-  const { source } = useRelayBrowsing()
-
+  const { source, selectSource } = useRelayBrowsing()
   useEffect(() => {
     document.title = pageTitle(`${t('navigation.home')}`)
     return () => {
@@ -109,25 +110,38 @@ export function HomePage() {
   const [grouped] = useGroupPerDay()
   const dedupedVideos = useMemo(() => applyDailyGrouping(videos, grouped), [videos, grouped])
 
-  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(dedupedVideos)
+  const {
+    filteredVideos,
+    filterButton,
+    enabled: trustEnabled,
+    hiddenCount: trustHiddenCount,
+    toggle: toggleTrust,
+    pending: trustPending,
+  } = useTrustFilter(dedupedVideos)
   const { videos: continueWatchingVideos } = useContinueWatching()
   const { videos: subscriptionsVideos } = useSubscriptionsVideos()
-
-  if (!filteredVideos) return null
 
   return (
     <div className="mx-auto max-w-560 px-3 sm:px-2">
       <div className="-mx-3 sm:mx-0">
         <CategoryButtonBar />
       </div>
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-1 sm:px-2">
+      <div className="mb-2 flex items-center justify-between gap-x-2 px-1 sm:flex-wrap sm:gap-x-4 sm:px-2">
         <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
           {t('pages.home.latestVideos')}
         </h1>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-x-2 sm:flex-initial sm:justify-end">
           <RelaySourcePicker />
-          <GroupPerDayButton />
-          {filterButton}
+          <div className="hidden items-center gap-x-2 sm:flex">
+            <GroupPerDayButton />
+            {filterButton}
+          </div>
+          <MobileFeedFilterPopover
+            showGroupPerDay
+            trustEnabled={trustEnabled}
+            trustHiddenCount={trustHiddenCount}
+            onToggleTrust={toggleTrust}
+          />
         </div>
       </div>
       <RelayBrowseStatus />
@@ -148,8 +162,8 @@ export function HomePage() {
       {(!source || source.relays.length > 0) && (
         <div className="-mx-3 sm:mx-0">
           <VideoTimelinePage
-            videos={filteredVideos}
-            loading={loading || trustPending}
+            videos={filteredVideos ?? []}
+            loading={loading || trustPending || !filteredVideos}
             exhausted={exhausted}
             prefetching={isPrefetching}
             subscriptionActive={subscriptionActive}
@@ -157,6 +171,15 @@ export function HomePage() {
             onPrefetch={prefetchMore}
             layoutMode="horizontal"
             emptyMessage={t('pages.home.noVideos')}
+            emptyAction={
+              <FeedEmptyAction
+                trustEnabled={trustEnabled}
+                trustHiddenCount={trustHiddenCount}
+                onToggleTrust={toggleTrust}
+                hasCustomSource={Boolean(source)}
+                onResetSource={() => selectSource(null)}
+              />
+            }
             exhaustedMessage={t('pages.home.noMore')}
             error={phase === 'error'}
             className=""

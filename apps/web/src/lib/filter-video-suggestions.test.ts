@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterVideoSuggestions } from './filter-video-suggestions'
+import { filterVideoSuggestions, partitionSuggestions } from './filter-video-suggestions'
 import type { VideoEvent } from '@nostube/core/video-event'
 
 describe('filterVideoSuggestions', () => {
@@ -192,5 +192,25 @@ describe('filterVideoSuggestions', () => {
     expect(result).toHaveLength(2)
     expect(result[0].id).toBe('video1')
     expect(result[1].id).toBe('video5')
+  })
+})
+
+describe('partitionSuggestions', () => {
+  it('caps same-creator and per-creator general suggestions so one channel never crowds the sidebar', () => {
+    const items = [
+      { id: 'a1', pubkey: 'author' },
+      { id: 'a2', pubkey: 'author' },
+      { id: 'a3', pubkey: 'author' },
+      { id: 'a4', pubkey: 'author' },
+      { id: 'b1', pubkey: 'creator-b' },
+      { id: 'b2', pubkey: 'creator-b' },
+      { id: 'b3', pubkey: 'creator-b' },
+      { id: 'c1', pubkey: 'creator-c' },
+    ]
+
+    const { sameCreator, general } = partitionSuggestions(items, 'author')
+
+    expect(sameCreator.map(v => v.id)).toEqual(['a1', 'a2', 'a3'])
+    expect(general.map(v => v.id)).toEqual(['b1', 'b2', 'c1'])
   })
 })

@@ -96,14 +96,30 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
   // Nothing passes yet but scores are still loading: callers should keep showing
   // skeletons, otherwise the empty grid flashes and infinite scroll pages on.
   const pending = enabled && filteredVideos?.length === 0 && hasPendingTrustScores(authorPubkeys)
+  const hiddenCount =
+    enabled && videos && filteredVideos ? Math.max(0, videos.length - filteredVideos.length) : 0
 
-  const onLabel = t('pages.home.trustFilterOn', {
-    defaultValue: 'Trust filter on — hiding low-score authors',
-  })
+  const onLabel =
+    hiddenCount > 0
+      ? t('pages.home.trustFilterOnCount', {
+          count: hiddenCount,
+          defaultValue: 'Trust filter on — {{count}} videos from low-score authors hidden',
+        })
+      : t('pages.home.trustFilterOn', {
+          defaultValue: 'Trust filter on — hiding low-score authors',
+        })
   const offLabel = t('pages.home.trustFilterOff', {
     defaultValue: 'Trust filter off — showing all videos',
   })
   const trustFilterLabel = enabled ? onLabel : offLabel
+
+  const toggle = () => {
+    if (enabled && !localStorage.getItem('trustFilter.warningShown')) {
+      setShowWarning(true)
+    } else {
+      setEnabled(prev => !prev)
+    }
+  }
 
   const filterButton = (
     <>
@@ -115,13 +131,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
             className={`h-11 min-w-11 shrink-0 gap-1.5 px-2 ${enabled ? 'text-muted-foreground' : 'text-destructive'}`}
             aria-label={trustFilterLabel}
             aria-pressed={enabled}
-            onClick={() => {
-              if (enabled && !localStorage.getItem('trustFilter.warningShown')) {
-                setShowWarning(true)
-              } else {
-                setEnabled(!enabled)
-              }
-            }}
+            onClick={toggle}
           >
             <Shield className="h-3.5 w-3.5" />
             <span>
@@ -171,10 +181,13 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
   )
 
   // Instance build: fixed off, so no toggle.
+  const isInstance = Boolean(getInstanceConfig())
   return {
     filteredVideos,
-    filterButton: getInstanceConfig() ? <></> : filterButton,
-    enabled,
+    filterButton: isInstance ? <></> : filterButton,
+    enabled: isInstance ? false : enabled,
+    hiddenCount: isInstance ? 0 : hiddenCount,
+    toggle,
     pending,
   }
 }

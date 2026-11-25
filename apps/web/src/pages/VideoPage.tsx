@@ -53,7 +53,14 @@ import { VideoCommentsSection, VideoInfoSection } from '@/components/VideoInfoSe
 import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
 import { VideoTransformAlert } from '@/components/VideoTransformAlert'
 import { VideoPageLayout } from '@/components/VideoPageLayout'
-import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
+import {
+  shouldVideoLoop,
+  buildShareUrl,
+  buildShareLinks,
+  formatVideoTitle,
+} from '@/utils/video-utils'
+import { getPublishDate } from '@nostube/core/video-event'
+import { getDateLocale } from '@/lib/date-locale'
 import { parseVideoChapters } from '@nostube/core/video-chapters'
 import { Button } from '@nostube/widgets/components/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
@@ -69,7 +76,7 @@ import { appTitle, pageTitle } from '@nostube/core/instance-config'
 const EMPTY_URLS: string[] = []
 
 function VideoPageContent() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const { nevent } = useParams<{ nevent: string }>()
@@ -309,11 +316,6 @@ function VideoPageContent() {
     return null
   }, [nevent, videoEvent, hintRelays, config.blossomServers, presetContent.nsfwPubkeys])
 
-  useEffect(() => {
-    if (!isDesktopPlayer || !isTauri()) return
-    void getCurrentWindow().setTitle(video?.title ? `NosTube – ${video.title}` : 'NosTube')
-  }, [isDesktopPlayer, video?.title])
-
   const isLoading = !video && videoEvent === undefined
   const contributedVariantsResult = useContributedVariants(video ?? null)
   const contributedVariants = contributedVariantsResult.variants
@@ -392,6 +394,27 @@ function VideoPageContent() {
     video?.pubkey ? { pubkey: video.pubkey, relays: relaysToUse } : undefined
   )
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
+
+  // Same title ladder as the cards: description first line, then author, then date.
+  // A raw `video.title` shows "Untitled video" for a note whose content says otherwise.
+  const displayTitle = useMemo(
+    () =>
+      video
+        ? formatVideoTitle(video.title, {
+            description: video.description,
+            authorName,
+            publishDate: getPublishDate(video),
+            dateLocale: getDateLocale(i18n.language),
+            t,
+          })
+        : '',
+    [video, authorName, i18n.language, t]
+  )
+
+  useEffect(() => {
+    if (!isDesktopPlayer || !isTauri()) return
+    void getCurrentWindow().setTitle(displayTitle ? `NosTube – ${displayTitle}` : 'NosTube')
+  }, [isDesktopPlayer, displayTitle])
 
   // Get user's blossom servers
   const { data: userBlossomServers } = useUserBlossomServers()
@@ -508,15 +531,15 @@ function VideoPageContent() {
 
   // Update document title
   useEffect(() => {
-    if (video?.title) {
-      document.title = pageTitle(`${video.title}`)
+    if (displayTitle) {
+      document.title = pageTitle(displayTitle)
     } else {
       document.title = appTitle()
     }
     return () => {
       document.title = appTitle()
     }
-  }, [video?.title])
+  }, [displayTitle])
 
   // Scroll to top when navigating to a different video, not when relay data arrives
   useEffect(() => {
@@ -556,7 +579,7 @@ function VideoPageContent() {
   })()
   const shareUrl = buildShareUrl(baseUrl, freshLink, includeTimestamp, currentPlayPos)
   const fullUrl = shareUrl
-  const title = video?.title || t('video.watchThisVideo')
+  const title = displayTitle || t('video.watchThisVideo')
   const thumbnailUrl = video?.images[0] || ''
 
   const shareLinks = useMemo(() => {
@@ -741,7 +764,7 @@ function VideoPageContent() {
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
         videoVariants={mergedAllVideoVariants || video.videoVariants}
-        title={video.title}
+        title={displayTitle}
         authorName={authorName}
         onPreviousTrack={prevPlaylistVideo ? navigateToPrevious : undefined}
         onNextTrack={nextPlaylistVideo ? navigateToNext : undefined}
@@ -766,6 +789,7 @@ function VideoPageContent() {
     handlePlaylistVideoEnd,
     handleVideoElementReady,
     authorName,
+    displayTitle,
     prevPlaylistVideo,
     navigateToPrevious,
     nextPlaylistVideo,
@@ -832,7 +856,7 @@ function VideoPageContent() {
         cinemaMode={cinemaMode}
         desktop={isDesktopPlayer}
         playlistLabel={playlistParam ? 'Playlist' : 'Suggestions'}
-        playerTitle={video?.title}
+        playerTitle={displayTitle || undefined}
         comments={
           <VideoCommentsSection video={videoWithLabels ?? null} relaysToUse={relaysToUse} />
         }

@@ -11,13 +11,14 @@ import { getKindsForType } from '@nostube/core/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
+import { FeedEmptyAction, MobileFeedFilterPopover } from '@/components/FeedFilterMenu'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function CategoryPage() {
   const { t } = useTranslation()
   const { category: categorySlug } = useParams<{ category: string }>()
   const relays = useReadRelays()
-  const { source } = useRelayBrowsing()
+  const { source, selectSource } = useRelayBrowsing()
   const effectiveRelays = source?.relays ?? relays
 
   // Memoize videoKinds to prevent infinite re-renders
@@ -38,7 +39,14 @@ export function CategoryPage() {
     directMode: !!source,
   })
 
-  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
+  const {
+    filteredVideos,
+    filterButton,
+    enabled: trustEnabled,
+    hiddenCount: trustHiddenCount,
+    toggle: toggleTrust,
+    pending: trustPending,
+  } = useTrustFilter(videos)
 
   // Update document title
   useEffect(() => {
@@ -74,13 +82,18 @@ export function CategoryPage() {
   return (
     <div className="max-w-560 mx-auto sm:px-2">
       <CategoryButtonBar activeSlug={categorySlug} />
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 px-4 sm:px-2">
+      <div className="mb-2 flex items-center justify-between gap-x-2 px-4 sm:flex-wrap sm:gap-x-4 sm:px-2">
         <h1 className="sr-only text-2xl font-semibold tracking-tight sm:not-sr-only sm:mr-auto">
           {category.name}
         </h1>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-x-2 sm:flex-initial sm:justify-end">
           <RelaySourcePicker />
-          {filterButton}
+          <div className="hidden items-center gap-x-2 sm:flex">{filterButton}</div>
+          <MobileFeedFilterPopover
+            trustEnabled={trustEnabled}
+            trustHiddenCount={trustHiddenCount}
+            onToggleTrust={toggleTrust}
+          />
         </div>
       </div>
       <RelayBrowseStatus />
@@ -94,6 +107,15 @@ export function CategoryPage() {
           layoutMode="auto"
           fullBleed
           emptyMessage={t('pages.category.noVideos', { category: category.name })}
+          emptyAction={
+            <FeedEmptyAction
+              trustEnabled={trustEnabled}
+              trustHiddenCount={trustHiddenCount}
+              onToggleTrust={toggleTrust}
+              hasCustomSource={Boolean(source)}
+              onResetSource={() => selectSource(null)}
+            />
+          }
           className=""
         />
       )}

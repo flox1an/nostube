@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -67,6 +68,7 @@ export function RelaySourcePicker() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { config } = useAppContext()
+  const { user } = useCurrentUser()
   const { source, selectSource, favorites, sets, favoriteRelays, setsLoading, error } =
     useRelayBrowsing()
   const [open, setOpen] = useState(false)
@@ -85,11 +87,21 @@ export function RelaySourcePicker() {
   const matches = (...values: (string | undefined)[]) =>
     !q || values.some(value => value?.toLowerCase().includes(q))
 
-  const myFeedLabel = t('relaySource.myFeed', { defaultValue: 'My feed' })
+  const myFeedLabel = user
+    ? t('relaySource.myFeed', { defaultValue: 'My feed' })
+    : t('relaySource.defaultFeed', { defaultValue: 'Default feed' })
+  const myFeedDescription = user
+    ? t('relaySource.myFeedDescription', {
+        count: readRelays.length,
+        defaultValue: 'All your read relays ({{count}})',
+      })
+    : t('relaySource.defaultFeedDescription', {
+        count: readRelays.length,
+        defaultValue: 'Default relays ({{count}})',
+      })
   const label = error
     ? t('relaySource.unavailable', { defaultValue: 'Source unavailable' })
     : (source?.title ?? myFeedLabel)
-
   const close = () => {
     setOpen(false)
     setQuery('')
@@ -205,13 +217,7 @@ export function RelaySourcePicker() {
                   >
                     {tick(!source && !error)}
                     <Globe className="h-4 w-4 shrink-0" />
-                    {text(
-                      myFeedLabel,
-                      t('relaySource.myFeedDescription', {
-                        count: readRelays.length,
-                        defaultValue: 'All your read relays ({{count}})',
-                      })
-                    )}
+                    {text(myFeedLabel, myFeedDescription)}
                   </CommandItem>
                 </CommandGroup>
               )}

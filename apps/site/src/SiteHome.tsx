@@ -8,7 +8,6 @@ import { SITE_PAGES, type InstanceConfig } from '@nostube/core/instance-config'
 import { cn } from '@nostube/widgets/cn'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
-import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { InstallBanner } from '@nostube/widgets/components/InstallHint'
 import { OfflineBanner } from '@nostube/widgets/components/OfflineBanner'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
@@ -60,7 +59,6 @@ function AccountRestoreInit() {
 function Site({ client, config }: { client: NostubeClient; config: InstanceConfig }) {
   const profile = useCreatorProfile(client, config)
   const gate = useAgeGate()
-  useBatchedProfileLoader()
   // The banner would push a video below the fold. On a video page the header is a breadcrumb
   // (site › video) instead of the logo, title and tagline; sign-in and search stay everywhere.
   const videoMatch = useMatch('/v/:id')

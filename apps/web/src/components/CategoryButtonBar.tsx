@@ -12,14 +12,17 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { search } = useLocation()
   const categoriesRef = useRef<HTMLDivElement>(null)
-  const [canScrollRight, setCanScrollRight] = useState(false)
+  const [scrollEdges, setScrollEdges] = useState({ left: false, right: false })
 
   useEffect(() => {
     const container = categoriesRef.current
     if (!container) return
 
-    const updateScrollHint = () =>
-      setCanScrollRight(container.scrollWidth - container.clientWidth - container.scrollLeft > 1)
+    const updateScrollHint = () => {
+      const left = container.scrollLeft > 1
+      const right = container.scrollWidth - container.clientWidth - container.scrollLeft > 1
+      setScrollEdges(prev => (prev.left === left && prev.right === right ? prev : { left, right }))
+    }
 
     updateScrollHint()
     container.addEventListener('scroll', updateScrollHint, { passive: true })
@@ -33,16 +36,23 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
     }
   }, [])
 
+  const maskGradient =
+    scrollEdges.left && scrollEdges.right
+      ? 'linear-gradient(to right, transparent, black 36px, black calc(100% - 40px), transparent)'
+      : scrollEdges.right
+        ? 'linear-gradient(to right, black calc(100% - 40px), transparent)'
+        : scrollEdges.left
+          ? 'linear-gradient(to right, transparent, black 36px)'
+          : undefined
+
   return (
     <div className="flex w-full items-center">
       <div
         ref={categoriesRef}
         className="min-w-0 flex-1 overflow-x-auto scroll-smooth scroll-pr-6 scrollbar-hide"
-        style={{
-          maskImage: canScrollRight
-            ? 'linear-gradient(to left, transparent, black 24px)'
-            : undefined,
-        }}
+        style={
+          maskGradient ? { maskImage: maskGradient, WebkitMaskImage: maskGradient } : undefined
+        }
       >
         <div className="flex min-w-max gap-2 py-2 pr-2 pl-4 sm:pl-2">
           <Button

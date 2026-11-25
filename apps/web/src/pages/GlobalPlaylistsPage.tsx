@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { nip19 } from 'nostr-tools'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@nostube/widgets/components/button'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { PlaylistThumbnailCollage } from '@/components/playlists/PlaylistThumbnailCollage'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
@@ -16,9 +17,9 @@ interface GlobalPlaylistCardProps {
 }
 
 function GlobalPlaylistCard({ playlist }: GlobalPlaylistCardProps) {
+  const { t } = useTranslation()
   const profile = useProfile({ pubkey: playlist.pubkey })
   const readRelays = useReadRelays()
-
   const naddr = nip19.naddrEncode({
     kind: 30005,
     pubkey: playlist.pubkey,
@@ -32,7 +33,7 @@ function GlobalPlaylistCard({ playlist }: GlobalPlaylistCardProps) {
 
   return (
     <div className="group flex flex-col rounded-lg overflow-hidden bg-card hover:bg-card/80 transition-colors">
-      <Link to={`/playlist/${naddr}`} className="block">
+      <Link to={`/playlist/${naddr}`} className="block" tabIndex={-1} aria-hidden="true">
         <PlaylistThumbnailCollage
           videoIds={videoIds}
           safetyState={playlist.safetyState}
@@ -42,18 +43,24 @@ function GlobalPlaylistCard({ playlist }: GlobalPlaylistCardProps) {
       </Link>
       <div className="p-3 flex flex-col gap-2">
         <Link to={`/playlist/${naddr}`} className="hover:underline">
-          <h3 className="font-medium line-clamp-1">{playlist.name}</h3>
+          <h2 className="font-medium line-clamp-1">{playlist.name}</h2>
         </Link>
         <p className="text-xs text-muted-foreground">
-          {playlist.videos.length} {playlist.videos.length === 1 ? 'video' : 'videos'}
+          {t('playlists.videoCount', {
+            count: playlist.videos.length,
+            defaultValue: '{{count}} videos',
+            defaultValue_one: '{{count}} video',
+          })}
         </p>
         <Link to={authorUrl} className="flex items-center gap-1.5 group/author">
-          <UserAvatar
-            picture={profile?.picture}
-            pubkey={playlist.pubkey}
-            name={displayName}
-            className="h-5 w-5"
-          />
+          <span aria-hidden="true" className="shrink-0">
+            <UserAvatar
+              picture={profile?.picture}
+              pubkey={playlist.pubkey}
+              name={displayName}
+              className="h-5 w-5"
+            />
+          </span>
           <span className="text-xs text-muted-foreground truncate group-hover/author:text-foreground transition-colors">
             {displayName}
           </span>
@@ -94,9 +101,14 @@ export default function GlobalPlaylistsPage() {
       {isLoading && playlists.length === 0 ? (
         <PlaylistGridSkeleton />
       ) : playlists.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-12 text-center">
-          {t('playlists.emptyState.noPublicPlaylists', 'No public playlists found.')}
-        </p>
+        <div className="rounded-xl border border-dashed py-12 px-4 text-center">
+          <p className="text-muted-foreground text-sm">
+            {t('playlists.emptyState.noPublicPlaylists', 'No public playlists found.')}
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" asChild>
+            <Link to="/">{t('pages.history.browseButton', { defaultValue: 'Browse Videos' })}</Link>
+          </Button>
+        </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {playlists.map(playlist => (

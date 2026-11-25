@@ -152,6 +152,13 @@
     "updatedAgo": "{{time}}前更新",
     "publishedAt": "发布于 {{date}}",
     "updatedAt": "更新于 {{date}}",
+    "suggestionsHeading": {
+      "fromCreator": "更多来自 {{name}}",
+      "general": "猜你喜欢",
+      "explore": "继续探索"
+    },
+    "untitledByAuthor": "{{author}} 的视频",
+    "untitledOnDate": "{{date}} 的视频",
     "comments": {
       "title": "评论",
       "addComment": "添加评论...",
@@ -640,10 +647,26 @@
       "timeout": "{{server}} 未及时响应。请重试或选择其他服务器。",
       "chunked": "{{server}} 不支持大文件上传。请选择其他服务器。",
       "unreachable": "无法连接到 {{server}}。请检查网络连接或选择其他服务器。"
+    },
+    "signedOut": {
+      "title": "在 nostube 分享你的视频",
+      "subtitle": "登录后即可发布。详情填写和发布都在同一页面完成。",
+      "stepChoose": "选择视频",
+      "stepDetails": "填写详情",
+      "stepPublish": "发布",
+      "cta": "登录以上传",
+      "trustNote": "你的账号负责签名发布；视频文件保存在你选择的托管服务器上。",
+      "howItWorksTitle": "发布与托管的工作方式",
+      "howHosting": "nostube 没有中央存储服务器。你可以自行选择存储服务器——公共服务器适合入门试用，也可以使用自己的服务器。",
+      "howBrowser": "视频会在浏览器中直接处理，请在完成前保持此标签页打开。"
     }
   },
   "settings": {
     "title": "设置",
+    "groups": {
+      "app": "应用",
+      "nostr": "Nostr 与网络"
+    },
     "selectSection": "选择区域",
     "selectSectionDescription": "从菜单中选择设置类别",
     "presets": {
@@ -855,8 +878,10 @@
     },
     "emptyState": {
       "helper": "创建您的第一个播放列表来组织视频",
-      "noPublicPlaylists": "No public playlists found."
+      "noPublicPlaylists": "未找到公开播放列表。"
     },
+    "videoCount_one": "{{count}} 个视频",
+    "videoCount_other": "{{count}} 个视频",
     "removeVideo": {
       "title": "移除视频",
       "description": "确定要从播放列表中移除此视频吗？",
@@ -890,7 +915,17 @@
       "groupPerDayOn": "每位创作者每天一个视频 — 点击显示全部",
       "groupPerDayOff": "显示全部视频 — 点击改为每位创作者每天一个",
       "groupPerDayOnShort": "已分组",
-      "groupPerDayOffShort": "未分组"
+      "groupPerDayOffShort": "未分组",
+      "trustFilterOnCount": "信任过滤已开启 — 已隐藏 {{count}} 个低评分作者的视频",
+      "trustFilterTitle": "信任过滤",
+      "trustFilterHint": "隐藏未知或低评分作者的视频。你关注的创作者始终可见。",
+      "trustFilterHintCount": "已隐藏 {{count}} 个低评分作者的视频。",
+      "groupPerDayTitle": "每位创作者每天一条",
+      "groupPerDayHint": "防止高产创作者刷屏信息流。",
+      "feedFilters": "信息流筛选",
+      "emptyTrustHint": "当前有 {{count}} 个视频被信任过滤隐藏。",
+      "showAllVideos": "显示全部视频",
+      "backToDefaultFeed": "返回默认信息流"
     },
     "shorts": {
       "noShorts": "未找到短视频。",
@@ -1311,6 +1346,7 @@
     "loading": "正在查找直播…",
     "empty": "未找到直播",
     "emptyHint": "新直播会在其公告到达后显示在这里。",
+    "viewEnded": "查看最近结束的直播",
     "contentWarning": "内容警告",
     "planned": "此直播尚未开始",
     "ended": "此直播已结束",
@@ -1439,7 +1475,11 @@
     "searchPlaceholder": "搜索中继或输入 URL...",
     "addCustom": "添加自定义中继",
     "invalidUrl": "无效的中继 URL",
-    "noResults": "未找到中继。"
+    "noResults": "未找到中继。",
+    "myFeed": "我的信息流",
+    "myFeedDescription": "所有读取中继（{{count}}）",
+    "defaultFeed": "默认信息流",
+    "defaultFeedDescription": "默认中继（{{count}}）"
   },
   "player": {
     "nextChapter": "跳到：{{title}}"

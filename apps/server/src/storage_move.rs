@@ -286,7 +286,7 @@ mod tests {
     }
 
     async fn store(state: &AppState, bytes: &[u8], origin: BlobOrigin) -> String {
-        let hash = format!("{:x}", Sha256::digest(bytes));
+        let hash = hex::encode(Sha256::digest(bytes));
         file_storage::ensure_temp_dir(state).await.unwrap();
         let temp = TempBlob::reserve(state, "test", Some("mp4"));
         std::fs::write(temp.path(), bytes).unwrap();

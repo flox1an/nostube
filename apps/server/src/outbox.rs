@@ -1432,7 +1432,7 @@ mod tests {
         bytes: &[u8], extension: &str, mirrored: bool,
     ) -> (String, std::path::PathBuf) {
         use sha2::Digest;
-        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = state.storage.uploads.join(format!("{hash}.{extension}"));
         tokio::fs::create_dir_all(&state.storage.uploads).await.unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();
@@ -1582,7 +1582,7 @@ mod tests {
         let order = Arc::new(Mutex::new(Vec::new()));
         let bytes = b"inflight bytes";
         use sha2::Digest;
-        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let hash = hex::encode(sha2::Sha256::digest(bytes));
         let upload = {
             let (started, release, present, order, hash) = (started.clone(), release.clone(), present.clone(), order.clone(), hash.clone());
             put(move || {
@@ -1974,7 +1974,7 @@ mod tests {
         use sha2::{Digest, Sha256};
         let keys = Keys::generate();
         let bytes = vec![11u8; 3 * 1024 * 1024];
-        let hash = format!("{:x}", Sha256::digest(&bytes));
+        let hash = hex::encode(Sha256::digest(&bytes));
         let size = bytes.len() as u64;
         let started = Arc::new(tokio::sync::Notify::new());
         let release = Arc::new(tokio::sync::Notify::new());
@@ -1997,7 +1997,7 @@ mod tests {
                         digest.update(&chunk);
                     }
                     assert_eq!(received, size);
-                    assert_eq!(format!("{:x}", digest.finalize()), expected);
+                    assert_eq!(hex::encode(digest.finalize()), expected);
                     Json(serde_json::json!({"sha256":expected,"size":size}))
                 }
             }))).await)

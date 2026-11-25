@@ -345,7 +345,7 @@ mod tests {
     /// A blob in the real Almond storage, owned by the creator (as an upload leaves it).
     async fn blob(f: &Fixture, bytes: &[u8]) -> String {
         use sha2::Digest;
-        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = f.state.storage.uploads.join(format!("{hash}.mp4"));
         tokio::fs::create_dir_all(&f.state.storage.uploads).await.unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();

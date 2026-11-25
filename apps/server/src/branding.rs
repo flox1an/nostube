@@ -156,7 +156,7 @@ struct Asset {
 
 impl Asset {
     fn new(kind: Kind, bytes: Bytes) -> Asset {
-        let version = format!("{:x}", Sha256::digest(&bytes))[..16].to_owned();
+        let version = hex::encode(Sha256::digest(&bytes))[..16].to_owned();
         Asset { kind, bytes, version }
     }
 
@@ -328,7 +328,7 @@ pub async fn store_blob(
     ext: Option<&str>,
 ) -> Result<String, String> {
     use almond::{models::BlobOrigin, services::file_storage::{self, BlobPublication, TempBlob}};
-    let hash = format!("{:x}", Sha256::digest(bytes));
+    let hash = hex::encode(Sha256::digest(bytes));
     file_storage::ensure_not_quarantined(state, &hash).await.map_err(|e| e.to_string())?;
     if let Some(metadata) = file_storage::get_file_metadata(state, &hash).await {
         if metadata.size == bytes.len() as u64 && metadata.origin == BlobOrigin::Upload {
@@ -578,7 +578,7 @@ mod tests {
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
         let hash = store_blob(&state, &files[0].2, files[0].1, Some("png")).await.unwrap();
         let first = almond::services::file_storage::get_file_metadata(&state, &hash).await.unwrap();
-        assert_eq!(hash, format!("{:x}", Sha256::digest(&bytes)));
+        assert_eq!(hash, hex::encode(Sha256::digest(&bytes)));
         assert_eq!(first.extension.as_deref(), Some("png"));
         assert_eq!(first.mime_type.as_deref(), Some("image/png"));
         assert_eq!(first.size, bytes.len() as u64);

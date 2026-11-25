@@ -139,7 +139,7 @@ async fn profile_images(branding: &Branding, outbox: &Outbox, keys: &Keys, publi
         .filter(|(path, _, _)| matches!(*path, "/branding/logo" | "/branding/banner")).collect();
     // Pin desired bytes before publication: a superseded nsite may share these very blobs.
     use sha2::{Digest, Sha256};
-    outbox.retain("profile", images.iter().map(|(_, _, bytes)| format!("{:x}", Sha256::digest(bytes))).collect()).await?;
+    outbox.retain("profile", images.iter().map(|(_, _, bytes)| hex::encode(Sha256::digest(bytes))).collect()).await?;
     if public_origin(public) || public["reach"] != "public" {
         return Ok(Some(ready));
     }
@@ -592,8 +592,8 @@ mod tests {
         let banner = b"\x89PNG\r\n\x1a\nbanner";
         f.branding.store(Slot::Logo, Image::Png, Bytes::from_static(PNG)).unwrap();
         f.branding.store(Slot::Banner, Image::Png, Bytes::from_static(banner)).unwrap();
-        let logo_hash = format!("{:x}", Sha256::digest(PNG));
-        let banner_hash = format!("{:x}", Sha256::digest(banner));
+        let logo_hash = hex::encode(Sha256::digest(PNG));
+        let banner_hash = hex::encode(Sha256::digest(banner));
         f.sync(&managed(&keys)).await;
         assert!(f.stored(keys.public_key(), Kind::Metadata).await.is_empty(), "unconfirmed images defer the entire profile");
         for (hash, bytes) in [(&logo_hash, PNG), (&banner_hash, &banner[..])] {

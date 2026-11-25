@@ -49,7 +49,7 @@ pub struct File {
 fn millis() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64
 }
-fn hash(bytes: &[u8]) -> String { format!("{:x}", Sha256::digest(bytes)) }
+fn hash(bytes: &[u8]) -> String { hex::encode(Sha256::digest(bytes)) }
 fn enabled(public: &Value) -> bool { public["siteHosting"] == "nsite" && public["reach"] == "public" }
 
 pub fn url(public: &Value, key: PublicKey) -> Result<String, String> {
@@ -156,7 +156,7 @@ fn aggregate(paths: &[(String, String)]) -> String {
     lines.sort();
     let mut digest = Sha256::new();
     for line in lines { digest.update(line.as_bytes()); }
-    format!("{:x}", digest.finalize())
+    hex::encode(digest.finalize())
 }
 fn manifest_tags(paths: &[(String, String)], public: &Value, aggregate: &str) -> Vec<Vec<String>> {
     paths.iter().map(|(path, hash)| vec!["path".into(), path.clone(), hash.clone()])

@@ -12,8 +12,8 @@ use std::{
 };
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2, PasswordHash, PasswordVerifier,
+    password_hash::{phc::PasswordHash, PasswordHasher, PasswordVerifier},
+    Argon2,
 };
 use axum::{
     extract::{Form, Query, State},
@@ -22,7 +22,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use hmac::{Hmac, Mac};
+use hmac::{KeyInit, Mac, SimpleHmac};
 use nostr::prelude::{Event, Keys, PublicKey};
 use serde::Deserialize;
 use sha2::Sha256;
@@ -170,7 +170,7 @@ impl AdminState {
             let token = secrets.setup_token.as_deref().ok_or("unregistered admin has no setup token")?;
             // Fragments stay out of HTTP access logs and Referrer headers.
             let link = format!("{setup_origin}/admin/setup#token={token}");
-            let code = qrcode::QrCode::new(link.as_bytes())?;
+            let code = qrcode::QrCode::new(link.as_bytes()).map_err(|e| format!("setup QR code: {e}"))?;
             let qr = code.render::<qrcode::render::unicode::Dense1x2>()
                 .light_color(qrcode::render::unicode::Dense1x2::Dark)
                 .dark_color(qrcode::render::unicode::Dense1x2::Light)
@@ -226,9 +226,9 @@ impl AdminState {
 // ── Sessions (HMAC-signed expiry, no server-side store) ─────────────────────
 
 fn sign_session(secret_hex: &str, expires: u64) -> String {
-    let mut mac = Hmac::<Sha256>::new_from_slice(secret_hex.as_bytes()).expect("hmac key");
+    let mut mac = SimpleHmac::<Sha256>::new_from_slice(secret_hex.as_bytes()).expect("hmac key");
     mac.update(expires.to_string().as_bytes());
-    format!("{expires:x}.{:x}", mac.finalize().into_bytes())
+    format!("{expires:x}.{}", hex::encode(mac.finalize().into_bytes()))
 }
 
 /// Ok(()) if the cookie is a valid, unexpired session for this secrets store.
@@ -261,7 +261,7 @@ fn now_secs() -> u64 {
 }
 
 fn random_hex(bytes: usize) -> String {
-    use rand::RngCore;
+    use rand::Rng;
     let mut buf = vec![0u8; bytes];
     rand::rng().fill_bytes(&mut buf);
     buf.iter().map(|b| format!("{b:02x}")).collect()
@@ -372,9 +372,7 @@ fn verify_nip98(state: &AdminState, headers: &HeaderMap, path: &str) -> Result<P
 }
 
 fn password_hash(pw: &str) -> Result<String, BoxError> {
-    Ok(Argon2::default()
-        .hash_password(pw.as_bytes(), &SaltString::generate(&mut OsRng))?
-        .to_string())
+    Ok(Argon2::default().hash_password(pw.as_bytes())?.to_string())
 }
 
 fn password_ok(hash: &str, pw: &str) -> bool {
@@ -2357,7 +2355,7 @@ mod tests {
         big.resize(512 * 1024 + 1, 0);
         let html = b"<!doctype html>".to_vec();
         let hashes: Vec<String> = [PNG.to_vec(), big, html].into_iter().map(|bytes| {
-            let hash = format!("{:x}", Sha256::digest(&bytes));
+            let hash = hex::encode(Sha256::digest(&bytes));
             fake.insert(&s3_key(&hash, "png"), &bytes);
             hash
         }).collect();
@@ -2387,7 +2385,7 @@ mod tests {
         let (_, dir, cookie) = studio_fixture().await;
         let c = Some(cookie.as_str());
         let in_s3 = b"a video stored in the bucket".to_vec();
-        let s3_hash = format!("{:x}", Sha256::digest(&in_s3));
+        let s3_hash = hex::encode(Sha256::digest(&in_s3));
         fake.insert(&s3_key(&s3_hash, "mp4"), &in_s3);
         fake.stop().await;
         // The instance starts with the bucket down.
@@ -2401,7 +2399,7 @@ mod tests {
         assert!(body["move"]["state"].is_string(), "{body}");
         // Local blobs keep playing; a blob that may be in S3 answers 503, not 404.
         let local = b"a video stored on this machine".to_vec();
-        let local_hash = format!("{:x}", Sha256::digest(&local));
+        let local_hash = hex::encode(Sha256::digest(&local));
         let path = blossom.storage.uploads.join(format!("{local_hash}.mp4"));
         tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
         tokio::fs::write(&path, &local).await.unwrap();
@@ -3069,7 +3067,7 @@ mod tests {
         std::fs::write(dir.join("config.toml"), config).unwrap();
 
         let bytes = b"scheduled video";
-        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = blossom.storage.uploads.join(format!("{hash}.mp4"));
         tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();
@@ -3255,7 +3253,7 @@ mod tests {
     #[tokio::test]
     async fn branding_activates_only_valid_local_blossom_images_without_reuploading() {
         use sha2::{Digest, Sha256};
-        let hash = format!("{:x}", Sha256::digest(PNG));
+        let hash = hex::encode(Sha256::digest(PNG));
         let (_, dir, cookie, _, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let keys = Keys::generate();
         let mut live = stores(&dir).await;

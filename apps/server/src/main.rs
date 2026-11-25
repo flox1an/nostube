@@ -803,7 +803,7 @@ mod tests {
             boot_id: "test".into(), admin: None, outbox: outbox.clone(), signer: Default::default(),
         };
         let upload = |bytes: &'static [u8], mirrored: bool| {
-            let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+            let hash = hex::encode(sha2::Sha256::digest(bytes));
             let expiration = (Timestamp::now().as_secs() + 600).to_string();
             let auth = EventBuilder::new(Kind::Custom(24242), hash.clone()).tags([
                 Tag::parse(["t", "upload"]).unwrap(), Tag::parse(["x", &hash]).unwrap(),
@@ -942,7 +942,7 @@ mod tests {
         use base64::Engine;
         use nostr::prelude::FinalizeEvent;
         use sha2::Digest;
-        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let hash = hex::encode(sha2::Sha256::digest(bytes));
         let expiration = (nostr::prelude::Timestamp::now().as_secs() + 600).to_string();
         let auth = nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(24242), hash.clone())
             .tags([

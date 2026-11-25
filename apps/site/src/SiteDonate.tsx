@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { lastValueFrom, toArray } from 'rxjs'
 import { use$, useEventStore } from 'applesauce-react/hooks'
-import { verifyEvent } from 'nostr-tools'
+import { verifyEvent, type NostrEvent } from 'nostr-tools'
 import { QRCodeSVG } from 'qrcode.react'
 import { HandHeart, Zap } from 'lucide-react'
 import { instanceRelays, type InstanceConfig } from '@nostube/core/instance-config'
@@ -35,7 +35,7 @@ function usePaymentTargets(pubkey: string, relays: string[]): PaymentTarget[] {
     const request = pool.request(relaysKey.split(','), [
       { kinds: [PAYMENT_TARGETS_KIND], authors: [pubkey], limit: 1 },
     ])
-    lastValueFrom(request.pipe(toArray()), { defaultValue: [] })
+    lastValueFrom(request.pipe(toArray()), { defaultValue: [] as NostrEvent[] })
       .then(events => {
         // A relay could hand out someone else's addresses: only the creator's signature counts.
         const newest = events

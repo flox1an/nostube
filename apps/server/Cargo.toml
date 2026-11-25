@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 almond = { git = "https://github.com/flox1an/almond.git", rev = "3f75d3c8f7f66828e19b82a3f8e24f68c23dfcca", default-features = false }
 axum = { version = "0.8.9", features = ["ws"] }
-axum-server = { version = "0.8", features = ["tls-rustls"] }
+axum-server = { version = "0.9", features = ["tls-rustls"] }
 rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }
 rcgen = "0.14"
 tokio = { version = "1", features = ["full"] }
@@ -18,26 +18,27 @@ tower = { version = "0.5", features = ["util"] }
 # nip49: the managed signer keeps its key as an ncryptsec (ADR 0007). nostr 0.45.5 does not
 # compile with nip49 alone (its error helper is gated on nip46/nip59), hence nip59.
 nostr = { version = "0.45", features = ["nip49", "nip59"] }
-rusqlite = { version = "0.40", features = ["bundled"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
 rust-embed = { version = "8.12", features = ["debug-embed"] }
-parking_lot = "0.12"
+parking_lot = "0.13"
 mime_guess = "2"
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1", features = ["derive"] }
-toml = "0.9"
-argon2 = { version = "0.5", features = ["std"] }
-hmac = "0.12"
-rand = "0.9"
-base64 = "0.22"
+toml = "1.2"
+argon2 = "0.6"
+hmac = "0.13"
+rand = "0.10"
+base64 = "0.23"
 libc = "0.2"
-sha2 = "0.10"
+sha2 = "0.11"
+hex = "0.4"
 time = "0.3"
 x509-parser = "0.18"
-qrcode = { version = "0.14", default-features = false }
+qrcode = { version = "0.15", default-features = false }
 # The outbox (ADR 0009): publishing to mirror relays and BUD-04 mirror requests. Both are
 # already in the tree through axum and almond.
-tokio-tungstenite = { version = "0.29", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
 reqwest = { version = "0.13", features = ["json", "stream"] }
 futures-util = "0.3"

@@ -62,6 +62,15 @@ const EXPIRY_PURGE_EVERY: Duration = Duration::from_secs(600);
 const PLAY_RETENTION_DAYS: i64 = 365;
 /// Idle read connections kept for reuse.
 const IDLE_READERS: usize = 8;
+/// Max events one filter returns; a larger or missing `limit` is clamped (the clients ask ≤ 500).
+const MAX_LIMIT: usize = 500;
+/// Max filters in one REQ.
+const MAX_FILTERS: usize = 10;
+/// Stored-event queries running at once; each holds a blocking thread and a read connection.
+const MAX_QUERIES: usize = 32;
+/// A client that takes longer than this to accept one message is dropped, so a socket nobody
+/// reads cannot hold a query (and its thread and read snapshot) forever.
+const SEND_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Schema v1 (`PRAGMA user_version`): upstream's `event` + `tag` tables minus NIP-05,
 /// NIP-26, accounts and invoices. `d_tag` holds the identifier of addressable events
@@ -239,6 +248,8 @@ struct Inner {
     live: broadcast::Sender<Arc<Event>>,
     /// Whether a served video file counts as a play (`site.countPlays`), toggled while running.
     count_plays: AtomicBool,
+    /// Bounds concurrent stored-event queries (`MAX_QUERIES`).
+    queries: Arc<tokio::sync::Semaphore>,
 }
 
 impl Inner {
@@ -301,7 +312,12 @@ impl Relay {
              WHERE created_at = 0;"
         )?;
         {
-            let mut rows = writer.prepare("SELECT event_hash, content FROM event")?;
+            // Only writer events keep media: a visitor naming a video's hash must not pin it.
+            writer.execute_batch("DELETE FROM media_ref WHERE event_hash IN (SELECT event_hash FROM visitor_event)")?;
+            let mut rows = writer.prepare(
+                "SELECT event_hash, content FROM event e
+                 WHERE NOT EXISTS (SELECT 1 FROM visitor_event v WHERE v.event_hash = e.event_hash)",
+            )?;
             for row in rows.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)))? {
                 let (id, content) = row?;
                 for hash in media_hashes(&content) {
@@ -343,6 +359,7 @@ impl Relay {
             nip11: parking_lot::RwLock::new(nip11_doc(cfg.name, cfg.description)),
             live: broadcast::channel(1024).0,
             count_plays: AtomicBool::new(false),
+            queries: Arc::new(tokio::sync::Semaphore::new(MAX_QUERIES)),
         }));
         tokio::spawn(purge_expired(Arc::downgrade(&relay.0)));
         Ok(relay)
@@ -404,12 +421,15 @@ impl Relay {
     }
 
     /// Streams the stored events matching `filters` as ready-to-send `EVENT` messages.
-    /// The query stops when the receiver is dropped (client gone).
-    fn query(&self, sub: &SubscriptionId, filters: Vec<Filter>) -> mpsc::Receiver<String> {
+    /// The query stops when the receiver is dropped (client gone). Waits for one of the
+    /// `MAX_QUERIES` slots.
+    async fn query(&self, sub: &SubscriptionId, filters: Vec<Filter>) -> mpsc::Receiver<String> {
         let (tx, rx) = mpsc::channel(256);
         let prefix = format!("[\"EVENT\",{},", serde_json::Value::from(sub.as_str()));
         let inner = self.0.clone();
+        let Ok(permit) = inner.queries.clone().acquire_owned().await else { return rx };
         tokio::task::spawn_blocking(move || {
+            let _permit = permit;
             let conn = match inner.reader() {
                 Ok(c) => c,
                 Err(e) => return tracing::warn!("relay: opening read connection: {e}"),
@@ -553,12 +573,19 @@ impl Relay {
                                 vec![RelayMessage::closed(id, "invalid: subscription id is longer than 256 characters")]
                             } else if subs.len() >= MAX_SUBSCRIPTIONS && !subs.contains_key(&id) {
                                 vec![RelayMessage::closed(id, "error: too many subscriptions (max 32)")]
+                            } else if filters.len() > MAX_FILTERS {
+                                vec![RelayMessage::closed(id, "invalid: too many filters (max 10)")]
                             } else {
-                                let filters: Vec<Filter> = filters.into_iter().map(|f| f.into_owned()).collect();
-                                let mut stored = self.query(&id, filters.clone());
+                                // Only client REQs are clamped; the server's own pages (`stored`) are not.
+                                let filters: Vec<Filter> = filters.into_iter().map(|f| {
+                                    let mut f = f.into_owned();
+                                    f.limit = Some(f.limit.map_or(MAX_LIMIT, |l| l.min(MAX_LIMIT)));
+                                    f
+                                }).collect();
+                                let mut stored = self.query(&id, filters.clone()).await;
                                 subs.insert(id.clone(), filters);
                                 while let Some(text) = stored.recv().await {
-                                    if ws.send(Message::Text(text.into())).await.is_err() {
+                                    if !matches!(tokio::time::timeout(SEND_TIMEOUT, ws.send(Message::Text(text.into()))).await, Ok(Ok(()))) {
                                         return;
                                     }
                                 }
@@ -590,7 +617,7 @@ impl Relay {
                 },
             };
             for m in out {
-                if ws.send(Message::Text(m.as_json().into())).await.is_err() {
+                if !matches!(tokio::time::timeout(SEND_TIMEOUT, ws.send(Message::Text(m.as_json().into()))).await, Ok(Ok(()))) {
                     return;
                 }
             }
@@ -1263,6 +1290,8 @@ fn admit(
         return Ok(Err(refusal));
     }
     let saved = persist(conn, ev, &[], false)?;
+    // A visitor's media tags are only text: they never keep a creator's blob alive.
+    conn.execute("DELETE FROM media_ref WHERE event_hash = ?", params![ev.id.as_bytes().as_slice()])?;
     if matches!(saved, Saved::Stored | Saved::Duplicate) && ev.kind.as_u16() != 5 {
         conn.execute(
             "INSERT OR IGNORE INTO visitor_event (event_hash, author) VALUES (?, ?)",
@@ -1627,6 +1656,7 @@ fn nip11_doc(name: String, description: String) -> String {
         limitation: Some(Limitation {
             max_message_length: Some(MAX_MESSAGE_BYTES as i32),
             max_subscriptions: Some(MAX_SUBSCRIPTIONS as i32),
+            max_limit: Some(MAX_LIMIT as i32),
             max_subid_length: Some(MAX_SUBID_LEN as i32),
             created_at_upper_limit: Some(Timestamp::from(MAX_FUTURE_SECS)),
             restricted_writes: Some(true),
@@ -1955,6 +1985,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_visitor_naming_a_video_hash_cannot_keep_it_after_deletion() {
+        let (writer, visitor) = (Keys::generate(), Keys::generate());
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let media = "e".repeat(64);
+        let video = ev(&writer, 21, now, "video", &[&["imeta", &format!("url https://m.example/{media}.mp4")]]);
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        let (id, author) = (video.id.to_hex(), writer.public_key().to_hex());
+        let comment = ev(&visitor, 1111, now, "pin", &[
+            &["E", &id, "", &author], &["K", "21"], &["P", &author],
+            &["e", &id, "", &author], &["k", "21"], &["p", &author], &["x", &media],
+        ]);
+        assert!(ok_status(relay.ingest(comment).await).0);
+        assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &id]])).await).0);
+        let queued: i64 = relay.0.writer.lock().query_row(
+            "SELECT COUNT(*) FROM outbox WHERE kind='cleanup' AND ref_id=?", [&media], |r| r.get(0)).unwrap();
+        assert_eq!(queued, 1);
+    }
+
+    #[tokio::test]
     async fn relay_expiration() {
         let a = Keys::generate();
         let relay = open(vec![a.public_key()]);
@@ -2000,7 +2050,7 @@ mod tests {
     }
 
     async fn queried(relay: &Relay) -> Vec<Event> {
-        let mut rx = relay.query(&SubscriptionId::new("test"), vec![Filter::new()]);
+        let mut rx = relay.query(&SubscriptionId::new("test"), vec![Filter::new()]).await;
         let mut events = Vec::new();
         while let Some(json) = rx.recv().await {
             let value: serde_json::Value = serde_json::from_str(&json).unwrap();

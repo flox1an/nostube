@@ -472,15 +472,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
         return relay::handle(app.relay, req).await;
     }
-    if path == "/admin" || path.starts_with("/admin/") {
+    if path == "/admin" || path.starts_with("/admin/") || path.starts_with("/api/admin/") {
         return match &app.admin {
-            Some(router) => router.clone().oneshot(req).await.into_response(),
-            None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
-        };
-    }
-    if path.starts_with("/api/admin/") {
-        return match &app.admin {
-            Some(router) => router.clone().oneshot(req).await.into_response(),
+            Some(router) => no_framing(router.clone().oneshot(req).await.into_response()),
             None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         };
     }
@@ -530,14 +524,48 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
             return (StatusCode::SERVICE_UNAVAILABLE, [(header::RETRY_AFTER, "5")],
                 "this blob is being moved to S3; retry the upload").into_response();
         }
+        // Almond checks each chunk against the quota, never the whole upload it adds up to.
+        if req.method() == Method::PATCH {
+            let length = req.headers().get("upload-length").and_then(|h| h.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
+            if let (Some(length), Ok(state)) = (length, outbox::storage(&app.outbox)) {
+                // ponytail: parallel chunked sessions can still overshoot together; reserve
+                // per session in Almond if several writers upload at once near the quota.
+                if let Err(error) = almond::services::file_storage::ensure_storage_capacity(&state, length).await {
+                    return error.into_response();
+                }
+            }
+        }
+        // Almond lets any allowed writer delete any blob; here only its owner may, and never
+        // one a stored event, a scheduled video or the nsite still uses.
+        let delete = (req.method() == Method::DELETE).then(|| blob_hash(path.trim_start_matches('/'))).flatten();
+        let _delete_guard = match (&delete, &auth) {
+            (Some(hash), Some(auth)) => {
+                let guard = outbox::MEDIA_LIFECYCLE.lock().await;
+                match app.outbox.may_delete(hash.clone(), auth.pubkey).await {
+                    Ok(true) => Some(guard),
+                    Ok(false) => return (StatusCode::FORBIDDEN, "only the owner may delete this blob, and only while nothing uses it").into_response(),
+                    Err(error) => {
+                        tracing::warn!("cannot check blob deletion: {error}");
+                        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                    }
+                }
+            }
+            _ => None,
+        };
         let local_read = if matches!(*req.method(), Method::GET | Method::HEAD) {
             match (outbox::storage(&app.outbox), blob_hash(path.trim_start_matches('/'))) {
                 (Ok(state), Some(hash)) => storage_move::local_read(&state, &hash).await,
                 _ => None,
             }
         } else { None };
-        let res = app.blossom.oneshot(req).await.into_response();
+        let res = sandboxed(app.blossom.oneshot(req).await.into_response());
         drop(local_read);
+        if let (Some(hash), Some(auth), true) = (delete, &auth, res.status().is_success()) {
+            // The local copy is gone; cleanup now only passes the deletion on to the mirrors.
+            if let Err(error) = app.outbox.delete_blobs(hash, auth.pubkey.to_hex(), vec![]).await {
+                tracing::warn!("cannot queue mirror deletion: {error}");
+            }
+        }
         if let Some(hash) = count.and_then(|name| blob_hash(&name)).filter(|_| is_served_video(&res)) {
             let relay = app.relay.clone();
             tokio::spawn(async move { relay.count_view(hash).await });
@@ -577,7 +605,7 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return nostr_json(&app, req.uri().query());
     }
     if file == "studio" || file.starts_with("studio/") {
-        return studio_asset(file);
+        return no_framing(studio_asset(file));
     }
     let managed = app.signer.lock().clone().and_then(Result::ok).map(|key| key.public_key());
     if let Some(location) = nsite::redirect(&app.branding.public_config(), managed, &path, req.uri().query()) {
@@ -607,6 +635,26 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let shell = std::str::from_utf8(&shell.data).expect("index.html is UTF-8");
     let html = seo::shell(&app.relay, &app.branding.public_config(), &path, shell).await;
     ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], html).into_response()
+}
+
+/// Blobs come from allowed writers, who hold no admin rights (CONTEXT.md): whatever type a
+/// blob was uploaded with, it must never run script on this origin, where the admin session
+/// lives. `<video>`, `<img>` and fetches of it still work; a top-level page of it is inert.
+fn sandboxed(mut res: Response) -> Response {
+    let headers = res.headers_mut();
+    headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    headers.insert(header::CONTENT_SECURITY_POLICY,
+        header::HeaderValue::from_static("default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"));
+    res
+}
+
+/// The admin area and the studio are never framed (clickjacking); `embed.html` and the site are.
+fn no_framing(mut res: Response) -> Response {
+    let headers = res.headers_mut();
+    headers.insert(header::X_FRAME_OPTIONS, header::HeaderValue::from_static("DENY"));
+    headers.insert(header::CONTENT_SECURITY_POLICY, header::HeaderValue::from_static("frame-ancestors 'none'"));
+    headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    res
 }
 
 /// NIP-05 for both identities (ADR 0012); any web client may read it, hence the `*`.
@@ -887,6 +935,92 @@ mod tests {
         assert_eq!(response.headers()[header::CONTENT_TYPE], "application/nostr+json");
         let req = Request::builder().uri("/embed.html").body(Body::empty()).unwrap();
         assert_eq!(dispatch(State(mirror_app), req).await.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn writer_blobs_cannot_script_the_admin_origin_or_delete_what_others_own() {
+        use base64::Engine;
+        use nostr::prelude::{EventBuilder, FinalizeEvent, Keys, Kind, Tag, Timestamp};
+        use sha2::Digest;
+        let dir = std::env::temp_dir().join(format!("nostube-blob-guard-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (alice, bob) = (Keys::generate(), Keys::generate());
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://instance.example".into());
+        cfg.allowed_npubs = vec![alice.public_key(), bob.public_key()];
+        cfg.storage_min_free = 0;
+        cfg.storage_max_size = 1 << 20;
+        let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
+            writers: vec![alice.public_key(), bob.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
+        }).unwrap();
+        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror { relays: vec![], blossom: vec![] }).unwrap();
+        outbox.attach_storage(state.clone());
+        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let app = App {
+            blossom: almond::create_app(state.clone()), relay: relay.clone(), branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "t".into(), admin: None, outbox, signer: Default::default(),
+        };
+        let auth = |key: &Keys, verb: &str, hash: &str| {
+            let expiration = (Timestamp::now().as_secs() + 600).to_string();
+            let event = EventBuilder::new(Kind::Custom(24242), verb).tags([
+                Tag::parse(["t", verb]).unwrap(), Tag::parse(["x", hash]).unwrap(),
+                Tag::parse(["expiration", &expiration]).unwrap(),
+            ]).finalize(key).unwrap();
+            format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(event.as_json()))
+        };
+        let upload = |key: &Keys, bytes: &'static [u8], mime: &str| {
+            let hash = hex::encode(sha2::Sha256::digest(bytes));
+            let req = Request::builder().method(Method::PUT).uri("/upload")
+                .header(header::AUTHORIZATION, auth(key, "upload", &hash))
+                .header(header::CONTENT_TYPE, mime).header("x-sha-256", &hash)
+                .header(header::CONTENT_LENGTH, bytes.len())
+                .body(Body::from(bytes)).unwrap();
+            (req, hash)
+        };
+        let delete = |key: &Keys, hash: &str| Request::builder().method(Method::DELETE).uri(format!("/{hash}"))
+            .header(header::AUTHORIZATION, auth(key, "delete", hash)).body(Body::empty()).unwrap();
+
+        // An HTML blob is served inert: no sniffing, no script, no same-origin access.
+        let (req, page) = upload(&alice, b"<script>fetch('/api/admin/config')</script>", "text/html");
+        let res = dispatch(State(app.clone()), req).await;
+        assert!(res.status().is_success(), "{:?}", axum::body::to_bytes(res.into_body(), 4096).await);
+        let res = dispatch(State(app.clone()), Request::builder().uri(format!("/{page}.html")).body(Body::empty()).unwrap()).await;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+        assert!(res.headers()[header::CONTENT_SECURITY_POLICY].to_str().unwrap().contains("sandbox"));
+
+        // Bob may not delete Alice's blob; Alice may, until a stored event uses it.
+        assert_eq!(dispatch(State(app.clone()), delete(&bob, &page)).await.status(), StatusCode::FORBIDDEN);
+        assert!(state.file_index.get(&page).await.is_some());
+        let (req, video) = upload(&alice, b"video bytes", "video/mp4");
+        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        let event = EventBuilder::new(Kind::Custom(21), "v")
+            .tags([Tag::parse(["imeta", &format!("url https://instance.example/{video}.mp4"), &format!("x {video}")]).unwrap()])
+            .finalize(&alice).unwrap();
+        assert!(matches!(relay.ingest(event).await, nostr::prelude::RelayMessage::Ok { status: true, .. }));
+        assert_eq!(dispatch(State(app.clone()), delete(&alice, &video)).await.status(), StatusCode::FORBIDDEN);
+        assert!(state.file_index.get(&video).await.is_some());
+        assert_eq!(dispatch(State(app.clone()), delete(&alice, &page)).await.status(), StatusCode::NO_CONTENT);
+        assert!(state.file_index.get(&page).await.is_none());
+
+        // A chunked upload larger than the remaining quota is refused before any chunk lands.
+        let hash = hex::encode(sha2::Sha256::digest(b"x"));
+        let req = Request::builder().method(Method::PATCH).uri("/upload")
+            .header(header::AUTHORIZATION, auth(&alice, "upload", &hash))
+            .header("x-sha-256", &hash).header("upload-type", "video/mp4")
+            .header("upload-length", (2u64 << 20).to_string()).header("upload-offset", "0")
+            .header(header::CONTENT_TYPE, "application/octet-stream").header(header::CONTENT_LENGTH, "1")
+            .body(Body::from(&b"x"[..])).unwrap();
+        assert_eq!(dispatch(State(app.clone()), req).await.status(), StatusCode::INSUFFICIENT_STORAGE);
+
+        // The studio cannot be framed; the embed player can.
+        let res = dispatch(State(app.clone()), Request::builder().uri("/studio/").body(Body::empty()).unwrap()).await;
+        assert_eq!(res.headers()[header::X_FRAME_OPTIONS], "DENY");
+        let res = dispatch(State(app), Request::builder().uri("/embed.html").body(Body::empty()).unwrap()).await;
+        assert!(res.headers().get(header::X_FRAME_OPTIONS).is_none());
     }
 
     #[test]

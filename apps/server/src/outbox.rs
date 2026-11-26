@@ -468,6 +468,24 @@ impl Outbox {
         }).await
     }
 
+    /// May `author` delete the local blob `hash` (BUD-02 `DELETE`)? Only its owner (the recorded
+    /// uploader, else Almond's indexed pubkey for blobs from before ownership was recorded), and
+    /// only while no stored event, scheduled video or retained set uses it. Call it under
+    /// `MEDIA_LIFECYCLE`.
+    pub async fn may_delete(&self, hash: String, author: nostr::prelude::PublicKey) -> Result<bool, String> {
+        let key = hash.clone();
+        let recorded = self.db(move |conn| {
+            conn.query_row("SELECT author FROM blob_owner WHERE hash = ?", [key], |r| r.get::<_, String>(0)).optional()
+        }).await?;
+        let owner = match recorded {
+            Some(owner) => Some(owner),
+            None => almond::services::file_storage::get_file_metadata(&storage(self)?, &hash).await
+                .and_then(|m| m.pubkey).map(|p| p.to_hex()),
+        };
+        if owner.as_deref() != Some(author.to_hex().as_str()) { return Ok(false); }
+        Ok(!retained_hashes(self).await?.contains(&hash))
+    }
+
     /// Only profile metadata, relay lists and Blossom lists may go to indexers, including old
     /// mirror jobs and explicit deliveries. Remember indexer targets across private reach/restarts.
     pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>, public: bool) -> Result<(), String> {

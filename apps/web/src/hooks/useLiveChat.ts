@@ -1,5 +1,5 @@
 import { use$, useEventStore } from 'applesauce-react/hooks'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { Filter } from 'nostr-tools'
 import type { LiveStream } from '@nostube/core/live-stream'
 import { useAppContext } from './useAppContext'
@@ -44,10 +44,12 @@ export function useLiveChat(stream: LiveStream) {
 
   const [exhausted, setExhausted] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
-  useEffect(() => {
+  const [chatAddress, setChatAddress] = useState(address)
+  if (chatAddress !== address) {
+    setChatAddress(address)
     setExhausted(false)
     setLoadingOlder(false)
-  }, [address])
+  }
 
   // Receipts via #e can predate the oldest chat event; the page cursor follows the #a feed only.
   const oldest = useMemo(

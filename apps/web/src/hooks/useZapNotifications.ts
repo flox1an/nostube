@@ -42,7 +42,9 @@ export function useZapNotifications() {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
   const readRelays = useReadRelays()
-  const [notifications, setNotifications] = useState<ZapNotification[]>([])
+  const [notifications, setNotifications] = useState<ZapNotification[]>(
+    () => getZapNotificationStorage().notifications
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
@@ -51,12 +53,6 @@ export function useZapNotifications() {
   // Store relays in ref to avoid recreating callback
   const relaysRef = useRef<string[]>([])
   relaysRef.current = [...new Set([...readRelays, ...ZAP_RELAYS])]
-
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    const storage = getZapNotificationStorage()
-    setNotifications(storage.notifications)
-  }, [])
 
   // Calculate unread count
   const unreadCount = useMemo(() => {

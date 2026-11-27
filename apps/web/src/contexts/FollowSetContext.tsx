@@ -165,9 +165,11 @@ export function FollowSetProvider({ children }: FollowSetProviderProps) {
     pubkey ? readCache(pubkey) : EMPTY
   )
 
-  useEffect(() => {
+  const [cachedFor, setCachedFor] = useState(pubkey)
+  if (cachedFor !== pubkey) {
+    setCachedFor(pubkey)
     setCachedPubkeys(pubkey ? readCache(pubkey) : EMPTY)
-  }, [pubkey])
+  }
 
   useEffect(() => {
     if (!pubkey || !followSetEvent) return

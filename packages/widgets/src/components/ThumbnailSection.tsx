@@ -50,7 +50,8 @@ export function ThumbnailSection({
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isImageLoaded, setIsImageLoaded] = useState(false)
+  // The src that finished loading; a different thumbnail starts as not loaded.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoDuration, setVideoDuration] = useState(0)
@@ -155,11 +156,6 @@ export function ThumbnailSection({
     }
   }, [videoUrl])
 
-  // Reset image loaded state when thumbnail source changes
-  useEffect(() => {
-    setIsImageLoaded(false)
-  }, [uploadedThumbnailUrl, thumbnailBlob])
-
   const handleLoadedMetadata = useCallback(() => {
     const video = videoRef.current
     if (!video) return
@@ -213,6 +209,7 @@ export function ThumbnailSection({
     if (!thumbnailBlob || !thumbnailSrc || uploadedThumbnailUrl) return
     return () => URL.revokeObjectURL(thumbnailSrc)
   }, [thumbnailBlob, thumbnailSrc, uploadedThumbnailUrl])
+  const isImageLoaded = loadedSrc === thumbnailSrc
 
   const FRAME_STEP = 1 / 30
 
@@ -321,7 +318,7 @@ export function ThumbnailSection({
               src={thumbnailSrc}
               alt={t('upload.thumbnail.uploaded', { defaultValue: 'Thumbnail' })}
               className={`rounded border max-h-80 object-contain transition-opacity duration-200 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onLoad={() => setIsImageLoaded(true)}
+              onLoad={() => setLoadedSrc(thumbnailSrc)}
             />
             {isImageLoaded && (
               <Button

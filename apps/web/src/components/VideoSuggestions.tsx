@@ -584,11 +584,9 @@ function VideoSuggestionsContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    if (!scoresReady && trustPubkeys.some(pk => personalScores.get(pk) !== null)) {
-      setScoresReady(true)
-    }
-  }, [personalScores, trustPubkeys, scoresReady])
+  if (!scoresReady && trustPubkeys.some(pk => personalScores.get(pk) !== null)) {
+    setScoresReady(true)
+  }
 
   // Fade in only when scores arrived after a delay (not cached from the start)
   const shouldFadeIn = !hadScoresOnMount && scoresReady

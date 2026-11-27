@@ -142,11 +142,9 @@ export default function SinglePlaylistPage() {
   }, [playlistEvent])
 
   // Initialize ordered video IDs from videoRefs
-  useEffect(() => {
-    if (videoRefs.length > 0 && orderedVideoIds.length === 0) {
-      setOrderedVideoIds(videoRefs.map(ref => ref.id))
-    }
-  }, [videoRefs, orderedVideoIds.length])
+  if (videoRefs.length > 0 && orderedVideoIds.length === 0) {
+    setOrderedVideoIds(videoRefs.map(ref => ref.id))
+  }
 
   // Create a map from videoEvents for quick lookup
   const videoEventMap = useMemo(() => {

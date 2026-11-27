@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useHasProfile } from '@/hooks'
 import { OnboardingShell } from './OnboardingShell'
@@ -68,11 +68,9 @@ export function PhasedOnboardingDialog({
     return flow
   }, [hasProfile, t])
 
-  useEffect(() => {
-    setCurrentStepIndex(index => Math.min(index, steps.length - 1))
-  }, [steps.length])
-
-  const currentStep = steps[currentStepIndex] ?? steps[steps.length - 1]
+  // Steps can shrink (a profile appears): clamp the index instead of waiting for an effect.
+  const stepIndex = Math.min(currentStepIndex, steps.length - 1)
+  const currentStep = steps[stepIndex]
 
   const advance = useCallback(() => {
     setCurrentStepIndex(index => Math.min(index + 1, steps.length - 1))
@@ -109,7 +107,7 @@ export function PhasedOnboardingDialog({
       title={currentStep.title}
       description={currentStep.description}
       steps={steps}
-      currentStepIndex={currentStepIndex}
+      currentStepIndex={stepIndex}
       hero={hero}
     >
       {currentStep.id === 'account' && <PhaseIdentityStep onComplete={advance} />}

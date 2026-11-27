@@ -4,7 +4,7 @@ import { Button } from '@nostube/widgets/components/button'
 import { useCurrentUser } from '@/hooks'
 import { dismissAlert, isAlertDismissed } from '@/lib/dismissed-alerts'
 import { useTrustScore } from '@/hooks/useTrustScore'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 /** Minimum global NosTube score (0–1) for the author to show the mirror alert */
@@ -31,12 +31,14 @@ export function VideoAvailabilityAlert({
   const { t } = useTranslation()
   const currentUser = useCurrentUser()
   const { globalScore } = useTrustScore(authorPubkey)
-  const [isDismissed, setIsDismissed] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(() => isAlertDismissed(videoId, 'availability'))
 
-  // Check dismissed state on mount and when videoId changes
-  useEffect(() => {
+  // Re-read the dismissed state when videoId changes
+  const [dismissedFor, setDismissedFor] = useState(videoId)
+  if (dismissedFor !== videoId) {
+    setDismissedFor(videoId)
     setIsDismissed(isAlertDismissed(videoId, 'availability'))
-  }, [videoId])
+  }
 
   const handleDismiss = () => {
     dismissAlert(videoId, 'availability')

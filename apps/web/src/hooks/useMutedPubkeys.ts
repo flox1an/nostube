@@ -94,9 +94,11 @@ export function useMutedPubkeys() {
   const storageKey = useMemo(() => getStorageKey(pubkey), [pubkey])
   const [localPubkeys, setLocalPubkeys] = useState<string[]>(() => readMutedPubkeys(storageKey))
 
-  useEffect(() => {
+  const [loadedKey, setLoadedKey] = useState(storageKey)
+  if (loadedKey !== storageKey) {
+    setLoadedKey(storageKey)
     setLocalPubkeys(readMutedPubkeys(storageKey))
-  }, [storageKey])
+  }
 
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {

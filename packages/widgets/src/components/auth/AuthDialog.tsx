@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { KeyRound, UserPlus } from 'lucide-react'
 import { Button } from '../button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
@@ -44,9 +44,11 @@ export function AuthDialog({
   const [step, setStep] = useState<Step>('choice')
 
   // Always land back on the choice screen the next time this is opened.
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(isOpen)
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen)
     if (isOpen) setStep('choice')
-  }, [isOpen])
+  }
 
   if (step === 'login') {
     return (

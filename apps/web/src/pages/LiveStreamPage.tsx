@@ -74,9 +74,11 @@ function StreamViewer({
   useEffect(() => {
     document.title = pageTitle(stream.title)
   }, [stream.title])
-  useEffect(() => {
+  const [failedKey, setFailedKey] = useState(playbackKey)
+  if (failedKey !== playbackKey) {
+    setFailedKey(playbackKey)
     setPlaybackFailed(false)
-  }, [playbackKey])
+  }
   if (chatOnly)
     return (
       <div className="flex h-dvh flex-col overflow-hidden px-3 pt-2">

@@ -51,12 +51,13 @@ export function GlobalSearchBar({
     }
   }, [isMobileExpanded])
 
-  useEffect(() => {
-    if (!syncWithSearchParam) return
-    if (location.pathname === '/search') {
-      setSearchQuery(searchParam)
-    }
-  }, [location.pathname, searchParam, syncWithSearchParam])
+  // Mirror the URL's ?q= into the input on mount and whenever it changes (typing in between is kept).
+  const syncedParam = syncWithSearchParam && location.pathname === '/search' ? searchParam : null
+  const [prevSyncedParam, setPrevSyncedParam] = useState<string | null>(null)
+  if (prevSyncedParam !== syncedParam) {
+    setPrevSyncedParam(syncedParam)
+    if (syncedParam !== null) setSearchQuery(syncedParam)
+  }
 
   const { profiles, loading } = useSearchVideoAuthors({
     query: searchQuery,

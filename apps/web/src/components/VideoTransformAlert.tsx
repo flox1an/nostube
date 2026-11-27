@@ -12,7 +12,7 @@ import {
 } from '@/lib/video-transformation-detection'
 import { dismissAlert, isAlertDismissed } from '@/lib/dismissed-alerts'
 import { useTrustScore } from '@/hooks/useTrustScore'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 /** Minimum global NosTube score (0–1) for the author to show the transform alert */
 const MIN_GLOBAL_SCORE = 0.2
@@ -38,12 +38,14 @@ export function VideoTransformAlert({
   const { t } = useTranslation()
   const currentUser = useCurrentUser()
   const { globalScore } = useTrustScore(authorPubkey)
-  const [isDismissed, setIsDismissed] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(() => isAlertDismissed(videoId, 'transformation'))
 
-  // Check dismissed state on mount and when videoId changes
-  useEffect(() => {
+  // Re-read the dismissed state when videoId changes
+  const [dismissedFor, setDismissedFor] = useState(videoId)
+  if (dismissedFor !== videoId) {
+    setDismissedFor(videoId)
     setIsDismissed(isAlertDismissed(videoId, 'transformation'))
-  }, [videoId])
+  }
 
   const handleDismiss = () => {
     dismissAlert(videoId, 'transformation')

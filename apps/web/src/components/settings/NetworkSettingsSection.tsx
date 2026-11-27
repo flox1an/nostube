@@ -75,9 +75,11 @@ function CollapsibleSection({
   const [open, setOpen] = useState(defaultOpen)
   const contentId = `${id}-settings-section`
 
-  useEffect(() => {
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen)
+  if (prevDefaultOpen !== defaultOpen) {
+    setPrevDefaultOpen(defaultOpen)
     setOpen(defaultOpen)
-  }, [defaultOpen])
+  }
 
   return (
     <div id={id} className="border rounded-lg overflow-hidden">

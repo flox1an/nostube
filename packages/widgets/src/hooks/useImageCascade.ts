@@ -140,11 +140,17 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   // Candidate that actually decoded in the consumer's <img>.
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
 
-  useEffect(() => {
+  const [resetKey, setResetKey] = useState({ initialStage, rawImage, videoUrl })
+  if (
+    resetKey.initialStage !== initialStage ||
+    resetKey.rawImage !== rawImage ||
+    resetKey.videoUrl !== videoUrl
+  ) {
+    setResetKey({ initialStage, rawImage, videoUrl })
     setStage(initialStage)
     setRacing(false)
     setLoadedSrc(null)
-  }, [initialStage, rawImage, videoUrl])
+  }
 
   // Race timer: only relevant while we're actually attempting the proxied candidate, a raw
   // fallback exists to race it against, and the proxied candidate has not already arrived.

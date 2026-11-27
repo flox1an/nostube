@@ -56,15 +56,13 @@ export function TagInput({
     return results.filter(entry => !tags.includes(entry.tag))
   }, [inputValue, search, tags, disabled])
 
-  // Reset highlight when suggestions change
-  useEffect(() => {
+  // When the suggestions change: highlight the first one and open the dropdown if there are any.
+  const [prevSuggestions, setPrevSuggestions] = useState(suggestions)
+  if (prevSuggestions !== suggestions) {
+    setPrevSuggestions(suggestions)
     setHighlightedIndex(0)
-  }, [suggestions])
-
-  // Open dropdown when there are suggestions
-  useEffect(() => {
     setIsOpen(suggestions.length > 0)
-  }, [suggestions])
+  }
 
   // Scroll highlighted item into view
   useEffect(() => {

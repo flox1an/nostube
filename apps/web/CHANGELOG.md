@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.97] - 2026-11-27
+
+### Changed
+
+- Stricter static checks: TypeScript runs with `strict` everywhere, ESLint checks promises (no unhandled or misused ones), deprecated APIs and React hook rules, CI also checks formatting, dead code (knip), rustfmt and clippy, and the Node server and Vite config are type-checked. Fixes that fell out of it: a few effects that returned on some paths only, unawaited promises now marked, and a recursive untyped helper in the URL validator.
+- Several "reset when X changes" effects now derive or reset their state while rendering (login dialog, tag input, image cascade, dismissed alerts, live chat, muted list, follow set, global search box, thumbnail preview, onboarding steps, notifications), which saves a redundant render and a frame of stale state.
+- Browser transcoding passes its target bitrate through mediabunny's `Quality` instead of the deprecated `bitrate` option; the resulting encoder settings are the same.
+
+### Removed
+
+- Unused components, hooks and exports (for example the sidebar, chart, carousel, drawer and form primitives, the wallet connect dialog and the old video-upload sub-components) and 37 unused dependencies from the web app.
+
 ## [0.2.95] - 2026-11-25
 
 ### Added

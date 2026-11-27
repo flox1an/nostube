@@ -3217,8 +3217,7 @@ mod tests {
         fake.stop().await;
         // The instance starts with the bucket down.
         let (app, blossom, _) = router_with_s3(&dir, fake.settings()).await;
-        let _tasks =
-            almond::spawn_background_tasks(&blossom, &almond_config(&dir, Some(fake.settings())));
+        let _tasks = almond::spawn_background_tasks(&blossom);
         assert_eq!(
             send(&app, "/api/admin/storage", None, None).await.0,
             StatusCode::UNAUTHORIZED

@@ -1,6 +1,6 @@
 [package]
 name = "nostube-server"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 publish = false
 
@@ -8,7 +8,7 @@ publish = false
 # ported relay, local-ca TLS, /api/config and the embedded Nostube site (apps/site) and embed player.
 
 [dependencies]
-almond = { git = "https://github.com/flox1an/almond.git", rev = "3f75d3c8f7f66828e19b82a3f8e24f68c23dfcca", default-features = false }
+almond = { git = "https://github.com/flox1an/almond.git", rev = "69efa6dcddfbd5ad468c64dcd8d790b640c4c4dc", default-features = false }
 axum = { version = "0.8.9", features = ["ws"] }
 axum-server = { version = "0.9", features = ["tls-rustls"] }
 rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }
@@ -19,7 +19,7 @@ tower = { version = "0.5", features = ["util"] }
 # compile with nip49 alone (its error helper is gated on nip46/nip59), hence nip59.
 nostr = { version = "0.45", features = ["nip49", "nip59"] }
 rusqlite = { version = "0.43", features = ["bundled"] }
-rust-embed = { version = "8.12", features = ["debug-embed"] }
+rust-embed = { version = "8.14", features = ["debug-embed"] }
 parking_lot = "0.13"
 mime_guess = "2"
 serde_json = "1"

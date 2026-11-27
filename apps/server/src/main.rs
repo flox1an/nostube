@@ -367,7 +367,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     };
     let blossom = blossom_config(&cfg, &data, s3_secret).validate()?;
     let state = almond::build_state(&blossom).await?;
-    let _tasks = almond::spawn_background_tasks(&state, &blossom);
+    let _tasks = almond::spawn_background_tasks(&state);
     // Resumes an interrupted move to S3 (#174).
     let migration = storage_move::open(&data, state.clone())?;
     let relay = relay::Relay::open(

@@ -43,8 +43,19 @@ impl FakeS3 {
         let objects = Objects::default();
         let put_gate = Arc::new(tokio::sync::Semaphore::new(1));
         let put_started = Arc::new(tokio::sync::Notify::new());
-        let server = serve(listener, objects.clone(), put_gate.clone(), put_started.clone());
-        FakeS3 { addr, objects, put_gate, put_started, server: Mutex::new(Some(server)) }
+        let server = serve(
+            listener,
+            objects.clone(),
+            put_gate.clone(),
+            put_started.clone(),
+        );
+        FakeS3 {
+            addr,
+            objects,
+            put_gate,
+            put_started,
+            server: Mutex::new(Some(server)),
+        }
     }
 
     /// `http://127.0.0.1:<port>`; stays the same across `stop`/`resume`.
@@ -84,7 +95,6 @@ impl FakeS3 {
         self.put_started.notified().await;
     }
 
-
     /// Closes the listener and every connection: requests fail to connect. Objects are kept.
     pub async fn stop(&self) {
         let running = self.server.lock().take();
@@ -97,7 +107,12 @@ impl FakeS3 {
     /// Listens again on the same address with the same objects.
     pub async fn resume(&self) {
         let listener = tokio::net::TcpListener::bind(self.addr).await.unwrap();
-        *self.server.lock() = Some(serve(listener, self.objects.clone(), self.put_gate.clone(), self.put_started.clone()));
+        *self.server.lock() = Some(serve(
+            listener,
+            self.objects.clone(),
+            self.put_gate.clone(),
+            self.put_started.clone(),
+        ));
     }
 }
 
@@ -108,7 +123,10 @@ fn serve(
     put_started: Arc<tokio::sync::Notify>,
 ) -> (oneshot::Sender<()>, JoinHandle<()>) {
     let (shutdown, signal) = oneshot::channel::<()>();
-    let app = Router::new().fallback(handle).with_state((objects, put_gate, put_started)).layer(DefaultBodyLimit::disable());
+    let app = Router::new()
+        .fallback(handle)
+        .with_state((objects, put_gate, put_started))
+        .layer(DefaultBodyLimit::disable());
     let task = tokio::spawn(async move {
         axum::serve(listener, app)
             .with_graceful_shutdown(async {
@@ -121,7 +139,11 @@ fn serve(
 }
 
 async fn handle(
-    State((objects, put_gate, put_started)): State<(Objects, Arc<tokio::sync::Semaphore>, Arc<tokio::sync::Notify>)>,
+    State((objects, put_gate, put_started)): State<(
+        Objects,
+        Arc<tokio::sync::Semaphore>,
+        Arc<tokio::sync::Notify>,
+    )>,
     method: Method,
     uri: Uri,
     Query(query): Query<HashMap<String, String>>,
@@ -147,25 +169,37 @@ async fn handle(
         (Method::PUT, false) => {
             put_started.notify_one();
             let _gate = put_gate.acquire().await.unwrap();
-            objects.lock().insert(key.to_owned(), payload(&headers, &body));
+            objects
+                .lock()
+                .insert(key.to_owned(), payload(&headers, &body));
             (StatusCode::OK, [(header::ETAG, "\"fake\"")]).into_response()
         }
         (Method::GET, false) => {
             let Some(bytes) = objects.lock().get(key).cloned() else {
                 return error(StatusCode::NOT_FOUND, "NoSuchKey");
             };
-            let range = headers.get(header::RANGE).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix("bytes="));
+            let range = headers
+                .get(header::RANGE)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.strip_prefix("bytes="));
             let Some((start, end)) = range.and_then(|r| r.split_once('-')) else {
                 return (StatusCode::OK, bytes).into_response();
             };
             let total = bytes.len();
             let start: usize = start.parse().unwrap_or(0);
-            let end = end.parse::<usize>().map_or(total.saturating_sub(1), |e| e.min(total.saturating_sub(1)));
+            let end = end
+                .parse::<usize>()
+                .map_or(total.saturating_sub(1), |e| e.min(total.saturating_sub(1)));
             if start > end {
                 return error(StatusCode::RANGE_NOT_SATISFIABLE, "InvalidRange");
             }
             let content_range = format!("bytes {start}-{end}/{total}");
-            (StatusCode::PARTIAL_CONTENT, [(header::CONTENT_RANGE, content_range)], bytes[start..=end].to_vec()).into_response()
+            (
+                StatusCode::PARTIAL_CONTENT,
+                [(header::CONTENT_RANGE, content_range)],
+                bytes[start..=end].to_vec(),
+            )
+                .into_response()
         }
         (Method::DELETE, false) => {
             objects.lock().remove(key);
@@ -183,7 +217,10 @@ fn error(status: StatusCode, code: &str) -> Response {
 fn list(objects: &Objects, prefix: &str) -> Response {
     let esc = |s: &str| s.replace('&', "&amp;").replace('<', "&lt;");
     let objects = objects.lock();
-    let matching: Vec<_> = objects.iter().filter(|(k, _)| k.starts_with(prefix)).collect();
+    let matching: Vec<_> = objects
+        .iter()
+        .filter(|(k, _)| k.starts_with(prefix))
+        .collect();
     let contents: String = matching
         .iter()
         .map(|(k, v)| {
@@ -199,14 +236,26 @@ fn list(objects: &Objects, prefix: &str) -> Response {
         esc(prefix),
         matching.len()
     );
-    (StatusCode::OK, [(header::CONTENT_TYPE, "application/xml")], xml).into_response()
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/xml")],
+        xml,
+    )
+        .into_response()
 }
 
 /// The object bytes; a streaming upload arrives `aws-chunked` (`<hex size>[;ext]\r\n<data>\r\n`
 /// until a zero-size chunk, then trailers).
 fn payload(headers: &HeaderMap, body: &[u8]) -> Vec<u8> {
-    let value = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or("");
-    if !value("x-amz-content-sha256").starts_with("STREAMING-") && !value("content-encoding").contains("aws-chunked") {
+    let value = |name: &str| {
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+    };
+    if !value("x-amz-content-sha256").starts_with("STREAMING-")
+        && !value("content-encoding").contains("aws-chunked")
+    {
         return body.to_vec();
     }
     let mut out = Vec::new();
@@ -217,7 +266,9 @@ fn payload(headers: &HeaderMap, body: &[u8]) -> Vec<u8> {
             .and_then(|l| usize::from_str_radix(l.split(';').next().unwrap_or("").trim(), 16).ok())
             .unwrap_or(0);
         rest = &rest[line + 2..];
-        let Some(chunk) = rest.get(..size).filter(|_| size > 0) else { break };
+        let Some(chunk) = rest.get(..size).filter(|_| size > 0) else {
+            break;
+        };
         out.extend_from_slice(chunk);
         rest = rest.get(size + 2..).unwrap_or_default();
     }

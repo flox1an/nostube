@@ -26,9 +26,15 @@ const DISABLED: &str = "S3 storage is not enabled";
 static LOCAL_READS: tokio::sync::RwLock<()> = tokio::sync::RwLock::const_new(());
 
 /// Pin a local location until its reader has opened the file, not until streaming completes.
-pub(crate) async fn local_read(state: &AppState, hash: &str) -> Option<tokio::sync::RwLockReadGuard<'static, ()>> {
+pub(crate) async fn local_read(
+    state: &AppState,
+    hash: &str,
+) -> Option<tokio::sync::RwLockReadGuard<'static, ()>> {
     let guard = LOCAL_READS.read().await;
-    state.file_index.get(hash).await
+    state
+        .file_index
+        .get(hash)
+        .await
         .is_some_and(|m| matches!(m.location, FileLocation::Local(_)))
         .then_some(guard)
 }
@@ -65,12 +71,17 @@ pub struct Migration {
 pub fn open(data: &Path, state: AppState) -> Result<Arc<Migration>, String> {
     let path = data.join(FILE);
     let job = match std::fs::read(&path) {
-        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| format!("cannot parse {}: {e}", path.display()))?,
+        Ok(bytes) => serde_json::from_slice(&bytes)
+            .map_err(|e| format!("cannot parse {}: {e}", path.display()))?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Job::default(),
         Err(e) => return Err(format!("cannot read {}: {e}", path.display())),
     };
     let running = job.state == State::Running;
-    let migration = Arc::new(Migration { path, state, job: Mutex::new(job) });
+    let migration = Arc::new(Migration {
+        path,
+        state,
+        job: Mutex::new(job),
+    });
     if running {
         tokio::spawn(migration.clone().run());
     }
@@ -81,14 +92,19 @@ impl Migration {
     /// Called under MEDIA_LIFECYCLE before a writer could wait on this blob's mutation guard.
     pub(crate) fn moving(&self, hash: Option<&str>) -> bool {
         let job = self.job.lock();
-        job.state == State::Running && job.current.as_ref()
-            .is_some_and(|(current, _)| hash.is_none_or(|hash| hash == current))
+        job.state == State::Running
+            && job
+                .current
+                .as_ref()
+                .is_some_and(|(current, _)| hash.is_none_or(|hash| hash == current))
     }
 
     /// The `move` object of `GET /api/admin/storage`.
     pub async fn status(&self) -> Value {
-        let (local_files, local_bytes) =
-            local_uploads(&self.state).await.iter().fold((0u64, 0u64), |(n, b), (_, m)| (n + 1, b + m.size));
+        let (local_files, local_bytes) = local_uploads(&self.state)
+            .await
+            .iter()
+            .fold((0u64, 0u64), |(n, b), (_, m)| (n + 1, b + m.size));
         let job = self.job.lock().clone();
         json!({
             "state": job.state,
@@ -112,7 +128,10 @@ impl Migration {
             if job.state == State::Running {
                 return Err("the move is already running".into());
             }
-            let next = Job { state: State::Running, ..Job::default() };
+            let next = Job {
+                state: State::Running,
+                ..Job::default()
+            };
             save(&self.path, &next)?;
             *job = next;
         }
@@ -155,7 +174,8 @@ impl Migration {
                 let _media = crate::outbox::MEDIA_LIFECYCLE.lock().await;
                 self.update(|job| job.current = Some((hash.clone(), local.size)))?;
             }
-            let moved = move_one(&self.state, &s3, &hash, &local).await
+            let moved = move_one(&self.state, &s3, &hash, &local)
+                .await
                 .map_err(|error| format!("{hash}: {error}"))?;
             self.update(|job| {
                 job.current = None;
@@ -182,17 +202,30 @@ impl Migration {
 /// Indexed upload blobs that still live on local disk.
 async fn local_uploads(state: &AppState) -> Vec<(String, Arc<FileMetadata>)> {
     let mut blobs = state.file_index.snapshot().await;
-    blobs.retain(|(_, m)| m.origin == BlobOrigin::Upload && matches!(m.location, FileLocation::Local(_)));
+    blobs.retain(|(_, m)| {
+        m.origin == BlobOrigin::Upload && matches!(m.location, FileLocation::Local(_))
+    });
     blobs
 }
 
 async fn still_indexed(state: &AppState, hash: &str, local: &FileMetadata) -> bool {
-    state.file_index.get(hash).await.is_some_and(|m| m.location == local.location)
+    state
+        .file_index
+        .get(hash)
+        .await
+        .is_some_and(|m| m.location == local.location)
 }
 
 /// Returns whether `hash` now lives in S3; false when it left the index meanwhile.
-async fn move_one(state: &AppState, s3: &NativeS3Storage, hash: &str, local: &FileMetadata) -> Result<bool, String> {
-    let FileLocation::Local(path) = &local.location else { return Ok(false) };
+async fn move_one(
+    state: &AppState,
+    s3: &NativeS3Storage,
+    hash: &str,
+    local: &FileMetadata,
+) -> Result<bool, String> {
+    let FileLocation::Local(path) = &local.location else {
+        return Ok(false);
+    };
     // Hold the same guard as Almond's upload and deletion for the whole physical transition.
     // Otherwise DELETE can sweep the bucket before PutObject finishes and resurrect the blob.
     let _guard = state.blob_mutation_locks.lock(hash).await;
@@ -200,7 +233,9 @@ async fn move_one(state: &AppState, s3: &NativeS3Storage, hash: &str, local: &Fi
         return Ok(false);
     }
     s3.ensure_available().map_err(|e| e.to_string())?;
-    file_storage::ensure_temp_dir(state).await.map_err(|e| e.to_string())?;
+    file_storage::ensure_temp_dir(state)
+        .await
+        .map_err(|e| e.to_string())?;
     let available = crate::admin::free_disk_bytes(&state.storage.root)
         .map_err(|e| format!("cannot inspect staging disk space: {e}"))?;
     if available < state.min_free_disk_bytes.saturating_add(local.size) {
@@ -210,17 +245,30 @@ async fn move_one(state: &AppState, s3: &NativeS3Storage, hash: &str, local: &Fi
     // `put` deletes the file it uploaded, so it gets a copy; dropping `temp` unlinks the copy
     // whenever the upload did not consume it.
     let temp = TempBlob::reserve(state, "s3move", extension);
-    tokio::fs::copy(path, temp.path()).await.map_err(|e| format!("cannot copy {}: {e}", path.display()))?;
-    let timeout = crate::outbox::MIRROR_TIMEOUT
-        .saturating_add(std::time::Duration::from_secs(local.size / crate::outbox::MIN_UPLOAD_RATE));
-    let key = tokio::time::timeout(timeout, s3.put(temp.path(), hash, extension, local.expiration)).await
-        .map_err(|_| "S3 upload timed out; the local copy is unchanged".to_owned())?
-        .map_err(|e| e.to_string())?;
+    tokio::fs::copy(path, temp.path())
+        .await
+        .map_err(|e| format!("cannot copy {}: {e}", path.display()))?;
+    let timeout = crate::outbox::MIRROR_TIMEOUT.saturating_add(std::time::Duration::from_secs(
+        local.size / crate::outbox::MIN_UPLOAD_RATE,
+    ));
+    let key = tokio::time::timeout(
+        timeout,
+        s3.put(temp.path(), hash, extension, local.expiration),
+    )
+    .await
+    .map_err(|_| "S3 upload timed out; the local copy is unchanged".to_owned())?
+    .map_err(|e| e.to_string())?;
     drop(temp);
     let _readers = LOCAL_READS.write().await;
 
-    let uploaded = FileMetadata { location: FileLocation::S3 { key }, ..local.clone() };
-    if let PublishResult::Published { displaced: Some(displaced) } = state.file_index.publish(hash.to_owned(), uploaded).await {
+    let uploaded = FileMetadata {
+        location: FileLocation::S3 { key },
+        ..local.clone()
+    };
+    if let PublishResult::Published {
+        displaced: Some(displaced),
+    } = state.file_index.publish(hash.to_owned(), uploaded).await
+    {
         if let FileLocation::Local(old) = &displaced.location {
             match tokio::fs::remove_file(old).await {
                 Ok(()) => {}
@@ -228,7 +276,11 @@ async fn move_one(state: &AppState, s3: &NativeS3Storage, hash: &str, local: &Fi
                 Err(e) => {
                     // Almond's cleanup job retries superseded copies.
                     tracing::warn!(hash, "moved to S3 but cannot remove {}: {e}", old.display());
-                    state.superseded_blob_deletions.write().await.push((hash.to_owned(), (*displaced).clone()));
+                    state
+                        .superseded_blob_deletions
+                        .write()
+                        .await
+                        .push((hash.to_owned(), (*displaced).clone()));
                 }
             }
         }
@@ -243,7 +295,12 @@ fn save(path: &Path, job: &Job) -> Result<(), String> {
     use std::os::unix::fs::OpenOptionsExt;
     let temp = path.with_extension("json.tmp");
     let write = || -> std::io::Result<()> {
-        let mut file = std::fs::OpenOptions::new().create(true).truncate(true).write(true).mode(0o600).open(&temp)?;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .mode(0o600)
+            .open(&temp)?;
         file.write_all(&serde_json::to_vec(job).expect("job serializes"))?;
         file.sync_all()?;
         std::fs::rename(&temp, path)
@@ -265,7 +322,8 @@ mod tests {
     const CACHE: &[u8] = b"upstream cache fill";
 
     fn temp_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("nss-move-test-{:016x}", rand::random::<u64>()));
+        let dir =
+            std::env::temp_dir().join(format!("nss-move-test-{:016x}", rand::random::<u64>()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -290,23 +348,40 @@ mod tests {
         file_storage::ensure_temp_dir(state).await.unwrap();
         let temp = TempBlob::reserve(state, "test", Some("mp4"));
         std::fs::write(temp.path(), bytes).unwrap();
-        file_storage::publish_blob(state, temp, BlobPublication {
-            sha256: hash.clone(), origin, extension: Some("mp4".into()), mime_type: Some("video/mp4".into()),
-            size: bytes.len() as u64, expiration: None,
-        }).await.unwrap();
+        file_storage::publish_blob(
+            state,
+            temp,
+            BlobPublication {
+                sha256: hash.clone(),
+                origin,
+                extension: Some("mp4".into()),
+                mime_type: Some("video/mp4".into()),
+                size: bytes.len() as u64,
+                expiration: None,
+            },
+        )
+        .await
+        .unwrap();
         hash
     }
 
     /// Two uploads stored before S3 was enabled, then a restart with S3 on: the #174 setup.
     async fn local_uploads_then_s3(dir: &Path, fake: &FakeS3) -> (AppState, String, String) {
         let plain = blossom(dir, None).await;
-        let (a, b) = (store(&plain, A, BlobOrigin::Upload).await, store(&plain, B, BlobOrigin::Upload).await);
+        let (a, b) = (
+            store(&plain, A, BlobOrigin::Upload).await,
+            store(&plain, B, BlobOrigin::Upload).await,
+        );
         drop(plain);
         (blossom(dir, Some(fake)).await, a, b)
     }
 
     async fn location(state: &AppState, hash: &str) -> FileLocation {
-        file_storage::get_file_metadata(state, hash).await.expect("indexed").location.clone()
+        file_storage::get_file_metadata(state, hash)
+            .await
+            .expect("indexed")
+            .location
+            .clone()
     }
 
     async fn local_path(state: &AppState, hash: &str) -> PathBuf {
@@ -318,11 +393,19 @@ mod tests {
 
     async fn served(state: &AppState, hash: &str) -> Vec<u8> {
         let location_read = local_read(state, hash).await;
-        let req = axum::http::Request::get(format!("/{hash}.mp4")).body(axum::body::Body::empty()).unwrap();
-        let res = almond::create_app(state.clone()).oneshot(req).await.unwrap();
+        let req = axum::http::Request::get(format!("/{hash}.mp4"))
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let res = almond::create_app(state.clone())
+            .oneshot(req)
+            .await
+            .unwrap();
         drop(location_read);
         assert_eq!(res.status(), 200, "{hash} is served");
-        axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap().to_vec()
+        axum::body::to_bytes(res.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec()
     }
 
     async fn finished(migration: &Migration) -> Value {
@@ -337,7 +420,10 @@ mod tests {
     }
 
     fn blob_keys(fake: &FakeS3) -> Vec<String> {
-        fake.keys().into_iter().filter(|k| !k.starts_with(".almond-probe/")).collect()
+        fake.keys()
+            .into_iter()
+            .filter(|k| !k.starts_with(".almond-probe/"))
+            .collect()
     }
 
     #[tokio::test]
@@ -346,46 +432,93 @@ mod tests {
         let fake = FakeS3::start().await;
         let (state, a, b) = local_uploads_then_s3(&dir, &fake).await;
         let cache = store(&state, CACHE, BlobOrigin::UpstreamCache).await;
-        let (path_a, path_b, cache_path) = (local_path(&state, &a).await, local_path(&state, &b).await, local_path(&state, &cache).await);
+        let (path_a, path_b, cache_path) = (
+            local_path(&state, &a).await,
+            local_path(&state, &b).await,
+            local_path(&state, &cache).await,
+        );
         let migration = open(&dir, state.clone()).unwrap();
         let idle = migration.status().await;
         assert_eq!(idle["state"], "idle");
-        assert_eq!((idle["localFiles"].as_u64(), idle["localBytes"].as_u64()), (Some(2), Some((A.len() + B.len()) as u64)));
+        assert_eq!(
+            (idle["localFiles"].as_u64(), idle["localBytes"].as_u64()),
+            (Some(2), Some((A.len() + B.len()) as u64))
+        );
 
         // Pause the first upload before S3 confirms it: local playback must remain available.
         let pending_upload = fake.pause_uploads().await;
         assert_eq!(migration.start().await.unwrap()["state"], "running");
-        assert!(migration.start().await.is_err(), "a second start is rejected while running");
-        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
-        assert!(blob_keys(&fake).is_empty(), "S3 has not confirmed a copy yet");
-        assert_eq!(std::fs::read_dir(&state.storage.temp).unwrap().count(), 1, "only one temporary copy");
-        assert!(path_a.exists() && path_b.exists(), "no local copy goes before its swap");
-        assert_eq!((served(&state, &a).await, served(&state, &b).await), (A.to_vec(), B.to_vec()));
+        assert!(
+            migration.start().await.is_err(),
+            "a second start is rejected while running"
+        );
+        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload())
+            .await
+            .unwrap();
+        assert!(
+            blob_keys(&fake).is_empty(),
+            "S3 has not confirmed a copy yet"
+        );
+        assert_eq!(
+            std::fs::read_dir(&state.storage.temp).unwrap().count(),
+            1,
+            "only one temporary copy"
+        );
+        assert!(
+            path_a.exists() && path_b.exists(),
+            "no local copy goes before its swap"
+        );
+        assert_eq!(
+            (served(&state, &a).await, served(&state, &b).await),
+            (A.to_vec(), B.to_vec())
+        );
         let paused = migration.status().await;
-        assert_eq!((paused["state"].as_str(), paused["filesDone"].as_u64(), paused["filesTotal"].as_u64()), (Some("running"), Some(0), Some(2)));
+        assert_eq!(
+            (
+                paused["state"].as_str(),
+                paused["filesDone"].as_u64(),
+                paused["filesTotal"].as_u64()
+            ),
+            (Some("running"), Some(0), Some(2))
+        );
         drop(pending_upload);
 
         let done = finished(&migration).await;
         let bytes = (A.len() + B.len()) as u64;
-        assert_eq!(done, json!({
-            "state": "completed", "filesDone": 2, "filesTotal": 2, "bytesDone": bytes, "bytesTotal": bytes,
-            "error": null, "localFiles": 0, "localBytes": 0,
-        }));
+        assert_eq!(
+            done,
+            json!({
+                "state": "completed", "filesDone": 2, "filesTotal": 2, "bytesDone": bytes, "bytesTotal": bytes,
+                "error": null, "localFiles": 0, "localBytes": 0,
+            })
+        );
         for (hash, bytes, path) in [(&a, A, &path_a), (&b, B, &path_b)] {
-            let FileLocation::S3 { key } = location(&state, hash).await else { panic!("{hash} still local") };
+            let FileLocation::S3 { key } = location(&state, hash).await else {
+                panic!("{hash} still local")
+            };
             assert_eq!(fake.object(&key).as_deref(), Some(bytes));
             assert!(!path.exists(), "the local copy is gone");
             assert_eq!(served(&state, hash).await, bytes);
         }
         assert_eq!(blob_keys(&fake).len(), 2);
         // The upstream cache stays local.
-        assert_eq!(location(&state, &cache).await, FileLocation::Local(cache_path.clone()));
+        assert_eq!(
+            location(&state, &cache).await,
+            FileLocation::Local(cache_path.clone())
+        );
         assert!(cache_path.exists());
         assert!(!fake.keys().iter().any(|k| k.contains(&cache)));
         assert_eq!(served(&state, &cache).await, CACHE);
         assert_eq!(std::fs::read_dir(&state.storage.temp).unwrap().count(), 0);
         use std::os::unix::fs::PermissionsExt;
-        assert_eq!(std::fs::metadata(dir.join(FILE)).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            std::fs::metadata(dir.join(FILE))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -399,30 +532,71 @@ mod tests {
         file_storage::ensure_temp_dir(&state).await.unwrap();
         let temp = TempBlob::reserve(&state, "crash", Some("mp4"));
         std::fs::copy(&path_a, temp.path()).unwrap();
-        let key = state.native_s3.as_ref().unwrap().put(temp.path(), &a, Some("mp4"), None).await.unwrap();
-        save(&dir.join(FILE), &Job { state: State::Running, current: Some((a.clone(), A.len() as u64)), ..Job::default() }).unwrap();
+        let key = state
+            .native_s3
+            .as_ref()
+            .unwrap()
+            .put(temp.path(), &a, Some("mp4"), None)
+            .await
+            .unwrap();
+        save(
+            &dir.join(FILE),
+            &Job {
+                state: State::Running,
+                current: Some((a.clone(), A.len() as u64)),
+                ..Job::default()
+            },
+        )
+        .unwrap();
         drop(state);
 
         // Restart: the local copy wins, and the job resumes on its own.
         let state = blossom(&dir, Some(&fake)).await;
-        assert_eq!(location(&state, &a).await, FileLocation::Local(path_a.clone()));
+        assert_eq!(
+            location(&state, &a).await,
+            FileLocation::Local(path_a.clone())
+        );
         assert_eq!(fake.object(&key).as_deref(), Some(A));
         let migration = open(&dir, state.clone()).unwrap();
         let done = finished(&migration).await;
         let bytes = (A.len() + B.len()) as u64;
-        assert_eq!((done["state"].as_str(), done["filesDone"].as_u64(), done["filesTotal"].as_u64()), (Some("completed"), Some(2), Some(2)));
-        assert_eq!((done["bytesDone"].as_u64(), done["bytesTotal"].as_u64()), (Some(bytes), Some(bytes)));
+        assert_eq!(
+            (
+                done["state"].as_str(),
+                done["filesDone"].as_u64(),
+                done["filesTotal"].as_u64()
+            ),
+            (Some("completed"), Some(2), Some(2))
+        );
+        assert_eq!(
+            (done["bytesDone"].as_u64(), done["bytesTotal"].as_u64()),
+            (Some(bytes), Some(bytes))
+        );
 
-        assert_eq!(state.file_index.stats().await.count, 2, "one index entry per blob");
-        assert_eq!(location(&state, &a).await, FileLocation::S3 { key: key.clone() }, "the same key was overwritten");
+        assert_eq!(
+            state.file_index.stats().await.count,
+            2,
+            "one index entry per blob"
+        );
+        assert_eq!(
+            location(&state, &a).await,
+            FileLocation::S3 { key: key.clone() },
+            "the same key was overwritten"
+        );
         assert_eq!(blob_keys(&fake).len(), 2);
         assert!(!path_a.exists());
-        assert_eq!((served(&state, &a).await, served(&state, &b).await), (A.to_vec(), B.to_vec()));
+        assert_eq!(
+            (served(&state, &a).await, served(&state, &b).await),
+            (A.to_vec(), B.to_vec())
+        );
         // A later restart indexes each blob once, from S3.
         drop(migration);
         let state = blossom(&dir, Some(&fake)).await;
         assert_eq!(state.file_index.stats().await.count, 2);
-        assert!(matches!(location(&state, &b).await, FileLocation::S3 { .. }));
+        assert!(matches!(
+            location(&state, &b).await,
+            FileLocation::S3 { .. }
+        ));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -439,12 +613,25 @@ mod tests {
         assert!(failed["error"].as_str().is_some_and(|e| !e.is_empty()));
         assert_eq!(failed["localFiles"], 2);
         assert!(local_path(&state, &a).await.exists() && local_path(&state, &b).await.exists());
-        assert!(std::fs::read_dir(&state.storage.temp).unwrap().next().is_none(), "the temporary copy is gone");
+        assert!(
+            std::fs::read_dir(&state.storage.temp)
+                .unwrap()
+                .next()
+                .is_none(),
+            "the temporary copy is gone"
+        );
 
         fake.resume().await;
         migration.start().await.unwrap();
         let done = finished(&migration).await;
-        assert_eq!((done["state"].as_str(), done["error"].is_null(), done["localFiles"].as_u64()), (Some("completed"), true, Some(0)));
+        assert_eq!(
+            (
+                done["state"].as_str(),
+                done["error"].is_null(),
+                done["localFiles"].as_u64()
+            ),
+            (Some("completed"), true, Some(0))
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -457,26 +644,60 @@ mod tests {
         drop(plain);
         let state = blossom(&dir, Some(&fake)).await;
         let migration = open(&dir, state.clone()).unwrap();
-        let _relay = crate::relay::Relay::open(&dir.join("relay.sqlite"), crate::relay::RelayConfig {
-            writers: vec![], name: "test".into(), description: "test".into(), mirror_relays: vec![],
-        }).unwrap();
-        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), crate::config::Mirror::default()).unwrap();
+        let _relay = crate::relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            crate::relay::RelayConfig {
+                writers: vec![],
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
+        let outbox = crate::outbox::Outbox::open(
+            &dir.join("relay.sqlite"),
+            crate::config::Mirror::default(),
+        )
+        .unwrap();
         outbox.attach_storage(state.clone());
         outbox.attach_migration(migration.clone());
         let owner = nostr::prelude::Keys::generate().public_key();
-        outbox.record_owner(hash.clone(), owner, false).await.unwrap();
-        outbox.delete_blobs(hash.clone(), owner.to_hex(), vec![]).await.unwrap();
+        outbox
+            .record_owner(hash.clone(), owner, false)
+            .await
+            .unwrap();
+        outbox
+            .delete_blobs(hash.clone(), owner.to_hex(), vec![])
+            .await
+            .unwrap();
         let gate = fake.pause_uploads().await;
         migration.start().await.unwrap();
-        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
-        tokio::time::timeout(Duration::from_secs(1), crate::outbox::run_due_for_test(&outbox, &Default::default())).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload())
+            .await
+            .unwrap();
+        tokio::time::timeout(
+            Duration::from_secs(1),
+            crate::outbox::run_due_for_test(&outbox, &Default::default()),
+        )
+        .await
+        .unwrap();
         assert!(state.file_index.get(&hash).await.is_some());
-        assert!(outbox.status().await.unwrap().to_string().contains("blob is being moved to S3"));
+        assert!(outbox
+            .status()
+            .await
+            .unwrap()
+            .to_string()
+            .contains("blob is being moved to S3"));
         drop(gate);
         assert_eq!(finished(&migration).await["state"], "completed");
         // Advance only the scheduler clock, as outbox's retry tests do; keep status/attempts intact.
-        rusqlite::Connection::open(dir.join("relay.sqlite")).unwrap()
-            .execute("UPDATE outbox SET next_attempt_at=0 WHERE kind='cleanup'", []).unwrap();
+        rusqlite::Connection::open(dir.join("relay.sqlite"))
+            .unwrap()
+            .execute(
+                "UPDATE outbox SET next_attempt_at=0 WHERE kind='cleanup'",
+                [],
+            )
+            .unwrap();
         crate::outbox::run_due_for_test(&outbox, &Default::default()).await;
         assert!(state.file_index.get(&hash).await.is_none());
         assert!(!fake.keys().iter().any(|key| key.contains(&hash)));
@@ -493,22 +714,35 @@ mod tests {
         let gate = fake.pause_uploads().await;
         let moving = {
             let (state, hash) = (state.clone(), a.clone());
-            tokio::spawn(async move { move_one(&state, state.native_s3.as_ref().unwrap(), &hash, &metadata).await })
+            tokio::spawn(async move {
+                move_one(&state, state.native_s3.as_ref().unwrap(), &hash, &metadata).await
+            })
         };
-        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload())
+            .await
+            .unwrap();
         let mut deleting = {
             let (state, hash) = (state.clone(), a.clone());
-            tokio::spawn(async move { file_storage::remove_indexed_blob(&state, &hash, Removal::Requested, None).await })
+            tokio::spawn(async move {
+                file_storage::remove_indexed_blob(&state, &hash, Removal::Requested, None).await
+            })
         };
-        assert!(tokio::time::timeout(Duration::from_millis(50), &mut deleting).await.is_err(),
-            "deletion must not sweep the bucket before PutObject completes");
+        assert!(
+            tokio::time::timeout(Duration::from_millis(50), &mut deleting)
+                .await
+                .is_err(),
+            "deletion must not sweep the bucket before PutObject completes"
+        );
         drop(gate);
         assert!(moving.await.unwrap().unwrap());
         assert!(deleting.await.unwrap().unwrap());
         assert!(state.file_index.get(&a).await.is_none());
         assert!(!fake.keys().iter().any(|key| key.contains(&a)));
         let reopened = blossom(&dir, Some(&fake)).await;
-        assert!(reopened.file_index.get(&a).await.is_none(), "a restart cannot resurrect the deletion");
+        assert!(
+            reopened.file_index.get(&a).await.is_none(),
+            "a restart cannot resurrect the deletion"
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -523,9 +757,13 @@ mod tests {
         let read = local_read(&state, &a).await;
         let moving = {
             let (state, hash) = (state.clone(), a.clone());
-            tokio::spawn(async move { move_one(&state, state.native_s3.as_ref().unwrap(), &hash, &metadata).await })
+            tokio::spawn(async move {
+                move_one(&state, state.native_s3.as_ref().unwrap(), &hash, &metadata).await
+            })
         };
-        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), fake.wait_for_upload())
+            .await
+            .unwrap();
         let mut file = tokio::fs::File::open(&path).await.unwrap();
         drop(read);
         assert!(moving.await.unwrap().unwrap());
@@ -547,7 +785,10 @@ mod tests {
         migration.start().await.unwrap();
         let failed = finished(&migration).await;
         assert_eq!(failed["state"], "failed");
-        assert!(failed["error"].as_str().unwrap().contains("free-space reserve"));
+        assert!(failed["error"]
+            .as_str()
+            .unwrap()
+            .contains("free-space reserve"));
         assert!(local_path(&state, &a).await.exists() && local_path(&state, &b).await.exists());
         assert!(fake.keys().is_empty());
         state.min_free_disk_bytes = 0;
@@ -566,7 +807,10 @@ mod tests {
         let migration = open(&dir, state).unwrap();
         assert_eq!(migration.start().await.unwrap_err(), DISABLED);
         let status = migration.status().await;
-        assert_eq!((status["state"].as_str(), status["localFiles"].as_u64()), (Some("idle"), Some(1)));
+        assert_eq!(
+            (status["state"].as_str(), status["localFiles"].as_u64()),
+            (Some("idle"), Some(1))
+        );
         assert!(!dir.join(FILE).exists());
         let _ = std::fs::remove_dir_all(&dir);
     }

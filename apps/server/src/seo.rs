@@ -65,7 +65,9 @@ struct Videos {
 
 impl Public {
     fn parse(bytes: &[u8]) -> Option<Public> {
-        let mut p: Self = serde_json::from_slice(bytes).map_err(|e| tracing::warn!("seo: reading the public config: {e}")).ok()?;
+        let mut p: Self = serde_json::from_slice(bytes)
+            .map_err(|e| tracing::warn!("seo: reading the public config: {e}"))
+            .ok()?;
         // Derive once per response from the canonical origin, not an access alias or video source.
         p.relay = Some(RelayUrl::parse(&crate::config::relay_url(&p.origin)).ok()?);
         Some(p)
@@ -73,7 +75,12 @@ impl Public {
 
     /// A page without any text does not exist on the site.
     fn has_page(&self, name: &str) -> bool {
-        PAGES.contains(&name) && self.site.pages.get(name).is_some_and(|texts| !texts.is_empty())
+        PAGES.contains(&name)
+            && self
+                .site
+                .pages
+                .get(name)
+                .is_some_and(|texts| !texts.is_empty())
     }
 
     fn absolute(&self, url: &str) -> Option<String> {
@@ -93,8 +100,13 @@ impl Public {
         if hidden.is_empty() {
             return true;
         }
-        let address = ev.kind.is_addressable().then(|| format!("{}:{}:{}", ev.kind.as_u16(), ev.pubkey.to_hex(), d_tag(ev)));
-        !hidden.iter().any(|h| *h == ev.id.to_hex() || address.as_ref() == Some(h))
+        let address = ev
+            .kind
+            .is_addressable()
+            .then(|| format!("{}:{}:{}", ev.kind.as_u16(), ev.pubkey.to_hex(), d_tag(ev)));
+        !hidden
+            .iter()
+            .any(|h| *h == ev.id.to_hex() || address.as_ref() == Some(h))
     }
 }
 
@@ -105,7 +117,9 @@ const INLINE_CONFIG_ID: &str = "nostube-config";
 /// The app shell with the head for `path` and the public config inlined, so the site starts
 /// without another request.
 pub async fn shell(relay: &Relay, public: &[u8], path: &str, shell: &str) -> String {
-    let (Some(p), Ok(json)) = (Public::parse(public), std::str::from_utf8(public)) else { return shell.to_owned() };
+    let (Some(p), Ok(json)) = (Public::parse(public), std::str::from_utf8(public)) else {
+        return shell.to_owned();
+    };
     let video = match path.strip_prefix("/v/") {
         Some(id) => find_video(relay, &p, id).await,
         None => None,
@@ -118,14 +132,20 @@ pub async fn shell(relay: &Relay, public: &[u8], path: &str, shell: &str) -> Str
         None => None,
     };
     let mut head = head(&p, canonical.as_deref(), video.as_ref());
-    let _ = write!(head, "<script type=\"application/json\" id=\"{INLINE_CONFIG_ID}\">{}</script>", script_json(json));
+    let _ = write!(
+        head,
+        "<script type=\"application/json\" id=\"{INLINE_CONFIG_ID}\">{}</script>",
+        script_json(json)
+    );
     inject(shell, &head)
 }
 
 /// `/sitemap.xml`: the start page, the pages that exist and every video of the creators in the
 /// instance's relay, each with Google's video entry when it has a thumbnail.
 pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
-    let Some(p) = Public::parse(public) else { return StatusCode::INTERNAL_SERVER_ERROR.into_response() };
+    let Some(p) = Public::parse(public) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
     let videos = match creator_videos(relay, &p).await {
         Ok(v) => v,
         Err(e) => {
@@ -140,7 +160,11 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
     for page in PAGES.into_iter().filter(|name| p.has_page(name)) {
         let _ = writeln!(xml, "<url><loc>{}/{page}</loc></url>", Esc(&p.origin));
     }
-    for v in videos.iter().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, &p)) {
+    for v in videos
+        .iter()
+        .filter(|ev| p.shows(ev))
+        .map(|ev| Video::from_event(ev, &p))
+    {
         if v.link.is_empty() {
             continue;
         }
@@ -151,7 +175,11 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
         }
         // Google's video entry needs a thumbnail, a title, a description and a file or player.
         if let Some(image) = v.image.as_deref().and_then(|i| p.absolute(i)) {
-            let description = if v.description.is_empty() { &v.title } else { &v.description };
+            let description = if v.description.is_empty() {
+                &v.title
+            } else {
+                &v.description
+            };
             let _ = write!(
                 xml,
                 "<video:video><video:thumbnail_loc>{}</video:thumbnail_loc><video:title>{}</video:title><video:description>{}</video:description>",
@@ -162,7 +190,11 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
             if let Some(url) = v.media.as_ref().and_then(|(u, _)| p.absolute(u)) {
                 let _ = write!(xml, "<video:content_loc>{}</video:content_loc>", Esc(&url));
             }
-            let _ = write!(xml, "<video:player_loc>{}</video:player_loc>", Esc(&embed_url(&p, &v.link)));
+            let _ = write!(
+                xml,
+                "<video:player_loc>{}</video:player_loc>",
+                Esc(&embed_url(&p, &v.link))
+            );
             if let Some(secs) = v.duration.filter(|s| (1..=28_800).contains(s)) {
                 let _ = write!(xml, "<video:duration>{secs}</video:duration>");
             }
@@ -174,21 +206,46 @@ pub async fn sitemap(relay: &Relay, public: &[u8]) -> Response {
         xml.push_str("</url>\n");
     }
     xml.push_str("</urlset>\n");
-    ([(header::CONTENT_TYPE, "application/xml; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], xml).into_response()
+    (
+        [
+            (header::CONTENT_TYPE, "application/xml; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        xml,
+    )
+        .into_response()
 }
 
 /// `/robots.txt`: everything may be crawled; points to the sitemap.
 pub fn robots(public: &[u8]) -> Response {
-    let Some(p) = Public::parse(public) else { return StatusCode::INTERNAL_SERVER_ERROR.into_response() };
-    let text = format!("User-agent: *\nDisallow:\n\nSitemap: {}/sitemap.xml\n", p.origin);
-    ([(header::CONTENT_TYPE, "text/plain; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], text).into_response()
+    let Some(p) = Public::parse(public) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let text = format!(
+        "User-agent: *\nDisallow:\n\nSitemap: {}/sitemap.xml\n",
+        p.origin
+    );
+    (
+        [
+            (header::CONTENT_TYPE, "text/plain; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        text,
+    )
+        .into_response()
 }
 
 /// `/feed.xml` (RSS 2.0) and `/atom.xml` (Atom): the newest shown videos of the creators, newest
 /// first, each with its playable file as enclosure.
 pub async fn feed(relay: &Relay, public: &[u8], atom: bool) -> Response {
-    let Some(p) = Public::parse(public) else { return StatusCode::INTERNAL_SERVER_ERROR.into_response() };
-    let events = if p.creators.is_empty() { Ok(vec![]) } else { relay.stored(video_filter(&p).limit(FEED_MAX)).await };
+    let Some(p) = Public::parse(public) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let events = if p.creators.is_empty() {
+        Ok(vec![])
+    } else {
+        relay.stored(video_filter(&p).limit(FEED_MAX)).await
+    };
     let events = match events {
         Ok(v) => v,
         Err(e) => {
@@ -196,30 +253,70 @@ pub async fn feed(relay: &Relay, public: &[u8], atom: bool) -> Response {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-    let videos: Vec<Video> = events.iter().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, &p)).filter(|v| !v.link.is_empty()).collect();
-    let (xml, mime) = if atom { (atom_feed(&p, &videos), "application/atom+xml") } else { (rss_feed(&p, &videos), "application/rss+xml") };
-    ([(header::CONTENT_TYPE, format!("{mime}; charset=utf-8")), (header::CACHE_CONTROL, "no-cache".to_owned())], xml).into_response()
+    let videos: Vec<Video> = events
+        .iter()
+        .filter(|ev| p.shows(ev))
+        .map(|ev| Video::from_event(ev, &p))
+        .filter(|v| !v.link.is_empty())
+        .collect();
+    let (xml, mime) = if atom {
+        (atom_feed(&p, &videos), "application/atom+xml")
+    } else {
+        (rss_feed(&p, &videos), "application/rss+xml")
+    };
+    (
+        [
+            (header::CONTENT_TYPE, format!("{mime}; charset=utf-8")),
+            (header::CACHE_CONTROL, "no-cache".to_owned()),
+        ],
+        xml,
+    )
+        .into_response()
 }
 
 /// The file's absolute URL, MIME type and size in bytes (0 when unknown: RSS requires a length).
 fn enclosure(p: &Public, v: &Video) -> Option<(String, String, u64)> {
     let (url, mime) = v.media.as_ref()?;
-    Some((p.absolute(url)?, mime.clone().unwrap_or_else(|| "video/mp4".to_owned()), v.size.unwrap_or(0)))
+    Some((
+        p.absolute(url)?,
+        mime.clone().unwrap_or_else(|| "video/mp4".to_owned()),
+        v.size.unwrap_or(0),
+    ))
 }
 
 fn rss_feed(p: &Public, videos: &[Video]) -> String {
     let mut xml = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\" xmlns:media=\"http://search.yahoo.com/mrss/\">\n<channel>\n",
     );
-    let description = if p.site.tagline.trim().is_empty() { &p.title } else { &p.site.tagline };
-    let _ = writeln!(xml, "<title>{}</title>\n<link>{}/</link>\n<description>{}</description>", Esc(&p.title), Esc(&p.origin), Esc(description));
-    let _ = writeln!(xml, "<atom:link href=\"{}{RSS_PATH}\" rel=\"self\" type=\"application/rss+xml\" />", Esc(&p.origin));
+    let description = if p.site.tagline.trim().is_empty() {
+        &p.title
+    } else {
+        &p.site.tagline
+    };
+    let _ = writeln!(
+        xml,
+        "<title>{}</title>\n<link>{}/</link>\n<description>{}</description>",
+        Esc(&p.title),
+        Esc(&p.origin),
+        Esc(description)
+    );
+    let _ = writeln!(
+        xml,
+        "<atom:link href=\"{}{RSS_PATH}\" rel=\"self\" type=\"application/rss+xml\" />",
+        Esc(&p.origin)
+    );
     if let Some(at) = videos.first().and_then(|v| rfc2822(v.created_at)) {
         let _ = writeln!(xml, "<lastBuildDate>{at}</lastBuildDate>");
     }
     for v in videos {
         let url = format!("{}/v/{}", p.origin, v.link);
-        let _ = write!(xml, "<item><title>{}</title><link>{}</link><guid isPermaLink=\"true\">{}</guid>", Esc(&v.title), Esc(&url), Esc(&url));
+        let _ = write!(
+            xml,
+            "<item><title>{}</title><link>{}</link><guid isPermaLink=\"true\">{}</guid>",
+            Esc(&v.title),
+            Esc(&url),
+            Esc(&url)
+        );
         if let Some(at) = rfc2822(v.created_at) {
             let _ = write!(xml, "<pubDate>{at}</pubDate>");
         }
@@ -237,8 +334,17 @@ fn rss_feed(p: &Public, videos: &[Video]) -> String {
 
 fn atom_feed(p: &Public, videos: &[Video]) -> String {
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\" xmlns:media=\"http://search.yahoo.com/mrss/\">\n");
-    let updated = iso_datetime(videos.first().map_or_else(|| nostr::prelude::Timestamp::now().as_secs(), |v| v.created_at)).unwrap_or_default();
-    let _ = writeln!(xml, "<id>{}/</id>\n<title>{}</title>\n<updated>{updated}</updated>", Esc(&p.origin), Esc(&p.title));
+    let updated = iso_datetime(videos.first().map_or_else(
+        || nostr::prelude::Timestamp::now().as_secs(),
+        |v| v.created_at,
+    ))
+    .unwrap_or_default();
+    let _ = writeln!(
+        xml,
+        "<id>{}/</id>\n<title>{}</title>\n<updated>{updated}</updated>",
+        Esc(&p.origin),
+        Esc(&p.title)
+    );
     if !p.site.tagline.trim().is_empty() {
         let _ = writeln!(xml, "<subtitle>{}</subtitle>", Esc(&p.site.tagline));
     }
@@ -262,7 +368,9 @@ fn atom_feed(p: &Public, videos: &[Video]) -> String {
 }
 
 fn video_filter(p: &Public) -> Filter {
-    Filter::new().kinds(VIDEO_KINDS.map(Kind::from)).authors(p.creators.iter().copied())
+    Filter::new()
+        .kinds(VIDEO_KINDS.map(Kind::from))
+        .authors(p.creators.iter().copied())
 }
 
 // ponytail: one sitemap file, so at most 50 000 videos; a sitemap index when an instance has more.
@@ -280,13 +388,19 @@ async fn find_video(relay: &Relay, p: &Public, id: &str) -> Option<Video> {
         return None;
     }
     let filter = match Nip19::from_bech32(id).ok()? {
-        Nip19::Coordinate(c) => video_filter(p).author(c.coordinate.public_key).kind(c.coordinate.kind).identifier(c.coordinate.identifier),
+        Nip19::Coordinate(c) => video_filter(p)
+            .author(c.coordinate.public_key)
+            .kind(c.coordinate.kind)
+            .identifier(c.coordinate.identifier),
         Nip19::Event(e) => video_filter(p).id(e.event_id),
         Nip19::EventId(id) => video_filter(p).id(id),
         _ => return None,
     };
     match relay.stored(filter.limit(1)).await {
-        Ok(events) => events.first().filter(|ev| p.shows(ev)).map(|ev| Video::from_event(ev, p)),
+        Ok(events) => events
+            .first()
+            .filter(|ev| p.shows(ev))
+            .map(|ev| Video::from_event(ev, p)),
         Err(e) => {
             tracing::warn!("seo: looking up video {id}: {e}");
             None
@@ -299,16 +413,28 @@ fn d_tag(ev: &Event) -> &str {
 }
 
 fn tag<'a>(ev: &'a Event, name: &str) -> Option<&'a str> {
-    ev.tags.iter().map(|t| t.as_slice()).find(|t| t.first().is_some_and(|n| n == name)).and_then(|t| t.get(1)).map(String::as_str)
+    ev.tags
+        .iter()
+        .map(|t| t.as_slice())
+        .find(|t| t.first().is_some_and(|n| n == name))
+        .and_then(|t| t.get(1))
+        .map(String::as_str)
 }
 
 /// A video's NIP-19 address with the relays where it can be retrieved.
 fn link(ev: &Event, relays: impl IntoIterator<Item = RelayUrl>) -> Option<String> {
     let d = d_tag(ev);
     if ev.kind.is_addressable() && !d.is_empty() {
-        Nip19Coordinate::new(Coordinate::new(ev.kind, ev.pubkey).identifier(d), relays).to_bech32().ok()
+        Nip19Coordinate::new(Coordinate::new(ev.kind, ev.pubkey).identifier(d), relays)
+            .to_bech32()
+            .ok()
     } else {
-        Nip19Event::new(ev.id).author(ev.pubkey).kind(ev.kind).relays(relays).to_bech32().ok()
+        Nip19Event::new(ev.id)
+            .author(ev.pubkey)
+            .kind(ev.kind)
+            .relays(relays)
+            .to_bech32()
+            .ok()
     }
 }
 
@@ -330,7 +456,10 @@ struct Video {
 impl Video {
     fn from_event(ev: &Event, p: &Public) -> Video {
         fn field<'a>(entries: &[(&str, &'a str)], key: &str) -> Option<&'a str> {
-            entries.iter().find(|(k, _)| *k == key).map(|(_, v)| v.trim())
+            entries
+                .iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, v)| v.trim())
         }
         // `imeta` entries are "<key> <value>" strings after the tag name.
         let imeta: Vec<Vec<(&str, &str)>> = ev
@@ -340,19 +469,41 @@ impl Video {
             .filter(|t| t.first().is_some_and(|n| n == "imeta"))
             .map(|t| t[1..].iter().filter_map(|e| e.split_once(' ')).collect())
             .collect();
-        let image = imeta.iter().find_map(|e| field(e, "image")).or_else(|| tag(ev, "thumb")).or_else(|| tag(ev, "image"));
+        let image = imeta
+            .iter()
+            .find_map(|e| field(e, "image"))
+            .or_else(|| tag(ev, "thumb"))
+            .or_else(|| tag(ev, "image"));
         let media = imeta.iter().find_map(|e| {
             let mime = field(e, "m");
             let url = field(e, "url").filter(|_| mime.is_none_or(|m| m.starts_with("video/")))?;
             Some((url.to_owned(), mime.map(str::to_owned)))
         });
         let content = ev.content.trim();
-        let alt = imeta.iter().find_map(|e| field(e, "alt")).filter(|a| !a.is_empty()).unwrap_or(content);
-        let title = tag(ev, "title").filter(|t| !t.trim().is_empty()).map(str::to_owned).unwrap_or_else(|| {
-            let words: Vec<&str> = alt.split_whitespace().filter(|w| !w.starts_with("https://") && !w.starts_with("http://")).collect();
-            if words.is_empty() { UNTITLED.to_owned() } else { words.join(" ") }
-        });
-        let description = if content.is_empty() { tag(ev, "description").unwrap_or("") } else { content };
+        let alt = imeta
+            .iter()
+            .find_map(|e| field(e, "alt"))
+            .filter(|a| !a.is_empty())
+            .unwrap_or(content);
+        let title = tag(ev, "title")
+            .filter(|t| !t.trim().is_empty())
+            .map(str::to_owned)
+            .unwrap_or_else(|| {
+                let words: Vec<&str> = alt
+                    .split_whitespace()
+                    .filter(|w| !w.starts_with("https://") && !w.starts_with("http://"))
+                    .collect();
+                if words.is_empty() {
+                    UNTITLED.to_owned()
+                } else {
+                    words.join(" ")
+                }
+            });
+        let description = if content.is_empty() {
+            tag(ev, "description").unwrap_or("")
+        } else {
+            content
+        };
         let duration = imeta
             .iter()
             .find_map(|e| field(e, "duration"))
@@ -368,7 +519,10 @@ impl Video {
             media,
             created_at: ev.created_at.as_secs(),
             duration,
-            size: imeta.iter().find_map(|e| field(e, "size")).and_then(|s| s.parse().ok()),
+            size: imeta
+                .iter()
+                .find_map(|e| field(e, "size"))
+                .and_then(|s| s.parse().ok()),
         }
     }
 }
@@ -389,14 +543,29 @@ fn embed_url(p: &Public, link: &str) -> String {
 /// `2026-10-12T08:30:00Z` (W3C datetime, as sitemaps and schema.org take it).
 fn iso_datetime(secs: u64) -> Option<String> {
     let at = time::OffsetDateTime::from_unix_timestamp(i64::try_from(secs).ok()?).ok()?;
-    Some(format!("{}T{:02}:{:02}:{:02}Z", at.date(), at.hour(), at.minute(), at.second()))
+    Some(format!(
+        "{}T{:02}:{:02}:{:02}Z",
+        at.date(),
+        at.hour(),
+        at.minute(),
+        at.second()
+    ))
 }
 
 /// `Sun, 12 Oct 2026 08:30:00 GMT` (RFC 822 as RSS takes it).
 fn rfc2822(secs: u64) -> Option<String> {
     let at = time::OffsetDateTime::from_unix_timestamp(i64::try_from(secs).ok()?).ok()?;
     let (day, month) = (at.weekday().to_string(), at.month().to_string());
-    Some(format!("{}, {:02} {} {} {:02}:{:02}:{:02} GMT", &day[..3], at.day(), &month[..3], at.year(), at.hour(), at.minute(), at.second()))
+    Some(format!(
+        "{}, {:02} {} {} {:02}:{:02}:{:02} GMT",
+        &day[..3],
+        at.day(),
+        &month[..3],
+        at.year(),
+        at.hour(),
+        at.minute(),
+        at.second()
+    ))
 }
 
 /// JSON for a `<script>` element: `<` as `\u003c`, so nothing in it can end the element early.
@@ -407,8 +576,18 @@ fn script_json(json: &str) -> String {
 fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     let site_image = || p.site.banner.as_deref().or(p.site.logo.as_deref());
     let (title, og_title, description, image) = match video {
-        Some(v) => (format!("{} – {}", v.title, p.title), v.title.as_str(), v.description.clone(), v.image.as_deref()),
-        None => (p.title.clone(), p.title.as_str(), clip(&p.site.tagline), site_image()),
+        Some(v) => (
+            format!("{} – {}", v.title, p.title),
+            v.title.as_str(),
+            v.description.clone(),
+            v.image.as_deref(),
+        ),
+        None => (
+            p.title.clone(),
+            p.title.as_str(),
+            clip(&p.site.tagline),
+            site_image(),
+        ),
     };
     let image = image.and_then(|i| p.absolute(i));
     let mut h = String::new();
@@ -421,7 +600,15 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     }
     meta("property", "og:site_name", &p.title);
     meta("property", "og:title", og_title);
-    meta("property", "og:type", if video.is_some() { "video.other" } else { "website" });
+    meta(
+        "property",
+        "og:type",
+        if video.is_some() {
+            "video.other"
+        } else {
+            "website"
+        },
+    );
     if let Some(url) = canonical {
         meta("property", "og:url", url);
     }
@@ -430,7 +617,10 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     }
     match video {
         Some(v) => {
-            let media = v.media.as_ref().and_then(|(u, m)| Some((p.absolute(u)?, m)));
+            let media = v
+                .media
+                .as_ref()
+                .and_then(|(u, m)| Some((p.absolute(u)?, m)));
             if let Some((url, mime)) = &media {
                 meta("property", "og:video", url);
                 if let Some(mime) = mime {
@@ -464,10 +654,22 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
                 if let Some(secs) = v.duration {
                     ld["duration"] = format!("PT{secs}S").into();
                 }
-                let _ = write!(h, "<script type=\"application/ld+json\">{}</script>", script_json(&ld.to_string()));
+                let _ = write!(
+                    h,
+                    "<script type=\"application/ld+json\">{}</script>",
+                    script_json(&ld.to_string())
+                );
             }
         }
-        None => meta("name", "twitter:card", if image.is_some() { "summary_large_image" } else { "summary" }),
+        None => meta(
+            "name",
+            "twitter:card",
+            if image.is_some() {
+                "summary_large_image"
+            } else {
+                "summary"
+            },
+        ),
     }
     let _ = write!(h, "<title>{}</title>", Esc(&title));
     if let Some(url) = canonical {
@@ -495,7 +697,11 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
 /// Replaces the shell's `<title>` (the build's placeholder) with `head`.
 fn inject(shell: &str, head: &str) -> String {
     match (shell.find("<title>"), shell.find("</title>")) {
-        (Some(start), Some(end)) if start < end => format!("{}{head}{}", &shell[..start], &shell[end + "</title>".len()..]),
+        (Some(start), Some(end)) if start < end => format!(
+            "{}{head}{}",
+            &shell[..start],
+            &shell[end + "</title>".len()..]
+        ),
         _ => shell.replacen("</head>", &format!("{head}</head>"), 1),
     }
 }
@@ -542,10 +748,36 @@ mod tests {
 
     async fn fixture() -> (Relay, Vec<u8>, Event, Event, Event) {
         let (creator, other) = (Keys::generate(), Keys::generate());
-        let path = std::env::temp_dir().join(format!("nostube-seo-test-{}.sqlite", creator.public_key().to_hex()));
+        let path = std::env::temp_dir().join(format!(
+            "nostube-seo-test-{}.sqlite",
+            creator.public_key().to_hex()
+        ));
         let writers = vec![creator.public_key(), other.public_key()];
-        let relay = Relay::open(&path, RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays: vec![] }).unwrap();
-        let shown = video(&creator, 34235, "Tom & \"Jerry\"", &[&["d", "intro"], &["imeta", "url https://cdn.example/v.mp4", "m video/mp4", "image https://cdn.example/t.jpg", "duration 61.4"]]);
+        let relay = Relay::open(
+            &path,
+            RelayConfig {
+                writers,
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
+        let shown = video(
+            &creator,
+            34235,
+            "Tom & \"Jerry\"",
+            &[
+                &["d", "intro"],
+                &[
+                    "imeta",
+                    "url https://cdn.example/v.mp4",
+                    "m video/mp4",
+                    "image https://cdn.example/t.jpg",
+                    "duration 61.4",
+                ],
+            ],
+        );
         let hidden = video(&creator, 21, "Secret", &[]);
         let foreign = video(&other, 34235, "Not ours", &[&["d", "x"]]);
         for e in [&shown, &hidden, &foreign] {
@@ -562,32 +794,59 @@ mod tests {
                 "banner": "/branding/banner?v=1",
             },
         });
-        (relay, serde_json::to_vec(&public).unwrap(), shown, hidden, foreign)
+        (
+            relay,
+            serde_json::to_vec(&public).unwrap(),
+            shown,
+            hidden,
+            foreign,
+        )
     }
 
     #[tokio::test]
     async fn published_video_urls_locate_both_video_kinds_on_the_canonical_relay() {
         let (relay, fixture_public, addressable, regular, _) = fixture().await;
         // An HTTPS origin hints its wss relay; a plain HTTP one (a FIPS mesh node) its ws relay.
-        for (origin, own_relay) in [("https://videos.example:8443", "wss://videos.example:8443"), ("http://npub.fips:8080", "ws://npub.fips:8080")] {
+        for (origin, own_relay) in [
+            ("https://videos.example:8443", "wss://videos.example:8443"),
+            ("http://npub.fips:8080", "ws://npub.fips:8080"),
+        ] {
             let mut public: serde_json::Value = serde_json::from_slice(&fixture_public).unwrap();
             public["origin"] = origin.into();
             public["videoSources"] = serde_json::json!(["wss://elsewhere.example"]);
             public["site"]["videos"]["hidden"] = serde_json::json!([]);
             let public = serde_json::to_vec(&public).unwrap();
-            let sitemap = axum::body::to_bytes(sitemap(&relay, &public).await.into_body(), usize::MAX).await.unwrap();
+            let sitemap =
+                axum::body::to_bytes(sitemap(&relay, &public).await.into_body(), usize::MAX)
+                    .await
+                    .unwrap();
             let sitemap = std::str::from_utf8(&sitemap).unwrap();
-            let rss = axum::body::to_bytes(feed(&relay, &public, false).await.into_body(), usize::MAX).await.unwrap();
-            let atom = axum::body::to_bytes(feed(&relay, &public, true).await.into_body(), usize::MAX).await.unwrap();
+            let rss =
+                axum::body::to_bytes(feed(&relay, &public, false).await.into_body(), usize::MAX)
+                    .await
+                    .unwrap();
+            let atom =
+                axum::body::to_bytes(feed(&relay, &public, true).await.into_body(), usize::MAX)
+                    .await
+                    .unwrap();
             for ev in [&addressable, &regular] {
                 // A previously shared identifier without hints must still resolve.
                 let old_id = link(ev, []).unwrap();
                 let page = shell(&relay, &public, &format!("/v/{old_id}"), SHELL).await;
-                let canonical = page.split("<link rel=\"canonical\" href=\"").nth(1).unwrap().split('"').next().unwrap();
+                let canonical = page
+                    .split("<link rel=\"canonical\" href=\"")
+                    .nth(1)
+                    .unwrap()
+                    .split('"')
+                    .next()
+                    .unwrap();
                 let id = canonical.strip_prefix(&format!("{origin}/v/")).unwrap();
                 let relays = match Nip19::from_bech32(id).unwrap() {
                     Nip19::Coordinate(c) => {
-                        assert_eq!(c.coordinate, Coordinate::new(ev.kind, ev.pubkey).identifier(d_tag(ev)));
+                        assert_eq!(
+                            c.coordinate,
+                            Coordinate::new(ev.kind, ev.pubkey).identifier(d_tag(ev))
+                        );
                         c.relays
                     }
                     Nip19::Event(e) => {
@@ -598,14 +857,29 @@ mod tests {
                     }
                     other => panic!("unexpected video identifier: {other:?}"),
                 };
-                assert_eq!(relays.iter().map(|r| r.as_str()).collect::<Vec<_>>(), [own_relay]);
-                assert!(page.contains(&format!("property=\"og:url\" content=\"{canonical}\"")), "{page}");
+                assert_eq!(
+                    relays.iter().map(|r| r.as_str()).collect::<Vec<_>>(),
+                    [own_relay]
+                );
+                assert!(
+                    page.contains(&format!("property=\"og:url\" content=\"{canonical}\"")),
+                    "{page}"
+                );
                 assert!(page.contains(&format!("/embed.html?v={id}")), "{page}");
                 assert!(sitemap.contains(canonical), "{sitemap}");
                 // Only the addressable fixture has the thumbnail required for a video sitemap entry.
                 if ev.id == addressable.id {
-                    assert!(sitemap.contains(&format!("/embed.html?v={id}")), "{sitemap}");
-                    let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
+                    assert!(
+                        sitemap.contains(&format!("/embed.html?v={id}")),
+                        "{sitemap}"
+                    );
+                    let ld = page
+                        .split("application/ld+json\">")
+                        .nth(1)
+                        .unwrap()
+                        .split("</script>")
+                        .next()
+                        .unwrap();
                     let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
                     assert_eq!(ld["url"], canonical);
                 }
@@ -621,19 +895,56 @@ mod tests {
         let naddr = link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap();
         let page = shell(&relay, &public, &format!("/v/{naddr}"), SHELL).await;
         assert!(!page.contains("Loading…"), "{page}");
-        assert!(page.contains("<title>Tom &amp; &quot;Jerry&quot; – My &lt;Site&gt;</title>"), "{page}");
-        assert!(page.contains("<meta name=\"description\" content=\"A &lt;b&gt;long&lt;/b&gt; description\" />"), "{page}");
-        assert!(page.contains("<meta property=\"og:image\" content=\"https://cdn.example/t.jpg\" />"), "{page}");
-        assert!(page.contains("<meta property=\"og:video\" content=\"https://cdn.example/v.mp4\" />"), "{page}");
+        assert!(
+            page.contains("<title>Tom &amp; &quot;Jerry&quot; – My &lt;Site&gt;</title>"),
+            "{page}"
+        );
+        assert!(
+            page.contains(
+                "<meta name=\"description\" content=\"A &lt;b&gt;long&lt;/b&gt; description\" />"
+            ),
+            "{page}"
+        );
+        assert!(
+            page.contains("<meta property=\"og:image\" content=\"https://cdn.example/t.jpg\" />"),
+            "{page}"
+        );
+        assert!(
+            page.contains("<meta property=\"og:video\" content=\"https://cdn.example/v.mp4\" />"),
+            "{page}"
+        );
         assert!(page.contains(&format!("<meta name=\"twitter:player\" content=\"https://videos.example/embed.html?v={naddr}\" />")), "{page}");
-        assert!(page.contains(&format!("<link rel=\"canonical\" href=\"https://videos.example/v/{naddr}\" />")), "{page}");
-        assert!(page.ends_with("<script src=\"/a.js\"></script></head><body></body></html>"), "{page}");
+        assert!(
+            page.contains(&format!(
+                "<link rel=\"canonical\" href=\"https://videos.example/v/{naddr}\" />"
+            )),
+            "{page}"
+        );
+        assert!(
+            page.ends_with("<script src=\"/a.js\"></script></head><body></body></html>"),
+            "{page}"
+        );
 
         // The public config goes along as it is, with nothing in it that could end the element.
-        let inline = page.split("id=\"nostube-config\">").nth(1).unwrap().split("</script>").next().unwrap();
+        let inline = page
+            .split("id=\"nostube-config\">")
+            .nth(1)
+            .unwrap()
+            .split("</script>")
+            .next()
+            .unwrap();
         assert!(!inline.contains('<'), "{inline}");
-        assert_eq!(serde_json::from_str::<serde_json::Value>(inline).unwrap(), serde_json::from_slice::<serde_json::Value>(&public).unwrap());
-        let ld = page.split("application/ld+json\">").nth(1).unwrap().split("</script>").next().unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(inline).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(&public).unwrap()
+        );
+        let ld = page
+            .split("application/ld+json\">")
+            .nth(1)
+            .unwrap()
+            .split("</script>")
+            .next()
+            .unwrap();
         let ld: serde_json::Value = serde_json::from_str(ld).unwrap();
         assert_eq!(ld["@type"], "VideoObject");
         assert_eq!(ld["name"], "Tom & \"Jerry\"");
@@ -644,30 +955,68 @@ mod tests {
 
         // Hidden, someone else's, or not a video link: the site's head, no canonical URL.
         let hidden = link(&hidden, []).unwrap();
-        for path in [format!("/v/{hidden}"), format!("/v/{}", link(&foreign, []).unwrap()), "/v/nope".into(), "/elsewhere".into()] {
+        for path in [
+            format!("/v/{hidden}"),
+            format!("/v/{}", link(&foreign, []).unwrap()),
+            "/v/nope".into(),
+            "/elsewhere".into(),
+        ] {
             let page = shell(&relay, &public, &path, SHELL).await;
-            assert!(page.contains("<title>My &lt;Site&gt;</title>"), "{path}: {page}");
-            assert!(!page.contains("canonical") && !page.contains("ld+json"), "{path}: {page}");
+            assert!(
+                page.contains("<title>My &lt;Site&gt;</title>"),
+                "{path}: {page}"
+            );
+            assert!(
+                !page.contains("canonical") && !page.contains("ld+json"),
+                "{path}: {page}"
+            );
             assert!(page.contains("id=\"nostube-config\""), "{path}: {page}");
         }
 
         let home = shell(&relay, &public, "/", SHELL).await;
         assert!(home.contains("<meta property=\"og:image\" content=\"https://videos.example/branding/banner?v=1\" />"), "{home}");
-        assert!(home.contains("<link rel=\"canonical\" href=\"https://videos.example/\" />"), "{home}");
-        assert!(shell(&relay, &public, "/about", SHELL).await.contains("href=\"https://videos.example/about\""));
-        assert!(!shell(&relay, &public, "/imprint", SHELL).await.contains("canonical"));
+        assert!(
+            home.contains("<link rel=\"canonical\" href=\"https://videos.example/\" />"),
+            "{home}"
+        );
+        assert!(shell(&relay, &public, "/about", SHELL)
+            .await
+            .contains("href=\"https://videos.example/about\""));
+        assert!(!shell(&relay, &public, "/imprint", SHELL)
+            .await
+            .contains("canonical"));
     }
 
     #[tokio::test]
     async fn the_sitemap_lists_the_pages_that_exist_and_the_shown_videos() {
         let (relay, public, shown, ..) = fixture().await;
         let res = sitemap(&relay, &public).await;
-        let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let xml = std::str::from_utf8(&body).unwrap();
-        let locs: Vec<&str> = xml.split("<loc>").skip(1).map(|s| s.split("</loc>").next().unwrap()).collect();
-        let video = format!("https://videos.example/v/{}", link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap());
-        assert_eq!(locs, ["https://videos.example/", "https://videos.example/about", video.as_str()], "{xml}");
-        assert!(xml.contains("<lastmod>2025-10-09T08:53:20Z</lastmod>"), "{xml}");
+        let locs: Vec<&str> = xml
+            .split("<loc>")
+            .skip(1)
+            .map(|s| s.split("</loc>").next().unwrap())
+            .collect();
+        let video = format!(
+            "https://videos.example/v/{}",
+            link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap()
+        );
+        assert_eq!(
+            locs,
+            [
+                "https://videos.example/",
+                "https://videos.example/about",
+                video.as_str()
+            ],
+            "{xml}"
+        );
+        assert!(
+            xml.contains("<lastmod>2025-10-09T08:53:20Z</lastmod>"),
+            "{xml}"
+        );
         assert!(xml.contains("<video:video><video:thumbnail_loc>https://cdn.example/t.jpg</video:thumbnail_loc><video:title>Tom &amp; &quot;Jerry&quot;</video:title><video:description>A &lt;b&gt;long&lt;/b&gt; description</video:description><video:content_loc>https://cdn.example/v.mp4</video:content_loc>"), "{xml}");
         assert!(xml.contains("<video:duration>61</video:duration><video:publication_date>2025-10-09T08:53:20Z</video:publication_date></video:video>"), "{xml}");
     }
@@ -675,19 +1024,39 @@ mod tests {
     #[tokio::test]
     async fn the_feeds_list_the_shown_videos_with_an_enclosure_and_every_page_links_them() {
         let (relay, public, shown, hidden, foreign) = fixture().await;
-        let url = format!("https://videos.example/v/{}", link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap());
+        let url = format!(
+            "https://videos.example/v/{}",
+            link(&shown, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap()
+        );
         for atom in [false, true] {
             let res = feed(&relay, &public, atom).await;
-            let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+            let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+                .await
+                .unwrap();
             let xml = std::str::from_utf8(&body).unwrap();
-            assert_eq!(xml.matches(if atom { "<entry>" } else { "<item>" }).count(), 1, "{xml}");
-            assert!(xml.contains(&url) && xml.contains("<title>Tom &amp; &quot;Jerry&quot;</title>"), "{xml}");
+            assert_eq!(
+                xml.matches(if atom { "<entry>" } else { "<item>" }).count(),
+                1,
+                "{xml}"
+            );
+            assert!(
+                xml.contains(&url) && xml.contains("<title>Tom &amp; &quot;Jerry&quot;</title>"),
+                "{xml}"
+            );
             assert!(xml.contains("https://cdn.example/v.mp4"), "{xml}");
             for other in [&hidden, &foreign] {
-                assert!(!xml.contains(&link(other, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap()), "{xml}");
+                assert!(
+                    !xml.contains(
+                        &link(other, [RelayUrl::parse("wss://videos.example").unwrap()]).unwrap()
+                    ),
+                    "{xml}"
+                );
             }
             if !atom {
-                assert!(xml.contains("<pubDate>Thu, 09 Oct 2025 08:53:20 GMT</pubDate>"), "{xml}");
+                assert!(
+                    xml.contains("<pubDate>Thu, 09 Oct 2025 08:53:20 GMT</pubDate>"),
+                    "{xml}"
+                );
                 assert!(xml.contains("<enclosure url=\"https://cdn.example/v.mp4\" length=\"0\" type=\"video/mp4\" />"), "{xml}");
             }
         }
@@ -702,7 +1071,10 @@ mod tests {
         let mut with_icon: serde_json::Value = serde_json::from_slice(&public).unwrap();
         with_icon["site"]["icon"] = "/branding/icon?v=abc".into();
         let with_icon = serde_json::to_vec(&with_icon).unwrap();
-        for (public, icon) in [(public, "/apple-touch-icon.png"), (with_icon, "/branding/icon?v=abc")] {
+        for (public, icon) in [
+            (public, "/apple-touch-icon.png"),
+            (with_icon, "/branding/icon?v=abc"),
+        ] {
             for path in ["/", "/about", "/v/nope", "/elsewhere"] {
                 let page = shell(&relay, &public, path, SHELL).await;
                 for tag in [
@@ -711,7 +1083,8 @@ mod tests {
                     format!("<meta name=\"theme-color\" content=\"{THEME_COLOR}\" />"),
                     "<meta name=\"mobile-web-app-capable\" content=\"yes\" />".to_owned(),
                     "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />".to_owned(),
-                    "<meta name=\"apple-mobile-web-app-title\" content=\"My &lt;Site&gt;\" />".to_owned(),
+                    "<meta name=\"apple-mobile-web-app-title\" content=\"My &lt;Site&gt;\" />"
+                        .to_owned(),
                 ] {
                     assert!(page.contains(&tag), "{path}: {tag} missing in {page}");
                 }
@@ -730,23 +1103,42 @@ mod tests {
         assert!(cut.ends_with('…'));
         // A cut right after a space drops the space before the ellipsis.
         let words = format!("{} next", "a".repeat(DESCRIPTION_MAX - 1));
-        assert_eq!(clip(&words), format!("{}…", "a".repeat(DESCRIPTION_MAX - 1)));
+        assert_eq!(
+            clip(&words),
+            format!("{}…", "a".repeat(DESCRIPTION_MAX - 1))
+        );
     }
 
     #[test]
     fn dates_follow_w3c_and_rfc_822() {
-        assert_eq!(iso_datetime(1_760_257_800).as_deref(), Some("2025-10-12T08:30:00Z"));
-        assert_eq!(rfc2822(1_760_257_800).as_deref(), Some("Sun, 12 Oct 2025 08:30:00 GMT"));
+        assert_eq!(
+            iso_datetime(1_760_257_800).as_deref(),
+            Some("2025-10-12T08:30:00Z")
+        );
+        assert_eq!(
+            rfc2822(1_760_257_800).as_deref(),
+            Some("Sun, 12 Oct 2025 08:30:00 GMT")
+        );
         assert_eq!(rfc2822(0).as_deref(), Some("Thu, 01 Jan 1970 00:00:00 GMT"));
-        assert_eq!(iso_datetime(u64::MAX), None, "out of range is no date, not a panic");
+        assert_eq!(
+            iso_datetime(u64::MAX),
+            None,
+            "out of range is no date, not a panic"
+        );
         assert_eq!(rfc2822(u64::MAX), None);
     }
 
     #[test]
     fn the_head_replaces_the_placeholder_title_or_lands_before_the_end_of_head() {
-        assert_eq!(inject(SHELL, "<title>X</title>"), SHELL.replace("<title>Loading…</title>", "<title>X</title>"));
+        assert_eq!(
+            inject(SHELL, "<title>X</title>"),
+            SHELL.replace("<title>Loading…</title>", "<title>X</title>")
+        );
         let untitled = "<html><head><meta charset=\"UTF-8\" /></head><body></body></html>";
-        assert_eq!(inject(untitled, "<title>X</title>"), "<html><head><meta charset=\"UTF-8\" /><title>X</title></head><body></body></html>");
+        assert_eq!(
+            inject(untitled, "<title>X</title>"),
+            "<html><head><meta charset=\"UTF-8\" /><title>X</title></head><body></body></html>"
+        );
         // A `</title>` before `<title>` is no title to replace.
         let odd = "<head></title><title></head>";
         assert_eq!(inject(odd, "H"), "<head></title><title>H</head>");
@@ -754,9 +1146,15 @@ mod tests {
 
     #[test]
     fn escaping_covers_html_text_and_both_quotes_and_keeps_unicode() {
-        assert_eq!(Esc(r#"<a href="x">Tom & 'Jerry' – ü</a>"#).to_string(), "&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39; – ü&lt;/a&gt;");
+        assert_eq!(
+            Esc(r#"<a href="x">Tom & 'Jerry' – ü</a>"#).to_string(),
+            "&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39; – ü&lt;/a&gt;"
+        );
         assert_eq!(Esc("").to_string(), "");
         assert_eq!(Esc("&&").to_string(), "&amp;&amp;");
-        assert_eq!(script_json(r#"{"t":"</script><script>"}"#), r#"{"t":"\u003c/script>\u003cscript>"}"#);
+        assert_eq!(
+            script_json(r#"{"t":"</script><script>"}"#),
+            r#"{"t":"\u003c/script>\u003cscript>"}"#
+        );
     }
 }

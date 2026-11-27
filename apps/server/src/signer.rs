@@ -20,15 +20,19 @@ pub type Shared = std::sync::Arc<parking_lot::Mutex<Option<Result<Keys, String>>
 /// The key as an `ncryptsec`, encrypted with `password`.
 pub fn encrypt(secret: &SecretKey, password: &str) -> Result<String, String> {
     let fail = |e: &dyn std::fmt::Display| format!("cannot encrypt the managed key: {e}");
-    let encrypted = EncryptedSecretKey::new(secret, password, LOG_N, KeySecurity::Medium).map_err(|e| fail(&e))?;
+    let encrypted = EncryptedSecretKey::new(secret, password, LOG_N, KeySecurity::Medium)
+        .map_err(|e| fail(&e))?;
     encrypted.to_bech32().map_err(|e| fail(&e))
 }
 
 /// The keys from an `ncryptsec`; fails on a wrong password and on any changed byte (the cipher
 /// is authenticated).
 pub fn decrypt(ncryptsec: &str, password: &str) -> Result<Keys, String> {
-    let encrypted = EncryptedSecretKey::from_bech32(ncryptsec).map_err(|e| format!("broken managed key: {e}"))?;
-    let secret = encrypted.decrypt(password).map_err(|e| format!("cannot unlock the managed key: {e}"))?;
+    let encrypted = EncryptedSecretKey::from_bech32(ncryptsec)
+        .map_err(|e| format!("broken managed key: {e}"))?;
+    let secret = encrypted
+        .decrypt(password)
+        .map_err(|e| format!("cannot unlock the managed key: {e}"))?;
     Ok(Keys::new(secret))
 }
 
@@ -47,16 +51,30 @@ struct Unsigned {
 /// signed here can also be stored here.
 pub fn sign(keys: &Keys, body: &[u8]) -> Result<Event, String> {
     if body.len() > MAX_MESSAGE_BYTES {
-        return Err(format!("event too large (over {} KiB)", MAX_MESSAGE_BYTES / 1024));
+        return Err(format!(
+            "event too large (over {} KiB)",
+            MAX_MESSAGE_BYTES / 1024
+        ));
     }
     let u: Unsigned = serde_json::from_slice(body).map_err(|e| format!("invalid event: {e}"))?;
     if u.created_at > Timestamp::now().as_secs() + MAX_FUTURE_SECS {
         return Err("created_at is too far in the future".into());
     }
-    let tags = u.tags.into_iter().map(Tag::parse).collect::<Result<Vec<_>, _>>().map_err(|e| format!("invalid tag: {e}"))?;
-    UnsignedEvent::new(keys.public_key(), Timestamp::from(u.created_at), Kind::from(u.kind), tags, u.content)
-        .finalize(keys)
-        .map_err(|e| format!("cannot sign: {e}"))
+    let tags = u
+        .tags
+        .into_iter()
+        .map(Tag::parse)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("invalid tag: {e}"))?;
+    UnsignedEvent::new(
+        keys.public_key(),
+        Timestamp::from(u.created_at),
+        Kind::from(u.kind),
+        tags,
+        u.content,
+    )
+    .finalize(keys)
+    .map_err(|e| format!("cannot sign: {e}"))
 }
 
 #[cfg(test)]
@@ -70,14 +88,22 @@ mod tests {
         let keys = Keys::generate();
         let ncryptsec = encrypt(keys.secret_key(), PASSWORD).unwrap();
         assert!(ncryptsec.starts_with("ncryptsec1"));
-        assert_eq!(decrypt(&ncryptsec, PASSWORD).unwrap().public_key(), keys.public_key());
+        assert_eq!(
+            decrypt(&ncryptsec, PASSWORD).unwrap().public_key(),
+            keys.public_key()
+        );
         assert!(decrypt(&ncryptsec, "wrong").is_err());
 
         // One changed byte of the ciphertext (re-encoded, so the bech32 checksum is valid).
-        let mut bytes = EncryptedSecretKey::from_bech32(&ncryptsec).unwrap().as_vec();
+        let mut bytes = EncryptedSecretKey::from_bech32(&ncryptsec)
+            .unwrap()
+            .as_vec();
         let last = bytes.len() - 1;
         bytes[last] ^= 1;
-        let tampered = EncryptedSecretKey::from_slice(&bytes).unwrap().to_bech32().unwrap();
+        let tampered = EncryptedSecretKey::from_slice(&bytes)
+            .unwrap()
+            .to_bech32()
+            .unwrap();
         assert!(decrypt(&tampered, PASSWORD).is_err());
     }
 
@@ -104,10 +130,20 @@ mod tests {
             r#"{"kind":1,"created_at":1,"tags":[[]],"content":""}"#.to_owned(), // empty tag
             r#"{"kind":1,"created_at":1,"tags":[[1]],"content":""}"#.to_owned(),
             r#"{"kind":1,"created_at":1,"tags":[],"content":"","pubkey":"x"}"#.to_owned(),
-            format!(r#"{{"kind":1,"created_at":{},"tags":[],"content":""}}"#, now + MAX_FUTURE_SECS + 60),
-            format!(r#"{{"kind":1,"created_at":1,"tags":[],"content":"{}"}}"#, "x".repeat(MAX_MESSAGE_BYTES)),
+            format!(
+                r#"{{"kind":1,"created_at":{},"tags":[],"content":""}}"#,
+                now + MAX_FUTURE_SECS + 60
+            ),
+            format!(
+                r#"{{"kind":1,"created_at":1,"tags":[],"content":"{}"}}"#,
+                "x".repeat(MAX_MESSAGE_BYTES)
+            ),
         ] {
-            assert!(sign(&keys, body.as_bytes()).is_err(), "accepted {}", &body[..body.len().min(80)]);
+            assert!(
+                sign(&keys, body.as_bytes()).is_err(),
+                "accepted {}",
+                &body[..body.len().min(80)]
+            );
         }
     }
 }

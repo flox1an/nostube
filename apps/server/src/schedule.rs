@@ -72,10 +72,16 @@ fn tag_value<'a>(ev: &'a Event, name: &str) -> Option<&'a str> {
 /// coordinate (`d` tag) as a pending one replaces it (edit before release); the replaced
 /// version's blobs are cleaned up unless something still uses them.
 pub async fn submit(
-    outbox: &Outbox, creators: &[PublicKey], writers: &[PublicKey], body: &[u8],
+    outbox: &Outbox,
+    creators: &[PublicKey],
+    writers: &[PublicKey],
+    body: &[u8],
 ) -> Result<serde_json::Value, Error> {
     if body.len() > MAX_MESSAGE_BYTES {
-        return rejected(format!("event too large (over {} KiB)", MAX_MESSAGE_BYTES / 1024));
+        return rejected(format!(
+            "event too large (over {} KiB)",
+            MAX_MESSAGE_BYTES / 1024
+        ));
     }
     let ev = Event::from_json(body).or_else(|e| rejected(format!("invalid event: {e}")))?;
     if ev.verify().is_err() {
@@ -111,7 +117,10 @@ pub async fn submit(
     let _media = MEDIA_LIFECYCLE.lock().await;
     let state = crate::outbox::storage(outbox).map_err(Error::Failed)?;
     for hash in &hashes {
-        if almond::services::file_storage::get_file_metadata(&state, hash).await.is_none() {
+        if almond::services::file_storage::get_file_metadata(&state, hash)
+            .await
+            .is_none()
+        {
             return rejected(format!("blob {hash} is not stored on this instance"));
         }
     }
@@ -176,7 +185,11 @@ pub async fn cancel(outbox: &Outbox, id: String) -> Result<(), Error> {
         })
         .await
         .map_err(Error::Failed)?;
-    if found { Ok(()) } else { rejected("no scheduled video with this id") }
+    if found {
+        Ok(())
+    } else {
+        rejected("no scheduled video with this id")
+    }
 }
 
 /// Pending videos and the newest history, for the studio. `event` is the signed event, so the
@@ -234,7 +247,12 @@ pub async fn release_due(outbox: &Outbox, relay: &Relay) -> usize {
         let key = id.clone();
         let json: Option<String> = match outbox
             .db(move |conn| {
-                conn.query_row("SELECT event FROM scheduled WHERE event_id = ? AND state = 'scheduled'", [key], |r| r.get(0)).optional()
+                conn.query_row(
+                    "SELECT event FROM scheduled WHERE event_id = ? AND state = 'scheduled'",
+                    [key],
+                    |r| r.get(0),
+                )
+                .optional()
             })
             .await
         {
@@ -303,9 +321,9 @@ pub(crate) fn pending_media(conn: &rusqlite::Connection) -> rusqlite::Result<Has
 
 #[cfg(test)]
 mod tests {
+    use super::Error;
     use super::*;
     use crate::config::Mirror;
-    use super::Error;
     use nostr::prelude::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -317,10 +335,21 @@ mod tests {
         state: almond::models::AppState,
     }
 
-    fn open(path: &std::path::Path, keys: &Keys, state: &almond::models::AppState) -> (Outbox, Relay) {
-        let relay = Relay::open(path, crate::relay::RelayConfig {
-            writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
-        }).unwrap();
+    fn open(
+        path: &std::path::Path,
+        keys: &Keys,
+        state: &almond::models::AppState,
+    ) -> (Outbox, Relay) {
+        let relay = Relay::open(
+            path,
+            crate::relay::RelayConfig {
+                writers: vec![keys.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         let outbox = Outbox::open(path, Mirror::default()).unwrap();
         outbox.attach_storage(state.clone());
         (outbox, relay)
@@ -329,7 +358,11 @@ mod tests {
     async fn fixture() -> Fixture {
         static N: AtomicUsize = AtomicUsize::new(0);
         let keys = Keys::generate();
-        let path = std::env::temp_dir().join(format!("nostube-schedule-test-{}-{}.sqlite", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let path = std::env::temp_dir().join(format!(
+            "nostube-schedule-test-{}-{}.sqlite",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
         let _ = std::fs::remove_file(&path);
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = path.with_extension("blossom");
@@ -339,7 +372,13 @@ mod tests {
         cfg.homepage_enabled = false;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
         let (outbox, relay) = open(&path, &keys, &state);
-        Fixture { keys, path, outbox, relay, state }
+        Fixture {
+            keys,
+            path,
+            outbox,
+            relay,
+            state,
+        }
     }
 
     /// A blob in the real Almond storage, owned by the creator (as an upload leaves it).
@@ -347,14 +386,30 @@ mod tests {
         use sha2::Digest;
         let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = f.state.storage.uploads.join(format!("{hash}.mp4"));
-        tokio::fs::create_dir_all(&f.state.storage.uploads).await.unwrap();
+        tokio::fs::create_dir_all(&f.state.storage.uploads)
+            .await
+            .unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();
-        f.state.file_index.insert(hash.clone(), almond::models::FileMetadata {
-            location: almond::models::FileLocation::Local(path), extension: Some("mp4".into()),
-            mime_type: Some("video/mp4".into()), size: bytes.len() as u64, created_at: now() as u64,
-            pubkey: None, expiration: None, origin: Default::default(),
-        }).await;
-        f.outbox.record_owner(hash.clone(), f.keys.public_key(), false).await.unwrap();
+        f.state
+            .file_index
+            .insert(
+                hash.clone(),
+                almond::models::FileMetadata {
+                    location: almond::models::FileLocation::Local(path),
+                    extension: Some("mp4".into()),
+                    mime_type: Some("video/mp4".into()),
+                    size: bytes.len() as u64,
+                    created_at: now() as u64,
+                    pubkey: None,
+                    expiration: None,
+                    origin: Default::default(),
+                },
+            )
+            .await;
+        f.outbox
+            .record_owner(hash.clone(), f.keys.public_key(), false)
+            .await
+            .unwrap();
         hash
     }
 
@@ -365,9 +420,15 @@ mod tests {
                 Tag::parse(["d", d]).unwrap(),
                 Tag::parse(["title", "clip"]).unwrap(),
                 Tag::parse(["published_at", &due.to_string()]).unwrap(),
-                Tag::parse(["imeta", format!("url {url}").as_str(), format!("x {hash}").as_str()]).unwrap(),
+                Tag::parse([
+                    "imeta",
+                    format!("url {url}").as_str(),
+                    format!("x {hash}").as_str(),
+                ])
+                .unwrap(),
             ])
-            .finalize(keys).unwrap()
+            .finalize(keys)
+            .unwrap()
     }
 
     async fn submit_event(f: &Fixture, event: &Event) -> Result<serde_json::Value, Error> {
@@ -384,15 +445,28 @@ mod tests {
     }
 
     async fn on_relay(f: &Fixture) -> Vec<Event> {
-        f.relay.stored(Filter::new().kinds([Kind::Custom(34235), Kind::Custom(34236)])).await.unwrap()
+        f.relay
+            .stored(Filter::new().kinds([Kind::Custom(34235), Kind::Custom(34236)]))
+            .await
+            .unwrap()
     }
 
     async fn make_due(outbox: &Outbox) {
-        outbox.db(|c| c.execute("UPDATE scheduled SET due_at = ?", [now() - 5])).await.unwrap();
+        outbox
+            .db(|c| c.execute("UPDATE scheduled SET due_at = ?", [now() - 5]))
+            .await
+            .unwrap();
     }
 
     async fn states(outbox: &Outbox) -> Vec<String> {
-        outbox.db(|c| c.prepare("SELECT state FROM scheduled ORDER BY due_at")?.query_map([], |r| r.get(0))?.collect()).await.unwrap()
+        outbox
+            .db(|c| {
+                c.prepare("SELECT state FROM scheduled ORDER BY due_at")?
+                    .query_map([], |r| r.get(0))?
+                    .collect()
+            })
+            .await
+            .unwrap()
     }
 
     #[tokio::test]
@@ -402,19 +476,39 @@ mod tests {
         let due = now() + 3600;
         let key = [f.keys.public_key()];
 
-        let tampered = video(&f.keys, 34235, "a", &hash, due).as_json().replace("\"hello\"", "\"hellp\"");
-        assert!(why(submit(&f.outbox, &key, &key, tampered.as_bytes()).await).starts_with("invalid: bad event id"));
+        let tampered = video(&f.keys, 34235, "a", &hash, due)
+            .as_json()
+            .replace("\"hello\"", "\"hellp\"");
+        assert!(
+            why(submit(&f.outbox, &key, &key, tampered.as_bytes()).await)
+                .starts_with("invalid: bad event id")
+        );
 
         let stranger = Keys::generate();
-        assert!(why(submit_event(&f, &video(&stranger, 34235, "a", &hash, due)).await).contains("not a creator"));
+        assert!(
+            why(submit_event(&f, &video(&stranger, 34235, "a", &hash, due)).await)
+                .contains("not a creator")
+        );
         // A creator the relay does not accept as writer is refused as well.
         let event = video(&f.keys, 34235, "a", &hash, due);
-        assert!(why(submit(&f.outbox, &key, &[], event.as_json().as_bytes()).await).contains("not a creator"));
+        assert!(
+            why(submit(&f.outbox, &key, &[], event.as_json().as_bytes()).await)
+                .contains("not a creator")
+        );
 
-        assert!(why(submit_event(&f, &video(&f.keys, 1, "a", &hash, due)).await).contains("kind 34235 and 34236"));
-        assert!(why(submit_event(&f, &video(&f.keys, 34235, "a", &hash, now() - 10)).await).contains("not in the future"));
+        assert!(
+            why(submit_event(&f, &video(&f.keys, 1, "a", &hash, due)).await)
+                .contains("kind 34235 and 34236")
+        );
+        assert!(
+            why(submit_event(&f, &video(&f.keys, 34235, "a", &hash, now() - 10)).await)
+                .contains("not in the future")
+        );
         let unknown = "e".repeat(64);
-        assert!(why(submit_event(&f, &video(&f.keys, 34235, "a", &unknown, due)).await).contains("not stored"));
+        assert!(
+            why(submit_event(&f, &video(&f.keys, 34235, "a", &unknown, due)).await)
+                .contains("not stored")
+        );
 
         assert!(states(&f.outbox).await.is_empty());
         std::fs::remove_file(&f.path).ok();
@@ -434,14 +528,25 @@ mod tests {
 
         // The server goes down; the due time passes; the next boot releases it by itself.
         make_due(&f.outbox).await;
-        let Fixture { keys, path, outbox, relay, state } = f;
+        let Fixture {
+            keys,
+            path,
+            outbox,
+            relay,
+            state,
+        } = f;
         drop((outbox, relay));
         let (outbox, relay) = open(&path, &keys, &state);
         let worker = spawn(outbox.clone(), relay.clone());
         let mut seen = vec![];
         for _ in 0..50 {
-            seen = relay.stored(Filter::new().kind(Kind::Custom(34235))).await.unwrap();
-            if !seen.is_empty() { break }
+            seen = relay
+                .stored(Filter::new().kind(Kind::Custom(34235)))
+                .await
+                .unwrap();
+            if !seen.is_empty() {
+                break;
+            }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         worker.abort();
@@ -456,19 +561,35 @@ mod tests {
     async fn editing_replaces_the_pending_event_and_only_unused_blobs_go() {
         let f = fixture().await;
         let (old, kept) = (blob(&f, b"old video").await, blob(&f, b"new video").await);
-        submit_event(&f, &video(&f.keys, 34235, "clip", &old, now() + 3600)).await.ok().expect("accepted");
+        submit_event(&f, &video(&f.keys, 34235, "clip", &old, now() + 3600))
+            .await
+            .ok()
+            .expect("accepted");
         let newer = video(&f.keys, 34235, "clip", &kept, now() + 7200);
         submit_event(&f, &newer).await.ok().expect("accepted");
-        assert_eq!(states(&f.outbox).await, ["scheduled"], "same d tag: one pending version");
+        assert_eq!(
+            states(&f.outbox).await,
+            ["scheduled"],
+            "same d tag: one pending version"
+        );
 
         let keys = Default::default();
         crate::outbox::run_due_for_test(&f.outbox, &keys).await;
-        assert!(f.state.file_index.get(&old).await.is_none(), "replaced video's blob is removed");
-        assert!(f.state.file_index.get(&kept).await.is_some(), "blob of the pending version stays");
+        assert!(
+            f.state.file_index.get(&old).await.is_none(),
+            "replaced video's blob is removed"
+        );
+        assert!(
+            f.state.file_index.get(&kept).await.is_some(),
+            "blob of the pending version stays"
+        );
 
         make_due(&f.outbox).await;
         assert_eq!(release_due(&f.outbox, &f.relay).await, 1);
-        assert_eq!(on_relay(&f).await.iter().map(|e| e.id).collect::<Vec<_>>(), [newer.id]);
+        assert_eq!(
+            on_relay(&f).await.iter().map(|e| e.id).collect::<Vec<_>>(),
+            [newer.id]
+        );
         std::fs::remove_file(&f.path).ok();
     }
 
@@ -478,14 +599,20 @@ mod tests {
         let hash = blob(&f, b"video bytes").await;
         let event = video(&f.keys, 34235, "clip", &hash, now() + 3600);
         submit_event(&f, &event).await.ok().expect("accepted");
-        cancel(&f.outbox, event.id.to_hex()).await.ok().expect("cancelled");
+        cancel(&f.outbox, event.id.to_hex())
+            .await
+            .ok()
+            .expect("cancelled");
         crate::outbox::run_due_for_test(&f.outbox, &Default::default()).await;
         assert!(f.state.file_index.get(&hash).await.is_none());
         assert!(states(&f.outbox).await.is_empty());
         make_due(&f.outbox).await;
         assert_eq!(release_due(&f.outbox, &f.relay).await, 0);
         assert!(on_relay(&f).await.is_empty());
-        assert!(matches!(cancel(&f.outbox, event.id.to_hex()).await, Err(Error::Rejected(_))));
+        assert!(matches!(
+            cancel(&f.outbox, event.id.to_hex()).await,
+            Err(Error::Rejected(_))
+        ));
 
         // Once released the video is public: cancel no longer applies (the normal delete path does).
         let hash = blob(&f, b"other bytes").await;
@@ -493,7 +620,10 @@ mod tests {
         submit_event(&f, &event).await.ok().expect("accepted");
         make_due(&f.outbox).await;
         assert_eq!(release_due(&f.outbox, &f.relay).await, 1);
-        assert!(matches!(cancel(&f.outbox, event.id.to_hex()).await, Err(Error::Rejected(_))));
+        assert!(matches!(
+            cancel(&f.outbox, event.id.to_hex()).await,
+            Err(Error::Rejected(_))
+        ));
         assert!(f.state.file_index.get(&hash).await.is_some());
         std::fs::remove_file(&f.path).ok();
     }

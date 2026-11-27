@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-instance/
+target/
+package-lock.json
+apps/web/.impeccable/
+apps/web/src-tauri/
+apps/server/

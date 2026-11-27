@@ -19,7 +19,11 @@ mod signer;
 mod storage_move;
 mod tls;
 
-use std::{net::SocketAddr, path::{Path, PathBuf}, sync::Arc};
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use axum::{
     body::Body,
@@ -55,7 +59,9 @@ type BoxError = Box<dyn std::error::Error + Send + Sync>;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .init();
     // Startup failures end with one line naming the cause (#7), then exit.
     let cli = match Cli::parse(std::env::args().skip(1), |name| std::env::var(name).ok()) {
@@ -118,8 +124,18 @@ const USAGE: &str = "usage: nostube-server [--data <dir>] [--bind <IP>] [--port 
 NOSTUBE_HTTP_PORT, NOSTUBE_ORIGIN, NOSTUBE_TLS)";
 
 impl Cli {
-    fn parse(args: impl Iterator<Item = String>, env: impl Fn(&str) -> Option<String>) -> Result<Cli, BoxError> {
-        let mut cli = Cli { data: "data".into(), bind: None, port: None, http_port: None, origin: None, tls: None };
+    fn parse(
+        args: impl Iterator<Item = String>,
+        env: impl Fn(&str) -> Option<String>,
+    ) -> Result<Cli, BoxError> {
+        let mut cli = Cli {
+            data: "data".into(),
+            bind: None,
+            port: None,
+            http_port: None,
+            origin: None,
+            tls: None,
+        };
         for name in ["data", "bind", "port", "http-port", "origin", "tls"] {
             let var = format!("NOSTUBE_{}", name.to_uppercase().replace('-', "_"));
             if let Some(value) = env(&var).filter(|v| !v.trim().is_empty()) {
@@ -130,9 +146,13 @@ impl Cli {
         while let Some(a) = args.next() {
             match a.as_str() {
                 "admin" | "reset" | "config" | "rollback" => {}
-                flag if flag.starts_with("--") && ["data", "bind", "port", "http-port", "origin", "tls"].contains(&&flag[2..]) => {
+                flag if flag.starts_with("--")
+                    && ["data", "bind", "port", "http-port", "origin", "tls"]
+                        .contains(&&flag[2..]) =>
+                {
                     let value = args.next().ok_or(format!("{flag} needs a value"))?;
-                    cli.set(&flag[2..], value).map_err(|e| format!("{flag}: {e}"))?;
+                    cli.set(&flag[2..], value)
+                        .map_err(|e| format!("{flag}: {e}"))?;
                 }
                 _ => return Err(format!("unknown argument {a}; {USAGE}").into()),
             }
@@ -143,7 +163,13 @@ impl Cli {
     fn set(&mut self, name: &str, value: String) -> Result<(), BoxError> {
         match name {
             "data" => self.data = value.into(),
-            "bind" => self.bind = Some(value.parse().map_err(|e| format!("invalid IP address: {e}"))?),
+            "bind" => {
+                self.bind = Some(
+                    value
+                        .parse()
+                        .map_err(|e| format!("invalid IP address: {e}"))?,
+                )
+            }
             "port" => {
                 let port: u16 = value.parse().map_err(|e| format!("invalid port: {e}"))?;
                 if port == 0 {
@@ -151,13 +177,17 @@ impl Cli {
                 }
                 self.port = Some(port);
             }
-            "http-port" => self.http_port = Some(value.parse().map_err(|e| format!("invalid port: {e}"))?),
+            "http-port" => {
+                self.http_port = Some(value.parse().map_err(|e| format!("invalid port: {e}"))?)
+            }
             "origin" => self.origin = Some(value.trim().trim_end_matches('/').to_owned()),
             "tls" => {
                 self.tls = Some(match value.as_str() {
                     "proxy" => TlsKind::Proxy,
                     "local-ca" => TlsKind::LocalCa,
-                    other => return Err(format!("unknown TLS mode {other} (proxy or local-ca)").into()),
+                    other => {
+                        return Err(format!("unknown TLS mode {other} (proxy or local-ca)").into())
+                    }
                 })
             }
             _ => unreachable!("every name is listed above"),
@@ -167,7 +197,11 @@ impl Cli {
 
     /// The TLS mode of a first start: what was asked for, else `proxy` if an origin was given.
     fn first_start_kind(&self) -> TlsKind {
-        self.tls.unwrap_or(if self.origin.is_some() { TlsKind::Proxy } else { TlsKind::LocalCa })
+        self.tls.unwrap_or(if self.origin.is_some() {
+            TlsKind::Proxy
+        } else {
+            TlsKind::LocalCa
+        })
     }
 }
 
@@ -194,8 +228,15 @@ async fn shutdown_signal() {
 
 /// How this run serves: with its own local CA, or as plain HTTP behind a proxy.
 enum Serving {
-    LocalCa { ca: tls::LocalCa, names: tls::LocalNames, https_port: u16, http_port: u16 },
-    Proxy { port: u16 },
+    LocalCa {
+        ca: tls::LocalCa,
+        names: tls::LocalNames,
+        https_port: u16,
+        http_port: u16,
+    },
+    Proxy {
+        port: u16,
+    },
 }
 
 async fn run(cli: Cli) -> Result<(), BoxError> {
@@ -233,7 +274,11 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             }
             TlsKind::LocalCa => {
                 let names = tls::LocalNames::detect(None)?;
-                Config::default_for(&names.local_name, cli.port.unwrap_or(443), cli.http_port.unwrap_or(80))
+                Config::default_for(
+                    &names.local_name,
+                    cli.port.unwrap_or(443),
+                    cli.http_port.unwrap_or(80),
+                )
             }
         };
         std::fs::write(&config_path, cfg.to_toml()?)?;
@@ -257,11 +302,17 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     }
 
     let (covered_hosts, setup_origin, serving) = match &cfg.tls {
-        config::Tls::LocalCa { router_name, https_port, http_port } => {
+        config::Tls::LocalCa {
+            router_name,
+            https_port,
+            http_port,
+        } => {
             // Transport overrides for this run; the config file keeps its values.
             let https_port = cli.port.unwrap_or(*https_port);
             let mut setup_origin = nostr::prelude::Url::parse(&cfg.origin)?;
-            setup_origin.set_port((https_port != 443).then_some(https_port)).map_err(|_| "invalid setup port")?;
+            setup_origin
+                .set_port((https_port != 443).then_some(https_port))
+                .map_err(|_| "invalid setup port")?;
             // `http_port = 0` (or `--http-port 0`) disables the port-80 onboarding
             // listener (e.g. behind a proxy that owns port 80).
             let http_port = cli.http_port.unwrap_or(*http_port);
@@ -270,8 +321,14 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             }
             let names = tls::LocalNames::detect(router_name.clone())?;
             let covered = names.local_name.eq_ignore_ascii_case(&cfg.origin_host)
-                || names.router_name.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
-                || cfg.origin_host.parse().is_ok_and(|ip| names.ips.contains(&ip));
+                || names
+                    .router_name
+                    .as_deref()
+                    .is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
+                || cfg
+                    .origin_host
+                    .parse()
+                    .is_ok_and(|ip| names.ips.contains(&ip));
             if !covered {
                 return Err(format!(
                     "origin host {} is not one of the certificate names ({}, router name {:?}, IPs {:?})",
@@ -283,13 +340,20 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             (
                 tls::covered_hosts(&names),
                 setup_origin.origin().ascii_serialization(),
-                Serving::LocalCa { ca, names, https_port, http_port },
+                Serving::LocalCa {
+                    ca,
+                    names,
+                    https_port,
+                    http_port,
+                },
             )
         }
         config::Tls::Proxy { port } => (
             vec![cfg.origin_host.clone()],
             cfg.origin.clone(),
-            Serving::Proxy { port: cli.port.unwrap_or(*port) },
+            Serving::Proxy {
+                port: cli.port.unwrap_or(*port),
+            },
         ),
     };
 
@@ -348,12 +412,21 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         }
     };
     // Without the admin area there is no managed key: blob jobs fail with that reason.
-    let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
+    let signer = admin
+        .as_ref()
+        .map(admin::AdminState::signer)
+        .unwrap_or_default();
     // Register index-only destinations and retire legacy jobs before any delivery can start.
     profile::sync(&relay, &branding, &outbox, &signer).await;
     let admin = admin.map(admin::router);
     let worker = outbox::spawn(outbox.clone(), signer.clone());
-    let nsite_worker = nsite::spawn(nsite, relay.clone(), branding.clone(), outbox.clone(), signer.clone());
+    let nsite_worker = nsite::spawn(
+        nsite,
+        relay.clone(),
+        branding.clone(),
+        outbox.clone(),
+        signer.clone(),
+    );
     // The first scan releases anything that became due while the server was down.
     let releaser = schedule::spawn(outbox.clone(), relay.clone());
 
@@ -368,7 +441,12 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     };
 
     match serving {
-        Serving::LocalCa { ca, names, https_port, http_port } => {
+        Serving::LocalCa {
+            ca,
+            names,
+            https_port,
+            http_port,
+        } => {
             let bind = cli.bind.unwrap_or(std::net::Ipv4Addr::UNSPECIFIED.into());
             if http_port != 0 {
                 // Port 80 is a nice-to-have (CA onboarding); a busy or privileged port
@@ -398,12 +476,21 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             listener.set_nonblocking(true)?;
             axum_server::from_tcp_rustls(listener, ca.rustls.clone())?
                 .handle((*handle).clone())
-                .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
+                .serve(
+                    Router::new()
+                        .fallback(dispatch)
+                        .with_state(app)
+                        .into_make_service(),
+                )
                 .await?;
         }
         Serving::Proxy { port } => {
             let bind = cli.bind.unwrap_or(std::net::Ipv4Addr::LOCALHOST.into());
-            let tls = if cfg.origin.starts_with("https://") { " (TLS ends at the proxy)" } else { "" };
+            let tls = if cfg.origin.starts_with("https://") {
+                " (TLS ends at the proxy)"
+            } else {
+                ""
+            };
             tracing::info!("serving {} as plain HTTP on {bind}:{port}{tls}", cfg.origin);
             let address = SocketAddr::new(bind, port);
             let listener = std::net::TcpListener::bind(address)
@@ -411,7 +498,12 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             listener.set_nonblocking(true)?;
             axum_server::from_tcp(listener)?
                 .handle((*handle).clone())
-                .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
+                .serve(
+                    Router::new()
+                        .fallback(dispatch)
+                        .with_state(app)
+                        .into_make_service(),
+                )
                 .await?;
         }
     }
@@ -460,7 +552,9 @@ fn blossom_config(cfg: &Config, data: &Path, s3_secret: Option<String>) -> almon
 /// The commit this build was made from (the container image sets `NOSTUBE_REVISION`), so a
 /// deploy can be checked against what it was meant to roll out. `None` when it is not set.
 fn revision(value: Option<String>) -> Option<String> {
-    value.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty() && v != "unknown")
+    value
+        .map(|v| v.trim().to_owned())
+        .filter(|v| !v.is_empty() && v != "unknown")
 }
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
@@ -481,7 +575,10 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if path.starts_with("/api/") {
         return match (req.method(), path.as_str()) {
             (&Method::GET, "/api/config") => (
-                [(header::CONTENT_TYPE, "application/json"), (header::CACHE_CONTROL, "no-store")],
+                [
+                    (header::CONTENT_TYPE, "application/json"),
+                    (header::CACHE_CONTROL, "no-store"),
+                ],
                 app.branding.public_config(),
             )
                 .into_response(),
@@ -501,76 +598,122 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return relay::handle_report(app.relay, req).await;
     }
     if is_blossom(req.method(), &path) {
-        let upload = matches!((req.method(), path.as_str()),
-            (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"));
+        let upload = matches!(
+            (req.method(), path.as_str()),
+            (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload")
+        );
         let mirrored = outbox::is_mirror_delivery(req.headers());
         // A GET that would start a file counts as a play when the answer comes from media a
         // stored video event names (`count_view` skips everything else) and play counting is
         // on. Decided here, on the request and the response, so Almond stays untouched; a
         // mirror fetching for storage is not a visitor and counts nothing.
-        let count = (!mirrored && is_play_start(&req)).then(|| path.trim_start_matches('/').to_owned());
+        let count =
+            (!mirrored && is_play_start(&req)).then(|| path.trim_start_matches('/').to_owned());
         // Almond already validates/consumes this auth in its handler. Retain the verified
         // identity only when the resulting descriptor confirms storage succeeded.
-        let auth = req.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok())
+        let auth = req
+            .headers()
+            .get(header::AUTHORIZATION)
+            .and_then(|h| h.to_str().ok())
             .and_then(|h| almond::services::auth::parse_auth_header(h).ok())
             .filter(|event| event.verify().is_ok());
-        let _media_guard = if upload { Some(outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
+        let _media_guard = if upload {
+            Some(outbox::MEDIA_LIFECYCLE.lock().await)
+        } else {
+            None
+        };
         // BUD-04 carries its hash in signed authorization, not in X-SHA-256.
-        let mirror_hash = (path == "/mirror").then(|| auth.as_ref()
-            .and_then(almond::services::auth::extract_sha256_from_event)).flatten();
-        let upload_hash = mirror_hash.as_deref()
+        let mirror_hash = (path == "/mirror")
+            .then(|| {
+                auth.as_ref()
+                    .and_then(almond::services::auth::extract_sha256_from_event)
+            })
+            .flatten();
+        let upload_hash = mirror_hash
+            .as_deref()
             .or_else(|| req.headers().get("x-sha-256").and_then(|h| h.to_str().ok()));
         if upload && upload_hash.is_some_and(|hash| app.outbox.moving_blob(Some(hash))) {
-            return (StatusCode::SERVICE_UNAVAILABLE, [(header::RETRY_AFTER, "5")],
-                "this blob is being moved to S3; retry the upload").into_response();
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                [(header::RETRY_AFTER, "5")],
+                "this blob is being moved to S3; retry the upload",
+            )
+                .into_response();
         }
         // Almond checks each chunk against the quota, never the whole upload it adds up to.
         if req.method() == Method::PATCH {
-            let length = req.headers().get("upload-length").and_then(|h| h.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
+            let length = req
+                .headers()
+                .get("upload-length")
+                .and_then(|h| h.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok());
             if let (Some(length), Ok(state)) = (length, outbox::storage(&app.outbox)) {
                 // ponytail: parallel chunked sessions can still overshoot together; reserve
                 // per session in Almond if several writers upload at once near the quota.
-                if let Err(error) = almond::services::file_storage::ensure_storage_capacity(&state, length).await {
+                if let Err(error) =
+                    almond::services::file_storage::ensure_storage_capacity(&state, length).await
+                {
                     return error.into_response();
                 }
             }
         }
         // Almond lets any allowed writer delete any blob; here only its owner may, and never
         // one a stored event, a scheduled video or the nsite still uses.
-        let delete = (req.method() == Method::DELETE).then(|| blob_hash(path.trim_start_matches('/'))).flatten();
-        let _delete_guard = match (&delete, &auth) {
-            (Some(hash), Some(auth)) => {
-                let guard = outbox::MEDIA_LIFECYCLE.lock().await;
-                match app.outbox.may_delete(hash.clone(), auth.pubkey).await {
-                    Ok(true) => Some(guard),
-                    Ok(false) => return (StatusCode::FORBIDDEN, "only the owner may delete this blob, and only while nothing uses it").into_response(),
-                    Err(error) => {
-                        tracing::warn!("cannot check blob deletion: {error}");
-                        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        let delete = (req.method() == Method::DELETE)
+            .then(|| blob_hash(path.trim_start_matches('/')))
+            .flatten();
+        let _delete_guard =
+            match (&delete, &auth) {
+                (Some(hash), Some(auth)) => {
+                    let guard = outbox::MEDIA_LIFECYCLE.lock().await;
+                    match app.outbox.may_delete(hash.clone(), auth.pubkey).await {
+                        Ok(true) => Some(guard),
+                        Ok(false) => return (
+                            StatusCode::FORBIDDEN,
+                            "only the owner may delete this blob, and only while nothing uses it",
+                        )
+                            .into_response(),
+                        Err(error) => {
+                            tracing::warn!("cannot check blob deletion: {error}");
+                            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                        }
                     }
                 }
-            }
-            _ => None,
-        };
+                _ => None,
+            };
         let local_read = if matches!(*req.method(), Method::GET | Method::HEAD) {
-            match (outbox::storage(&app.outbox), blob_hash(path.trim_start_matches('/'))) {
+            match (
+                outbox::storage(&app.outbox),
+                blob_hash(path.trim_start_matches('/')),
+            ) {
                 (Ok(state), Some(hash)) => storage_move::local_read(&state, &hash).await,
                 _ => None,
             }
-        } else { None };
+        } else {
+            None
+        };
         let res = sandboxed(app.blossom.oneshot(req).await.into_response());
         drop(local_read);
         if let (Some(hash), Some(auth), true) = (delete, &auth, res.status().is_success()) {
             // The local copy is gone; cleanup now only passes the deletion on to the mirrors.
-            if let Err(error) = app.outbox.delete_blobs(hash, auth.pubkey.to_hex(), vec![]).await {
+            if let Err(error) = app
+                .outbox
+                .delete_blobs(hash, auth.pubkey.to_hex(), vec![])
+                .await
+            {
                 tracing::warn!("cannot queue mirror deletion: {error}");
             }
         }
-        if let Some(hash) = count.and_then(|name| blob_hash(&name)).filter(|_| is_served_video(&res)) {
+        if let Some(hash) = count
+            .and_then(|name| blob_hash(&name))
+            .filter(|_| is_served_video(&res))
+        {
             let relay = app.relay.clone();
             tokio::spawn(async move { relay.count_view(hash).await });
         }
-        if !upload || !res.status().is_success() { return res; }
+        if !upload || !res.status().is_success() {
+            return res;
+        }
         let (parts, body) = res.into_parts();
         let bytes = match axum::body::to_bytes(body, 1 << 20).await {
             Ok(bytes) => bytes,
@@ -585,14 +728,22 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
                     tracing::warn!("stored upload has no verified auth author");
                     return StatusCode::SERVICE_UNAVAILABLE.into_response();
                 };
-                if let Err(error) = app.outbox.record_owner(hash.to_owned(), auth.pubkey, mirrored).await {
+                if let Err(error) = app
+                    .outbox
+                    .record_owner(hash.to_owned(), auth.pubkey, mirrored)
+                    .await
+                {
                     tracing::warn!("cannot persist upload ownership: {error}");
                     return StatusCode::SERVICE_UNAVAILABLE.into_response();
                 }
             }
         }
         let res = Response::from_parts(parts, Body::from(bytes));
-        return if mirrored { res } else { app.outbox.after_upload(res).await };
+        return if mirrored {
+            res
+        } else {
+            app.outbox.after_upload(res).await
+        };
     }
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
         return StatusCode::METHOD_NOT_ALLOWED.into_response();
@@ -607,8 +758,18 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if file == "studio" || file.starts_with("studio/") {
         return no_framing(studio_asset(file));
     }
-    let managed = app.signer.lock().clone().and_then(Result::ok).map(|key| key.public_key());
-    if let Some(location) = nsite::redirect(&app.branding.public_config(), managed, &path, req.uri().query()) {
+    let managed = app
+        .signer
+        .lock()
+        .clone()
+        .and_then(Result::ok)
+        .map(|key| key.public_key());
+    if let Some(location) = nsite::redirect(
+        &app.branding.public_config(),
+        managed,
+        &path,
+        req.uri().query(),
+    ) {
         return (StatusCode::FOUND, [(header::LOCATION, location)]).into_response();
     }
     match file {
@@ -618,7 +779,10 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         "robots.txt" => return seo::robots(&app.branding.public_config()),
         "manifest.webmanifest" => {
             return (
-                [(header::CONTENT_TYPE, "application/manifest+json"), (header::CACHE_CONTROL, "no-cache")],
+                [
+                    (header::CONTENT_TYPE, "application/manifest+json"),
+                    (header::CACHE_CONTROL, "no-cache"),
+                ],
                 app.branding.manifest(),
             )
                 .into_response()
@@ -634,7 +798,14 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let shell = Web::get("index.html").expect("embedded index.html");
     let shell = std::str::from_utf8(&shell.data).expect("index.html is UTF-8");
     let html = seo::shell(&app.relay, &app.branding.public_config(), &path, shell).await;
-    ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], html).into_response()
+    (
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        html,
+    )
+        .into_response()
 }
 
 /// Blobs come from allowed writers, who hold no admin rights (CONTEXT.md): whatever type a
@@ -642,7 +813,10 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
 /// lives. `<video>`, `<img>` and fetches of it still work; a top-level page of it is inert.
 fn sandboxed(mut res: Response) -> Response {
     let headers = res.headers_mut();
-    headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        header::HeaderValue::from_static("nosniff"),
+    );
     headers.insert(header::CONTENT_SECURITY_POLICY,
         header::HeaderValue::from_static("default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"));
     res
@@ -651,9 +825,18 @@ fn sandboxed(mut res: Response) -> Response {
 /// The admin area and the studio are never framed (clickjacking); `embed.html` and the site are.
 fn no_framing(mut res: Response) -> Response {
     let headers = res.headers_mut();
-    headers.insert(header::X_FRAME_OPTIONS, header::HeaderValue::from_static("DENY"));
-    headers.insert(header::CONTENT_SECURITY_POLICY, header::HeaderValue::from_static("frame-ancestors 'none'"));
-    headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    headers.insert(
+        header::X_FRAME_OPTIONS,
+        header::HeaderValue::from_static("DENY"),
+    );
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        header::HeaderValue::from_static("frame-ancestors 'none'"),
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        header::HeaderValue::from_static("nosniff"),
+    );
     res
 }
 
@@ -667,7 +850,12 @@ fn nostr_json(app: &App, query: Option<&str>) -> Response {
     };
     (
         [(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")],
-        Json(profile::nostr_json(&public, managed, app.relay.mirror_relays(), name)),
+        Json(profile::nostr_json(
+            &public,
+            managed,
+            app.relay.mirror_relays(),
+            name,
+        )),
     )
         .into_response()
 }
@@ -697,7 +885,14 @@ fn asset_response(file: &str, data: std::borrow::Cow<'static, [u8]>) -> Response
         "no-cache"
     };
     let mime = mime_guess::from_path(file).first_or_octet_stream();
-    ([(header::CONTENT_TYPE, mime.as_ref().to_owned()), (header::CACHE_CONTROL, cache.to_owned())], data).into_response()
+    (
+        [
+            (header::CONTENT_TYPE, mime.as_ref().to_owned()),
+            (header::CACHE_CONTROL, cache.to_owned()),
+        ],
+        data,
+    )
+        .into_response()
 }
 
 /// `/report` (BUD-09) is not here: it never reaches Almond (ADR 0011), nostube-server's own
@@ -722,7 +917,11 @@ fn is_blob_name(seg: &str) -> bool {
 
 /// The blob's hash in lowercase, `None` when the name is not a blob.
 fn blob_hash(seg: &str) -> Option<String> {
-    is_blob_name(seg).then(|| seg.split_once('.').map_or(seg, |(h, _)| h).to_ascii_lowercase())
+    is_blob_name(seg).then(|| {
+        seg.split_once('.')
+            .map_or(seg, |(h, _)| h)
+            .to_ascii_lowercase()
+    })
 }
 
 /// Would this request start playing a file? A `GET` without `Range` (the usual full starts:
@@ -733,7 +932,11 @@ fn is_play_start(req: &Request<Body>) -> bool {
     if req.method() != Method::GET {
         return false;
     }
-    match req.headers().get(header::RANGE).and_then(|value| value.to_str().ok()) {
+    match req
+        .headers()
+        .get(header::RANGE)
+        .and_then(|value| value.to_str().ok())
+    {
         None => true,
         Some(range) => matches!(range, "bytes=0-"),
     }
@@ -759,8 +962,13 @@ mod tests {
     use std::collections::HashMap;
 
     fn parse(args: &[&str], env: &[(&str, &str)]) -> Result<Cli, BoxError> {
-        let env: HashMap<String, String> = env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
-        Cli::parse(args.iter().map(|a| a.to_string()), move |name| env.get(name).cloned())
+        let env: HashMap<String, String> = env
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        Cli::parse(args.iter().map(|a| a.to_string()), move |name| {
+            env.get(name).cloned()
+        })
     }
 
     #[test]
@@ -785,7 +993,11 @@ mod tests {
 
     #[test]
     fn flags_win_over_the_environment_and_the_defaults_are_safe() {
-        let cli = parse(&["--data", "/mnt/x", "--port", "9000"], &[("NOSTUBE_DATA", "/data"), ("NOSTUBE_PORT", "8081")]).unwrap();
+        let cli = parse(
+            &["--data", "/mnt/x", "--port", "9000"],
+            &[("NOSTUBE_DATA", "/data"), ("NOSTUBE_PORT", "8081")],
+        )
+        .unwrap();
         assert_eq!(cli.data, PathBuf::from("/mnt/x"));
         assert_eq!(cli.port, Some(9000));
         let bare = parse(&[], &[]).unwrap();
@@ -798,25 +1010,36 @@ mod tests {
     fn the_subcommands_still_parse_and_bad_values_say_where_they_came_from() {
         assert!(parse(&["admin", "reset"], &[("NOSTUBE_DATA", "/data")]).is_ok());
         assert!(parse(&["config", "rollback", "--data", "/d"], &[]).is_ok());
-        let err = parse(&[], &[("NOSTUBE_PORT", "0")]).unwrap_err().to_string();
+        let err = parse(&[], &[("NOSTUBE_PORT", "0")])
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("NOSTUBE_PORT"), "{err}");
         assert!(parse(&["--tls", "plain"], &[]).is_err());
         assert!(parse(&["--bogus"], &[]).is_err());
         assert!(parse(&["--origin"], &[]).is_err());
         // An empty variable counts as unset (compose passes `NOSTUBE_ORIGIN=` when it is blank).
-        assert!(parse(&[], &[("NOSTUBE_ORIGIN", "  ")]).unwrap().origin.is_none());
+        assert!(parse(&[], &[("NOSTUBE_ORIGIN", "  ")])
+            .unwrap()
+            .origin
+            .is_none());
     }
 
     #[test]
     fn an_explicit_tls_mode_beats_the_origin_hint() {
         let cli = parse(&["--tls", "local-ca", "--origin", "https://x.example"], &[]).unwrap();
         assert_eq!(cli.first_start_kind(), TlsKind::LocalCa);
-        assert_eq!(parse(&["--tls", "proxy"], &[]).unwrap().first_start_kind(), TlsKind::Proxy);
+        assert_eq!(
+            parse(&["--tls", "proxy"], &[]).unwrap().first_start_kind(),
+            TlsKind::Proxy
+        );
     }
 
     #[test]
     fn the_revision_is_reported_only_when_the_build_knows_it() {
-        assert_eq!(revision(Some(" 5f96a79\n".into())).as_deref(), Some("5f96a79"));
+        assert_eq!(
+            revision(Some(" 5f96a79\n".into())).as_deref(),
+            Some("5f96a79")
+        );
         assert_eq!(revision(Some("unknown".into())), None);
         assert_eq!(revision(Some("  ".into())), None);
         assert_eq!(revision(None), None);
@@ -829,7 +1052,11 @@ mod tests {
         use sha2::Digest;
         use std::sync::atomic::{AtomicUsize, Ordering};
         static N: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!("nostube-upload-owner-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let dir = std::env::temp_dir().join(format!(
+            "nostube-upload-owner-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let key = Keys::generate();
         let mut cfg = almond::Config::defaults();
@@ -838,30 +1065,70 @@ mod tests {
         cfg.allowed_npubs = vec![key.public_key()];
         cfg.storage_min_free = 0;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
-            writers: vec![key.public_key()], name: "test".into(), description: "test".into(), mirror_relays: vec![],
-        }).unwrap();
-        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror {
-            relays: vec![], blossom: vec!["https://mirror.example".into()],
-        }).unwrap();
+        let relay = relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: vec![key.public_key()],
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
+        let outbox = outbox::Outbox::open(
+            &dir.join("relay.sqlite"),
+            config::Mirror {
+                relays: vec![],
+                blossom: vec!["https://mirror.example".into()],
+            },
+        )
+        .unwrap();
         outbox.attach_storage(state.clone());
-        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let public = Config::default_for_proxy("https://instance.example", 8080)
+            .unwrap()
+            .public_json();
         let app = App {
-            blossom: almond::create_app(state.clone()), relay, branding: Arc::new(branding::Branding::open(&dir, public)),
-            boot_id: "test".into(), admin: None, outbox: outbox.clone(), signer: Default::default(),
+            blossom: almond::create_app(state.clone()),
+            relay,
+            branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "test".into(),
+            admin: None,
+            outbox: outbox.clone(),
+            signer: Default::default(),
         };
         let upload = |bytes: &'static [u8], mirrored: bool| {
             let hash = hex::encode(sha2::Sha256::digest(bytes));
             let expiration = (Timestamp::now().as_secs() + 600).to_string();
-            let auth = EventBuilder::new(Kind::Custom(24242), hash.clone()).tags([
-                Tag::parse(["t", "upload"]).unwrap(), Tag::parse(["x", &hash]).unwrap(),
-                Tag::parse(["expiration", &expiration]).unwrap(),
-            ]).finalize(&key).unwrap();
-            let req = Request::builder().method(Method::PUT).uri("/upload")
-                .header(header::AUTHORIZATION, format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(auth.as_json())))
-                .header(header::CONTENT_TYPE, "video/mp4").header("x-sha-256", &hash)
-                .header(header::USER_AGENT, if mirrored { "nostube-outbox/test" } else { "studio/test" })
-                .body(Body::from(bytes)).unwrap();
+            let auth = EventBuilder::new(Kind::Custom(24242), hash.clone())
+                .tags([
+                    Tag::parse(["t", "upload"]).unwrap(),
+                    Tag::parse(["x", &hash]).unwrap(),
+                    Tag::parse(["expiration", &expiration]).unwrap(),
+                ])
+                .finalize(&key)
+                .unwrap();
+            let req = Request::builder()
+                .method(Method::PUT)
+                .uri("/upload")
+                .header(
+                    header::AUTHORIZATION,
+                    format!(
+                        "Nostr {}",
+                        base64::engine::general_purpose::STANDARD.encode(auth.as_json())
+                    ),
+                )
+                .header(header::CONTENT_TYPE, "video/mp4")
+                .header("x-sha-256", &hash)
+                .header(
+                    header::USER_AGENT,
+                    if mirrored {
+                        "nostube-outbox/test"
+                    } else {
+                        "studio/test"
+                    },
+                )
+                .body(Body::from(bytes))
+                .unwrap();
             (req, hash)
         };
         let (request, local_hash) = upload(b"local uploaded bytes", false);
@@ -873,12 +1140,24 @@ mod tests {
         assert!(response.status().is_success());
         assert!(state.file_index.get(&mirrored_hash).await.is_some());
         let conn = relay::connect(&dir.join("relay.sqlite")).unwrap();
-        let owner = |hash: &str| conn.query_row("SELECT author,mirrored FROM blob_owner WHERE hash=?", [hash],
-            |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?))).unwrap();
+        let owner = |hash: &str| {
+            conn.query_row(
+                "SELECT author,mirrored FROM blob_owner WHERE hash=?",
+                [hash],
+                |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)),
+            )
+            .unwrap()
+        };
         assert_eq!(owner(&local_hash), (key.public_key().to_hex(), false));
         assert_eq!(owner(&mirrored_hash), (key.public_key().to_hex(), true));
-        let count = |hash: &str| conn.query_row("SELECT COUNT(*) FROM outbox WHERE kind='blob' AND ref_id=?", [hash],
-            |r| r.get::<_, i64>(0)).unwrap();
+        let count = |hash: &str| {
+            conn.query_row(
+                "SELECT COUNT(*) FROM outbox WHERE kind='blob' AND ref_id=?",
+                [hash],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap()
+        };
         assert_eq!(count(&local_hash), 1);
         assert_eq!(count(&mirrored_hash), 0);
         // PUT /report must reach the relay directly (ADR 0011), never Almond: Almond's own
@@ -887,32 +1166,60 @@ mod tests {
             .tags([Tag::parse(["p", &key.public_key().to_hex()]).unwrap()])
             .finalize(&Keys::generate())
             .unwrap();
-        let req = Request::builder().method(Method::PUT).uri("/report").body(Body::from(report.as_json())).unwrap();
-        assert_eq!(dispatch(State(app.clone()), req).await.status(), StatusCode::ACCEPTED);
+        let req = Request::builder()
+            .method(Method::PUT)
+            .uri("/report")
+            .body(Body::from(report.as_json()))
+            .unwrap();
+        assert_eq!(
+            dispatch(State(app.clone()), req).await.status(),
+            StatusCode::ACCEPTED
+        );
         // NIP-05 is readable cross-origin; no creator and no managed key: no names.
-        let req = Request::builder().uri("/.well-known/nostr.json?name=_").body(Body::empty()).unwrap();
+        let req = Request::builder()
+            .uri("/.well-known/nostr.json?name=_")
+            .body(Body::empty())
+            .unwrap();
         let res = dispatch(State(app.clone()), req).await;
         assert_eq!(res.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN], "*");
         assert_eq!(res.headers()[header::CONTENT_TYPE], "application/json");
-        let body = axum::body::to_bytes(res.into_body(), 1 << 10).await.unwrap();
-        assert_eq!(serde_json::from_slice::<serde_json::Value>(&body).unwrap(), serde_json::json!({ "names": {} }));
+        let body = axum::body::to_bytes(res.into_body(), 1 << 10)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
+            serde_json::json!({ "names": {} })
+        );
         // The manifest comes from the branding, not the shell.
-        let req = Request::builder().uri("/manifest.webmanifest").body(Body::empty()).unwrap();
+        let req = Request::builder()
+            .uri("/manifest.webmanifest")
+            .body(Body::empty())
+            .unwrap();
         let res = dispatch(State(app.clone()), req).await;
-        assert_eq!(res.headers()[header::CONTENT_TYPE], "application/manifest+json");
+        assert_eq!(
+            res.headers()[header::CONTENT_TYPE],
+            "application/manifest+json"
+        );
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
-        let body = axum::body::to_bytes(res.into_body(), 1 << 12).await.unwrap();
+        let body = axum::body::to_bytes(res.into_body(), 1 << 12)
+            .await
+            .unwrap();
         assert_eq!(body, app.branding.manifest());
         // The dispatch seam is identical for a successful PUT /mirror descriptor. Keep
         // this boundary test offline: Almond's fetching/SSRF policy is not replaced here.
-        conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash]).unwrap();
+        conn.execute("DELETE FROM blob_owner WHERE hash=?", [&mirrored_hash])
+            .unwrap();
         let metadata = state.file_index.get(&mirrored_hash).await.unwrap();
-        let descriptor = serde_json::to_value(state.create_blob_descriptor(&mirrored_hash, &metadata)).unwrap();
+        let descriptor =
+            serde_json::to_value(state.create_blob_descriptor(&mirrored_hash, &metadata)).unwrap();
         let mut mirror_app = app;
-        mirror_app.blossom = Router::new().route("/mirror", axum::routing::put(move || {
-            let descriptor = descriptor.clone();
-            async move { Json(descriptor) }
-        }));
+        mirror_app.blossom = Router::new().route(
+            "/mirror",
+            axum::routing::put(move || {
+                let descriptor = descriptor.clone();
+                async move { Json(descriptor) }
+            }),
+        );
         let (mut request, _) = upload(b"mirrored uploaded bytes", true);
         *request.uri_mut() = "/mirror".parse().unwrap();
         let response = dispatch(State(mirror_app.clone()), request).await;
@@ -925,16 +1232,39 @@ mod tests {
         public.nsite.domain = "site.example".into();
         mirror_app.branding.set_base(public.public_json());
         *mirror_app.signer.lock() = Some(Ok(key.clone()));
-        let req = Request::builder().uri("/?q=hello%20world").body(Body::empty()).unwrap();
+        let req = Request::builder()
+            .uri("/?q=hello%20world")
+            .body(Body::empty())
+            .unwrap();
         let response = dispatch(State(mirror_app.clone()), req).await;
         assert_eq!(response.status(), StatusCode::FOUND);
-        assert_eq!(response.headers()[header::LOCATION], "https://site.example/?q=hello%20world");
-        let req = Request::builder().uri("/").header(header::ACCEPT, "application/nostr+json").body(Body::empty()).unwrap();
+        assert_eq!(
+            response.headers()[header::LOCATION],
+            "https://site.example/?q=hello%20world"
+        );
+        let req = Request::builder()
+            .uri("/")
+            .header(header::ACCEPT, "application/nostr+json")
+            .body(Body::empty())
+            .unwrap();
         let response = dispatch(State(mirror_app.clone()), req).await;
-        assert_eq!(response.status(), StatusCode::OK, "NIP-11 has precedence over the site redirect");
-        assert_eq!(response.headers()[header::CONTENT_TYPE], "application/nostr+json");
-        let req = Request::builder().uri("/embed.html").body(Body::empty()).unwrap();
-        assert_eq!(dispatch(State(mirror_app), req).await.status(), StatusCode::OK);
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "NIP-11 has precedence over the site redirect"
+        );
+        assert_eq!(
+            response.headers()[header::CONTENT_TYPE],
+            "application/nostr+json"
+        );
+        let req = Request::builder()
+            .uri("/embed.html")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(
+            dispatch(State(mirror_app), req).await.status(),
+            StatusCode::OK
+        );
     }
 
     #[tokio::test]
@@ -953,73 +1283,179 @@ mod tests {
         cfg.storage_min_free = 0;
         cfg.storage_max_size = 1 << 20;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
-            writers: vec![alice.public_key(), bob.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
-        }).unwrap();
-        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror { relays: vec![], blossom: vec![] }).unwrap();
+        let relay = relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: vec![alice.public_key(), bob.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
+        let outbox = outbox::Outbox::open(
+            &dir.join("relay.sqlite"),
+            config::Mirror {
+                relays: vec![],
+                blossom: vec![],
+            },
+        )
+        .unwrap();
         outbox.attach_storage(state.clone());
-        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let public = Config::default_for_proxy("https://instance.example", 8080)
+            .unwrap()
+            .public_json();
         let app = App {
-            blossom: almond::create_app(state.clone()), relay: relay.clone(), branding: Arc::new(branding::Branding::open(&dir, public)),
-            boot_id: "t".into(), admin: None, outbox, signer: Default::default(),
+            blossom: almond::create_app(state.clone()),
+            relay: relay.clone(),
+            branding: Arc::new(branding::Branding::open(&dir, public)),
+            boot_id: "t".into(),
+            admin: None,
+            outbox,
+            signer: Default::default(),
         };
         let auth = |key: &Keys, verb: &str, hash: &str| {
             let expiration = (Timestamp::now().as_secs() + 600).to_string();
-            let event = EventBuilder::new(Kind::Custom(24242), verb).tags([
-                Tag::parse(["t", verb]).unwrap(), Tag::parse(["x", hash]).unwrap(),
-                Tag::parse(["expiration", &expiration]).unwrap(),
-            ]).finalize(key).unwrap();
-            format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(event.as_json()))
+            let event = EventBuilder::new(Kind::Custom(24242), verb)
+                .tags([
+                    Tag::parse(["t", verb]).unwrap(),
+                    Tag::parse(["x", hash]).unwrap(),
+                    Tag::parse(["expiration", &expiration]).unwrap(),
+                ])
+                .finalize(key)
+                .unwrap();
+            format!(
+                "Nostr {}",
+                base64::engine::general_purpose::STANDARD.encode(event.as_json())
+            )
         };
         let upload = |key: &Keys, bytes: &'static [u8], mime: &str| {
             let hash = hex::encode(sha2::Sha256::digest(bytes));
-            let req = Request::builder().method(Method::PUT).uri("/upload")
+            let req = Request::builder()
+                .method(Method::PUT)
+                .uri("/upload")
                 .header(header::AUTHORIZATION, auth(key, "upload", &hash))
-                .header(header::CONTENT_TYPE, mime).header("x-sha-256", &hash)
+                .header(header::CONTENT_TYPE, mime)
+                .header("x-sha-256", &hash)
                 .header(header::CONTENT_LENGTH, bytes.len())
-                .body(Body::from(bytes)).unwrap();
+                .body(Body::from(bytes))
+                .unwrap();
             (req, hash)
         };
-        let delete = |key: &Keys, hash: &str| Request::builder().method(Method::DELETE).uri(format!("/{hash}"))
-            .header(header::AUTHORIZATION, auth(key, "delete", hash)).body(Body::empty()).unwrap();
+        let delete = |key: &Keys, hash: &str| {
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(format!("/{hash}"))
+                .header(header::AUTHORIZATION, auth(key, "delete", hash))
+                .body(Body::empty())
+                .unwrap()
+        };
 
         // An HTML blob is served inert: no sniffing, no script, no same-origin access.
-        let (req, page) = upload(&alice, b"<script>fetch('/api/admin/config')</script>", "text/html");
+        let (req, page) = upload(
+            &alice,
+            b"<script>fetch('/api/admin/config')</script>",
+            "text/html",
+        );
         let res = dispatch(State(app.clone()), req).await;
-        assert!(res.status().is_success(), "{:?}", axum::body::to_bytes(res.into_body(), 4096).await);
-        let res = dispatch(State(app.clone()), Request::builder().uri(format!("/{page}.html")).body(Body::empty()).unwrap()).await;
+        assert!(
+            res.status().is_success(),
+            "{:?}",
+            axum::body::to_bytes(res.into_body(), 4096).await
+        );
+        let res = dispatch(
+            State(app.clone()),
+            Request::builder()
+                .uri(format!("/{page}.html"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
         assert_eq!(res.status(), StatusCode::OK);
         assert_eq!(res.headers()[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
-        assert!(res.headers()[header::CONTENT_SECURITY_POLICY].to_str().unwrap().contains("sandbox"));
+        assert!(res.headers()[header::CONTENT_SECURITY_POLICY]
+            .to_str()
+            .unwrap()
+            .contains("sandbox"));
 
         // Bob may not delete Alice's blob; Alice may, until a stored event uses it.
-        assert_eq!(dispatch(State(app.clone()), delete(&bob, &page)).await.status(), StatusCode::FORBIDDEN);
+        assert_eq!(
+            dispatch(State(app.clone()), delete(&bob, &page))
+                .await
+                .status(),
+            StatusCode::FORBIDDEN
+        );
         assert!(state.file_index.get(&page).await.is_some());
         let (req, video) = upload(&alice, b"video bytes", "video/mp4");
-        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        assert!(dispatch(State(app.clone()), req)
+            .await
+            .status()
+            .is_success());
         let event = EventBuilder::new(Kind::Custom(21), "v")
-            .tags([Tag::parse(["imeta", &format!("url https://instance.example/{video}.mp4"), &format!("x {video}")]).unwrap()])
-            .finalize(&alice).unwrap();
-        assert!(matches!(relay.ingest(event).await, nostr::prelude::RelayMessage::Ok { status: true, .. }));
-        assert_eq!(dispatch(State(app.clone()), delete(&alice, &video)).await.status(), StatusCode::FORBIDDEN);
+            .tags([Tag::parse([
+                "imeta",
+                &format!("url https://instance.example/{video}.mp4"),
+                &format!("x {video}"),
+            ])
+            .unwrap()])
+            .finalize(&alice)
+            .unwrap();
+        assert!(matches!(
+            relay.ingest(event).await,
+            nostr::prelude::RelayMessage::Ok { status: true, .. }
+        ));
+        assert_eq!(
+            dispatch(State(app.clone()), delete(&alice, &video))
+                .await
+                .status(),
+            StatusCode::FORBIDDEN
+        );
         assert!(state.file_index.get(&video).await.is_some());
-        assert_eq!(dispatch(State(app.clone()), delete(&alice, &page)).await.status(), StatusCode::NO_CONTENT);
+        assert_eq!(
+            dispatch(State(app.clone()), delete(&alice, &page))
+                .await
+                .status(),
+            StatusCode::NO_CONTENT
+        );
         assert!(state.file_index.get(&page).await.is_none());
 
         // A chunked upload larger than the remaining quota is refused before any chunk lands.
         let hash = hex::encode(sha2::Sha256::digest(b"x"));
-        let req = Request::builder().method(Method::PATCH).uri("/upload")
+        let req = Request::builder()
+            .method(Method::PATCH)
+            .uri("/upload")
             .header(header::AUTHORIZATION, auth(&alice, "upload", &hash))
-            .header("x-sha-256", &hash).header("upload-type", "video/mp4")
-            .header("upload-length", (2u64 << 20).to_string()).header("upload-offset", "0")
-            .header(header::CONTENT_TYPE, "application/octet-stream").header(header::CONTENT_LENGTH, "1")
-            .body(Body::from(&b"x"[..])).unwrap();
-        assert_eq!(dispatch(State(app.clone()), req).await.status(), StatusCode::INSUFFICIENT_STORAGE);
+            .header("x-sha-256", &hash)
+            .header("upload-type", "video/mp4")
+            .header("upload-length", (2u64 << 20).to_string())
+            .header("upload-offset", "0")
+            .header(header::CONTENT_TYPE, "application/octet-stream")
+            .header(header::CONTENT_LENGTH, "1")
+            .body(Body::from(&b"x"[..]))
+            .unwrap();
+        assert_eq!(
+            dispatch(State(app.clone()), req).await.status(),
+            StatusCode::INSUFFICIENT_STORAGE
+        );
 
         // The studio cannot be framed; the embed player can.
-        let res = dispatch(State(app.clone()), Request::builder().uri("/studio/").body(Body::empty()).unwrap()).await;
+        let res = dispatch(
+            State(app.clone()),
+            Request::builder()
+                .uri("/studio/")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
         assert_eq!(res.headers()[header::X_FRAME_OPTIONS], "DENY");
-        let res = dispatch(State(app), Request::builder().uri("/embed.html").body(Body::empty()).unwrap()).await;
+        let res = dispatch(
+            State(app),
+            Request::builder()
+                .uri("/embed.html")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
         assert!(res.headers().get(header::X_FRAME_OPTIONS).is_none());
     }
 
@@ -1034,8 +1470,14 @@ mod tests {
         };
         assert!(req(Method::GET, None));
         assert!(req(Method::GET, Some("bytes=0-")));
-        assert!(!req(Method::GET, Some("bytes=0-1")), "Safari's probe, a real start follows");
-        assert!(!req(Method::GET, Some("bytes=512-")), "a seek or a later chunk");
+        assert!(
+            !req(Method::GET, Some("bytes=0-1")),
+            "Safari's probe, a real start follows"
+        );
+        assert!(
+            !req(Method::GET, Some("bytes=512-")),
+            "a seek or a later chunk"
+        );
         assert!(!req(Method::GET, Some("bytes=-256")), "a tail request");
         assert!(!req(Method::HEAD, None));
     }
@@ -1050,13 +1492,31 @@ mod tests {
                 .unwrap()
         };
         assert!(is_served_video(&res(StatusCode::OK, "video/mp4")));
-        assert!(is_served_video(&res(StatusCode::PARTIAL_CONTENT, "video/webm; codecs=vp9")));
-        assert!(is_served_video(&res(StatusCode::OK, "application/vnd.apple.mpegurl")));
-        assert!(is_served_video(&res(StatusCode::OK, "application/x-mpegurl")));
-        assert!(!is_served_video(&res(StatusCode::NOT_MODIFIED, "video/mp4")));
+        assert!(is_served_video(&res(
+            StatusCode::PARTIAL_CONTENT,
+            "video/webm; codecs=vp9"
+        )));
+        assert!(is_served_video(&res(
+            StatusCode::OK,
+            "application/vnd.apple.mpegurl"
+        )));
+        assert!(is_served_video(&res(
+            StatusCode::OK,
+            "application/x-mpegurl"
+        )));
+        assert!(!is_served_video(&res(
+            StatusCode::NOT_MODIFIED,
+            "video/mp4"
+        )));
         assert!(!is_served_video(&res(StatusCode::NOT_FOUND, "video/mp4")));
-        assert!(!is_served_video(&res(StatusCode::OK, "image/jpeg")), "thumbnails stay out");
-        assert!(!is_served_video(&res(StatusCode::OK, "text/vtt")), "text tracks stay out");
+        assert!(
+            !is_served_video(&res(StatusCode::OK, "image/jpeg")),
+            "thumbnails stay out"
+        );
+        assert!(
+            !is_served_video(&res(StatusCode::OK, "text/vtt")),
+            "text tracks stay out"
+        );
     }
 
     #[test]
@@ -1078,18 +1538,29 @@ mod tests {
         use sha2::Digest;
         let hash = hex::encode(sha2::Sha256::digest(bytes));
         let expiration = (nostr::prelude::Timestamp::now().as_secs() + 600).to_string();
-        let auth = nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(24242), hash.clone())
-            .tags([
-                nostr::prelude::Tag::parse(["t", "upload"]).unwrap(),
-                nostr::prelude::Tag::parse(["x", &hash]).unwrap(),
-                nostr::prelude::Tag::parse(["expiration", &expiration]).unwrap(),
-            ])
-            .finalize(key)
+        let auth =
+            nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(24242), hash.clone())
+                .tags([
+                    nostr::prelude::Tag::parse(["t", "upload"]).unwrap(),
+                    nostr::prelude::Tag::parse(["x", &hash]).unwrap(),
+                    nostr::prelude::Tag::parse(["expiration", &expiration]).unwrap(),
+                ])
+                .finalize(key)
+                .unwrap();
+        let req = Request::builder()
+            .method(Method::PUT)
+            .uri("/upload")
+            .header(
+                header::AUTHORIZATION,
+                format!(
+                    "Nostr {}",
+                    base64::engine::general_purpose::STANDARD.encode(auth.as_json())
+                ),
+            )
+            .header(header::CONTENT_TYPE, "video/mp4")
+            .header("x-sha-256", &hash)
+            .body(Body::from(bytes))
             .unwrap();
-        let req = Request::builder().method(Method::PUT).uri("/upload")
-            .header(header::AUTHORIZATION, format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(auth.as_json())))
-            .header(header::CONTENT_TYPE, "video/mp4").header("x-sha-256", &hash)
-            .body(Body::from(bytes)).unwrap();
         (req, hash)
     }
 
@@ -1098,7 +1569,11 @@ mod tests {
         use nostr::prelude::{EventBuilder, FinalizeEvent, Keys, Kind, Tag};
         use std::sync::atomic::{AtomicUsize, Ordering};
         static N: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!("nostube-play-count-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let dir = std::env::temp_dir().join(format!(
+            "nostube-play-count-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let key = Keys::generate();
         let mut cfg = almond::Config::defaults();
@@ -1107,36 +1582,67 @@ mod tests {
         cfg.allowed_npubs = vec![key.public_key()];
         cfg.storage_min_free = 0;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
-            writers: vec![key.public_key()], name: "test".into(), description: "test".into(), mirror_relays: vec![],
-        }).unwrap();
+        let relay = relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: vec![key.public_key()],
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         relay.set_count_plays(true);
-        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let outbox =
+            outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
         outbox.attach_storage(state.clone());
-        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let public = Config::default_for_proxy("https://instance.example", 8080)
+            .unwrap()
+            .public_json();
         let app = App {
-            blossom: almond::create_app(state.clone()), relay: relay.clone(),
+            blossom: almond::create_app(state.clone()),
+            relay: relay.clone(),
             branding: Arc::new(branding::Branding::open(&dir, public)),
-            boot_id: "test".into(), admin: None, outbox, signer: Default::default(),
+            boot_id: "test".into(),
+            admin: None,
+            outbox,
+            signer: Default::default(),
         };
         let (req, video_hash) = upload_request(&key, b"a playable video");
-        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        assert!(dispatch(State(app.clone()), req)
+            .await
+            .status()
+            .is_success());
         let (req, stray_hash) = upload_request(&key, b"an unnamed file");
-        assert!(dispatch(State(app.clone()), req).await.status().is_success());
+        assert!(dispatch(State(app.clone()), req)
+            .await
+            .status()
+            .is_success());
         let video = EventBuilder::new(Kind::Custom(34235), "clip")
             .tags([
                 Tag::parse(["d", "clip"]).unwrap(),
-                Tag::parse(["imeta", &format!("url https://instance.example/{video_hash}.mp4"), "m video/mp4"]).unwrap(),
+                Tag::parse([
+                    "imeta",
+                    &format!("url https://instance.example/{video_hash}.mp4"),
+                    "m video/mp4",
+                ])
+                .unwrap(),
             ])
             .finalize(&key)
             .unwrap();
         relay.ingest(video.clone()).await;
         assert!(
-            !relay.stored(nostr::prelude::Filter::new().id(video.id)).await.unwrap().is_empty(),
+            !relay
+                .stored(nostr::prelude::Filter::new().id(video.id))
+                .await
+                .unwrap()
+                .is_empty(),
             "the creator is a writer"
         );
         let get = |hash: &str, range: Option<&str>| {
-            let mut builder = Request::builder().method(Method::GET).uri(format!("/{hash}.mp4"));
+            let mut builder = Request::builder()
+                .method(Method::GET)
+                .uri(format!("/{hash}.mp4"));
             if let Some(range) = range {
                 builder = builder.header(header::RANGE, range);
             }
@@ -1170,8 +1676,16 @@ mod tests {
         let response = dispatch(State(app.clone()), get(&stray_hash, None)).await;
         assert_eq!(response.status(), StatusCode::OK);
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        assert_eq!(relay.plays(365).await.unwrap().get(&id).copied(), Some(1), "seeks count nothing");
-        assert_eq!(relay.plays(365).await.unwrap().len(), 1, "unnamed files count nothing");
+        assert_eq!(
+            relay.plays(365).await.unwrap().get(&id).copied(),
+            Some(1),
+            "seeks count nothing"
+        );
+        assert_eq!(
+            relay.plays(365).await.unwrap().len(),
+            1,
+            "unnamed files count nothing"
+        );
     }
 
     /// #171: after a restart with `storage.s3`, uploads land in the bucket and both they and the
@@ -1182,7 +1696,11 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use tower::ServiceExt;
         static N: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!("nostube-s3-restart-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let dir = std::env::temp_dir().join(format!(
+            "nostube-s3-restart-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let fake = FakeS3::start().await;
         let key = nostr::prelude::Keys::generate();
@@ -1198,14 +1716,27 @@ mod tests {
             async move {
                 let res = app.oneshot(req.body(Body::empty()).unwrap()).await.unwrap();
                 let status = res.status();
-                (status, axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap().to_vec())
+                (
+                    status,
+                    axum::body::to_bytes(res.into_body(), 1 << 20)
+                        .await
+                        .unwrap()
+                        .to_vec(),
+                )
             }
         };
         // Before: an upload on this machine.
-        let local = almond::build_state(&blossom_config(&cfg, &dir, None).validate().unwrap()).await.unwrap();
+        let local = almond::build_state(&blossom_config(&cfg, &dir, None).validate().unwrap())
+            .await
+            .unwrap();
         assert!(local.native_s3.is_none());
         let (req, local_hash) = upload_request(&key, b"uploaded before S3");
-        assert!(almond::create_app(local.clone()).oneshot(req).await.unwrap().status().is_success());
+        assert!(almond::create_app(local.clone())
+            .oneshot(req)
+            .await
+            .unwrap()
+            .status()
+            .is_success());
         drop(local);
         // The studio saved S3: the settings in the config, the secret in secrets.toml.
         cfg.storage.s3 = Some(config::S3Config {
@@ -1215,41 +1746,87 @@ mod tests {
             force_path_style: true,
             access_key_id: ACCESS_KEY.into(),
         });
-        assert!(blossom_config(&cfg, &dir, None).validate().is_err(), "S3 without its secret does not start");
-        std::fs::write(dir.join("secrets.toml"), format!("session_secret = \"x\"\ns3_secret_access_key = \"{SECRET_KEY}\"\n")).unwrap();
+        assert!(
+            blossom_config(&cfg, &dir, None).validate().is_err(),
+            "S3 without its secret does not start"
+        );
+        std::fs::write(
+            dir.join("secrets.toml"),
+            format!("session_secret = \"x\"\ns3_secret_access_key = \"{SECRET_KEY}\"\n"),
+        )
+        .unwrap();
         let secret = admin::s3_secret(&dir).unwrap();
-        let state = almond::build_state(&blossom_config(&cfg, &dir, secret).validate().unwrap()).await.unwrap();
+        let state = almond::build_state(&blossom_config(&cfg, &dir, secret).validate().unwrap())
+            .await
+            .unwrap();
         assert!(state.native_s3.is_some());
         let (req, s3_hash) = upload_request(&key, b"uploaded into the bucket");
-        let res = almond::create_app(state.clone()).oneshot(req).await.unwrap();
+        let res = almond::create_app(state.clone())
+            .oneshot(req)
+            .await
+            .unwrap();
         assert!(res.status().is_success(), "{}", res.status());
         let stored = fake.keys();
-        let object = stored.iter().find(|k| k.contains(&s3_hash)).unwrap_or_else(|| panic!("not in the bucket: {stored:?}"));
+        let object = stored
+            .iter()
+            .find(|k| k.contains(&s3_hash))
+            .unwrap_or_else(|| panic!("not in the bucket: {stored:?}"));
         assert_eq!(fake.object(object).unwrap(), b"uploaded into the bucket");
-        assert!(stored.iter().all(|k| !k.contains(&local_hash)), "local blobs stay local");
-        for (hash, bytes) in [(&local_hash, &b"uploaded before S3"[..]), (&s3_hash, &b"uploaded into the bucket"[..])] {
-            assert_eq!(get(&state, format!("{hash}.mp4"), None).await, (StatusCode::OK, bytes.to_vec()));
-            assert_eq!(get(&state, format!("{hash}.mp4"), Some("bytes=3-8")).await, (StatusCode::PARTIAL_CONTENT, bytes[3..=8].to_vec()));
+        assert!(
+            stored.iter().all(|k| !k.contains(&local_hash)),
+            "local blobs stay local"
+        );
+        for (hash, bytes) in [
+            (&local_hash, &b"uploaded before S3"[..]),
+            (&s3_hash, &b"uploaded into the bucket"[..]),
+        ] {
+            assert_eq!(
+                get(&state, format!("{hash}.mp4"), None).await,
+                (StatusCode::OK, bytes.to_vec())
+            );
+            assert_eq!(
+                get(&state, format!("{hash}.mp4"), Some("bytes=3-8")).await,
+                (StatusCode::PARTIAL_CONTENT, bytes[3..=8].to_vec())
+            );
         }
         // A duplicate upload must retry promptly, not hold the global media lock behind a move.
         fake.wait_for_upload().await;
         let migration = storage_move::open(&dir, state.clone()).unwrap();
-        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let outbox =
+            outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
         outbox.attach_storage(state.clone());
         outbox.attach_migration(migration.clone());
-        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
-            writers: cfg.allowed_writers.clone(), name: "test".into(), description: "test".into(), mirror_relays: vec![],
-        }).unwrap();
+        let relay = relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: cfg.allowed_writers.clone(),
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         let app = App {
-            blossom: almond::create_app(state.clone()), relay,
+            blossom: almond::create_app(state.clone()),
+            relay,
             branding: Arc::new(branding::Branding::open(&dir, cfg.public_json())),
-            boot_id: "test".into(), admin: None, outbox, signer: Default::default(),
+            boot_id: "test".into(),
+            admin: None,
+            outbox,
+            signer: Default::default(),
         };
         let gate = fake.pause_uploads().await;
         migration.start().await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), fake.wait_for_upload()).await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(5), fake.wait_for_upload())
+            .await
+            .unwrap();
         let (request, _) = upload_request(&key, b"uploaded before S3");
-        let busy = tokio::time::timeout(std::time::Duration::from_secs(1), dispatch(State(app.clone()), request)).await.unwrap();
+        let busy = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            dispatch(State(app.clone()), request),
+        )
+        .await
+        .unwrap();
         assert_eq!(busy.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(busy.headers()[header::RETRY_AFTER], "5");
         // An unrelated BUD-04 request keeps its normal validation error, without X-SHA-256.
@@ -1258,11 +1835,18 @@ mod tests {
         parts.uri = "/mirror".parse().unwrap();
         parts.headers.remove("x-sha-256");
         let mirror = Request::from_parts(parts, Body::from("{}"));
-        let response = tokio::time::timeout(std::time::Duration::from_secs(1), dispatch(State(app), mirror)).await.unwrap();
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            dispatch(State(app), mirror),
+        )
+        .await
+        .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         drop(gate);
         for _ in 0..500 {
-            if migration.status().await["state"] != "running" { break; }
+            if migration.status().await["state"] != "running" {
+                break;
+            }
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
         assert_eq!(migration.status().await["state"], "completed");
@@ -1273,32 +1857,64 @@ mod tests {
     async fn site_app(name: &str) -> (App, PathBuf) {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static N: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!("nostube-dispatch-{name}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let dir = std::env::temp_dir().join(format!(
+            "nostube-dispatch-{name}-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = dir.join("blossom");
         cfg.public_url = Some("https://instance.example".into());
         cfg.storage_min_free = 0;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let relay = relay::Relay::open(&dir.join("relay.sqlite"), relay::RelayConfig {
-            writers: vec![], name: "test".into(), description: "test".into(), mirror_relays: vec![],
-        }).unwrap();
-        let outbox = outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
-        let public = Config::default_for_proxy("https://instance.example", 8080).unwrap().public_json();
+        let relay = relay::Relay::open(
+            &dir.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: vec![],
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
+        let outbox =
+            outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let public = Config::default_for_proxy("https://instance.example", 8080)
+            .unwrap()
+            .public_json();
         let app = App {
-            blossom: almond::create_app(state), relay,
+            blossom: almond::create_app(state),
+            relay,
             branding: Arc::new(branding::Branding::open(&dir, public)),
-            boot_id: "boot-1".into(), admin: None, outbox, signer: Default::default(),
+            boot_id: "boot-1".into(),
+            admin: None,
+            outbox,
+            signer: Default::default(),
         };
         (app, dir)
     }
 
     async fn get(app: &App, method: Method, uri: &str) -> Response {
-        dispatch(State(app.clone()), Request::builder().method(method).uri(uri).body(Body::empty()).unwrap()).await
+        dispatch(
+            State(app.clone()),
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
     }
 
     async fn body(res: Response) -> String {
-        String::from_utf8(axum::body::to_bytes(res.into_body(), 1 << 22).await.unwrap().to_vec()).unwrap()
+        String::from_utf8(
+            axum::body::to_bytes(res.into_body(), 1 << 22)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap()
     }
 
     #[tokio::test]
@@ -1308,7 +1924,10 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         assert_eq!(res.headers()[header::CONTENT_TYPE], "application/json");
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
-        assert_eq!(body(res).await.as_bytes(), &app.branding.public_config()[..]);
+        assert_eq!(
+            body(res).await.as_bytes(),
+            &app.branding.public_config()[..]
+        );
 
         let res = get(&app, Method::GET, "/api/health").await;
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
@@ -1316,8 +1935,14 @@ mod tests {
         assert_eq!(health["ok"], true);
         assert_eq!(health["boot"], "boot-1");
 
-        assert_eq!(get(&app, Method::GET, "/api/unknown").await.status(), StatusCode::NOT_FOUND);
-        assert_eq!(get(&app, Method::POST, "/api/config").await.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            get(&app, Method::GET, "/api/unknown").await.status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            get(&app, Method::POST, "/api/config").await.status(),
+            StatusCode::NOT_FOUND
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -1325,10 +1950,17 @@ mod tests {
     async fn without_a_working_admin_the_admin_paths_are_unavailable_and_never_fall_to_the_site() {
         let (app, dir) = site_app("admin").await;
         for path in ["/admin", "/admin/login", "/api/admin/config"] {
-            assert_eq!(get(&app, Method::GET, path).await.status(), StatusCode::SERVICE_UNAVAILABLE, "{path}");
+            assert_eq!(
+                get(&app, Method::GET, path).await.status(),
+                StatusCode::SERVICE_UNAVAILABLE,
+                "{path}"
+            );
         }
         // `/administrator` is a site route, not the admin area.
-        assert_eq!(get(&app, Method::GET, "/administrator").await.status(), StatusCode::OK);
+        assert_eq!(
+            get(&app, Method::GET, "/administrator").await.status(),
+            StatusCode::OK
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -1338,22 +1970,42 @@ mod tests {
         // Any client route gets the app shell, revalidated on every load.
         let res = get(&app, Method::GET, "/v/some-video").await;
         assert_eq!(res.status(), StatusCode::OK);
-        assert_eq!(res.headers()[header::CONTENT_TYPE], "text/html; charset=utf-8");
+        assert_eq!(
+            res.headers()[header::CONTENT_TYPE],
+            "text/html; charset=utf-8"
+        );
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
         assert!(body(res).await.contains("</html>"));
         // A real hashed asset is cached for good; a missing one is a 404, never the shell.
-        let asset = Web::iter().find(|f| f.starts_with("assets/") && f.ends_with(".js")).expect("built assets");
+        let asset = Web::iter()
+            .find(|f| f.starts_with("assets/") && f.ends_with(".js"))
+            .expect("built assets");
         let res = get(&app, Method::GET, &format!("/{asset}")).await;
         assert_eq!(res.status(), StatusCode::OK);
-        assert_eq!(res.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
-        assert!(res.headers()[header::CONTENT_TYPE].to_str().unwrap().contains("javascript"));
-        assert_eq!(get(&app, Method::GET, "/assets/gone-1234.js").await.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            res.headers()[header::CACHE_CONTROL],
+            "public, max-age=31536000, immutable"
+        );
+        assert!(res.headers()[header::CONTENT_TYPE]
+            .to_str()
+            .unwrap()
+            .contains("javascript"));
+        assert_eq!(
+            get(&app, Method::GET, "/assets/gone-1234.js")
+                .await
+                .status(),
+            StatusCode::NOT_FOUND
+        );
         // Root files keep their type and are revalidated.
         let res = get(&app, Method::GET, "/embed.html").await;
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
         // Only reads reach the site.
         for method in [Method::POST, Method::PUT, Method::DELETE] {
-            assert_eq!(get(&app, method.clone(), "/about").await.status(), StatusCode::METHOD_NOT_ALLOWED, "{method}");
+            assert_eq!(
+                get(&app, method.clone(), "/about").await.status(),
+                StatusCode::METHOD_NOT_ALLOWED,
+                "{method}"
+            );
         }
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -1366,15 +2018,31 @@ mod tests {
             assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
             body(res).await
         };
-        let studio = std::str::from_utf8(&Web::get("studio/index.html").unwrap().data).unwrap().to_owned();
+        let studio = std::str::from_utf8(&Web::get("studio/index.html").unwrap().data)
+            .unwrap()
+            .to_owned();
         // `/studio`, `/studio/` and deep studio routes all get the studio's shell, not the site's.
         for path in ["/studio", "/studio/", "/studio/videos/upload"] {
-            assert_eq!(shell(get(&app, Method::GET, path).await).await, studio, "{path}");
+            assert_eq!(
+                shell(get(&app, Method::GET, path).await).await,
+                studio,
+                "{path}"
+            );
         }
-        let asset = Web::iter().find(|f| f.starts_with("studio/assets/")).expect("built studio assets");
+        let asset = Web::iter()
+            .find(|f| f.starts_with("studio/assets/"))
+            .expect("built studio assets");
         let res = get(&app, Method::GET, &format!("/{asset}")).await;
-        assert_eq!(res.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
-        assert_eq!(get(&app, Method::GET, "/studio/assets/gone.js").await.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            res.headers()[header::CACHE_CONTROL],
+            "public, max-age=31536000, immutable"
+        );
+        assert_eq!(
+            get(&app, Method::GET, "/studio/assets/gone.js")
+                .await
+                .status(),
+            StatusCode::NOT_FOUND
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -1383,18 +2051,29 @@ mod tests {
         let hash = "ab".repeat(32);
         let blob = format!("/{hash}.mp4");
         for (method, path) in [
-            (Method::PUT, "/upload"), (Method::PUT, "/mirror"), (Method::PATCH, "/upload"),
-            (Method::HEAD, "/upload"), (Method::OPTIONS, "/mirror"),
+            (Method::PUT, "/upload"),
+            (Method::PUT, "/mirror"),
+            (Method::PATCH, "/upload"),
+            (Method::HEAD, "/upload"),
+            (Method::OPTIONS, "/mirror"),
             (Method::GET, "/list/npub1x"),
-            (Method::GET, blob.as_str()), (Method::HEAD, blob.as_str()),
-            (Method::DELETE, blob.as_str()), (Method::OPTIONS, blob.as_str()),
+            (Method::GET, blob.as_str()),
+            (Method::HEAD, blob.as_str()),
+            (Method::DELETE, blob.as_str()),
+            (Method::OPTIONS, blob.as_str()),
         ] {
             assert!(is_blossom(&method, path), "{method} {path}");
         }
         for (method, path) in [
-            (Method::GET, "/upload"), (Method::PATCH, "/mirror"), (Method::POST, "/upload"),
-            (Method::PUT, blob.as_str()), (Method::GET, "/feed.xml"), (Method::GET, "/"),
-            (Method::DELETE, "/upload"), (Method::GET, "/list"), (Method::PUT, "/report"),
+            (Method::GET, "/upload"),
+            (Method::PATCH, "/mirror"),
+            (Method::POST, "/upload"),
+            (Method::PUT, blob.as_str()),
+            (Method::GET, "/feed.xml"),
+            (Method::GET, "/"),
+            (Method::DELETE, "/upload"),
+            (Method::GET, "/list"),
+            (Method::PUT, "/report"),
         ] {
             assert!(!is_blossom(&method, path), "{method} {path}");
         }

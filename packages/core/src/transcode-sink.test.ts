@@ -123,7 +123,10 @@ describe('openTranscodeSink', () => {
     const stale = `${Date.now() - 2 * 60 * 60 * 1000}-stale`
     jobs.dirs.set(stale, new FakeDir())
     enableOpfs()
-    setStorage({ getDirectory: async () => root, estimate: async () => ({ quota: 1e12, usage: 0 }) })
+    setStorage({
+      getDirectory: async () => root,
+      estimate: async () => ({ quota: 1e12, usage: 0 }),
+    })
 
     const sink = await openTranscodeSink({ expectedBytes: 1e6 })
     expect(sink.kind).toBe('opfs')

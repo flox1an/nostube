@@ -73,7 +73,7 @@ describe('video oEmbed HTTP contract', () => {
     const response = await createApp().request(requestUrl(videoUrl).replace('https:', 'http:'), {
       headers: { 'X-Forwarded-Proto': 'https' },
     })
-    const body = await response.json()
+    const body = (await response.json()) as Record<string, string>
     expect(body.html).toContain(`src="${origin}/embed.html?v=${identifier}"`)
     expect(body.provider_url).toBe(origin)
   })
@@ -82,7 +82,9 @@ describe('video oEmbed HTTP contract', () => {
     const response = await createApp().request(requestUrl(videoUrl), {
       headers: { 'X-Forwarded-Proto': 'javascript' },
     })
-    expect((await response.json()).html).toContain(`src="${origin}/embed.html`)
+    expect(((await response.json()) as { html: string }).html).toContain(
+      `src="${origin}/embed.html`
+    )
   })
 
   it('returns 404 for an unknown video URL', async () => {
@@ -207,7 +209,9 @@ describe('live stream oEmbed', () => {
       ...liveEvent,
       tags: liveEvent.tags.map(t => (t[0] === 'status' ? ['status', 'ended'] : t)),
     })
-    const body = await (await createApp().request(requestUrl(liveUrl))).json()
+    const body = (await (await createApp().request(requestUrl(liveUrl))).json()) as {
+      title: string
+    }
     expect(body.title).toBe('Bitfest')
   })
 

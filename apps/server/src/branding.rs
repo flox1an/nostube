@@ -125,9 +125,14 @@ impl Kind {
 /// UTF-8 that opens like an SVG document and has an `<svg` element. Whatever else it holds, it is
 /// only ever served as `image/svg+xml` in a sandbox (see `serve`).
 fn is_svg(b: &[u8]) -> bool {
-    let Ok(text) = std::str::from_utf8(b) else { return false };
+    let Ok(text) = std::str::from_utf8(b) else {
+        return false;
+    };
     let text = text.trim_start_matches('\u{feff}').trim_start();
-    ["<?xml", "<svg", "<!--", "<!DOCTYPE svg"].iter().any(|p| text.starts_with(p)) && text.contains("<svg")
+    ["<?xml", "<svg", "<!--", "<!DOCTYPE svg"]
+        .iter()
+        .any(|p| text.starts_with(p))
+        && text.contains("<svg")
 }
 
 /// Width and height from a PNG's IHDR chunk, which always comes first.
@@ -157,7 +162,11 @@ struct Asset {
 impl Asset {
     fn new(kind: Kind, bytes: Bytes) -> Asset {
         let version = hex::encode(Sha256::digest(&bytes))[..16].to_owned();
-        Asset { kind, bytes, version }
+        Asset {
+            kind,
+            bytes,
+            version,
+        }
     }
 
     fn url(&self, slot: Slot) -> String {
@@ -192,9 +201,17 @@ impl Branding {
     pub fn open(data: &Path, public_json: serde_json::Value) -> Branding {
         let dir = data.join("branding");
         let assets = Slot::ALL.map(|slot| load(&dir, slot));
-        let mut state = State { base: public_json, assets, public_config: Bytes::new(), manifest: Bytes::new() };
+        let mut state = State {
+            base: public_json,
+            assets,
+            public_config: Bytes::new(),
+            manifest: Bytes::new(),
+        };
         state.rebuild();
-        Branding { dir, state: RwLock::new(state) }
+        Branding {
+            dir,
+            state: RwLock::new(state),
+        }
     }
 
     /// The serialized public config (`/api/config`) with the current branding URLs.
@@ -210,16 +227,19 @@ impl Branding {
     /// A cheap snapshot of the nsite's branding paths, MIME types and shared image bytes.
     pub fn files(&self) -> Vec<(&'static str, &'static str, Bytes)> {
         let state = self.state.read();
-        Slot::ALL.into_iter().filter_map(|slot| {
-            let asset = state.assets[slot as usize].as_ref()?;
-            let path = match slot {
-                Slot::Logo => "/branding/logo",
-                Slot::Favicon => "/branding/favicon",
-                Slot::Banner => "/branding/banner",
-                Slot::Icon => "/branding/icon",
-            };
-            Some((path, asset.kind.mime(), asset.bytes.clone()))
-        }).collect()
+        Slot::ALL
+            .into_iter()
+            .filter_map(|slot| {
+                let asset = state.assets[slot as usize].as_ref()?;
+                let path = match slot {
+                    Slot::Logo => "/branding/logo",
+                    Slot::Favicon => "/branding/favicon",
+                    Slot::Banner => "/branding/banner",
+                    Slot::Icon => "/branding/icon",
+                };
+                Some((path, asset.kind.mime(), asset.bytes.clone()))
+            })
+            .collect()
     }
 
     /// Takes the public config of a config applied while running (no restart).
@@ -234,7 +254,12 @@ impl Branding {
         let state = self.state.read();
         Slot::ALL
             .into_iter()
-            .map(|s| (s.name().to_owned(), state.assets[s as usize].as_ref().map(|a| a.url(s)).into()))
+            .map(|s| {
+                (
+                    s.name().to_owned(),
+                    state.assets[s as usize].as_ref().map(|a| a.url(s)).into(),
+                )
+            })
             .collect::<serde_json::Map<_, _>>()
             .into()
     }
@@ -244,7 +269,9 @@ impl Branding {
     pub fn store(&self, slot: Slot, kind: Kind, bytes: Bytes) -> std::io::Result<String> {
         let mut state = self.state.write();
         std::fs::create_dir_all(&self.dir)?;
-        let tmp = self.dir.join(format!(".{}.{}.tmp", slot.name(), kind.ext()));
+        let tmp = self
+            .dir
+            .join(format!(".{}.{}.tmp", slot.name(), kind.ext()));
         std::fs::write(&tmp, &bytes)?;
         std::fs::rename(&tmp, self.dir.join(file_name(slot, kind)))?;
         self.remove_files(slot, Some(kind));
@@ -291,12 +318,20 @@ impl Branding {
             return StatusCode::NOT_FOUND.into_response();
         };
         let etag = format!("\"{}\"", asset.version);
-        let pinned = query.is_some_and(|q| q.split('&').any(|p| p.strip_prefix("v=") == Some(asset.version.as_str())));
+        let pinned = query.is_some_and(|q| {
+            q.split('&')
+                .any(|p| p.strip_prefix("v=") == Some(asset.version.as_str()))
+        });
         let mut headers = vec![
             (header::ETAG, etag.clone()),
             (
                 header::CACHE_CONTROL,
-                if pinned { "public, max-age=31536000, immutable" } else { "no-cache" }.to_owned(),
+                if pinned {
+                    "public, max-age=31536000, immutable"
+                } else {
+                    "no-cache"
+                }
+                .to_owned(),
             ),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
         ];
@@ -315,7 +350,11 @@ impl Branding {
         }
         headers.push((header::CONTENT_TYPE, asset.kind.mime().to_owned()));
         // A `Body`, not `Bytes`: those would add their own `application/octet-stream`.
-        (AppendHeaders(headers), axum::body::Body::from(asset.bytes.clone())).into_response()
+        (
+            AppendHeaders(headers),
+            axum::body::Body::from(asset.bytes.clone()),
+        )
+            .into_response()
     }
 }
 
@@ -327,28 +366,49 @@ pub async fn store_blob(
     mime: &str,
     ext: Option<&str>,
 ) -> Result<String, String> {
-    use almond::{models::BlobOrigin, services::file_storage::{self, BlobPublication, TempBlob}};
+    use almond::{
+        models::BlobOrigin,
+        services::file_storage::{self, BlobPublication, TempBlob},
+    };
     let hash = hex::encode(Sha256::digest(bytes));
-    file_storage::ensure_not_quarantined(state, &hash).await.map_err(|e| e.to_string())?;
+    file_storage::ensure_not_quarantined(state, &hash)
+        .await
+        .map_err(|e| e.to_string())?;
     if let Some(metadata) = file_storage::get_file_metadata(state, &hash).await {
         if metadata.size == bytes.len() as u64 && metadata.origin == BlobOrigin::Upload {
             return Ok(hash);
         }
     }
-    file_storage::ensure_storage_capacity(state, bytes.len() as u64).await.map_err(|e| e.to_string())?;
-    file_storage::ensure_temp_dir(state).await.map_err(|e| e.to_string())?;
+    file_storage::ensure_storage_capacity(state, bytes.len() as u64)
+        .await
+        .map_err(|e| e.to_string())?;
+    file_storage::ensure_temp_dir(state)
+        .await
+        .map_err(|e| e.to_string())?;
     let temp = TempBlob::reserve(state, "nostube-generated", ext);
-    tokio::fs::write(temp.path(), bytes).await.map_err(|e| e.to_string())?;
-    let stored = file_storage::publish_blob(state, temp, BlobPublication {
-        sha256: hash.clone(),
-        origin: BlobOrigin::Upload,
-        extension: ext.map(str::to_owned),
-        mime_type: Some(mime.to_owned()),
-        size: bytes.len() as u64,
-        expiration: None,
-    }).await.map_err(|e| e.to_string())?;
+    tokio::fs::write(temp.path(), bytes)
+        .await
+        .map_err(|e| e.to_string())?;
+    let stored = file_storage::publish_blob(
+        state,
+        temp,
+        BlobPublication {
+            sha256: hash.clone(),
+            origin: BlobOrigin::Upload,
+            extension: ext.map(str::to_owned),
+            mime_type: Some(mime.to_owned()),
+            size: bytes.len() as u64,
+            expiration: None,
+        },
+    )
+    .await
+    .map_err(|e| e.to_string())?;
     if stored.metadata.size != bytes.len() as u64 {
-        return Err(format!("stored blob {hash} size {} differs from {}", stored.metadata.size, bytes.len()));
+        return Err(format!(
+            "stored blob {hash} size {} differs from {}",
+            stored.metadata.size,
+            bytes.len()
+        ));
     }
     Ok(hash)
 }
@@ -377,7 +437,11 @@ fn load(dir: &Path, slot: Slot) -> Option<Asset> {
             Some(Asset::new(kind, bytes.into()))
         }
         Ok(_) => {
-            tracing::warn!("branding: ignoring {}: not a usable {} file within the limit", path.display(), kind.ext());
+            tracing::warn!(
+                "branding: ignoring {}: not a usable {} file within the limit",
+                path.display(),
+                kind.ext()
+            );
             None
         }
         Err(e) => {
@@ -389,14 +453,19 @@ fn load(dir: &Path, slot: Slot) -> Option<Asset> {
 
 fn build(base: &serde_json::Value, assets: &[Option<Asset>]) -> Bytes {
     let mut json = base.clone();
-    if let Some(site) = json.get_mut("site").and_then(serde_json::Value::as_object_mut) {
+    if let Some(site) = json
+        .get_mut("site")
+        .and_then(serde_json::Value::as_object_mut)
+    {
         for slot in Slot::ALL {
             if let Some(asset) = &assets[slot as usize] {
                 site.insert(slot.name().to_owned(), asset.url(slot).into());
             }
         }
     }
-    serde_json::to_vec(&json).expect("a JSON value serializes").into()
+    serde_json::to_vec(&json)
+        .expect("a JSON value serializes")
+        .into()
 }
 
 /// Longest `short_name` (what fits under a home screen icon), in characters.
@@ -405,10 +474,19 @@ const SHORT_NAME_MAX: usize = 12;
 /// The title, cut after the last whole word within `SHORT_NAME_MAX` characters; mid-word when
 /// that word would leave less than half.
 fn short_name(title: &str) -> &str {
-    let Some((cut, _)) = title.char_indices().nth(SHORT_NAME_MAX) else { return title };
+    let Some((cut, _)) = title.char_indices().nth(SHORT_NAME_MAX) else {
+        return title;
+    };
     let head = &title[..cut];
-    let whole = if title[cut..].starts_with(' ') { Some(head) } else { head.rfind(' ').map(|space| &head[..space]) };
-    whole.map(str::trim_end).filter(|w| w.chars().count() >= SHORT_NAME_MAX / 2).unwrap_or(head.trim_end())
+    let whole = if title[cut..].starts_with(' ') {
+        Some(head)
+    } else {
+        head.rfind(' ').map(|space| &head[..space])
+    };
+    whole
+        .map(str::trim_end)
+        .filter(|w| w.chars().count() >= SHORT_NAME_MAX / 2)
+        .unwrap_or(head.trim_end())
 }
 
 /// `/manifest.webmanifest`: makes the site installable under the instance's title, with its icon
@@ -444,7 +522,9 @@ fn manifest(base: &serde_json::Value, icon: Option<&Asset>) -> Bytes {
     if let Some(tagline) = base["site"]["tagline"].as_str().filter(|t| !t.is_empty()) {
         json["description"] = tagline.into();
     }
-    serde_json::to_vec(&json).expect("a JSON value serializes").into()
+    serde_json::to_vec(&json)
+        .expect("a JSON value serializes")
+        .into()
 }
 
 #[cfg(test)]
@@ -457,15 +537,30 @@ mod tests {
         assert_eq!(Kind::sniff(&[0xff, 0xd8, 0xff, 0xe0]), Some(Kind::Jpeg));
         assert_eq!(Kind::sniff(b"RIFF\0\0\0\0WEBPVP8 "), Some(Kind::Webp));
         assert_eq!(Kind::sniff(&[0, 0, 1, 0, 1, 0]), Some(Kind::Ico));
-        assert_eq!(Kind::sniff(b"\xef\xbb\xbf <?xml version=\"1.0\"?><svg/>"), Some(Kind::Svg));
-        assert_eq!(Kind::sniff(b"<!doctype html><html><svg></svg></html>"), None);
+        assert_eq!(
+            Kind::sniff(b"\xef\xbb\xbf <?xml version=\"1.0\"?><svg/>"),
+            Some(Kind::Svg)
+        );
+        assert_eq!(
+            Kind::sniff(b"<!doctype html><html><svg></svg></html>"),
+            None
+        );
         assert_eq!(Kind::sniff(b""), None);
         assert!(!Slot::Logo.accepts(Kind::Ico) && Slot::Favicon.accepts(Kind::Ico));
-        assert!(Slot::Icon.accepts(Kind::Png) && !Slot::Icon.accepts(Kind::Svg) && !Slot::Icon.accepts(Kind::Ico));
+        assert!(
+            Slot::Icon.accepts(Kind::Png)
+                && !Slot::Icon.accepts(Kind::Svg)
+                && !Slot::Icon.accepts(Kind::Ico)
+        );
     }
 
     fn png_of(w: u32, h: u32) -> Vec<u8> {
-        [&b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"[..], &w.to_be_bytes(), &h.to_be_bytes()].concat()
+        [
+            &b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"[..],
+            &w.to_be_bytes(),
+            &h.to_be_bytes(),
+        ]
+        .concat()
     }
 
     #[test]
@@ -490,34 +585,81 @@ mod tests {
 
     #[test]
     fn the_manifest_follows_the_title_tagline_and_icon() {
-        let dir = std::env::temp_dir().join(format!("nss-manifest-test-{}", crate::admin::random_boot_id()));
-        let branding = Branding::open(&dir, serde_json::json!({ "title": "My Great Video Channel", "site": { "tagline": "" } }));
+        let dir = std::env::temp_dir().join(format!(
+            "nss-manifest-test-{}",
+            crate::admin::random_boot_id()
+        ));
+        let branding = Branding::open(
+            &dir,
+            serde_json::json!({ "title": "My Great Video Channel", "site": { "tagline": "" } }),
+        );
         let read = || serde_json::from_slice::<serde_json::Value>(&branding.manifest()).unwrap();
         let m = read();
-        assert_eq!((m["id"].as_str(), m["start_url"].as_str(), m["scope"].as_str()), (Some("/"), Some("/"), Some("/")));
+        assert_eq!(
+            (
+                m["id"].as_str(),
+                m["start_url"].as_str(),
+                m["scope"].as_str()
+            ),
+            (Some("/"), Some("/"), Some("/"))
+        );
         assert_eq!(m["display"], "fullscreen");
         assert_eq!(m["name"], "My Great Video Channel");
         assert_eq!(m["short_name"], "My Great");
         assert!(m.get("description").is_none(), "{m}");
         assert_eq!(m["lang"], "en");
-        assert_eq!(m["categories"], serde_json::json!(["entertainment", "social", "video"]));
-        assert_eq!((m["theme_color"].as_str(), m["background_color"].as_str()), (Some(THEME_COLOR), Some(THEME_COLOR)));
-        let srcs: Vec<_> = m["icons"].as_array().unwrap().iter().map(|i| i["src"].as_str().unwrap()).collect();
-        assert_eq!(srcs, ["/nostube-192.png", "/nostube.png", "/nostube.svg", "/nostube-maskable.png"]);
+        assert_eq!(
+            m["categories"],
+            serde_json::json!(["entertainment", "social", "video"])
+        );
+        assert_eq!(
+            (m["theme_color"].as_str(), m["background_color"].as_str()),
+            (Some(THEME_COLOR), Some(THEME_COLOR))
+        );
+        let srcs: Vec<_> = m["icons"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["src"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            srcs,
+            [
+                "/nostube-192.png",
+                "/nostube.png",
+                "/nostube.svg",
+                "/nostube-maskable.png"
+            ]
+        );
         assert_eq!(m["icons"][3]["purpose"], "maskable");
 
         // A config applied while running and an uploaded icon show at once.
         branding.set_base(serde_json::json!({ "title": "Tubes", "site": { "tagline": "Hello" } }));
-        let url = branding.store(Slot::Icon, Kind::Png, png_of(1024, 1024).into()).unwrap();
+        let url = branding
+            .store(Slot::Icon, Kind::Png, png_of(1024, 1024).into())
+            .unwrap();
         let m = read();
-        assert_eq!((m["name"].as_str(), m["short_name"].as_str(), m["description"].as_str()), (Some("Tubes"), Some("Tubes"), Some("Hello")));
-        assert_eq!(m["icons"], serde_json::json!([{ "src": url, "type": "image/png", "sizes": "1024x1024", "purpose": "any" }]));
+        assert_eq!(
+            (
+                m["name"].as_str(),
+                m["short_name"].as_str(),
+                m["description"].as_str()
+            ),
+            (Some("Tubes"), Some("Tubes"), Some("Hello"))
+        );
+        assert_eq!(
+            m["icons"],
+            serde_json::json!([{ "src": url, "type": "image/png", "sizes": "1024x1024", "purpose": "any" }])
+        );
         let public: serde_json::Value = serde_json::from_slice(&branding.public_config()).unwrap();
         assert_eq!(public["site"]["icon"], url.as_str());
         assert_eq!(branding.urls()["icon"], url.as_str());
 
         // A restart keeps the icon; a removal brings back Nostube's.
-        let reopened = Branding::open(&dir, serde_json::json!({ "title": "Tubes", "site": { "tagline": "Hello" } }));
+        let reopened = Branding::open(
+            &dir,
+            serde_json::json!({ "title": "Tubes", "site": { "tagline": "Hello" } }),
+        );
         assert_eq!(reopened.manifest(), branding.manifest());
         branding.remove(Slot::Icon).unwrap();
         assert_eq!(read()["icons"].as_array().unwrap().len(), 4);
@@ -526,31 +668,60 @@ mod tests {
 
     #[test]
     fn an_svg_is_served_sandboxed_and_the_pinned_url_is_cached_for_good() {
-        let dir = std::env::temp_dir().join(format!("nss-branding-test-{}", crate::admin::random_boot_id()));
+        let dir = std::env::temp_dir().join(format!(
+            "nss-branding-test-{}",
+            crate::admin::random_boot_id()
+        ));
         let branding = Branding::open(&dir, serde_json::json!({ "site": {} }));
         let svg = b"<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>";
-        let url = branding.store(Slot::Logo, Kind::Svg, Bytes::from_static(svg)).unwrap();
+        let url = branding
+            .store(Slot::Logo, Kind::Svg, Bytes::from_static(svg))
+            .unwrap();
         let version = url.split_once("?v=").unwrap().1;
 
         let res = branding.serve("logo", Some(&format!("v={version}")), &HeaderMap::new());
         assert_eq!(res.status(), StatusCode::OK);
         let h = res.headers();
         assert_eq!(h[header::CONTENT_TYPE], "image/svg+xml");
-        assert_eq!(h[header::CONTENT_SECURITY_POLICY], "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+        assert_eq!(
+            h[header::CONTENT_SECURITY_POLICY],
+            "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+        );
         assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
-        assert_eq!(h[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
+        assert_eq!(
+            h[header::CACHE_CONTROL],
+            "public, max-age=31536000, immutable"
+        );
 
         let mut conditional = HeaderMap::new();
-        conditional.insert(header::IF_NONE_MATCH, format!("\"{version}\"").parse().unwrap());
+        conditional.insert(
+            header::IF_NONE_MATCH,
+            format!("\"{version}\"").parse().unwrap(),
+        );
         let res = branding.serve("logo", None, &conditional);
         assert_eq!(res.status(), StatusCode::NOT_MODIFIED);
         assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
-        assert_eq!(branding.serve("banner", None, &HeaderMap::new()).status(), StatusCode::NOT_FOUND);
-        assert_eq!(branding.serve("other", None, &HeaderMap::new()).status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            branding.serve("banner", None, &HeaderMap::new()).status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            branding.serve("other", None, &HeaderMap::new()).status(),
+            StatusCode::NOT_FOUND
+        );
 
         // A replacement of another type leaves one file, and a restart serves the new one.
-        branding.store(Slot::Logo, Kind::Png, Bytes::from_static(b"\x89PNG\r\n\x1a\nxx")).unwrap();
-        let files: Vec<_> = std::fs::read_dir(dir.join("branding")).unwrap().map(|e| e.unwrap().file_name()).collect();
+        branding
+            .store(
+                Slot::Logo,
+                Kind::Png,
+                Bytes::from_static(b"\x89PNG\r\n\x1a\nxx"),
+            )
+            .unwrap();
+        let files: Vec<_> = std::fs::read_dir(dir.join("branding"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
         assert_eq!(files, ["logo.png"]);
         let reopened = Branding::open(&dir, serde_json::json!({ "site": {} }));
         let res = reopened.serve("logo", None, &HeaderMap::new());
@@ -561,31 +732,61 @@ mod tests {
 
     #[tokio::test]
     async fn nsite_branding_files_reuse_the_same_content_addressed_blossom_blob() {
-        let dir = std::env::temp_dir().join(format!("nss-branding-blob-test-{}", crate::admin::random_boot_id()));
+        let dir = std::env::temp_dir().join(format!(
+            "nss-branding-blob-test-{}",
+            crate::admin::random_boot_id()
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let branding = Branding::open(&dir, serde_json::json!({ "site": {} }));
         let bytes = Bytes::from_static(b"\x89PNG\r\n\x1a\nbranding");
-        branding.store(Slot::Logo, Kind::Png, bytes.clone()).unwrap();
-        branding.store(Slot::Banner, Kind::Png, bytes.clone()).unwrap();
+        branding
+            .store(Slot::Logo, Kind::Png, bytes.clone())
+            .unwrap();
+        branding
+            .store(Slot::Banner, Kind::Png, bytes.clone())
+            .unwrap();
         let files = branding.files();
-        assert_eq!(files.iter().map(|(path, mime, _)| (*path, *mime)).collect::<Vec<_>>(),
-            [("/branding/logo", "image/png"), ("/branding/banner", "image/png")]);
-        assert_eq!(files[0].2.as_ptr(), bytes.as_ptr(), "snapshot shares bytes rather than copying images");
+        assert_eq!(
+            files
+                .iter()
+                .map(|(path, mime, _)| (*path, *mime))
+                .collect::<Vec<_>>(),
+            [
+                ("/branding/logo", "image/png"),
+                ("/branding/banner", "image/png")
+            ]
+        );
+        assert_eq!(
+            files[0].2.as_ptr(),
+            bytes.as_ptr(),
+            "snapshot shares bytes rather than copying images"
+        );
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = dir.join("blossom");
         cfg.public_url = Some("https://tube.example".into());
         cfg.storage_min_free = 0;
         let state = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let hash = store_blob(&state, &files[0].2, files[0].1, Some("png")).await.unwrap();
-        let first = almond::services::file_storage::get_file_metadata(&state, &hash).await.unwrap();
+        let hash = store_blob(&state, &files[0].2, files[0].1, Some("png"))
+            .await
+            .unwrap();
+        let first = almond::services::file_storage::get_file_metadata(&state, &hash)
+            .await
+            .unwrap();
         assert_eq!(hash, hex::encode(Sha256::digest(&bytes)));
         assert_eq!(first.extension.as_deref(), Some("png"));
         assert_eq!(first.mime_type.as_deref(), Some("image/png"));
         assert_eq!(first.size, bytes.len() as u64);
-        let same = store_blob(&state, &files[1].2, files[1].1, Some("png")).await.unwrap();
+        let same = store_blob(&state, &files[1].2, files[1].1, Some("png"))
+            .await
+            .unwrap();
         assert_eq!(same, hash);
-        let second = almond::services::file_storage::get_file_metadata(&state, &same).await.unwrap();
-        assert!(std::sync::Arc::ptr_eq(&first, &second), "the incumbent indexed blob is reused");
+        let second = almond::services::file_storage::get_file_metadata(&state, &same)
+            .await
+            .unwrap();
+        assert!(
+            std::sync::Arc::ptr_eq(&first, &second),
+            "the incumbent indexed blob is reused"
+        );
         branding.remove(Slot::Logo).unwrap();
         assert_eq!(branding.files().len(), 1);
         assert_eq!(files.len(), 2, "a snapshot survives later branding edits");

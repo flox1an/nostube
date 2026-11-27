@@ -24,7 +24,9 @@ pub fn wait_after(failures: u32) -> Duration {
     if failures <= FREE_ATTEMPTS {
         return Duration::ZERO;
     }
-    let seconds = 1u64.checked_shl(failures - FREE_ATTEMPTS).unwrap_or(u64::MAX);
+    let seconds = 1u64
+        .checked_shl(failures - FREE_ATTEMPTS)
+        .unwrap_or(u64::MAX);
     Duration::from_secs(seconds).min(MAX_WAIT)
 }
 
@@ -70,7 +72,10 @@ impl LoginGuard {
     }
 
     fn forget_old(&mut self, now: Instant) {
-        if self.last_failure.is_some_and(|last| now.duration_since(last) >= FORGET_AFTER) {
+        if self
+            .last_failure
+            .is_some_and(|last| now.duration_since(last) >= FORGET_AFTER)
+        {
             *self = LoginGuard::default();
         }
     }
@@ -95,7 +100,10 @@ mod tests {
     #[test]
     fn the_first_wrong_passwords_are_free_then_the_wait_doubles_up_to_the_cap() {
         let waits: Vec<u64> = (1..=14).map(|n| wait_after(n).as_secs()).collect();
-        assert_eq!(waits, [0, 0, 0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 900, 900]);
+        assert_eq!(
+            waits,
+            [0, 0, 0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 900, 900]
+        );
         assert_eq!(wait_after(u32::MAX), MAX_WAIT);
     }
 

@@ -13,7 +13,15 @@ const BOLT11 =
   'lnbc10u1p3unwfusp5t9r3yymhpfqculx78u027lxspgxcr2n2987mx2j55nnfs95nxnzqpp5jmrh92pfld78spqs78v9euf2385t83uvpwk9ldrlvf6ch7tpascqhp5zvkrmemgth3tufcvflmzjzfvjt023nazlhljz2n9hattj4f8jq8qxqyjw5qcqpjrzjqtc4fc44feggv7065fqe5m4ytjarg3repr5j9el35xhmtfexc42yczarjuqqfzqqqqqqqqlgqqqqqqgq9q9qxpqysgq079nkq507a5tw7xgttmj4u990j7wfggtrasah5gd4ywfr2pjcn29383tphp4t48gquelz9z78p4cq7ml3nrrphw5w6eckhjwmhezhnqpy6gyf0'
 
 const streamEvent = finalizeEvent(
-  { kind: 30311, created_at: 1, content: '', tags: [['d', 'show'], ['p', hostPk, '', 'host']] },
+  {
+    kind: 30311,
+    created_at: 1,
+    content: '',
+    tags: [
+      ['d', 'show'],
+      ['p', hostPk, '', 'host'],
+    ],
+  },
   author
 )
 const address = `30311:${streamEvent.pubkey}:show`
@@ -101,7 +109,13 @@ describe('live zap receipts', () => {
     const split = 'f'.repeat(64)
     const recipients = zapRecipients({
       ...stream,
-      event: { ...streamEvent, tags: [['zap', split, 'wss://x', '1'], ['zap', 'bad']] },
+      event: {
+        ...streamEvent,
+        tags: [
+          ['zap', split, 'wss://x', '1'],
+          ['zap', 'bad'],
+        ],
+      },
     })
     expect(recipients).toEqual([hostPk, streamEvent.pubkey, split])
   })

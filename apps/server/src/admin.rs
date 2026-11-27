@@ -157,7 +157,8 @@ impl AdminState {
             Secrets::create(data)?
         };
         let managed = secrets.managed_key.as_deref().map(|ncryptsec| {
-            let keys = signer_password(data, false).and_then(|pw| crate::signer::decrypt(ncryptsec, &pw));
+            let keys =
+                signer_password(data, false).and_then(|pw| crate::signer::decrypt(ncryptsec, &pw));
             if let Err(e) = &keys {
                 // Signing and the export fail with this; everything else keeps working.
                 tracing::error!("managed signer: {e}");
@@ -167,11 +168,16 @@ impl AdminState {
         if secrets.registered() {
             tracing::info!("admin area enabled");
         } else {
-            let token = secrets.setup_token.as_deref().ok_or("unregistered admin has no setup token")?;
+            let token = secrets
+                .setup_token
+                .as_deref()
+                .ok_or("unregistered admin has no setup token")?;
             // Fragments stay out of HTTP access logs and Referrer headers.
             let link = format!("{setup_origin}/admin/setup#token={token}");
-            let code = qrcode::QrCode::new(link.as_bytes()).map_err(|e| format!("setup QR code: {e}"))?;
-            let qr = code.render::<qrcode::render::unicode::Dense1x2>()
+            let code =
+                qrcode::QrCode::new(link.as_bytes()).map_err(|e| format!("setup QR code: {e}"))?;
+            let qr = code
+                .render::<qrcode::render::unicode::Dense1x2>()
                 .light_color(qrcode::render::unicode::Dense1x2::Dark)
                 .dark_color(qrcode::render::unicode::Dense1x2::Light)
                 .build();
@@ -200,8 +206,19 @@ impl AdminState {
     /// Rebuilds the channel profile (and in public reach the relay list) from the settings (#129,
     /// ADR 0012); signs nothing in own identity.
     async fn sync_profile(&self) {
-        crate::profile::sync(&self.stores.relay, &self.stores.branding, &self.stores.outbox, &self.managed).await;
-        if let Err(error) = self.stores.nsite.request(&self.stores.branding.public_config()).await {
+        crate::profile::sync(
+            &self.stores.relay,
+            &self.stores.branding,
+            &self.stores.outbox,
+            &self.managed,
+        )
+        .await;
+        if let Err(error) = self
+            .stores
+            .nsite
+            .request(&self.stores.branding.public_config())
+            .await
+        {
             tracing::warn!("nsite: cannot request rebuild: {error}");
         }
     }
@@ -209,7 +226,11 @@ impl AdminState {
     /// `nostube-server admin reset`: forget password and bound key, issue a new
     /// setup token and print it (ADR 0002).
     pub fn reset(data: &Path) -> Result<(), BoxError> {
-        let mut s = if Secrets::path(data).exists() { Secrets::load(data)? } else { Secrets::default() };
+        let mut s = if Secrets::path(data).exists() {
+            Secrets::load(data)?
+        } else {
+            Secrets::default()
+        };
         s.password_hash = None;
         s.nostr_pubkey = None;
         s.session_secret = random_hex(32); // invalidates all sessions
@@ -253,11 +274,18 @@ fn cookie(secure: bool, value: &str, max_age: u64) -> String {
 
 fn session_cookie(secret_hex: &str, secure: bool) -> String {
     let expires = now_secs() + SESSION_TTL.as_secs();
-    cookie(secure, &sign_session(secret_hex, expires), SESSION_TTL.as_secs())
+    cookie(
+        secure,
+        &sign_session(secret_hex, expires),
+        SESSION_TTL.as_secs(),
+    )
 }
 
 fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 fn random_hex(bytes: usize) -> String {
@@ -278,8 +306,12 @@ fn write_private(path: &Path, text: &str) -> Result<(), BoxError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let mut f =
-        std::fs::OpenOptions::new().create(true).truncate(true).write(true).mode(0o600).open(path)?;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .mode(0o600)
+        .open(path)?;
     f.write_all(text.as_bytes())?;
     Ok(())
 }
@@ -294,7 +326,8 @@ fn signer_password(data: &Path, create: bool) -> Result<String, String> {
         Ok(_) => Err(format!("{} is empty", path.display())),
         Err(e) if create && e.kind() == std::io::ErrorKind::NotFound => {
             let password = random_hex(32);
-            write_private(&path, &password).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+            write_private(&path, &password)
+                .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
             Ok(password)
         }
         Err(e) => Err(format!("cannot read {}: {e}", path.display())),
@@ -326,17 +359,33 @@ fn authed(state: &AdminState, headers: &HeaderMap) -> Auth {
 
 /// Verify a NIP-98 `Authorization: Nostr <base64>` header against the endpoint
 /// this handler serves, tolerating every name the certificate covers (aliases).
-fn verify_nip98(state: &AdminState, headers: &HeaderMap, path: &str) -> Result<PublicKey, Response> {
+// The error is a ready HTTP response; boxing it would only move the allocation to every caller.
+#[allow(clippy::result_large_err)]
+fn verify_nip98(
+    state: &AdminState,
+    headers: &HeaderMap,
+    path: &str,
+) -> Result<PublicKey, Response> {
     use base64::Engine;
     let bad = |msg: &'static str| (StatusCode::UNAUTHORIZED, msg).into_response();
-    let auth = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()).ok_or_else(|| bad("missing Authorization header"))?;
-    let b64 = auth.strip_prefix("Nostr ").map(str::trim).filter(|s| !s.is_empty()).ok_or_else(|| bad("not a NIP-98 header"))?;
+    let auth = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| bad("missing Authorization header"))?;
+    let b64 = auth
+        .strip_prefix("Nostr ")
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| bad("not a NIP-98 header"))?;
     let raw = base64::engine::general_purpose::STANDARD
         .decode(b64)
         .map_err(|_| bad("authorization event is not base64"))?;
     let json = String::from_utf8(raw).map_err(|_| bad("authorization event is not utf-8"))?;
-    let event = Event::from_json(json.as_str()).map_err(|_| bad("authorization event is not a valid event"))?;
-    event.verify().map_err(|_| bad("authorization event signature invalid"))?;
+    let event = Event::from_json(json.as_str())
+        .map_err(|_| bad("authorization event is not a valid event"))?;
+    event
+        .verify()
+        .map_err(|_| bad("authorization event signature invalid"))?;
     if event.kind != nostr::prelude::Kind::HttpAuth {
         return Err(bad("wrong event kind"));
     }
@@ -348,7 +397,11 @@ fn verify_nip98(state: &AdminState, headers: &HeaderMap, path: &str) -> Result<P
     let (u, method) = event
         .tags
         .iter()
-        .filter_map(|t| t.as_slice().split_first().map(|(k, v)| (k.as_str(), v.first())))
+        .filter_map(|t| {
+            t.as_slice()
+                .split_first()
+                .map(|(k, v)| (k.as_str(), v.first()))
+        })
         .fold((None, None), |acc, (k, v)| match (k, v) {
             ("u", Some(v)) => (Some(v.to_owned()), acc.1),
             ("method", Some(v)) => (acc.0, Some(v.to_owned())),
@@ -365,7 +418,12 @@ fn verify_nip98(state: &AdminState, headers: &HeaderMap, path: &str) -> Result<P
         return Err(bad("u path mismatch"));
     }
     let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
-    if host != state.origin_host && !state.covered_hosts.iter().any(|h| h.eq_ignore_ascii_case(&host)) {
+    if host != state.origin_host
+        && !state
+            .covered_hosts
+            .iter()
+            .any(|h| h.eq_ignore_ascii_case(&host))
+    {
         return Err(bad("u host is not this instance"));
     }
     Ok(event.pubkey)
@@ -376,8 +434,11 @@ fn password_hash(pw: &str) -> Result<String, BoxError> {
 }
 
 fn password_ok(hash: &str, pw: &str) -> bool {
-    PasswordHash::new(hash)
-        .is_ok_and(|parsed| Argon2::default().verify_password(pw.as_bytes(), &parsed).is_ok())
+    PasswordHash::new(hash).is_ok_and(|parsed| {
+        Argon2::default()
+            .verify_password(pw.as_bytes(), &parsed)
+            .is_ok()
+    })
 }
 
 // ── Router ──────────────────────────────────────────────────────────────────
@@ -401,7 +462,10 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/signer", get(signer_get).post(signer_create))
         .route("/api/admin/signer/sign", post(signer_sign))
         .route("/api/admin/signer/export", post(signer_export))
-        .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
+        .route(
+            "/api/admin/branding/{slot}",
+            axum::routing::put(branding_put).delete(branding_delete),
+        )
         .route("/api/admin/outbox", get(outbox_get))
         .route("/api/admin/outbox/retry", post(outbox_retry))
         .route("/api/admin/outbox/event/{id}", get(outbox_event))
@@ -420,7 +484,10 @@ pub fn router(state: AdminState) -> Router {
 /// Admin answers belong to one session: a shared cache (a CDN in front of the instance) must
 /// neither keep them nor hand them to another visitor.
 async fn no_store(mut res: Response) -> Response {
-    res.headers_mut().insert(header::CACHE_CONTROL, header::HeaderValue::from_static("private, no-store"));
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        header::HeaderValue::from_static("private, no-store"),
+    );
     res
 }
 
@@ -457,13 +524,19 @@ async fn setup_post(State(state): State<Arc<AdminState>>, Form(f): Form<SetupFor
     if secrets.registered() {
         return Redirect::to("/admin").into_response();
     }
-    let ok = secrets.setup_token.as_deref().is_some_and(|t| constant_eq(t, f.token.trim()));
+    let ok = secrets
+        .setup_token
+        .as_deref()
+        .is_some_and(|t| constant_eq(t, f.token.trim()));
     if !ok {
         return page("Setup", &setup_form(Some("Setup token is wrong."))).into_response();
     }
     if f.password.len() < 8 {
-        return page("Setup", &setup_form(Some("Password must be at least 8 characters.")))
-            .into_response();
+        return page(
+            "Setup",
+            &setup_form(Some("Password must be at least 8 characters.")),
+        )
+        .into_response();
     }
     if f.password != f.password2 {
         return page("Setup", &setup_form(Some("Passwords do not match."))).into_response();
@@ -509,7 +582,10 @@ async fn login_post(State(state): State<Arc<AdminState>>, Form(f): Form<LoginFor
         return too_many_attempts(wait, nostr);
     }
     let secrets = state.secrets.lock().unwrap();
-    let ok = secrets.password_hash.as_deref().is_some_and(|h| password_ok(h, &f.password));
+    let ok = secrets
+        .password_hash
+        .as_deref()
+        .is_some_and(|h| password_ok(h, &f.password));
     if !ok {
         let nostr = secrets.nostr_pubkey.is_some();
         drop(secrets);
@@ -519,7 +595,10 @@ async fn login_post(State(state): State<Arc<AdminState>>, Form(f): Form<LoginFor
         tracing::warn!("admin login: wrong password ({failures} in a row)");
         // Same page for wrong passwords; no detail for guessing.
         let message = match wait {
-            Some(wait) => format!("Wrong password. Wait {} before the next try.", login_guard::describe(wait)),
+            Some(wait) => format!(
+                "Wrong password. Wait {} before the next try.",
+                login_guard::describe(wait)
+            ),
             None => "Wrong password.".to_owned(),
         };
         return page("Log in", &login_form(Some(&message), nostr)).into_response();
@@ -536,7 +615,11 @@ fn too_many_attempts(wait: std::time::Duration, nostr: bool) -> Response {
     let message = format!(
         "Too many wrong passwords. Try again in {}.{}",
         login_guard::describe(wait),
-        if nostr { " Logging in with your Nostr key still works." } else { "" }
+        if nostr {
+            " Logging in with your Nostr key still works."
+        } else {
+            ""
+        }
     );
     (
         StatusCode::TOO_MANY_REQUESTS,
@@ -553,9 +636,16 @@ async fn login_nostr(State(state): State<Arc<AdminState>>, headers: HeaderMap) -
         Err(r) => return r,
     };
     let secrets = state.secrets.lock().unwrap();
-    let bound = secrets.nostr_pubkey.as_deref().is_some_and(|b| b == pubkey.to_hex());
+    let bound = secrets
+        .nostr_pubkey
+        .as_deref()
+        .is_some_and(|b| b == pubkey.to_hex());
     if !bound {
-        return (StatusCode::UNAUTHORIZED, "this key is not bound to the admin").into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            "this key is not bound to the admin",
+        )
+            .into_response();
     }
     let secret = secrets.session_secret.clone();
     drop(secrets);
@@ -620,7 +710,11 @@ fn refuse_write(state: &AdminState, headers: &HeaderMap) -> Option<Response> {
 
 /// `refuse_write` for a body of another type (`image/*`: any image type). A cross-site form can
 /// only send form and text types, so these keep the same guarantee.
-fn refuse_write_as(state: &AdminState, headers: &HeaderMap, content_type: &str) -> Option<Response> {
+fn refuse_write_as(
+    state: &AdminState,
+    headers: &HeaderMap,
+    content_type: &str,
+) -> Option<Response> {
     if !is_authed(state, headers) {
         return Some(json_error(StatusCode::UNAUTHORIZED, "not logged in"));
     }
@@ -628,7 +722,12 @@ fn refuse_write_as(state: &AdminState, headers: &HeaderMap, content_type: &str) 
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .is_some_and(|v| v.starts_with(content_type.trim_end_matches('*')));
-    (!accepted).then(|| json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &format!("content-type must be {content_type}")))
+    (!accepted).then(|| {
+        json_error(
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            &format!("content-type must be {content_type}"),
+        )
+    })
 }
 
 /// Everything the studio edits, in the camelCase shape of the public contract. The S3 secret
@@ -732,7 +831,12 @@ impl S3Body {
         match self.secret_access_key.as_deref() {
             Some("") => Err("secretAccessKey must not be empty".into()),
             Some(secret) => Ok(secret.to_owned()),
-            None => state.secrets.lock().unwrap().s3_secret_access_key.clone()
+            None => state
+                .secrets
+                .lock()
+                .unwrap()
+                .s3_secret_access_key
+                .clone()
                 .ok_or_else(|| "secretAccessKey is required: none is stored yet".into()),
         }
     }
@@ -801,11 +905,17 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     };
     let tls = match &cfg.tls {
-        config::Tls::LocalCa { router_name, https_port, http_port } => format!(
+        config::Tls::LocalCa {
+            router_name,
+            https_port,
+            http_port,
+        } => format!(
             "local-ca · https :{https_port} · http :{http_port} · router name {}",
             router_name.as_deref().unwrap_or("—")
         ),
-        config::Tls::Proxy { port } => format!("proxy · plain HTTP :{port}, TLS at the reverse proxy"),
+        config::Tls::Proxy { port } => {
+            format!("proxy · plain HTTP :{port}, TLS at the reverse proxy")
+        }
     };
     let tls_mode = match &cfg.tls {
         config::Tls::LocalCa { .. } => "local-ca",
@@ -813,7 +923,10 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
     };
     let (nostr, secret_set) = {
         let secrets = state.secrets.lock().unwrap();
-        (secrets.nostr_pubkey.clone(), secrets.s3_secret_access_key.is_some())
+        (
+            secrets.nostr_pubkey.clone(),
+            secrets.s3_secret_access_key.is_some(),
+        )
     };
     Json(serde_json::json!({
         "revision": cfg.revision,
@@ -839,12 +952,22 @@ async fn stats_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> 
     }
     let relay = match state.stores.relay.stats().await {
         Ok(r) => r,
-        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("relay stats: {e}")),
+        Err(e) => {
+            return json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("relay stats: {e}"),
+            )
+        }
     };
     let blossom = &state.stores.blossom;
     let free = match free_disk_bytes(&blossom.storage.root) {
         Ok(f) => f,
-        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("free disk space: {e}")),
+        Err(e) => {
+            return json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("free disk space: {e}"),
+            )
+        }
     };
     let index = blossom.file_index.stats().await;
     let metrics = &blossom.metrics;
@@ -889,10 +1012,16 @@ async fn plays_get(
     if !is_authed(&state, &headers) {
         return json_error(StatusCode::UNAUTHORIZED, "not logged in");
     }
-    let days = query.days.filter(|days| (1..=365).contains(days)).unwrap_or(365);
+    let days = query
+        .days
+        .filter(|days| (1..=365).contains(days))
+        .unwrap_or(365);
     match state.stores.relay.plays(days).await {
         Ok(plays) => Json(plays).into_response(),
-        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("play counts: {e}")),
+        Err(e) => json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("play counts: {e}"),
+        ),
     }
 }
 
@@ -960,7 +1089,11 @@ impl ConfigPut {
 /// What saving this edit would do, without saving it: the config's own refusal, whether the
 /// instance restarts (the rule of `apply`), and whether its mirrors allow public reach. The studio
 /// asks while the owner edits, so the rules live only here.
-async fn config_check(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn config_check(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -975,11 +1108,16 @@ async fn config_check(State(state): State<Arc<AdminState>>, headers: HeaderMap, 
     let (edited, s3, _) = put.into_parts();
     let mut eligible = current.clone();
     eligible.mirror = edited.mirror.clone();
-    let typed_secret = s3.and_then(|s3| s3.secret_access_key).filter(|s| !s.is_empty());
+    let typed_secret = s3
+        .and_then(|s3| s3.secret_access_key)
+        .filter(|s| !s.is_empty());
     let (error, restart) = match current.with_edits(&edited) {
         Ok(next) => {
             let stored = state.secrets.lock().unwrap().s3_secret_access_key.clone();
-            (None, current.needs_restart(&next) || typed_secret.is_some_and(|s| Some(s) != stored))
+            (
+                None,
+                current.needs_restart(&next) || typed_secret.is_some_and(|s| Some(s) != stored),
+            )
         }
         Err(e) => (Some(e.to_string()), false),
     };
@@ -989,7 +1127,11 @@ async fn config_check(State(state): State<Arc<AdminState>>, headers: HeaderMap, 
 /// Saves the edited config: validates everything, keeps `config.prev`, applies it (`restart` in
 /// the answer says whether the instance restarts for it, see `Config::needs_restart`).
 /// The body must be JSON (see `refuse_write`). Origin, TLS and the revision are not editable.
-async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn config_put(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -1011,13 +1153,22 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
     if next.site_hosting == config::SiteHosting::Nsite {
         match managed_keys(&state) {
             Ok(Some(_)) => {}
-            Ok(None) => return json_error(StatusCode::BAD_REQUEST, "nsite needs the managed signing key"),
+            Ok(None) => {
+                return json_error(
+                    StatusCode::BAD_REQUEST,
+                    "nsite needs the managed signing key",
+                )
+            }
             Err(error) => return json_error(StatusCode::BAD_REQUEST, &error),
         }
     }
-    let disabling = current.site_hosting == config::SiteHosting::Nsite && next.site_hosting != config::SiteHosting::Nsite;
+    let disabling = current.site_hosting == config::SiteHosting::Nsite
+        && next.site_hosting != config::SiteHosting::Nsite;
     if disabling && delete_nsite.is_none() {
-        return json_error(StatusCode::BAD_REQUEST, "choose deleteNsite explicitly: true deletes the nsite, false keeps public copies");
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "choose deleteNsite explicitly: true deletes the nsite, false keeps public copies",
+        );
     }
     // S3 preflight (#171): new or changed settings, or a new secret, must pass Almond's probe
     // before anything is written. Unchanged settings save without one, so the rest of the config
@@ -1030,8 +1181,13 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
             };
             if current.storage.s3.as_ref() != Some(s3) || body.secret_access_key.is_some() {
                 if let Err((step, error)) = probe_s3(s3.settings(secret.clone())).await {
-                    let message = format!("preflight failed: S3 connection test failed at {step}: {error}");
-                    return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": message, "step": step }))).into_response();
+                    let message =
+                        format!("preflight failed: S3 connection test failed at {step}: {error}");
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({ "error": message, "step": step })),
+                    )
+                        .into_response();
                 }
             }
             body.secret_access_key.is_some().then_some(secret)
@@ -1043,7 +1199,12 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
     if disabling {
-        if let Err(error) = state.stores.nsite.disable(delete_nsite == Some(true), &state.stores.outbox).await {
+        if let Err(error) = state
+            .stores
+            .nsite
+            .disable(delete_nsite == Some(true), &state.stores.outbox)
+            .await
+        {
             return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error);
         }
     }
@@ -1051,12 +1212,24 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
     if !restart {
         state.sync_profile().await;
     }
-    Json(serde_json::json!({ "ok": true, "revision": next.revision, "restart": restart })).into_response()
+    Json(serde_json::json!({ "ok": true, "revision": next.revision, "restart": restart }))
+        .into_response()
 }
 
 async fn nsite_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
-    if !is_authed(&state, &headers) { return json_error(StatusCode::UNAUTHORIZED, "not logged in"); }
-    match state.stores.nsite.status(&state.stores.branding.public_config(), &state.managed, &state.stores.outbox).await {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    match state
+        .stores
+        .nsite
+        .status(
+            &state.stores.branding.public_config(),
+            &state.managed,
+            &state.stores.outbox,
+        )
+        .await
+    {
         Ok(status) => Json(status).into_response(),
         Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
     }
@@ -1066,12 +1239,25 @@ async fn nsite_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> 
 #[serde(deny_unknown_fields)]
 struct EmptyBody {}
 
-async fn nsite_publish(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
-    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
-    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) { return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")); }
+async fn nsite_publish(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) {
+        return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}"));
+    }
     match managed_keys(&state) {
         Ok(Some(_)) => {}
-        Ok(None) => return json_error(StatusCode::BAD_REQUEST, "nsite needs the managed signing key"),
+        Ok(None) => {
+            return json_error(
+                StatusCode::BAD_REQUEST,
+                "nsite needs the managed signing key",
+            )
+        }
         Err(error) => return json_error(StatusCode::BAD_REQUEST, &error),
     }
     let cfg = match Config::load(&state.data.join("config.toml")) {
@@ -1079,9 +1265,17 @@ async fn nsite_publish(State(state): State<Arc<AdminState>>, headers: HeaderMap,
         Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error.to_string()),
     };
     if cfg.site_hosting != config::SiteHosting::Nsite || cfg.reach != config::Reach::Public {
-        return json_error(StatusCode::BAD_REQUEST, "save site hosting nsite in public reach before publishing");
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "save site hosting nsite in public reach before publishing",
+        );
     }
-    match state.stores.nsite.request(&state.stores.branding.public_config()).await {
+    match state
+        .stores
+        .nsite
+        .request(&state.stores.branding.public_config())
+        .await
+    {
         Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
         Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
     }
@@ -1089,16 +1283,33 @@ async fn nsite_publish(State(state): State<Arc<AdminState>>, headers: HeaderMap,
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct MirrorsBody { hashes: Vec<String> }
+struct MirrorsBody {
+    hashes: Vec<String>,
+}
 
-async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
-    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+async fn media_mirrors(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
     let put: MirrorsBody = match serde_json::from_slice(&body) {
         Ok(put) => put,
-        Err(error) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")),
+        Err(error) => {
+            return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}"))
+        }
     };
-    if put.hashes.iter().any(|h| almond::services::file_storage::validate_sha256_format(h).is_err()) {
-        return json_error(StatusCode::BAD_REQUEST, "hashes must be Blossom sha256 values");
+    if put
+        .hashes
+        .iter()
+        .any(|h| almond::services::file_storage::validate_sha256_format(h).is_err())
+    {
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "hashes must be Blossom sha256 values",
+        );
     }
     let cfg = match Config::load(&state.data.join("config.toml")) {
         Ok(cfg) => cfg,
@@ -1111,9 +1322,20 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
     let public_servers = cfg.public_mirror().blossom;
     for hash in put.hashes.iter().cloned() {
         let Some(metadata) = state.stores.blossom.file_index.get(&hash).await else {
-            return json_error(StatusCode::NOT_FOUND, &format!("required output is not on this instance: {hash}"));
+            return json_error(
+                StatusCode::NOT_FOUND,
+                &format!("required output is not on this instance: {hash}"),
+            );
         };
-        let name = format!("{hash}{}", metadata.extension.as_ref().filter(|e| !e.is_empty()).map(|e| format!(".{e}")).unwrap_or_default());
+        let name = format!(
+            "{hash}{}",
+            metadata
+                .extension
+                .as_ref()
+                .filter(|e| !e.is_empty())
+                .map(|e| format!(".{e}"))
+                .unwrap_or_default()
+        );
         if cfg.origin_is_public() {
             urls.insert(hash, format!("{}/{name}", cfg.origin).into());
             continue;
@@ -1123,13 +1345,33 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
             problem = Some("publishing from a private origin requires a publicly reachable mirror Blossom server".into());
             continue;
         }
-        if let Err(error) = state.stores.outbox.queue_blob(hash.clone(), metadata.size, format!("{}/{name}", cfg.origin)).await {
+        if let Err(error) = state
+            .stores
+            .outbox
+            .queue_blob(
+                hash.clone(),
+                metadata.size,
+                format!("{}/{name}", cfg.origin),
+            )
+            .await
+        {
             return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error);
         }
         match state.stores.outbox.blob_copies(hash.clone()).await {
-            Ok(copies) => match copies.into_iter().find(|url| public_servers.iter().any(|server| server.trim_end_matches('/') == url.trim_end_matches('/'))) {
-                Some(server) => { urls.insert(hash.clone(), format!("{}/{name}", server.trim_end_matches('/')).into()); }
-                None => { ready = false; }
+            Ok(copies) => match copies.into_iter().find(|url| {
+                public_servers
+                    .iter()
+                    .any(|server| server.trim_end_matches('/') == url.trim_end_matches('/'))
+            }) {
+                Some(server) => {
+                    urls.insert(
+                        hash.clone(),
+                        format!("{}/{name}", server.trim_end_matches('/')).into(),
+                    );
+                }
+                None => {
+                    ready = false;
+                }
             },
             Err(error) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
         }
@@ -1142,7 +1384,10 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
         }
     }
     match state.stores.outbox.media_jobs(put.hashes).await {
-        Ok(jobs) => Json(serde_json::json!({ "ready": ready, "urls": urls, "error": problem, "jobs": jobs })).into_response(),
+        Ok(jobs) => Json(
+            serde_json::json!({ "ready": ready, "urls": urls, "error": problem, "jobs": jobs }),
+        )
+        .into_response(),
         Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error),
     }
 }
@@ -1151,42 +1396,60 @@ async fn media_mirrors(State(state): State<Arc<AdminState>>, headers: HeaderMap,
 
 /// Almond's credential probe (put, get, list, delete of one `.almond-probe/` object), as the
 /// failing step and the provider's error.
-async fn probe_s3(settings: almond::services::native_storage::S3Settings) -> Result<(), (&'static str, String)> {
+async fn probe_s3(
+    settings: almond::services::native_storage::S3Settings,
+) -> Result<(), (&'static str, String)> {
     use almond::services::native_storage::{probe, ProbeStep};
-    tokio::time::timeout(Duration::from_secs(30), probe(&settings)).await
-        .map_err(|_| ("probe", "S3 connection test timed out after 30 seconds".to_owned()))?
+    tokio::time::timeout(Duration::from_secs(30), probe(&settings))
+        .await
+        .map_err(|_| {
+            (
+                "probe",
+                "S3 connection test timed out after 30 seconds".to_owned(),
+            )
+        })?
         .map_err(|failure| {
-        let step = match failure.step {
-            ProbeStep::Put => "put",
-            ProbeStep::Get => "get",
-            ProbeStep::List => "list",
-            ProbeStep::Delete => "delete",
-        };
-        let error = match failure.code {
-            Some(code) => format!("{code}: {}", failure.message),
-            None => failure.message,
-        };
-        (step, error)
-    })
+            let step = match failure.step {
+                ProbeStep::Put => "put",
+                ProbeStep::Get => "get",
+                ProbeStep::List => "list",
+                ProbeStep::Delete => "delete",
+            };
+            let error = match failure.code {
+                Some(code) => format!("{code}: {}", failure.message),
+                None => failure.message,
+            };
+            (step, error)
+        })
 }
 
 /// Tests S3 settings without saving them: `{ok: true}` or `{ok: false, step, error}`. An
 /// omitted secret means the stored one.
-async fn storage_test(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
-    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
+async fn storage_test(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
     let body: S3Body = match serde_json::from_slice(&body) {
         Ok(body) => body,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
     };
     let s3 = body.config();
-    if let Err(e) = s3.check() { return json_error(StatusCode::BAD_REQUEST, &e.to_string()); }
+    if let Err(e) = s3.check() {
+        return json_error(StatusCode::BAD_REQUEST, &e.to_string());
+    }
     let secret = match body.secret(&state) {
         Ok(secret) => secret,
         Err(e) => return json_error(StatusCode::BAD_REQUEST, &e),
     };
     match probe_s3(s3.settings(secret)).await {
         Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
-        Err((step, error)) => Json(serde_json::json!({ "ok": false, "step": step, "error": error })).into_response(),
+        Err((step, error)) => {
+            Json(serde_json::json!({ "ok": false, "step": step, "error": error })).into_response()
+        }
     }
 }
 
@@ -1194,20 +1457,31 @@ async fn storage_test(State(state): State<Arc<AdminState>>, headers: HeaderMap, 
 /// `lastAttempt` is in Unix seconds.
 async fn storage_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
     use almond::services::native_storage::S3Status;
-    if !is_authed(&state, &headers) { return json_error(StatusCode::UNAUTHORIZED, "not logged in"); }
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
     let s3 = state.stores.blossom.s3_status().map(|status| match status {
         S3Status::Available => serde_json::json!({ "available": true, "lastError": null, "lastAttempt": null }),
         S3Status::Unavailable { error, last_attempt } => {
             serde_json::json!({ "available": false, "lastError": error, "lastAttempt": last_attempt })
         }
     });
-    Json(serde_json::json!({ "s3": s3, "move": state.stores.migration.status().await })).into_response()
+    Json(serde_json::json!({ "s3": s3, "move": state.stores.migration.status().await }))
+        .into_response()
 }
 
 /// Starts (or resumes) moving local uploads into the bucket (#174). Body `{}`.
-async fn storage_move(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
-    if let Some(refusal) = refuse_write(&state, &headers) { return refusal; }
-    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) { return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}")); }
+async fn storage_move(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    if let Err(error) = serde_json::from_slice::<EmptyBody>(&body) {
+        return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {error}"));
+    }
     match state.stores.migration.start().await {
         Ok(status) => Json(status).into_response(),
         Err(error) => json_error(StatusCode::BAD_REQUEST, &error),
@@ -1226,23 +1500,42 @@ async fn branding_put(
     body: axum::body::Body,
 ) -> Response {
     use crate::branding::{Kind, Slot};
-    let from_blossom = headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())
+    let from_blossom = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
         .is_some_and(|v| v.split(';').next().unwrap_or("").trim() == "application/json");
-    let refusal = if from_blossom { refuse_write(&state, &headers) } else { refuse_write_as(&state, &headers, "image/*") };
-    if let Some(refusal) = refusal { return refusal; }
+    let refusal = if from_blossom {
+        refuse_write(&state, &headers)
+    } else {
+        refuse_write_as(&state, &headers, "image/*")
+    };
+    if let Some(refusal) = refusal {
+        return refusal;
+    }
     let Some(slot) = Slot::parse(&name) else {
         return json_error(StatusCode::NOT_FOUND, "no such branding slot");
     };
     let max = slot.max_bytes();
-    let too_big = || json_error(StatusCode::PAYLOAD_TOO_LARGE, &format!("the {} may be at most {} KiB", slot.name(), max / 1024));
+    let too_big = || {
+        json_error(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            &format!("the {} may be at most {} KiB", slot.name(), max / 1024),
+        )
+    };
     // Order activation against video cleanup; only indexed blobs (local or S3) can become branding.
-    let _media_guard = if from_blossom { Some(crate::outbox::MEDIA_LIFECYCLE.lock().await) } else { None };
+    let _media_guard = if from_blossom {
+        Some(crate::outbox::MEDIA_LIFECYCLE.lock().await)
+    } else {
+        None
+    };
     let bytes = if from_blossom {
         use almond::services::file_storage;
         use tokio::io::AsyncReadExt;
         #[derive(Deserialize)]
         #[serde(deny_unknown_fields)]
-        struct BlobBody { sha256: String }
+        struct BlobBody {
+            sha256: String,
+        }
         let Ok(body) = axum::body::to_bytes(body, 256).await else {
             return json_error(StatusCode::BAD_REQUEST, "invalid branding blob reference");
         };
@@ -1253,46 +1546,85 @@ async fn branding_put(
             return json_error(StatusCode::BAD_REQUEST, "invalid Blossom sha256");
         }
         let _location_read = crate::storage_move::local_read(&state.stores.blossom, &sha256).await;
-        let Some(metadata) = file_storage::get_file_metadata(&state.stores.blossom, &sha256).await else {
-            return json_error(StatusCode::NOT_FOUND, "branding blob is not on this instance");
+        let Some(metadata) = file_storage::get_file_metadata(&state.stores.blossom, &sha256).await
+        else {
+            return json_error(
+                StatusCode::NOT_FOUND,
+                "branding blob is not on this instance",
+            );
         };
-        if metadata.size > max as u64 { return too_big(); }
+        if metadata.size > max as u64 {
+            return too_big();
+        }
         let bytes = match &metadata.location {
             almond::models::FileLocation::Local(path) => {
                 let mut bytes = Vec::with_capacity(metadata.size as usize);
                 let Ok(file) = tokio::fs::File::open(path).await else {
                     return json_error(StatusCode::NOT_FOUND, "branding blob is missing");
                 };
-                if file.take((max + 1) as u64).read_to_end(&mut bytes).await.is_err() {
-                    return json_error(StatusCode::INTERNAL_SERVER_ERROR, "cannot read branding blob");
+                if file
+                    .take((max + 1) as u64)
+                    .read_to_end(&mut bytes)
+                    .await
+                    .is_err()
+                {
+                    return json_error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "cannot read branding blob",
+                    );
                 }
                 axum::body::Bytes::from(bytes)
             }
             // Bound the actual stream too: bucket contents may have changed since indexing.
             almond::models::FileLocation::S3 { key } => {
                 let Some(s3) = state.stores.blossom.native_s3.as_ref() else {
-                    return json_error(StatusCode::SERVICE_UNAVAILABLE, "S3 storage is not configured");
+                    return json_error(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "S3 storage is not configured",
+                    );
                 };
                 let read = async {
                     let output = s3.get(key, None).await?;
                     let mut bytes = Vec::with_capacity(metadata.size as usize);
-                    output.body.into_async_read().take((max + 1) as u64).read_to_end(&mut bytes).await
-                        .map_err(|e| almond::error::AppError::ServiceUnavailable(format!("S3 body read failed: {e}")))?;
+                    output
+                        .body
+                        .into_async_read()
+                        .take((max + 1) as u64)
+                        .read_to_end(&mut bytes)
+                        .await
+                        .map_err(|e| {
+                            almond::error::AppError::ServiceUnavailable(format!(
+                                "S3 body read failed: {e}"
+                            ))
+                        })?;
                     Ok::<_, almond::error::AppError>(axum::body::Bytes::from(bytes))
                 };
                 match read.await {
                     Ok(bytes) => bytes,
-                    Err(e) => return json_error(StatusCode::SERVICE_UNAVAILABLE, &format!("cannot read branding blob: {e}")),
+                    Err(e) => {
+                        return json_error(
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            &format!("cannot read branding blob: {e}"),
+                        )
+                    }
                 }
             }
         };
-        if bytes.len() > max { return too_big(); }
+        if bytes.len() > max {
+            return too_big();
+        }
         bytes
     } else {
-        let declared = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
-        if declared.is_some_and(|n| n > max) { return too_big(); }
+        let declared = headers
+            .get(header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
+        if declared.is_some_and(|n| n > max) {
+            return too_big();
+        }
         // Stops reading at the limit. A broken connection also lands here.
-        let Ok(bytes) = axum::body::to_bytes(body, max).await else { return too_big(); };
+        let Ok(bytes) = axum::body::to_bytes(body, max).await else {
+            return too_big();
+        };
         bytes
     };
     // Profile publication ingests through the relay, which also takes MEDIA_LIFECYCLE.
@@ -1302,7 +1634,10 @@ async fn branding_put(
         return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &message);
     };
     if slot == Slot::Icon && crate::branding::icon_size(&bytes).is_none() {
-        return json_error(StatusCode::UNPROCESSABLE_ENTITY, crate::branding::ICON_REFUSAL);
+        return json_error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            crate::branding::ICON_REFUSAL,
+        );
     }
     match state.stores.branding.store(slot, kind, bytes) {
         Ok(url) => {
@@ -1310,7 +1645,10 @@ async fn branding_put(
             state.sync_profile().await;
             Json(serde_json::json!({ "url": url })).into_response()
         }
-        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot store the {}: {e}", slot.name())),
+        Err(e) => json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("cannot store the {}: {e}", slot.name()),
+        ),
     }
 }
 
@@ -1332,7 +1670,10 @@ async fn branding_delete(
             state.sync_profile().await;
             Json(serde_json::json!({ "ok": true })).into_response()
         }
-        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot remove the {}: {e}", slot.name())),
+        Err(e) => json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("cannot remove the {}: {e}", slot.name()),
+        ),
     }
 }
 
@@ -1380,7 +1721,11 @@ struct RetryBody {
 
 /// Failed jobs get a fresh set of attempts, due now. Body `{}`, `{"target": "<url>"}`, and/or
 /// `{"eventId": "<hex>"}`.
-async fn outbox_retry(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn outbox_retry(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -1421,7 +1766,11 @@ async fn schedule_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) 
 
 /// Takes a signed video event whose `published_at` is in the future and holds it until then.
 /// Body: the event JSON. The same `d` tag as a pending video replaces it.
-async fn schedule_post(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn schedule_post(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -1429,7 +1778,14 @@ async fn schedule_post(State(state): State<Arc<AdminState>>, headers: HeaderMap,
         Ok(cfg) => cfg,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     };
-    match crate::schedule::submit(&state.stores.outbox, &cfg.creators, &cfg.allowed_writers, &body).await {
+    match crate::schedule::submit(
+        &state.stores.outbox,
+        &cfg.creators,
+        &cfg.allowed_writers,
+        &body,
+    )
+    .await
+    {
         Ok(accepted) => Json(accepted).into_response(),
         Err(e) => schedule_error(e),
     }
@@ -1442,7 +1798,11 @@ struct CancelBody {
 }
 
 /// Drops a pending video and removes its blobs. Body `{"id": "<event id>"}`.
-async fn schedule_cancel(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn schedule_cancel(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -1475,7 +1835,11 @@ async fn signer_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         Ok(Some(keys)) => managed_json(&keys),
         Ok(None) => match Config::load(&state.data.join("config.toml")) {
             Ok(cfg) => {
-                let mode = if cfg.creators.is_empty() { "none" } else { "own" };
+                let mode = if cfg.creators.is_empty() {
+                    "none"
+                } else {
+                    "own"
+                };
                 Json(serde_json::json!({ "mode": mode, "pubkey": null })).into_response()
             }
             Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
@@ -1484,7 +1848,8 @@ async fn signer_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
 }
 
 fn managed_json(keys: &Keys) -> Response {
-    Json(serde_json::json!({ "mode": "managed", "pubkey": keys.public_key().to_hex() })).into_response()
+    Json(serde_json::json!({ "mode": "managed", "pubkey": keys.public_key().to_hex() }))
+        .into_response()
 }
 
 /// Generates the managed key and stores it encrypted. Once only: replacing it would throw away
@@ -1502,12 +1867,17 @@ async fn signer_create(State(state): State<Arc<AdminState>>, headers: HeaderMap)
         drop(secrets);
         return match managed_keys(&state) {
             Ok(Some(keys)) => managed_json(&keys),
-            Ok(None) => json_error(StatusCode::INTERNAL_SERVER_ERROR, "the managed key is stored but not loaded"),
+            Ok(None) => json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "the managed key is stored but not loaded",
+            ),
             Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
         };
     }
     let keys = Keys::generate();
-    let ncryptsec = match signer_password(&state.data, true).and_then(|pw| crate::signer::encrypt(keys.secret_key(), &pw)) {
+    let ncryptsec = match signer_password(&state.data, true)
+        .and_then(|pw| crate::signer::encrypt(keys.secret_key(), &pw))
+    {
         Ok(n) => n,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
@@ -1523,7 +1893,11 @@ async fn signer_create(State(state): State<Arc<AdminState>>, headers: HeaderMap)
 }
 
 /// Signs `{kind, created_at, tags, content}` with the managed key and answers the signed event.
-async fn signer_sign(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn signer_sign(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
     }
@@ -1546,7 +1920,11 @@ struct ExportBody {
 
 /// The managed key as `nsec`, only with the admin password. Wrong passwords count towards the
 /// login throttle (ADR 0002 addendum): the export is as good a place to guess as the login.
-async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+async fn signer_export(
+    State(state): State<Arc<AdminState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     use nostr::prelude::ToBech32;
     if let Some(refusal) = refuse_write(&state, &headers) {
         return refusal;
@@ -1564,11 +1942,20 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
     let mut guard = state.login_guard.lock().unwrap();
     let now = Instant::now();
     if let Err(wait) = guard.check(now) {
-        let message = format!("Too many wrong passwords. Try again in {}.", login_guard::describe(wait));
+        let message = format!(
+            "Too many wrong passwords. Try again in {}.",
+            login_guard::describe(wait)
+        );
         let retry = [(header::RETRY_AFTER, wait.as_secs_f64().ceil().to_string())];
         return (retry, json_error(StatusCode::TOO_MANY_REQUESTS, &message)).into_response();
     }
-    let ok = state.secrets.lock().unwrap().password_hash.as_deref().is_some_and(|h| password_ok(h, &password));
+    let ok = state
+        .secrets
+        .lock()
+        .unwrap()
+        .password_hash
+        .as_deref()
+        .is_some_and(|h| password_ok(h, &password));
     if !ok {
         guard.record_failure(now);
         let failures = guard.failures();
@@ -1579,10 +1966,7 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
     guard.record_success();
     drop(guard);
     tracing::warn!("managed key exported");
-    let nsec = match keys.secret_key().to_bech32() {
-        Ok(n) => n,
-        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
-    };
+    let Ok(nsec) = keys.secret_key().to_bech32();
     Json(serde_json::json!({ "nsec": nsec })).into_response()
 }
 
@@ -1593,14 +1977,20 @@ async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap,
 /// restarts the process on it. Answers whether it restarts. Used by the studio endpoint.
 /// `s3_secret` is a secret the studio sent: it goes to the secrets store (never the config) and,
 /// when it differs from the stored one, restarts the instance like any storage change.
-fn apply(state: &AdminState, current: &Config, next: &Config, s3_secret: Option<&str>) -> Result<bool, String> {
+fn apply(
+    state: &AdminState,
+    current: &Config,
+    next: &Config,
+    s3_secret: Option<&str>,
+) -> Result<bool, String> {
     if let Some(e) = preflight(state, &next.tls) {
         return Err(format!("preflight failed: {e}"));
     }
     let path = state.data.join("config.toml");
     let temp = path.with_extension("toml.tmp");
     let text = next.to_toml().map_err(|e| e.to_string())?;
-    std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
+    std::fs::copy(&path, state.data.join("config.prev"))
+        .map_err(|e| format!("cannot keep config.prev: {e}"))?;
     write_private(&temp, &text).map_err(|e| format!("cannot stage config: {e}"))?;
     let mut secrets = state.secrets.lock().unwrap();
     let previous = secrets.s3_secret_access_key.clone();
@@ -1615,12 +2005,17 @@ fn apply(state: &AdminState, current: &Config, next: &Config, s3_secret: Option<
     if let Err(error) = std::fs::rename(&temp, &path) {
         if secret_changed {
             secrets.s3_secret_access_key = previous;
-            secrets.save(&state.data).map_err(|e| format!("cannot apply config ({error}) or restore the S3 secret ({e})"))?;
+            secrets.save(&state.data).map_err(|e| {
+                format!("cannot apply config ({error}) or restore the S3 secret ({e})")
+            })?;
         }
         return Err(format!("cannot apply config: {error}"));
     }
     drop(secrets);
-    state.stores.outbox.set_origin_public(next.origin_is_public());
+    state
+        .stores
+        .outbox
+        .set_origin_public(next.origin_is_public());
     // Hosting/private transitions stop redirects immediately; other restart-only edits stay staged.
     if current.site_hosting != next.site_hosting || current.reach != next.reach {
         state.stores.branding.set_base(next.public_json());
@@ -1629,10 +2024,16 @@ fn apply(state: &AdminState, current: &Config, next: &Config, s3_secret: Option<
         state.stores.branding.set_base(next.public_json());
         state.stores.relay.set_title(&next.title);
         state.stores.relay.set_count_plays(next.site.count_plays);
-        tracing::info!("admin: config revision {} applied while running", next.revision);
+        tracing::info!(
+            "admin: config revision {} applied while running",
+            next.revision
+        );
         return Ok(false);
     }
-    tracing::info!("admin: config revision {} applied; restarting", next.revision);
+    tracing::info!(
+        "admin: config revision {} applied; restarting",
+        next.revision
+    );
     // The response must reach the browser before the listener stops accepting.
     let handle = state.handle.clone();
     tokio::spawn(async move {
@@ -1682,7 +2083,13 @@ pub fn rollback(data: &Path) -> Result<(), BoxError> {
 
 fn set_cookie_redirect(state: &AdminState, secret: &str, to: &str) -> Response {
     (
-        [(header::SET_COOKIE, session_cookie(secret, state.secure_cookies)), (header::LOCATION, to.to_owned())],
+        [
+            (
+                header::SET_COOKIE,
+                session_cookie(secret, state.secure_cookies),
+            ),
+            (header::LOCATION, to.to_owned()),
+        ],
         StatusCode::SEE_OTHER,
     )
         .into_response()
@@ -1692,11 +2099,17 @@ fn constant_eq(a: &str, b: &str) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    a.bytes().zip(b.bytes()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+    a.bytes()
+        .zip(b.bytes())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }
 
 fn esc(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// The stylesheet of the pages the server renders itself (setup and login). It follows the
@@ -1747,7 +2160,9 @@ fn page(title: &str, body: &str) -> Html<String> {
 }
 
 fn setup_form(error: Option<&str>) -> String {
-    let error = error.map(|e| format!("<p class=error role=alert>{}</p>", esc(e))).unwrap_or_default();
+    let error = error
+        .map(|e| format!("<p class=error role=alert>{}</p>", esc(e)))
+        .unwrap_or_default();
     format!(
         r#"<h1>Register the admin</h1>{error}
 <p>One-time setup. The token is in the instance log (or came from <code>nostube-server admin reset</code>).</p>
@@ -1769,7 +2184,9 @@ if (token) {{
 
 /// `nostr`: a Nostr key is bound, so the page also offers the NIP-07 login.
 fn login_form(error: Option<&str>, nostr: bool) -> String {
-    let error = error.map(|e| format!("<p class=error role=alert>{}</p>", esc(e))).unwrap_or_default();
+    let error = error
+        .map(|e| format!("<p class=error role=alert>{}</p>", esc(e)))
+        .unwrap_or_default();
     // Not a format string: these are single braces on purpose (they are only inserted below).
     let nostr = if nostr {
         r#"<p class=or>or</p>
@@ -1836,8 +2253,14 @@ mod tests {
         let reloaded = Secrets::load(&dir).unwrap();
         assert!(reloaded.registered());
         assert!(reloaded.setup_token.is_none());
-        assert!(password_ok(reloaded.password_hash.as_deref().unwrap(), "correct horse"));
-        assert!(!password_ok(reloaded.password_hash.as_deref().unwrap(), "wrong"));
+        assert!(password_ok(
+            reloaded.password_hash.as_deref().unwrap(),
+            "correct horse"
+        ));
+        assert!(!password_ok(
+            reloaded.password_hash.as_deref().unwrap(),
+            "wrong"
+        ));
         assert!(constant_eq(&token, &token));
         assert!(!constant_eq(&token, "nope"));
         std::fs::remove_dir_all(&dir).ok();
@@ -1860,7 +2283,10 @@ mod tests {
         assert!(rollback(&dir).is_err()); // no prev yet
         std::fs::write(dir.join("config.prev"), "revision = 1\n").unwrap();
         rollback(&dir).unwrap();
-        assert_eq!(std::fs::read_to_string(dir.join("config.toml")).unwrap(), "revision = 1\n");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("config.toml")).unwrap(),
+            "revision = 1\n"
+        );
         assert!(!dir.join("config.prev").exists());
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -1888,18 +2314,42 @@ mod tests {
                 .tag(Tag::custom("method", ["POST"]))
                 .finalize(&keys)
                 .unwrap();
-            format!("Nostr {}", base64::engine::general_purpose::STANDARD.encode(event.as_json()))
+            format!(
+                "Nostr {}",
+                base64::engine::general_purpose::STANDARD.encode(event.as_json())
+            )
         };
-        let headers = |v: String| HeaderMap::from_iter([(header::AUTHORIZATION, v.parse().unwrap())]);
+        let headers =
+            |v: String| HeaderMap::from_iter([(header::AUTHORIZATION, v.parse().unwrap())]);
         assert_eq!(
-            verify_nip98(&state, &headers(auth("/admin/login/nostr", "macbook-2.local")), "/admin/login/nostr").unwrap(),
+            verify_nip98(
+                &state,
+                &headers(auth("/admin/login/nostr", "macbook-2.local")),
+                "/admin/login/nostr"
+            )
+            .unwrap(),
             keys.public_key()
         );
         // The LAN IP is a covered alias.
-        assert!(verify_nip98(&state, &headers(auth("/admin/login/nostr", "192.168.0.32")), "/admin/login/nostr").is_ok());
+        assert!(verify_nip98(
+            &state,
+            &headers(auth("/admin/login/nostr", "192.168.0.32")),
+            "/admin/login/nostr"
+        )
+        .is_ok());
         // Wrong path, foreign host, and missing header are all refused.
-        assert!(verify_nip98(&state, &headers(auth("/admin/config", "macbook-2.local")), "/admin/login/nostr").is_err());
-        assert!(verify_nip98(&state, &headers(auth("/admin/login/nostr", "evil.example")), "/admin/login/nostr").is_err());
+        assert!(verify_nip98(
+            &state,
+            &headers(auth("/admin/config", "macbook-2.local")),
+            "/admin/login/nostr"
+        )
+        .is_err());
+        assert!(verify_nip98(
+            &state,
+            &headers(auth("/admin/login/nostr", "evil.example")),
+            "/admin/login/nostr"
+        )
+        .is_err());
         assert!(verify_nip98(&state, &HeaderMap::new(), "/admin/login/nostr").is_err());
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -1914,7 +2364,10 @@ mod tests {
     }
 
     /// Almond's settings of `stores`; with `s3`, new uploads go to that bucket.
-    fn almond_config(dir: &Path, s3: Option<almond::services::native_storage::S3Settings>) -> almond::Config {
+    fn almond_config(
+        dir: &Path,
+        s3: Option<almond::services::native_storage::S3Settings>,
+    ) -> almond::Config {
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = dir.join("blossom");
         cfg.public_url = Some("https://flox-mac.local".into());
@@ -1932,18 +2385,36 @@ mod tests {
         cfg.validate().unwrap()
     }
 
-    async fn stores_with(dir: &Path, s3: Option<almond::services::native_storage::S3Settings>) -> Stores {
+    async fn stores_with(
+        dir: &Path,
+        s3: Option<almond::services::native_storage::S3Settings>,
+    ) -> Stores {
         let blossom = almond::build_state(&almond_config(dir, s3)).await.unwrap();
-        let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into(), mirror_relays: vec![] };
-        let public = Config::load(&dir.join("config.toml")).map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
+        let relay = crate::relay::RelayConfig {
+            writers: vec![],
+            name: "t".into(),
+            description: "t".into(),
+            mirror_relays: vec![],
+        };
+        let public = Config::load(&dir.join("config.toml"))
+            .map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
         let branding = Arc::new(crate::branding::Branding::open(dir, public));
         let relay = Relay::open(&dir.join("relay.sqlite"), relay).unwrap();
-        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let outbox =
+            crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default())
+                .unwrap();
         outbox.attach_storage(blossom.clone());
         let nsite = crate::nsite::Nsite::open(dir).unwrap();
         let migration = crate::storage_move::open(dir, blossom.clone()).unwrap();
         outbox.attach_migration(migration.clone());
-        Stores { relay, blossom, branding, outbox, nsite, migration }
+        Stores {
+            relay,
+            blossom,
+            branding,
+            outbox,
+            nsite,
+            migration,
+        }
     }
 
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
@@ -1962,7 +2433,13 @@ mod tests {
     async fn studio_fixture_with_stores(
         tls: &str,
         tls_files: bool,
-    ) -> (Router, PathBuf, String, almond::AppState, Arc<crate::branding::Branding>) {
+    ) -> (
+        Router,
+        PathBuf,
+        String,
+        almond::AppState,
+        Arc<crate::branding::Branding>,
+    ) {
         let dir = std::env::temp_dir().join(format!("nss-studio-test-{}", random_hex(4)));
         std::fs::create_dir_all(dir.join("tls")).unwrap();
         if tls_files {
@@ -1995,51 +2472,101 @@ mod tests {
             stores,
         )
         .unwrap();
-        let cookie = session_cookie(&secret, true).split(';').next().unwrap().to_owned();
+        let cookie = session_cookie(&secret, true)
+            .split(';')
+            .next()
+            .unwrap()
+            .to_owned();
         (router(state), dir, cookie, blossom, branding)
     }
 
-    async fn call(app: &Router, method: &str, cookie: Option<&str>, content_type: Option<&str>, body: &str) -> (StatusCode, serde_json::Value) {
+    async fn call(
+        app: &Router,
+        method: &str,
+        cookie: Option<&str>,
+        content_type: Option<&str>,
+        body: &str,
+    ) -> (StatusCode, serde_json::Value) {
         use tower::ServiceExt;
-        let mut req = axum::http::Request::builder().method(method).uri("/api/admin/config");
+        let mut req = axum::http::Request::builder()
+            .method(method)
+            .uri("/api/admin/config");
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
         if let Some(t) = content_type {
             req = req.header(header::CONTENT_TYPE, t);
         }
-        let res = app.clone().oneshot(req.body(axum::body::Body::from(body.to_owned())).unwrap()).await.unwrap();
+        let res = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::from(body.to_owned())).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
     }
 
-    async fn api_call(app: &Router, method: &str, path: &str, cookie: Option<&str>, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
+    async fn api_call(
+        app: &Router,
+        method: &str,
+        path: &str,
+        cookie: Option<&str>,
+        body: serde_json::Value,
+    ) -> (StatusCode, serde_json::Value) {
         use tower::ServiceExt;
-        let mut req = axum::http::Request::builder().method(method).uri(path).header(header::CONTENT_TYPE, "application/json");
-        if let Some(cookie) = cookie { req = req.header(header::COOKIE, cookie); }
-        let res = app.clone().oneshot(req.body(axum::body::Body::from(body.to_string())).unwrap()).await.unwrap();
+        let mut req = axum::http::Request::builder()
+            .method(method)
+            .uri(path)
+            .header(header::CONTENT_TYPE, "application/json");
+        if let Some(cookie) = cookie {
+            req = req.header(header::COOKIE, cookie);
+        }
+        let res = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::from(body.to_string())).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 
     #[tokio::test]
     async fn config_check_answers_what_saving_would_do_without_saving() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let (app, dir, cookie) =
+            studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         let c = Some(cookie.as_str());
         let path = "/api/admin/config/check";
         let saved = Config::load(&dir.join("config.toml")).unwrap();
-        assert_eq!(api_call(&app, "POST", path, None, put_value("#112233")).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            api_call(&app, "POST", path, None, put_value("#112233"))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
 
         let mut edit = editable_json(&saved, false);
         edit["title"] = "Checked".into();
         let (status, body) = api_call(&app, "POST", path, c, edit.clone()).await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(body, serde_json::json!({ "error": null, "restart": false, "canBePublic": false }));
+        assert_eq!(
+            body,
+            serde_json::json!({ "error": null, "restart": false, "canBePublic": false })
+        );
 
         edit["storage"]["quotaGib"] = (saved.storage.quota_gib + 1).into();
-        assert_eq!(api_call(&app, "POST", path, c, edit.clone()).await.1["restart"], true);
+        assert_eq!(
+            api_call(&app, "POST", path, c, edit.clone()).await.1["restart"],
+            true
+        );
 
         // A private origin needs public mirrors for public reach (ADR 0012/0013).
         edit["reach"] = "public".into();
@@ -2048,46 +2575,105 @@ mod tests {
         assert_eq!(body["canBePublic"], false);
         edit["mirror"] = serde_json::json!({ "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] });
         let (_, body) = api_call(&app, "POST", path, c, edit).await;
-        assert_eq!(body, serde_json::json!({ "error": null, "restart": true, "canBePublic": true }));
+        assert_eq!(
+            body,
+            serde_json::json!({ "error": null, "restart": true, "canBePublic": true })
+        );
 
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().title, saved.title, "a check saves nothing");
+        assert_eq!(
+            Config::load(&dir.join("config.toml")).unwrap().title,
+            saved.title,
+            "a check saves nothing"
+        );
     }
 
     #[tokio::test]
     async fn nsite_endpoints_require_auth_managed_key_saved_settings_and_explicit_disable_choice() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let (app, dir, cookie) =
+            studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         let c = Some(cookie.as_str());
         let empty = serde_json::json!({});
-        assert_eq!(api_call(&app, "GET", "/api/admin/nsite", None, empty.clone()).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", None, empty.clone()).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone()).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            api_call(&app, "GET", "/api/admin/nsite", None, empty.clone())
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            api_call(
+                &app,
+                "POST",
+                "/api/admin/nsite/publish",
+                None,
+                empty.clone()
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone())
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
         let mut edit = put_value("#112233");
         edit["reach"] = "public".into();
         edit["siteHosting"] = "nsite".into();
-        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        let (status, body) =
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         assert!(body["error"].as_str().unwrap().contains("managed"));
 
-        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
-            "test".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap();
+        let state = AdminState::open(
+            &dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "test".into(),
+            Arc::new(axum_server::Handle::new()),
+            stores(&dir).await,
+        )
+        .unwrap();
         *state.managed.lock() = Some(Ok(Keys::generate()));
         let app = router(state);
-        assert_eq!(api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone()).await.0, StatusCode::BAD_REQUEST, "only saved nsite settings may publish");
+        assert_eq!(
+            api_call(&app, "POST", "/api/admin/nsite/publish", c, empty.clone())
+                .await
+                .0,
+            StatusCode::BAD_REQUEST,
+            "only saved nsite settings may publish"
+        );
         // Keep mirror targets unchanged in this test so a config apply does not schedule a restart.
         let mut cfg = Config::load(&dir.join("config.toml")).unwrap();
-        cfg.mirror = config::Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec!["https://blossom.example".into()] };
+        cfg.mirror = config::Mirror {
+            relays: vec!["wss://mirror.example".into()],
+            blossom: vec!["https://blossom.example".into()],
+        };
         cfg.reach = config::Reach::Public;
         cfg.site_hosting = config::SiteHosting::Nsite;
         std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
         edit = editable_json(&cfg, false);
         edit["reach"] = "private".into();
-        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        let (status, body) =
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         assert!(body["error"].as_str().unwrap().contains("deleteNsite"));
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site_hosting, config::SiteHosting::Nsite);
+        assert_eq!(
+            Config::load(&dir.join("config.toml")).unwrap().site_hosting,
+            config::SiteHosting::Nsite
+        );
         edit["deleteNsite"] = false.into();
-        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::OK);
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site_hosting, config::SiteHosting::Instance);
+        assert_eq!(
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string())
+                .await
+                .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            Config::load(&dir.join("config.toml")).unwrap().site_hosting,
+            config::SiteHosting::Instance
+        );
     }
 
     #[tokio::test]
@@ -2096,58 +2682,135 @@ mod tests {
         let mut cfg = Config::load(&dir.join("config.toml")).unwrap();
         cfg.origin = "https://home.example".into();
         cfg.origin_host = "home.example".into();
-        cfg.tls = config::Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 };
+        cfg.tls = config::Tls::LocalCa {
+            router_name: None,
+            https_port: 443,
+            http_port: 80,
+        };
         cfg.reach = config::Reach::Public;
-        cfg.mirror = config::Mirror { relays: vec!["wss://mirror.example".into()], blossom: vec![cfg.origin.clone(), "https://blossom.example".into(), "https://optional.example".into()] };
+        cfg.mirror = config::Mirror {
+            relays: vec!["wss://mirror.example".into()],
+            blossom: vec![
+                cfg.origin.clone(),
+                "https://blossom.example".into(),
+                "https://optional.example".into(),
+            ],
+        };
         std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
         let mut live = stores(&dir).await;
-        live.outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), cfg.mirror.clone()).unwrap();
+        live.outbox =
+            crate::outbox::Outbox::open(&dir.join("relay.sqlite"), cfg.mirror.clone()).unwrap();
         live.outbox.attach_storage(live.blossom.clone());
         live.outbox.set_origin_public(false);
         let owner = Keys::generate().public_key().to_hex();
-        let (video, _) = live.outbox.store_local(b"video bytes", "video/mp4", "mp4", &owner).await.unwrap();
-        let (thumbnail, _) = live.outbox.store_local(b"thumbnail bytes", "image/png", "png", &owner).await.unwrap();
+        let (video, _) = live
+            .outbox
+            .store_local(b"video bytes", "video/mp4", "mp4", &owner)
+            .await
+            .unwrap();
+        let (thumbnail, _) = live
+            .outbox
+            .store_local(b"thumbnail bytes", "image/png", "png", &owner)
+            .await
+            .unwrap();
         let outbox = live.outbox.clone();
-        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
-            "test".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        let state = AdminState::open(
+            &dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "test".into(),
+            Arc::new(axum_server::Handle::new()),
+            live,
+        )
+        .unwrap();
         let app = router(state);
         let path = "/api/admin/media/mirrors";
         let body = serde_json::json!({"hashes":[video,thumbnail]});
-        assert_eq!(api_call(&app, "POST", path, None, body.clone()).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            api_call(&app, "POST", path, None, body.clone()).await.0,
+            StatusCode::UNAUTHORIZED
+        );
         let c = Some(cookie.as_str());
         let (status, response) = api_call(&app, "POST", path, c, body.clone()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(response["ready"], false);
         let waiting = response["jobs"].as_array().unwrap();
-        assert!(waiting.iter().any(|job| job["target"] == "https://blossom.example" && job["status"] == "pending" && job["active"] == true));
+        assert!(waiting
+            .iter()
+            .any(|job| job["target"] == "https://blossom.example"
+                && job["status"] == "pending"
+                && job["active"] == true));
         outbox.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://home.example'", []).map(|_| ())).await.unwrap();
         let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
-        assert_eq!(response["ready"], false, "a local-ca self-copy is not publicly available");
+        assert_eq!(
+            response["ready"], false,
+            "a local-ca self-copy is not publicly available"
+        );
         assert_eq!(response["urls"], serde_json::json!({}));
         let confirmed = video.clone();
         outbox.db(move |conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://blossom.example' AND ref_id=?", [confirmed]).map(|_| ())).await.unwrap();
         let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
         assert_eq!(response["ready"], false, "thumbnail is required too");
-        assert_eq!(response["urls"][&video], format!("https://blossom.example/{video}.mp4"));
+        assert_eq!(
+            response["urls"][&video],
+            format!("https://blossom.example/{video}.mp4")
+        );
         outbox.db(|conn| {
             conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob' AND target='https://blossom.example'", [])?;
             conn.execute("UPDATE outbox SET status='pending',last_error='offline' WHERE kind='blob' AND target='https://optional.example'", []).map(|_| ())
         }).await.unwrap();
         let (_, response) = api_call(&app, "POST", path, c, body.clone()).await;
         assert_eq!(response["ready"], true);
-        assert!(response["error"].is_null(), "optional mirror failures cannot block confirmed media");
-        assert_eq!(response["urls"][&thumbnail], format!("https://blossom.example/{thumbnail}.png"));
-        assert!(response["jobs"].as_array().unwrap().iter().any(|job|
-            job["target"] == "https://optional.example" && job["status"] == "pending" && job["lastError"] == "offline"));
-        assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["../secrets"]})).await.0, StatusCode::BAD_REQUEST);
-        assert_eq!(api_call(&app, "POST", path, c, serde_json::json!({"hashes":["00".repeat(32)]})).await.0, StatusCode::NOT_FOUND);
+        assert!(
+            response["error"].is_null(),
+            "optional mirror failures cannot block confirmed media"
+        );
+        assert_eq!(
+            response["urls"][&thumbnail],
+            format!("https://blossom.example/{thumbnail}.png")
+        );
+        assert!(response["jobs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|job| job["target"] == "https://optional.example"
+                && job["status"] == "pending"
+                && job["lastError"] == "offline"));
+        assert_eq!(
+            api_call(
+                &app,
+                "POST",
+                path,
+                c,
+                serde_json::json!({"hashes":["../secrets"]})
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            api_call(
+                &app,
+                "POST",
+                path,
+                c,
+                serde_json::json!({"hashes":["00".repeat(32)]})
+            )
+            .await
+            .0,
+            StatusCode::NOT_FOUND
+        );
         cfg.origin = "https://instance.example".into();
         cfg.origin_host = "instance.example".into();
         cfg.tls = config::Tls::Proxy { port: 8080 };
         std::fs::write(dir.join("config.toml"), cfg.to_toml().unwrap()).unwrap();
         let (_, response) = api_call(&app, "POST", path, c, body).await;
         assert_eq!(response["ready"], true);
-        assert_eq!(response["urls"][&video], format!("https://instance.example/{video}.mp4"));
+        assert_eq!(
+            response["urls"][&video],
+            format!("https://instance.example/{video}.mp4")
+        );
     }
 
     fn put_value(accent: &str) -> serde_json::Value {
@@ -2187,22 +2850,48 @@ mod tests {
     }
 
     /// A second router on `dir` whose Blossom was started with `s3` (an instance after restart).
-    async fn router_with_s3(dir: &Path, s3: almond::services::native_storage::S3Settings) -> (Router, almond::AppState, Arc<crate::branding::Branding>) {
+    async fn router_with_s3(
+        dir: &Path,
+        s3: almond::services::native_storage::S3Settings,
+    ) -> (Router, almond::AppState, Arc<crate::branding::Branding>) {
         let stores = stores_with(dir, Some(s3)).await;
         let (blossom, branding) = (stores.blossom.clone(), stores.branding.clone());
-        let state = AdminState::open(dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
-            "boot".into(), Arc::new(axum_server::Handle::new()), stores).unwrap();
+        let state = AdminState::open(
+            dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "boot".into(),
+            Arc::new(axum_server::Handle::new()),
+            stores,
+        )
+        .unwrap();
         (router(state), blossom, branding)
     }
 
     /// `GET /<name>` from Blossom: status and body.
-    async fn blob(blossom: &almond::AppState, name: &str, range: Option<&str>) -> (StatusCode, Vec<u8>) {
+    async fn blob(
+        blossom: &almond::AppState,
+        name: &str,
+        range: Option<&str>,
+    ) -> (StatusCode, Vec<u8>) {
         use tower::ServiceExt;
         let mut req = axum::http::Request::builder().uri(format!("/{name}"));
-        if let Some(range) = range { req = req.header(header::RANGE, range); }
-        let res = almond::create_app(blossom.clone()).oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        if let Some(range) = range {
+            req = req.header(header::RANGE, range);
+        }
+        let res = almond::create_app(blossom.clone())
+            .oneshot(req.body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        (status, axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap().to_vec())
+        (
+            status,
+            axum::body::to_bytes(res.into_body(), 1 << 20)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
     }
 
     /// The fan-out key Almond gives an uploaded blob.
@@ -2220,25 +2909,49 @@ mod tests {
         let mut edit = put_value("#112233");
         edit["storage"]["s3"] = s3_json(&fake);
         let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
-        assert!(fake.keys().is_empty(), "the preflight probe leaves no object: {:?}", fake.keys());
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &true.into()),
+            "{body}"
+        );
+        assert!(
+            fake.keys().is_empty(),
+            "the preflight probe leaves no object: {:?}",
+            fake.keys()
+        );
         // The secret goes to the secrets store, never the config file or a GET.
         let file = std::fs::read_to_string(dir.join("config.toml")).unwrap();
-        assert!(file.contains("[storage.s3]") && !file.contains(SECRET_KEY), "{file}");
-        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        assert!(
+            file.contains("[storage.s3]") && !file.contains(SECRET_KEY),
+            "{file}"
+        );
+        assert_eq!(
+            Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(),
+            Some(SECRET_KEY)
+        );
         let (_, read) = call(&app, "GET", c, None, "").await;
         assert!(!read.to_string().contains(SECRET_KEY));
-        assert_eq!(read["config"]["storage"]["s3"], serde_json::json!({
-            "endpoint": fake.url(), "bucket": BUCKET, "region": "auto", "forcePathStyle": true,
-            "accessKeyId": ACCESS_KEY, "secretSet": true,
-        }));
+        assert_eq!(
+            read["config"]["storage"]["s3"],
+            serde_json::json!({
+                "endpoint": fake.url(), "bucket": BUCKET, "region": "auto", "forcePathStyle": true,
+                "accessKeyId": ACCESS_KEY, "secretSet": true,
+            })
+        );
         // Saved back as read (secretSet, no secret): the stored secret stays and a title edit
         // neither probes nor restarts.
         let mut again = read["config"].clone();
         again["title"] = "Again".into();
         let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &false.into()), "{body}");
-        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &false.into()),
+            "{body}"
+        );
+        assert_eq!(
+            Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(),
+            Some(SECRET_KEY)
+        );
         // An empty secret is refused, and so is turning S3 off.
         let before = std::fs::read(dir.join("config.toml")).unwrap();
         again["storage"]["s3"]["secretAccessKey"] = "".into();
@@ -2247,14 +2960,27 @@ mod tests {
         again["storage"]["s3"] = serde_json::Value::Null;
         let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body["error"].as_str().unwrap().contains("cannot be turned off"), "{body}");
+        assert!(
+            body["error"]
+                .as_str()
+                .unwrap()
+                .contains("cannot be turned off"),
+            "{body}"
+        );
         assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
         // A new secret alone restarts the instance.
         again["storage"]["s3"] = read["config"]["storage"]["s3"].clone();
         again["storage"]["s3"]["secretAccessKey"] = "rotated".into();
         let (status, body) = call(&app, "PUT", c, json, &again.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
-        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some("rotated"));
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &true.into()),
+            "{body}"
+        );
+        assert_eq!(
+            Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(),
+            Some("rotated")
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -2265,17 +2991,38 @@ mod tests {
         let mut edit = put_value("#112233");
         edit["storage"]["s3"] = s3_json(&fake);
         let c = Some(cookie.as_str());
-        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::OK);
+        assert_eq!(
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string())
+                .await
+                .0,
+            StatusCode::OK
+        );
         let before = std::fs::read(dir.join("config.toml")).unwrap();
         std::fs::create_dir(dir.join("config.toml.tmp")).unwrap();
         edit["storage"]["s3"]["secretAccessKey"] = "rotated".into();
-        assert_eq!(call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string())
+                .await
+                .0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
         assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
-        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some(SECRET_KEY));
+        assert_eq!(
+            Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(),
+            Some(SECRET_KEY)
+        );
         std::fs::remove_dir(dir.join("config.toml.tmp")).unwrap();
-        let (status, body) = call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &true.into()), "{body}");
-        assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(), Some("rotated"));
+        let (status, body) =
+            call(&app, "PUT", c, Some("application/json"), &edit.to_string()).await;
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &true.into()),
+            "{body}"
+        );
+        assert_eq!(
+            Secrets::load(&dir).unwrap().s3_secret_access_key.as_deref(),
+            Some("rotated")
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -2285,9 +3032,15 @@ mod tests {
         let (app, dir, cookie) = studio_fixture().await;
         let c = Some(cookie.as_str());
         const TEST: &str = "/api/admin/storage/test";
-        assert_eq!(api_call(&app, "POST", TEST, None, s3_json(&fake)).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            api_call(&app, "POST", TEST, None, s3_json(&fake)).await.0,
+            StatusCode::UNAUTHORIZED
+        );
         let (status, body) = api_call(&app, "POST", TEST, c, s3_json(&fake)).await;
-        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "ok": true })));
+        assert_eq!(
+            (status, body),
+            (StatusCode::OK, serde_json::json!({ "ok": true }))
+        );
         assert!(fake.keys().is_empty(), "{:?}", fake.keys());
         let gone = {
             let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -2295,37 +3048,70 @@ mod tests {
         };
         for (field, value, code) in [
             ("bucket", "missing-bucket".to_owned(), Some("NoSuchBucket")),
-            ("accessKeyId", "wrong-key".to_owned(), Some("InvalidAccessKeyId")),
+            (
+                "accessKeyId",
+                "wrong-key".to_owned(),
+                Some("InvalidAccessKeyId"),
+            ),
             ("endpoint", gone, None),
         ] {
             let mut body = s3_json(&fake);
             body[field] = value.into();
             let (status, answer) = api_call(&app, "POST", TEST, c, body).await;
-            assert_eq!((status, &answer["ok"], &answer["step"]), (StatusCode::OK, &false.into(), &"put".into()), "{field}: {answer}");
+            assert_eq!(
+                (status, &answer["ok"], &answer["step"]),
+                (StatusCode::OK, &false.into(), &"put".into()),
+                "{field}: {answer}"
+            );
             let error = answer["error"].as_str().unwrap();
-            assert!(!error.is_empty() && code.is_none_or(|code| error.contains(code)), "{field}: {error}");
+            assert!(
+                !error.is_empty() && code.is_none_or(|code| error.contains(code)),
+                "{field}: {error}"
+            );
         }
         // Invalid input is a 400; without a stored secret one is required, and never empty.
         let mut body = s3_json(&fake);
         body["endpoint"] = "s3.example".into();
-        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            api_call(&app, "POST", TEST, c, body).await.0,
+            StatusCode::BAD_REQUEST
+        );
         let mut body = s3_json(&fake);
         body.as_object_mut().unwrap().remove("secretAccessKey");
-        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            api_call(&app, "POST", TEST, c, body).await.0,
+            StatusCode::BAD_REQUEST
+        );
         let mut body = s3_json(&fake);
         body["secretAccessKey"] = "".into();
-        assert_eq!(api_call(&app, "POST", TEST, c, body).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            api_call(&app, "POST", TEST, c, body).await.0,
+            StatusCode::BAD_REQUEST
+        );
         // With a stored secret, an omitted one means that one.
         let mut s = Secrets::load(&dir).unwrap();
         s.s3_secret_access_key = Some(SECRET_KEY.into());
         s.save(&dir).unwrap();
-        let app = router(AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()], "https://flox-mac.local",
-            "boot".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap());
+        let app = router(
+            AdminState::open(
+                &dir,
+                "flox-mac.local",
+                vec!["flox-mac.local".into()],
+                "https://flox-mac.local",
+                "boot".into(),
+                Arc::new(axum_server::Handle::new()),
+                stores(&dir).await,
+            )
+            .unwrap(),
+        );
         let mut body = s3_json(&fake);
         body.as_object_mut().unwrap().remove("secretAccessKey");
         body["secretSet"] = true.into();
         let (status, answer) = api_call(&app, "POST", "/api/admin/storage/test", c, body).await;
-        assert_eq!((status, answer), (StatusCode::OK, serde_json::json!({ "ok": true })));
+        assert_eq!(
+            (status, answer),
+            (StatusCode::OK, serde_json::json!({ "ok": true }))
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -2337,9 +3123,23 @@ mod tests {
         let mut edit = put_value("#112233");
         edit["storage"]["s3"] = s3_json(&fake);
         edit["storage"]["s3"]["bucket"] = "missing-bucket".into();
-        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
-        assert_eq!((status, &body["step"]), (StatusCode::BAD_REQUEST, &"put".into()), "{body}");
-        assert!(body["error"].as_str().unwrap().contains("NoSuchBucket"), "{body}");
+        let (status, body) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &edit.to_string(),
+        )
+        .await;
+        assert_eq!(
+            (status, &body["step"]),
+            (StatusCode::BAD_REQUEST, &"put".into()),
+            "{body}"
+        );
+        assert!(
+            body["error"].as_str().unwrap().contains("NoSuchBucket"),
+            "{body}"
+        );
         assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
         assert!(!dir.join("config.prev").exists());
         assert_eq!(Secrets::load(&dir).unwrap().s3_secret_access_key, None);
@@ -2354,26 +3154,53 @@ mod tests {
         let mut big = PNG.to_vec();
         big.resize(512 * 1024 + 1, 0);
         let html = b"<!doctype html>".to_vec();
-        let hashes: Vec<String> = [PNG.to_vec(), big, html].into_iter().map(|bytes| {
-            let hash = hex::encode(Sha256::digest(&bytes));
-            fake.insert(&s3_key(&hash, "png"), &bytes);
-            hash
-        }).collect();
+        let hashes: Vec<String> = [PNG.to_vec(), big, html]
+            .into_iter()
+            .map(|bytes| {
+                let hash = hex::encode(Sha256::digest(&bytes));
+                fake.insert(&s3_key(&hash, "png"), &bytes);
+                hash
+            })
+            .collect();
         // Started with S3: Almond indexes the bucket's blobs.
         let (app, blossom, branding) = router_with_s3(&dir, fake.settings()).await;
         let indexed = blossom.file_index.get(&hashes[0]).await.unwrap();
-        assert!(matches!(indexed.location, almond::models::FileLocation::S3 { .. }), "{:?}", indexed.location);
+        assert!(
+            matches!(indexed.location, almond::models::FileLocation::S3 { .. }),
+            "{:?}",
+            indexed.location
+        );
         let (c, json) = (Some(cookie.as_str()), Some("application/json"));
-        let reference = |hash: &str| serde_json::json!({ "sha256": hash }).to_string().into_bytes();
-        let (status, body) = branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0])).await;
+        let reference = |hash: &str| {
+            serde_json::json!({ "sha256": hash })
+                .to_string()
+                .into_bytes()
+        };
+        let (status, body) =
+            branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0])).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(public_site(&branding)["logo"], body["url"]);
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
-        assert_eq!(branding_call(&app, "PUT", "banner", c, json, reference(&hashes[2])).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(branding_call(&app, "PUT", "logo", c, json, reference(&hashes[1])).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            branding_call(&app, "PUT", "banner", c, json, reference(&hashes[2]))
+                .await
+                .0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, json, reference(&hashes[1]))
+                .await
+                .0,
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
         // A bucket object can grow after listing; the streamed read must still enforce the limit.
         fake.insert(&s3_key(&hashes[0], "png"), &vec![0; 512 * 1024 + 1]);
-        assert_eq!(branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0])).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, json, reference(&hashes[0]))
+                .await
+                .0,
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2390,27 +3217,62 @@ mod tests {
         fake.stop().await;
         // The instance starts with the bucket down.
         let (app, blossom, _) = router_with_s3(&dir, fake.settings()).await;
-        let _tasks = almond::spawn_background_tasks(&blossom, &almond_config(&dir, Some(fake.settings())));
-        assert_eq!(send(&app, "/api/admin/storage", None, None).await.0, StatusCode::UNAUTHORIZED);
+        let _tasks =
+            almond::spawn_background_tasks(&blossom, &almond_config(&dir, Some(fake.settings())));
+        assert_eq!(
+            send(&app, "/api/admin/storage", None, None).await.0,
+            StatusCode::UNAUTHORIZED
+        );
         let (status, _, body) = send(&app, "/api/admin/storage", c, None).await;
-        assert_eq!((status, &body["s3"]["available"]), (StatusCode::OK, &false.into()), "{body}");
-        assert!(body["s3"]["lastError"].as_str().is_some_and(|e| !e.is_empty()), "{body}");
+        assert_eq!(
+            (status, &body["s3"]["available"]),
+            (StatusCode::OK, &false.into()),
+            "{body}"
+        );
+        assert!(
+            body["s3"]["lastError"]
+                .as_str()
+                .is_some_and(|e| !e.is_empty()),
+            "{body}"
+        );
         assert!(body["s3"]["lastAttempt"].as_u64().is_some(), "{body}");
         assert!(body["move"]["state"].is_string(), "{body}");
         // Local blobs keep playing; a blob that may be in S3 answers 503, not 404.
         let local = b"a video stored on this machine".to_vec();
         let local_hash = hex::encode(Sha256::digest(&local));
         let path = blossom.storage.uploads.join(format!("{local_hash}.mp4"));
-        tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
+        tokio::fs::create_dir_all(&blossom.storage.uploads)
+            .await
+            .unwrap();
         tokio::fs::write(&path, &local).await.unwrap();
-        blossom.file_index.insert(local_hash.clone(), almond::models::FileMetadata {
-            location: almond::models::FileLocation::Local(path), extension: Some("mp4".into()),
-            mime_type: Some("video/mp4".into()), size: local.len() as u64, created_at: 1, pubkey: None,
-            expiration: None, origin: Default::default(),
-        }).await;
-        assert_eq!(blob(&blossom, &format!("{local_hash}.mp4"), None).await, (StatusCode::OK, local.clone()));
-        assert_eq!(blob(&blossom, &format!("{local_hash}.mp4"), Some("bytes=2-5")).await, (StatusCode::PARTIAL_CONTENT, local[2..=5].to_vec()));
-        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), None).await.0, StatusCode::SERVICE_UNAVAILABLE);
+        blossom
+            .file_index
+            .insert(
+                local_hash.clone(),
+                almond::models::FileMetadata {
+                    location: almond::models::FileLocation::Local(path),
+                    extension: Some("mp4".into()),
+                    mime_type: Some("video/mp4".into()),
+                    size: local.len() as u64,
+                    created_at: 1,
+                    pubkey: None,
+                    expiration: None,
+                    origin: Default::default(),
+                },
+            )
+            .await;
+        assert_eq!(
+            blob(&blossom, &format!("{local_hash}.mp4"), None).await,
+            (StatusCode::OK, local.clone())
+        );
+        assert_eq!(
+            blob(&blossom, &format!("{local_hash}.mp4"), Some("bytes=2-5")).await,
+            (StatusCode::PARTIAL_CONTENT, local[2..=5].to_vec())
+        );
+        assert_eq!(
+            blob(&blossom, &format!("{s3_hash}.mp4"), None).await.0,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
         // Back up: Almond's retry finds the bucket, the status flips and the S3 blob plays.
         fake.resume().await;
         let mut available = false;
@@ -2424,8 +3286,14 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(250)).await;
         }
         assert!(available, "S3 never became available again");
-        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), None).await, (StatusCode::OK, in_s3.clone()));
-        assert_eq!(blob(&blossom, &format!("{s3_hash}.mp4"), Some("bytes=2-5")).await, (StatusCode::PARTIAL_CONTENT, in_s3[2..=5].to_vec()));
+        assert_eq!(
+            blob(&blossom, &format!("{s3_hash}.mp4"), None).await,
+            (StatusCode::OK, in_s3.clone())
+        );
+        assert_eq!(
+            blob(&blossom, &format!("{s3_hash}.mp4"), Some("bytes=2-5")).await,
+            (StatusCode::PARTIAL_CONTENT, in_s3[2..=5].to_vec())
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -2435,7 +3303,14 @@ mod tests {
         let (status, body) = call(&app, "GET", None, None, "").await;
         assert_eq!(status, StatusCode::UNAUTHORIZED);
         assert_eq!(body["error"], "not logged in");
-        let (status, _) = call(&app, "PUT", None, Some("application/json"), &put_body("#112233")).await;
+        let (status, _) = call(
+            &app,
+            "PUT",
+            None,
+            Some("application/json"),
+            &put_body("#112233"),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNAUTHORIZED);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2454,9 +3329,19 @@ mod tests {
         assert_eq!(body["config"]["storage"]["quotaGib"], 7);
         assert_eq!(body["config"]["site"]["theme"]["font"], "sans");
         // A file from before signer relays reads as the public defaults.
-        assert_eq!(body["config"]["signerRelays"], serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"]));
+        assert_eq!(
+            body["config"]["signerRelays"],
+            serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"])
+        );
         // What the studio reads is accepted as it is when saved back.
-        let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &body["config"].to_string()).await;
+        let (status, _) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &body["config"].to_string(),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2470,7 +3355,10 @@ mod tests {
             (json, put_body("red")),
             (json, put_body("#12345")),
             (json, "not json".to_owned()),
-            (json, put_body("#112233").replace("\"title\"", "\"extra\":1,\"title\"")),
+            (
+                json,
+                put_body("#112233").replace("\"title\"", "\"extra\":1,\"title\""),
+            ),
             (json, put_body("#112233").replace("mono", "comic")),
             (json, put_body("#112233").replace("Renamed", "  ")),
             (json, {
@@ -2478,8 +3366,18 @@ mod tests {
                 v["site"]["links"] = serde_json::json!({});
                 v.to_string()
             }),
-            (json, put_body("#112233").replace("https://example.org/p/{nip19}", "http://example.org/p/{nip19}")),
-            (json, put_body("#112233").replace("https://example.org/n/{nip19}", "https://example.org/n/")),
+            (
+                json,
+                put_body("#112233").replace(
+                    "https://example.org/p/{nip19}",
+                    "http://example.org/p/{nip19}",
+                ),
+            ),
+            (
+                json,
+                put_body("#112233")
+                    .replace("https://example.org/n/{nip19}", "https://example.org/n/"),
+            ),
             (json, {
                 let mut v = put_value("#112233");
                 v["site"].as_object_mut().unwrap().remove("pages");
@@ -2487,32 +3385,80 @@ mod tests {
             }),
             (json, put_body("#112233").replace("\"de\"", "\"deu\"")),
             (json, put_body("#112233").replace("\"Imprint\"", "\"  \"")),
-            (json, put_body("#112233").replace("\"about\"", "\"unknown\"")),
+            (
+                json,
+                put_body("#112233").replace("\"about\"", "\"unknown\""),
+            ),
             (json, {
                 let mut v = put_value("#112233");
                 v.as_object_mut().unwrap().remove("storage");
                 v.to_string()
             }),
-            (json, put_body("#112233").replace("wss://relay.example", "https://relay.example")),
+            (
+                json,
+                put_body("#112233").replace("wss://relay.example", "https://relay.example"),
+            ),
             (json, {
                 let mut v = put_value("#112233");
                 v.as_object_mut().unwrap().remove("signerRelays");
                 v.to_string()
             }),
-            (json, put_body("#112233").replace("wss://signer.example", "https://signer.example")),
-            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example/nip46")),
-            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example?x=1")),
-            (json, put_body("#112233").replace("wss://signer.example", "wss://signer.example#x")),
-            (json, put_body("#112233").replace("wss://signer.example", "wss://user:pw@signer.example")),
-            (json, put_body("#112233").replace("wss://signer.example", "wss://signer .example")),
-            (json, put_body("#112233").replace("https://blossom.example", "ftp://blossom.example")),
-            (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
-            (json, put_body("#112233").replace("https://shop.example/", "javascript:alert(1)")),
-            (json, put_body("#112233").replace("https://support.example/", "https://user:pw@support.example/")),
-            (json, put_body("#112233").replace("\"featuredText\"", "\"featured_text\"")),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "https://signer.example"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "wss://signer.example/nip46"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "wss://signer.example?x=1"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "wss://signer.example#x"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "wss://user:pw@signer.example"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("wss://signer.example", "wss://signer .example"),
+            ),
+            (
+                json,
+                put_body("#112233").replace("https://blossom.example", "ftp://blossom.example"),
+            ),
+            (
+                json,
+                put_body("#112233").replace(
+                    &format!("\"creators\":[\"{PK}\"]"),
+                    "\"creators\":[\"nope\"]",
+                ),
+            ),
+            (
+                json,
+                put_body("#112233").replace("https://shop.example/", "javascript:alert(1)"),
+            ),
+            (
+                json,
+                put_body("#112233").replace(
+                    "https://support.example/",
+                    "https://user:pw@support.example/",
+                ),
+            ),
+            (
+                json,
+                put_body("#112233").replace("\"featuredText\"", "\"featured_text\""),
+            ),
             (json, {
                 let mut v = put_value("#112233");
-                v["site"]["homepage"].as_object_mut().unwrap().remove("action");
+                v["site"]["homepage"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("action");
                 v.to_string()
             }),
             (json, {
@@ -2535,7 +3481,14 @@ mod tests {
     async fn studio_api_applies_the_edit_and_keeps_origin_and_tls() {
         let (app, dir, cookie) = studio_fixture().await;
         let before = Config::load(&dir.join("config.toml")).unwrap();
-        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        let (status, body) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &put_body("#112233"),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["revision"], 5);
         // Writers stay, but storage and mirror change: the instance restarts for it.
@@ -2543,22 +3496,53 @@ mod tests {
         assert!(dir.join("config.prev").exists());
         let after = Config::load(&dir.join("config.toml")).unwrap();
         assert_eq!((after.revision, after.title.as_str()), (5, "Renamed"));
-        assert_eq!((after.site.accent.as_str(), after.site.tagline.as_str()), ("#112233", "Hi"));
+        assert_eq!(
+            (after.site.accent.as_str(), after.site.tagline.as_str()),
+            ("#112233", "Hi")
+        );
         assert_eq!(after.site.hidden_videos, vec![format!("34235:{PK}:intro")]);
         assert_eq!(after.site.links.video, "https://example.org/v/{nip19}");
-        assert_eq!(after.site.pages.about.get("de").map(String::as_str), Some("Über uns"));
-        assert_eq!(after.site.pages.imprint.get("en").map(String::as_str), Some("Imprint"));
+        assert_eq!(
+            after.site.pages.about.get("de").map(String::as_str),
+            Some("Über uns")
+        );
+        assert_eq!(
+            after.site.pages.imprint.get("en").map(String::as_str),
+            Some("Imprint")
+        );
         assert!(after.site.pages.privacy.is_empty());
-        assert_eq!(after.site.homepage.action.as_ref().map(|a| a.url.as_str()), Some("https://support.example/"));
+        assert_eq!(
+            after.site.homepage.action.as_ref().map(|a| a.url.as_str()),
+            Some("https://support.example/")
+        );
         let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
-        assert_eq!(read["config"]["site"]["homepage"], put_value("#112233")["site"]["homepage"], "the studio reads back what it saved");
-        assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
+        assert_eq!(
+            read["config"]["site"]["homepage"],
+            put_value("#112233")["site"]["homepage"],
+            "the studio reads back what it saved"
+        );
+        assert_eq!(
+            after.video_sources,
+            vec!["wss://flox-mac.local", "wss://relay.example"]
+        );
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert!(after.profile_relays.is_empty());
-        assert_eq!(after.signer_relays, vec!["ws://npub1x.fips:8080", "wss://signer.example"]);
-        assert_eq!(read["config"]["signerRelays"], put_value("#112233")["signerRelays"]);
+        assert_eq!(
+            after.signer_relays,
+            vec!["ws://npub1x.fips:8080", "wss://signer.example"]
+        );
+        assert_eq!(
+            read["config"]["signerRelays"],
+            put_value("#112233")["signerRelays"]
+        );
         assert_eq!(after.search, Search::Local);
-        assert_eq!((after.storage.quota_gib, after.storage.free_space_reserve_gib), (100, 3));
+        assert_eq!(
+            (
+                after.storage.quota_gib,
+                after.storage.free_space_reserve_gib
+            ),
+            (100, 3)
+        );
         assert_eq!(after.mirror.relays, vec!["wss://mirror.example"]);
         assert_eq!(after.mirror.blossom, vec!["https://blossom.example"]);
         // Not editable: origin and TLS.
@@ -2567,16 +3551,35 @@ mod tests {
         // A studio from before the homepage omits it: that saves as no curation.
         let mut legacy = put_value("#112233");
         legacy["site"].as_object_mut().unwrap().remove("homepage");
-        assert_eq!(call(&app, "PUT", Some(&cookie), Some("application/json"), &legacy.to_string()).await.0, StatusCode::OK);
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().site.homepage, config::SiteHomepage::default());
+        assert_eq!(
+            call(
+                &app,
+                "PUT",
+                Some(&cookie),
+                Some("application/json"),
+                &legacy.to_string()
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            Config::load(&dir.join("config.toml"))
+                .unwrap()
+                .site
+                .homepage,
+            config::SiteHomepage::default()
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn a_public_only_edit_applies_while_running_and_a_storage_change_restarts() {
-        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, _, branding) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let json = Some("application/json");
-        let public = || serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap();
+        let public =
+            || serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap();
         let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
         let mut edit = read["config"].clone();
         edit["title"] = "Live".into();
@@ -2584,28 +3587,73 @@ mod tests {
         edit["videoSources"] = serde_json::json!(["wss://other.example"]);
         assert_eq!(edit["reach"], "private");
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &serde_json::Value::Bool(false)),
+            "{body}"
+        );
         let live = public();
-        assert_eq!((&live["revision"], &live["title"], &live["site"]["tagline"]), (&5.into(), &"Live".into(), &"Now".into()));
+        assert_eq!(
+            (&live["revision"], &live["title"], &live["site"]["tagline"]),
+            (&5.into(), &"Live".into(), &"Now".into())
+        );
         // Private reach: the site gets the instance relay only; the studio keeps the stored list.
-        assert_eq!(live["videoSources"], serde_json::json!(["wss://flox-mac.local"]));
-        assert_eq!(call(&app, "GET", Some(&cookie), None, "").await.1["config"]["videoSources"], serde_json::json!(["wss://other.example"]));
+        assert_eq!(
+            live["videoSources"],
+            serde_json::json!(["wss://flox-mac.local"])
+        );
+        assert_eq!(
+            call(&app, "GET", Some(&cookie), None, "").await.1["config"]["videoSources"],
+            serde_json::json!(["wss://other.example"])
+        );
         // Signer relays are served as saved in private reach too, and stay out of the read lists.
         edit["signerRelays"] = serde_json::json!(["ws://npub1x.fips:8080"]);
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &serde_json::Value::Bool(false)),
+            "{body}"
+        );
         let live = public();
-        assert_eq!(live["signerRelays"], serde_json::json!(["ws://npub1x.fips:8080"]));
-        assert_eq!((&live["videoSources"], &live["interactionRelays"]), (&serde_json::json!(["wss://flox-mac.local"]), &serde_json::json!(["wss://flox-mac.local"])));
-        assert_eq!(call(&app, "GET", Some(&cookie), None, "").await.1["config"]["signerRelays"], live["signerRelays"]);
+        assert_eq!(
+            live["signerRelays"],
+            serde_json::json!(["ws://npub1x.fips:8080"])
+        );
+        assert_eq!(
+            (&live["videoSources"], &live["interactionRelays"]),
+            (
+                &serde_json::json!(["wss://flox-mac.local"]),
+                &serde_json::json!(["wss://flox-mac.local"])
+            )
+        );
+        assert_eq!(
+            call(&app, "GET", Some(&cookie), None, "").await.1["config"]["signerRelays"],
+            live["signerRelays"]
+        );
         edit["signerRelays"] = serde_json::json!([]);
-        assert_eq!(call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await.0, StatusCode::OK);
-        assert_eq!(public()["signerRelays"], serde_json::json!([]), "an empty list stays empty");
-        assert!(Config::load(&dir.join("config.toml")).unwrap().signer_relays.is_empty());
+        assert_eq!(
+            call(&app, "PUT", Some(&cookie), json, &edit.to_string())
+                .await
+                .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            public()["signerRelays"],
+            serde_json::json!([]),
+            "an empty list stays empty"
+        );
+        assert!(Config::load(&dir.join("config.toml"))
+            .unwrap()
+            .signer_relays
+            .is_empty());
 
         edit["storage"]["quotaGib"] = 8.into();
         let (status, body) = call(&app, "PUT", Some(&cookie), json, &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(true)), "{body}");
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &serde_json::Value::Bool(true)),
+            "{body}"
+        );
         // Saved for the next start; the running instance keeps serving the last live revision.
         assert_eq!(Config::load(&dir.join("config.toml")).unwrap().revision, 8);
         assert_eq!(public()["revision"], 7);
@@ -2616,15 +3664,43 @@ mod tests {
     async fn outbox_status_and_retry_need_the_session_and_retry_needs_json() {
         let (app, dir, cookie) = studio_fixture().await;
         let c = Some(cookie.as_str());
-        assert_eq!(send(&app, "/api/admin/outbox", None, None).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(send(&app, "/api/admin/outbox/retry", None, Some("{}")).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(call_raw(&app, "/api/admin/outbox/retry", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(r#"{"all":true}"#)).await.0, StatusCode::BAD_REQUEST);
-        let (status, _, body) = send(&app, "/api/admin/outbox/retry", c, Some(r#"{"target":"wss://a.example"}"#)).await;
-        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "retried": 0 })));
+        assert_eq!(
+            send(&app, "/api/admin/outbox", None, None).await.0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", None, Some("{}"))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call_raw(&app, "/api/admin/outbox/retry", c).await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", c, Some(r#"{"all":true}"#))
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+        let (status, _, body) = send(
+            &app,
+            "/api/admin/outbox/retry",
+            c,
+            Some(r#"{"target":"wss://a.example"}"#),
+        )
+        .await;
+        assert_eq!(
+            (status, body),
+            (StatusCode::OK, serde_json::json!({ "retried": 0 }))
+        );
         let (status, _, body) = send(&app, "/api/admin/outbox", c, None).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, serde_json::json!({ "relays": [], "blossom": [], "counts": [], "problems": [] }));
+        assert_eq!(
+            body,
+            serde_json::json!({ "relays": [], "blossom": [], "counts": [], "problems": [] })
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -2634,7 +3710,9 @@ mod tests {
         let c = Some(cookie.as_str());
         let (event, other, gone) = ("e1".repeat(32), "0f".repeat(32), "ab".repeat(32));
         let (media, unrelated) = ("11".repeat(32), "22".repeat(32));
-        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        let outbox =
+            crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default())
+                .unwrap();
         let seed = format!(
             "INSERT INTO event (event_hash,created_at,author,kind,content) VALUES (unhex('{event}'),1,zeroblob(32),34235,'{{}}'),(unhex('{other}'),1,zeroblob(32),1,'{{}}');
              INSERT INTO media_ref VALUES (unhex('{event}'),'{media}'),(unhex('{other}'),'{unrelated}');
@@ -2651,50 +3729,122 @@ mod tests {
              -- An explicit owner authorization keeps a job running without a configured mirror.
              INSERT INTO outbox_forced VALUES (8);"
         );
-        outbox.db(move |conn| conn.execute_batch(&seed)).await.unwrap();
+        outbox
+            .db(move |conn| conn.execute_batch(&seed))
+            .await
+            .unwrap();
         let path = format!("/api/admin/outbox/event/{event}");
-        assert_eq!(send(&app, &path, None, None).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            send(&app, &path, None, None).await.0,
+            StatusCode::UNAUTHORIZED
+        );
         let scoped = format!(r#"{{"eventId":"{event}"}}"#);
-        assert_eq!(send(&app, "/api/admin/outbox/retry", None, Some(&scoped)).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(send(&app, "/api/admin/outbox/event/xyz", c, None).await.0, StatusCode::BAD_REQUEST);
-        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(r#"{"eventId":"xyz"}"#)).await.0, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", None, Some(&scoped))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            send(&app, "/api/admin/outbox/event/xyz", c, None).await.0,
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            send(
+                &app,
+                "/api/admin/outbox/retry",
+                c,
+                Some(r#"{"eventId":"xyz"}"#)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
         let unknown = "cd".repeat(32);
-        let (status, _, body) = send(&app, &format!("/api/admin/outbox/event/{unknown}"), c, None).await;
-        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "eventId": unknown, "jobs": [], "lifetime": "server" })));
+        let (status, _, body) =
+            send(&app, &format!("/api/admin/outbox/event/{unknown}"), c, None).await;
+        assert_eq!(
+            (status, body),
+            (
+                StatusCode::OK,
+                serde_json::json!({ "eventId": unknown, "jobs": [], "lifetime": "server" })
+            )
+        );
 
-        let (status, _, body) = send(&app, &format!("/api/admin/outbox/event/{}", event.to_uppercase()), c, None).await;
+        let (status, _, body) = send(
+            &app,
+            &format!("/api/admin/outbox/event/{}", event.to_uppercase()),
+            c,
+            None,
+        )
+        .await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, serde_json::json!({ "eventId": event, "lifetime": "server", "jobs": [
+        assert_eq!(
+            body,
+            serde_json::json!({ "eventId": event, "lifetime": "server", "jobs": [
             { "id": 1, "kind": "event", "target": "wss://a.example", "ref": event, "status": "failed", "attempts": 24, "lastError": "refused", "nextAttemptAt": null, "updatedAt": 5, "active": false },
             { "id": 2, "kind": "event", "target": "wss://b.example", "ref": event, "status": "done", "attempts": 1, "lastError": "canceled", "nextAttemptAt": null, "updatedAt": 5, "active": false },
             { "id": 3, "kind": "blob", "target": "https://blossom.example", "ref": media, "status": "failed", "attempts": 24, "lastError": "503", "nextAttemptAt": null, "updatedAt": 5, "active": false },
             { "id": 8, "kind": "blob", "target": "https://other.example", "ref": media, "status": "pending", "attempts": 2, "lastError": "timeout", "nextAttemptAt": 99, "updatedAt": 5, "active": true },
             // Pending for a target no longer configured: the worker never runs it.
             { "id": 9, "kind": "blob", "target": "https://removed.example", "ref": media, "status": "pending", "attempts": 3, "lastError": "timeout", "nextAttemptAt": 99, "updatedAt": 5, "active": false },
-        ] }));
+        ] })
+        );
         let (_, _, body) = send(&app, &format!("/api/admin/outbox/event/{gone}"), c, None).await;
-        assert_eq!((&body["jobs"][0]["status"], &body["jobs"][0]["lastError"]), (&"done".into(), &serde_json::Value::Null), "stored state, nothing inferred");
+        assert_eq!(
+            (&body["jobs"][0]["status"], &body["jobs"][0]["lastError"]),
+            (&"done".into(), &serde_json::Value::Null),
+            "stored state, nothing inferred"
+        );
 
         let one_target = format!(r#"{{"eventId":"{event}","target":"https://blossom.example"}}"#);
-        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(&one_target)).await.2, serde_json::json!({ "retried": 1 }));
-        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(&scoped)).await.2, serde_json::json!({ "retried": 1 }));
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", c, Some(&one_target))
+                .await
+                .2,
+            serde_json::json!({ "retried": 1 })
+        );
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", c, Some(&scoped))
+                .await
+                .2,
+            serde_json::json!({ "retried": 1 })
+        );
         let (_, _, body) = send(&app, &path, c, None).await;
-        assert_eq!((&body["jobs"][0]["status"], body["jobs"][0]["attempts"].as_i64(), &body["jobs"][0]["lastError"]), (&"pending".into(), Some(0), &serde_json::Value::Null));
+        assert_eq!(
+            (
+                &body["jobs"][0]["status"],
+                body["jobs"][0]["attempts"].as_i64(),
+                &body["jobs"][0]["lastError"]
+            ),
+            (&"pending".into(), Some(0), &serde_json::Value::Null)
+        );
         assert_eq!(body["jobs"][2]["status"], "pending");
         // Another event, unrelated media and cleanup stayed failed until a global retry.
-        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some("{}")).await.2, serde_json::json!({ "retried": 3 }));
+        assert_eq!(
+            send(&app, "/api/admin/outbox/retry", c, Some("{}")).await.2,
+            serde_json::json!({ "retried": 3 })
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn behind_a_proxy_saving_needs_no_tls_files() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let (app, dir, cookie) =
+            studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         assert!(!dir.join("tls").join("ca.pem").exists());
         let (status, body) = call(&app, "GET", Some(&cookie), None, "").await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(body["tlsMode"], "proxy");
         assert!(body["tls"].as_str().unwrap().contains("proxy"));
-        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        let (status, body) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &put_body("#112233"),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert!(dir.join("config.prev").exists());
         let after = Config::load(&dir.join("config.toml")).unwrap();
@@ -2704,27 +3854,58 @@ mod tests {
 
     #[tokio::test]
     async fn a_local_origin_needs_both_public_mirrors_to_switch_to_public() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
+        let (app, dir, cookie) =
+            studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         let (_, read) = call(&app, "GET", Some(&cookie), None, "").await;
-        assert_eq!(read["canBePublic"], false, "flox-mac.local is not reachable from the network");
+        assert_eq!(
+            read["canBePublic"], false,
+            "flox-mac.local is not reachable from the network"
+        );
         assert_eq!(read["config"]["reach"], "private");
         let mut edit = put_value("#112233");
         edit["reach"] = "public".into();
         edit["mirror"] = serde_json::json!({"relays": [], "blossom": []});
-        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
+        let (status, body) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &edit.to_string(),
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().reach, config::Reach::Private);
+        assert_eq!(
+            Config::load(&dir.join("config.toml")).unwrap().reach,
+            config::Reach::Private
+        );
         edit["mirror"] = serde_json::json!({"relays":["wss://mirror.example"],"blossom":["https://blossom.example"]});
-        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &edit.to_string()).await;
+        let (status, body) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &edit.to_string(),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(Config::load(&dir.join("config.toml")).unwrap().reach, config::Reach::Public);
+        assert_eq!(
+            Config::load(&dir.join("config.toml")).unwrap().reach,
+            config::Reach::Public
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn with_a_local_ca_missing_tls_files_still_block_saving() {
         let (app, dir, cookie) = studio_fixture_for("{ mode = \"local-ca\" }", false).await;
-        let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        let (status, _) = call(
+            &app,
+            "PUT",
+            Some(&cookie),
+            Some("application/json"),
+            &put_body("#112233"),
+        )
+        .await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2735,16 +3916,29 @@ mod tests {
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
-        let res = app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        let res = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
     }
 
     #[tokio::test]
     async fn stats_need_a_session_and_leak_nothing_without_one() {
         let (app, dir, cookie) = studio_fixture().await;
-        for c in [None, Some("admin_session=forged"), Some(&cookie[..cookie.len() - 1])] {
+        for c in [
+            None,
+            Some("admin_session=forged"),
+            Some(&cookie[..cookie.len() - 1]),
+        ] {
             let (status, body) = get_stats(&app, c).await;
             assert_eq!(status, StatusCode::UNAUTHORIZED, "{c:?}");
             assert_eq!(body, serde_json::json!({ "error": "not logged in" }));
@@ -2752,16 +3946,29 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    async fn get_plays(app: &Router, cookie: Option<&str>, query: &str) -> (StatusCode, serde_json::Value) {
+    async fn get_plays(
+        app: &Router,
+        cookie: Option<&str>,
+        query: &str,
+    ) -> (StatusCode, serde_json::Value) {
         use tower::ServiceExt;
         let mut req = axum::http::Request::builder().uri(format!("/api/admin/plays{query}"));
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
-        let res = app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        let res = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
     }
 
     #[tokio::test]
@@ -2773,7 +3980,11 @@ mod tests {
             assert_eq!(body, serde_json::json!({ "error": "not logged in" }));
         }
         let (status, body) = get_plays(&app, Some(&cookie), "?days=0").await;
-        assert_eq!((status, &body), (StatusCode::OK, &serde_json::json!({})), "0 clamps to the default");
+        assert_eq!(
+            (status, &body),
+            (StatusCode::OK, &serde_json::json!({})),
+            "0 clamps to the default"
+        );
         let (status, body) = get_plays(&app, Some(&cookie), "").await;
         assert_eq!((status, body), (StatusCode::OK, serde_json::json!({})));
         std::fs::remove_dir_all(&dir).ok();
@@ -2781,7 +3992,8 @@ mod tests {
 
     #[tokio::test]
     async fn stats_report_the_live_relay_and_blossom() {
-        let (app, dir, cookie, blossom, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, blossom, _) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let (status, body) = get_stats(&app, Some(&cookie)).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["relay"]["url"], "wss://flox-mac.local");
@@ -2818,7 +4030,10 @@ mod tests {
 
     #[test]
     fn the_server_rendered_pages_follow_the_system_theme() {
-        for html in [page("Log in", &login_form(None, false)).0, page("Setup", &setup_form(None)).0] {
+        for html in [
+            page("Log in", &login_form(None, false)).0,
+            page("Setup", &setup_form(None)).0,
+        ] {
             assert!(html.contains("color-scheme:light dark"));
             assert!(html.contains("prefers-color-scheme:dark"));
             assert!(html.contains("name=viewport"));
@@ -2858,8 +4073,14 @@ mod tests {
             .unwrap();
         let res = app.clone().oneshot(req).await.unwrap();
         let (status, headers) = (res.status(), res.headers().clone());
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, headers, String::from_utf8_lossy(&bytes).into_owned())
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            headers,
+            String::from_utf8_lossy(&bytes).into_owned(),
+        )
     }
 
     #[tokio::test]
@@ -2887,23 +4108,46 @@ mod tests {
         use tower::ServiceExt;
         let (https, dir, _) = studio_fixture().await;
         // The same instance with a plain HTTP canonical origin (a FIPS mesh node).
-        let http = router(AdminState::open(&dir, "npub1x.fips", vec!["npub1x.fips".into()], "http://npub1x.fips:8080",
-            "boot2".into(), Arc::new(axum_server::Handle::new()), stores(&dir).await).unwrap());
+        let http = router(
+            AdminState::open(
+                &dir,
+                "npub1x.fips",
+                vec!["npub1x.fips".into()],
+                "http://npub1x.fips:8080",
+                "boot2".into(),
+                Arc::new(axum_server::Handle::new()),
+                stores(&dir).await,
+            )
+            .unwrap(),
+        );
         for (app, secure) in [(&https, true), (&http, false)] {
             let (status, headers, _) = try_login(app, "correct%20horse").await;
             assert_eq!(status, StatusCode::SEE_OTHER);
             let set = headers[header::SET_COOKIE].to_str().unwrap().to_owned();
             assert_eq!(set.contains("Secure"), secure, "{set}");
-            assert!(set.contains("; HttpOnly;") && set.contains("SameSite=Strict"), "{set}");
+            assert!(
+                set.contains("; HttpOnly;") && set.contains("SameSite=Strict"),
+                "{set}"
+            );
             // What the browser keeps opens the studio.
             let session = set.split(';').next().unwrap();
-            assert_eq!(send(app, "/api/admin/config", Some(session), None).await.0, StatusCode::OK);
-            let req = axum::http::Request::builder().method("POST").uri("/admin/logout").body(axum::body::Body::empty()).unwrap();
+            assert_eq!(
+                send(app, "/api/admin/config", Some(session), None).await.0,
+                StatusCode::OK
+            );
+            let req = axum::http::Request::builder()
+                .method("POST")
+                .uri("/admin/logout")
+                .body(axum::body::Body::empty())
+                .unwrap();
             let res = app.clone().oneshot(req).await.unwrap();
             assert_eq!(res.status(), StatusCode::SEE_OTHER);
             let cleared = res.headers()[header::SET_COOKIE].to_str().unwrap();
             assert_eq!(cleared.contains("Secure"), secure, "{cleared}");
-            assert!(cleared.starts_with(&format!("{COOKIE}=;")) && cleared.ends_with("Max-Age=0"), "{cleared}");
+            assert!(
+                cleared.starts_with(&format!("{COOKIE}=;")) && cleared.ends_with("Max-Age=0"),
+                "{cleared}"
+            );
         }
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2922,14 +4166,25 @@ mod tests {
         let (status, headers, body) = try_login(&app, "correct%20horse").await;
         assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
         assert!(headers.get(header::SET_COOKIE).is_none());
-        let retry: u64 = headers.get(header::RETRY_AFTER).unwrap().to_str().unwrap().parse().unwrap();
+        let retry: u64 = headers
+            .get(header::RETRY_AFTER)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse()
+            .unwrap();
         assert!((1..=2).contains(&retry), "{retry}");
         assert!(body.contains("Too many wrong passwords"));
         // The page itself and everything else keep working.
         use tower::ServiceExt;
         let page = app
             .clone()
-            .oneshot(axum::http::Request::builder().uri("/admin/login").body(axum::body::Body::empty()).unwrap())
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/admin/login")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(page.status(), StatusCode::OK);
@@ -2957,7 +4212,10 @@ mod tests {
         }
         // Parallel requests do not all slip through before the first failure is counted: past the
         // three free tries and the one that earned the wait, the rest are refused unseen.
-        assert_eq!(answered, 4, "three free tries and the one that earned the wait");
+        assert_eq!(
+            answered, 4,
+            "three free tries and the one that earned the wait"
+        );
         assert_eq!(refused, 8);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -2965,9 +4223,16 @@ mod tests {
     // ── managed signer ──
 
     /// A JSON request to `uri`; answers status, headers and the JSON body (Null if none).
-    async fn send(app: &Router, uri: &str, cookie: Option<&str>, body: Option<&str>) -> (StatusCode, HeaderMap, serde_json::Value) {
+    async fn send(
+        app: &Router,
+        uri: &str,
+        cookie: Option<&str>,
+        body: Option<&str>,
+    ) -> (StatusCode, HeaderMap, serde_json::Value) {
         use tower::ServiceExt;
-        let mut req = axum::http::Request::builder().method(if body.is_some() { "POST" } else { "GET" }).uri(uri);
+        let mut req = axum::http::Request::builder()
+            .method(if body.is_some() { "POST" } else { "GET" })
+            .uri(uri);
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
@@ -2977,8 +4242,14 @@ mod tests {
         let body = axum::body::Body::from(body.unwrap_or_default().to_owned());
         let res = app.clone().oneshot(req.body(body).unwrap()).await.unwrap();
         let (status, headers) = (res.status(), res.headers().clone());
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, headers, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            headers,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
     }
 
     /// The router of a second process on the same data dir (a restart).
@@ -3006,11 +4277,20 @@ mod tests {
         assert_eq!(state, serde_json::json!({ "mode": "own", "pubkey": null }));
 
         // Session and JSON body required, as for every studio write.
-        assert_eq!(send(&app, "/api/admin/signer", None, Some("{}")).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(call_raw(&app, "/api/admin/signer", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            send(&app, "/api/admin/signer", None, Some("{}")).await.0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call_raw(&app, "/api/admin/signer", c).await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
         // Nothing to sign with yet.
         let event = r#"{"kind":1,"created_at":1700000000,"tags":[["t","x"]],"content":"hello"}"#;
-        assert_eq!(send(&app, "/api/admin/signer/sign", c, Some(event)).await.0, StatusCode::CONFLICT);
+        assert_eq!(
+            send(&app, "/api/admin/signer/sign", c, Some(event)).await.0,
+            StatusCode::CONFLICT
+        );
 
         let (status, _, created) = send(&app, "/api/admin/signer", c, Some("{}")).await;
         assert_eq!(status, StatusCode::OK);
@@ -3022,10 +4302,24 @@ mod tests {
         assert_eq!((status, again), (StatusCode::OK, created.clone()));
 
         // Signing needs the session and refuses a body that is not an unsigned event.
-        assert_eq!(send(&app, "/api/admin/signer/sign", None, Some(event)).await.0, StatusCode::UNAUTHORIZED);
-        let (status, _, error) = send(&app, "/api/admin/signer/sign", c, Some(r#"{"kind":1,"tags":[]}"#)).await;
+        assert_eq!(
+            send(&app, "/api/admin/signer/sign", None, Some(event))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        let (status, _, error) = send(
+            &app,
+            "/api/admin/signer/sign",
+            c,
+            Some(r#"{"kind":1,"tags":[]}"#),
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(error["error"].as_str().unwrap().contains("invalid event"), "{error}");
+        assert!(
+            error["error"].as_str().unwrap().contains("invalid event"),
+            "{error}"
+        );
 
         let (status, _, signed) = send(&app, "/api/admin/signer/sign", c, Some(event)).await;
         assert_eq!(status, StatusCode::OK);
@@ -3039,7 +4333,14 @@ mod tests {
         assert!(secrets.contains("managed_key = \"ncryptsec1"), "{secrets}");
         assert!(!secrets.contains("nsec1"));
         use std::os::unix::fs::PermissionsExt;
-        assert_eq!(std::fs::metadata(dir.join("signer.key")).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            std::fs::metadata(dir.join("signer.key"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
 
         // A restart unlocks the same key.
         let app = reopen(&dir).await;
@@ -3050,8 +4351,14 @@ mod tests {
         // Without its password the key stays locked: signing fails loudly, the rest still works.
         std::fs::remove_file(dir.join("signer.key")).unwrap();
         let app = reopen(&dir).await;
-        assert_eq!(send(&app, "/api/admin/signer", c, None).await.0, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(send(&app, "/api/admin/signer/sign", c, Some(event)).await.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            send(&app, "/api/admin/signer", c, None).await.0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            send(&app, "/api/admin/signer/sign", c, Some(event)).await.0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
         assert_eq!(call(&app, "GET", c, None, "").await.0, StatusCode::OK);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -3059,51 +4366,100 @@ mod tests {
     #[tokio::test]
     async fn scheduled_videos_are_submitted_edited_and_cancelled_through_the_studio_endpoints() {
         use sha2::Digest;
-        let (app, dir, cookie, blossom, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, blossom, _) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let c = Some(cookie.as_str());
-        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"].as_str().unwrap().to_owned();
+        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         // The managed key becomes the creator, as the studio's config save does.
-        let config = std::fs::read_to_string(dir.join("config.toml")).unwrap().replace(PK, &pubkey);
+        let config = std::fs::read_to_string(dir.join("config.toml"))
+            .unwrap()
+            .replace(PK, &pubkey);
         std::fs::write(dir.join("config.toml"), config).unwrap();
 
         let bytes = b"scheduled video";
         let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = blossom.storage.uploads.join(format!("{hash}.mp4"));
-        tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
+        tokio::fs::create_dir_all(&blossom.storage.uploads)
+            .await
+            .unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();
-        blossom.file_index.insert(hash.clone(), almond::models::FileMetadata {
-            location: almond::models::FileLocation::Local(path), extension: Some("mp4".into()),
-            mime_type: Some("video/mp4".into()), size: bytes.len() as u64, created_at: 1, pubkey: None,
-            expiration: None, origin: Default::default(),
-        }).await;
+        blossom
+            .file_index
+            .insert(
+                hash.clone(),
+                almond::models::FileMetadata {
+                    location: almond::models::FileLocation::Local(path),
+                    extension: Some("mp4".into()),
+                    mime_type: Some("video/mp4".into()),
+                    size: bytes.len() as u64,
+                    created_at: 1,
+                    pubkey: None,
+                    expiration: None,
+                    origin: Default::default(),
+                },
+            )
+            .await;
 
         let due = now_secs() + 3600;
-        let template = |d: &str, due: u64| serde_json::json!({
+        let template = |d: &str, due: u64| {
+            serde_json::json!({
             "kind": 34235, "created_at": now_secs(), "content": "hello",
             "tags": [["d", d], ["title", "Later"], ["published_at", due.to_string()],
                      ["imeta", format!("url https://flox-mac.local/{hash}.mp4"), format!("x {hash}")]],
-        }).to_string();
+        }).to_string()
+        };
         let sign = |body: String| {
             let app = app.clone();
             let cookie = cookie.clone();
-            async move { send(&app, "/api/admin/signer/sign", Some(&cookie), Some(&body)).await.2.to_string() }
+            async move {
+                send(&app, "/api/admin/signer/sign", Some(&cookie), Some(&body))
+                    .await
+                    .2
+                    .to_string()
+            }
         };
         let signed = sign(template("later", due)).await;
 
         // A studio write: session and JSON body.
-        assert_eq!(send(&app, "/api/admin/schedule", None, Some(&signed)).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(call_raw(&app, "/api/admin/schedule", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(send(&app, "/api/admin/schedule", None, None).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            send(&app, "/api/admin/schedule", None, Some(&signed))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call_raw(&app, "/api/admin/schedule", c).await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(
+            send(&app, "/api/admin/schedule", None, None).await.0,
+            StatusCode::UNAUTHORIZED
+        );
         // Refused: not in the future, and a key that is no creator.
         let past = sign(template("later", now_secs() - 10)).await;
         let (status, _, error) = send(&app, "/api/admin/schedule", c, Some(&past)).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(error["error"].as_str().unwrap().contains("not in the future"), "{error}");
+        assert!(
+            error["error"]
+                .as_str()
+                .unwrap()
+                .contains("not in the future"),
+            "{error}"
+        );
         let stranger = nostr::prelude::Keys::generate();
         use nostr::prelude::FinalizeEvent;
         let foreign = nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(34235), "x")
-            .tags([nostr::prelude::Tag::parse(["d", "x"]).unwrap()]).finalize(&stranger).unwrap().as_json();
-        assert_eq!(send(&app, "/api/admin/schedule", c, Some(&foreign)).await.0, StatusCode::BAD_REQUEST);
+            .tags([nostr::prelude::Tag::parse(["d", "x"]).unwrap()])
+            .finalize(&stranger)
+            .unwrap()
+            .as_json();
+        assert_eq!(
+            send(&app, "/api/admin/schedule", c, Some(&foreign)).await.0,
+            StatusCode::BAD_REQUEST
+        );
 
         let (status, _, accepted) = send(&app, "/api/admin/schedule", c, Some(&signed)).await;
         assert_eq!(status, StatusCode::OK, "{accepted}");
@@ -3115,7 +4471,10 @@ mod tests {
 
         // Edit before release: the same d tag replaces the held event.
         let edited = sign(template("later", due + 60)).await;
-        assert_eq!(send(&app, "/api/admin/schedule", c, Some(&edited)).await.0, StatusCode::OK);
+        assert_eq!(
+            send(&app, "/api/admin/schedule", c, Some(&edited)).await.0,
+            StatusCode::OK
+        );
         let (_, _, list) = send(&app, "/api/admin/schedule", c, None).await;
         assert_eq!(list["items"].as_array().unwrap().len(), 1);
         assert_eq!(list["items"][0]["dueAt"], due + 60);
@@ -3123,10 +4482,28 @@ mod tests {
         // Cancelling drops it; a second cancel finds nothing.
         let new_id = list["items"][0]["id"].as_str().unwrap().to_owned();
         let cancel = serde_json::json!({ "id": new_id }).to_string();
-        assert_eq!(send(&app, "/api/admin/schedule/cancel", None, Some(&cancel)).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(send(&app, "/api/admin/schedule/cancel", c, Some(&cancel)).await.0, StatusCode::OK);
-        assert_eq!(send(&app, "/api/admin/schedule/cancel", c, Some(&cancel)).await.0, StatusCode::BAD_REQUEST);
-        assert!(send(&app, "/api/admin/schedule", c, None).await.2["items"].as_array().unwrap().is_empty());
+        assert_eq!(
+            send(&app, "/api/admin/schedule/cancel", None, Some(&cancel))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            send(&app, "/api/admin/schedule/cancel", c, Some(&cancel))
+                .await
+                .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            send(&app, "/api/admin/schedule/cancel", c, Some(&cancel))
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+        assert!(send(&app, "/api/admin/schedule", c, None).await.2["items"]
+            .as_array()
+            .unwrap()
+            .is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -3137,7 +4514,11 @@ mod tests {
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
-        app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap().status()
+        app.clone()
+            .oneshot(req.body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap()
+            .status()
     }
 
     #[tokio::test]
@@ -3146,16 +4527,51 @@ mod tests {
         let (app, dir, cookie) = studio_fixture().await;
         let c = Some(cookie.as_str());
         let export = |pw: &str| serde_json::json!({ "password": pw }).to_string();
-        assert_eq!(send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await.0, StatusCode::CONFLICT);
-        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"].as_str().unwrap().to_owned();
+        assert_eq!(
+            send(
+                &app,
+                "/api/admin/signer/export",
+                c,
+                Some(&export("correct horse"))
+            )
+            .await
+            .0,
+            StatusCode::CONFLICT
+        );
+        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"]
+            .as_str()
+            .unwrap()
+            .to_owned();
 
-        assert_eq!(send(&app, "/api/admin/signer/export", None, Some(&export("correct horse"))).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(send(&app, "/api/admin/signer/export", c, Some("{}")).await.0, StatusCode::BAD_REQUEST);
-        let (status, _, body) = send(&app, "/api/admin/signer/export", c, Some(&export("wrong"))).await;
+        assert_eq!(
+            send(
+                &app,
+                "/api/admin/signer/export",
+                None,
+                Some(&export("correct horse"))
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            send(&app, "/api/admin/signer/export", c, Some("{}"))
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+        let (status, _, body) =
+            send(&app, "/api/admin/signer/export", c, Some(&export("wrong"))).await;
         assert_eq!(status, StatusCode::FORBIDDEN);
         assert!(body.get("nsec").is_none());
 
-        let (status, headers, body) = send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await;
+        let (status, headers, body) = send(
+            &app,
+            "/api/admin/signer/export",
+            c,
+            Some(&export("correct horse")),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(headers[header::CACHE_CONTROL], "private, no-store");
         let secret = SecretKey::from_bech32(body["nsec"].as_str().unwrap()).unwrap();
@@ -3165,53 +4581,117 @@ mod tests {
         for _ in 0..4 {
             send(&app, "/api/admin/signer/export", c, Some(&export("wrong"))).await;
         }
-        let (status, headers, _) = send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await;
+        let (status, headers, _) = send(
+            &app,
+            "/api/admin/signer/export",
+            c,
+            Some(&export("correct horse")),
+        )
+        .await;
         assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
         assert!(headers.get(header::RETRY_AFTER).is_some());
-        assert_eq!(try_login(&app, "correct%20horse").await.0, StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(
+            try_login(&app, "correct%20horse").await.0,
+            StatusCode::TOO_MANY_REQUESTS
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
 
-    async fn branding_call(app: &Router, method: &str, slot: &str, cookie: Option<&str>, content_type: Option<&str>, body: Vec<u8>) -> (StatusCode, serde_json::Value) {
+    async fn branding_call(
+        app: &Router,
+        method: &str,
+        slot: &str,
+        cookie: Option<&str>,
+        content_type: Option<&str>,
+        body: Vec<u8>,
+    ) -> (StatusCode, serde_json::Value) {
         use tower::ServiceExt;
-        let mut req = axum::http::Request::builder().method(method).uri(format!("/api/admin/branding/{slot}"));
+        let mut req = axum::http::Request::builder()
+            .method(method)
+            .uri(format!("/api/admin/branding/{slot}"));
         if let Some(c) = cookie {
             req = req.header(header::COOKIE, c);
         }
         if let Some(t) = content_type {
             req = req.header(header::CONTENT_TYPE, t);
         }
-        let res = app.clone().oneshot(req.body(axum::body::Body::from(body)).unwrap()).await.unwrap();
+        let res = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::from(body)).unwrap())
+            .await
+            .unwrap();
         let status = res.status();
-        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
-        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
     }
 
     fn public_site(branding: &crate::branding::Branding) -> serde_json::Value {
-        serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap()["site"].clone()
+        serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap()["site"]
+            .clone()
     }
 
     #[tokio::test]
     async fn branding_uploads_need_a_session_and_a_real_image_within_the_limit() {
         use tower::ServiceExt;
-        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, _, branding) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let c = Some(cookie.as_str());
         let png = Some("image/png");
-        assert_eq!(branding_call(&app, "PUT", "logo", None, png, PNG.to_vec()).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(branding_call(&app, "PUT", "logo", Some("admin_session=forged"), png, PNG.to_vec()).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", None, png, PNG.to_vec())
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            branding_call(
+                &app,
+                "PUT",
+                "logo",
+                Some("admin_session=forged"),
+                png,
+                PNG.to_vec()
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
         // A cross-site form can send text/plain; only image types are taken.
-        assert_eq!(branding_call(&app, "PUT", "logo", c, Some("text/plain"), PNG.to_vec()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, Some("text/plain"), PNG.to_vec())
+                .await
+                .0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
         // An HTML page renamed to .png: the bytes decide, not the declared type.
         let html = b"<!doctype html><script>alert(1)</script>".to_vec();
         let (status, body) = branding_call(&app, "PUT", "logo", c, png, html).await;
         assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
-        assert_eq!(body["error"], "the logo must be a PNG, JPEG, WebP or SVG image");
+        assert_eq!(
+            body["error"],
+            "the logo must be a PNG, JPEG, WebP or SVG image"
+        );
         // ICO is for the favicon only.
         let ico = vec![0, 0, 1, 0, 1, 0];
-        assert_eq!(branding_call(&app, "PUT", "logo", c, Some("image/x-icon"), ico.clone()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(branding_call(&app, "PUT", "favicon", c, Some("image/x-icon"), ico).await.0, StatusCode::OK);
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, Some("image/x-icon"), ico.clone())
+                .await
+                .0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(
+            branding_call(&app, "PUT", "favicon", c, Some("image/x-icon"), ico)
+                .await
+                .0,
+            StatusCode::OK
+        );
         // One byte over the limit: read up to the limit (no length announced) ...
         let mut big = PNG.to_vec();
         big.resize(512 * 1024 + 1, 0);
@@ -3226,13 +4706,32 @@ mod tests {
             .header(header::CONTENT_LENGTH, big.len())
             .body(axum::body::Body::from(big.clone()))
             .unwrap();
-        assert_eq!(app.clone().oneshot(req).await.unwrap().status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            app.clone().oneshot(req).await.unwrap().status(),
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
         // The banner may be larger.
-        assert_eq!(branding_call(&app, "PUT", "banner", c, png, big).await.0, StatusCode::OK);
-        assert_eq!(branding_call(&app, "PUT", "nope", c, png, PNG.to_vec()).await.0, StatusCode::NOT_FOUND);
+        assert_eq!(
+            branding_call(&app, "PUT", "banner", c, png, big).await.0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            branding_call(&app, "PUT", "nope", c, png, PNG.to_vec())
+                .await
+                .0,
+            StatusCode::NOT_FOUND
+        );
         // The icon: a square PNG of at least 512×512, nothing else.
         let png_of = |w: u32, h: u32| [PNG, &w.to_be_bytes(), &h.to_be_bytes()].concat();
-        let (status, body) = branding_call(&app, "PUT", "icon", c, Some("image/svg+xml"), b"<svg></svg>".to_vec()).await;
+        let (status, body) = branding_call(
+            &app,
+            "PUT",
+            "icon",
+            c,
+            Some("image/svg+xml"),
+            b"<svg></svg>".to_vec(),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
         assert_eq!(body["error"], "the icon must be a PNG image");
         for bad in [png_of(512, 256), png_of(256, 256), PNG.to_vec()] {
@@ -3241,11 +4740,20 @@ mod tests {
             assert_eq!(body["error"], crate::branding::ICON_REFUSAL);
         }
         assert!(public_site(&branding)["icon"].is_null());
-        assert_eq!(branding_call(&app, "PUT", "icon", c, png, png_of(512, 512)).await.0, StatusCode::OK);
-        assert!(public_site(&branding)["icon"].as_str().is_some_and(|u| u.starts_with("/branding/icon?v=")));
+        assert_eq!(
+            branding_call(&app, "PUT", "icon", c, png, png_of(512, 512))
+                .await
+                .0,
+            StatusCode::OK
+        );
+        assert!(public_site(&branding)["icon"]
+            .as_str()
+            .is_some_and(|u| u.starts_with("/branding/icon?v=")));
         let site = public_site(&branding);
         assert!(site["logo"].is_null(), "{site}");
-        assert!(site["favicon"].as_str().is_some_and(|u| u.starts_with("/branding/favicon?v=")));
+        assert!(site["favicon"]
+            .as_str()
+            .is_some_and(|u| u.starts_with("/branding/favicon?v=")));
         assert!(!dir.join("branding").join("logo.png").exists());
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -3254,62 +4762,144 @@ mod tests {
     async fn branding_activates_only_valid_local_blossom_images_without_reuploading() {
         use sha2::{Digest, Sha256};
         let hash = hex::encode(Sha256::digest(PNG));
-        let (_, dir, cookie, _, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (_, dir, cookie, _, _) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let keys = Keys::generate();
         let mut live = stores(&dir).await;
-        live.relay = Relay::open(&dir.join("managed-relay.sqlite"), crate::relay::RelayConfig {
-            writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
-        }).unwrap();
+        live.relay = Relay::open(
+            &dir.join("managed-relay.sqlite"),
+            crate::relay::RelayConfig {
+                writers: vec![keys.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         let relay = live.relay.clone();
         let blossom = live.blossom.clone();
         let branding = live.branding.clone();
-        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()],
-            "https://flox-mac.local", "boot".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        let state = AdminState::open(
+            &dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "boot".into(),
+            Arc::new(axum_server::Handle::new()),
+            live,
+        )
+        .unwrap();
         *state.managed.lock() = Some(Ok(keys.clone()));
         let app = router(state);
         let path = dir.join("blossom").join(&hash);
         tokio::fs::write(&path, PNG).await.unwrap();
-        blossom.file_index.insert(hash.clone(), almond::models::FileMetadata {
-            location: almond::models::FileLocation::Local(path.clone()), extension: Some("png".into()),
-            mime_type: Some("image/png".into()), size: PNG.len() as u64, created_at: 1, pubkey: None,
-            expiration: None, origin: Default::default(),
-        }).await;
-        let body = serde_json::json!({ "sha256": hash }).to_string().into_bytes();
+        blossom
+            .file_index
+            .insert(
+                hash.clone(),
+                almond::models::FileMetadata {
+                    location: almond::models::FileLocation::Local(path.clone()),
+                    extension: Some("png".into()),
+                    mime_type: Some("image/png".into()),
+                    size: PNG.len() as u64,
+                    created_at: 1,
+                    pubkey: None,
+                    expiration: None,
+                    origin: Default::default(),
+                },
+            )
+            .await;
+        let body = serde_json::json!({ "sha256": hash })
+            .to_string()
+            .into_bytes();
         let json = Some("application/json");
         let c = Some(cookie.as_str());
-        assert_eq!(branding_call(&app, "PUT", "logo", None, json, body.clone()).await.0, StatusCode::UNAUTHORIZED);
-        for bad in [r#"{"sha256":"../../secrets.toml"}"#.to_owned(), serde_json::json!({ "sha256": "ab".repeat(32) }).to_string()] {
-            assert!(!branding_call(&app, "PUT", "logo", c, json, bad.into_bytes()).await.0.is_success());
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", None, json, body.clone())
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        for bad in [
+            r#"{"sha256":"../../secrets.toml"}"#.to_owned(),
+            serde_json::json!({ "sha256": "ab".repeat(32) }).to_string(),
+        ] {
+            assert!(
+                !branding_call(&app, "PUT", "logo", c, json, bad.into_bytes())
+                    .await
+                    .0
+                    .is_success()
+            );
             assert!(public_site(&branding)["logo"].is_null());
         }
-        let (status, response) = tokio::time::timeout(Duration::from_secs(2),
-            branding_call(&app, "PUT", "logo", c, json, body.clone())).await.expect("branding activation must not deadlock profile publication");
+        let (status, response) = tokio::time::timeout(
+            Duration::from_secs(2),
+            branding_call(&app, "PUT", "logo", c, json, body.clone()),
+        )
+        .await
+        .expect("branding activation must not deadlock profile publication");
         assert_eq!(status, StatusCode::OK, "{response}");
         assert_eq!(public_site(&branding)["logo"], response["url"]);
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
-        let profile = relay.stored(nostr::prelude::Filter::new().author(keys.public_key()).kind(nostr::prelude::Kind::Metadata)).await.unwrap();
+        let profile = relay
+            .stored(
+                nostr::prelude::Filter::new()
+                    .author(keys.public_key())
+                    .kind(nostr::prelude::Kind::Metadata),
+            )
+            .await
+            .unwrap();
         let content: serde_json::Value = serde_json::from_str(&profile[0].content).unwrap();
-        assert!(content.get("picture").is_none(), "a private LAN profile carries no unreachable image URL: {content}");
+        assert!(
+            content.get("picture").is_none(),
+            "a private LAN profile carries no unreachable image URL: {content}"
+        );
         // Refused replacements leave the existing branding untouched, regardless of declared MIME/size.
         tokio::fs::write(&path, b"<html>").await.unwrap();
-        assert_eq!(branding_call(&app, "PUT", "logo", c, json, body.clone()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        tokio::fs::write(&path, vec![0; 512 * 1024 + 1]).await.unwrap();
-        assert_eq!(branding_call(&app, "PUT", "logo", c, json, body).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, json, body.clone())
+                .await
+                .0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        tokio::fs::write(&path, vec![0; 512 * 1024 + 1])
+            .await
+            .unwrap();
+        assert_eq!(
+            branding_call(&app, "PUT", "logo", c, json, body).await.0,
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn a_lightning_address_is_checked_applied_while_running_and_published_as_lud16() {
-        let (_, dir, cookie, _, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (_, dir, cookie, _, _) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let keys = Keys::generate();
         let mut live = stores(&dir).await;
-        live.relay = Relay::open(&dir.join("managed-relay.sqlite"), crate::relay::RelayConfig {
-            writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
-        }).unwrap();
+        live.relay = Relay::open(
+            &dir.join("managed-relay.sqlite"),
+            crate::relay::RelayConfig {
+                writers: vec![keys.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         let relay = live.relay.clone();
-        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()],
-            "https://flox-mac.local", "boot".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        let state = AdminState::open(
+            &dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "boot".into(),
+            Arc::new(axum_server::Handle::new()),
+            live,
+        )
+        .unwrap();
         *state.managed.lock() = Some(Ok(keys.clone()));
         let app = router(state);
         let (c, json) = (Some(cookie.as_str()), Some("application/json"));
@@ -3318,36 +4908,92 @@ mod tests {
         edit["site"]["lightning"] = "no address".into();
         let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body["error"].as_str().unwrap().starts_with("site.lightning must be a lightning address"), "{body}");
+        assert!(
+            body["error"]
+                .as_str()
+                .unwrap()
+                .starts_with("site.lightning must be a lightning address"),
+            "{body}"
+        );
         edit["site"]["lightning"] = "channel@wallet.example".into();
         let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
-        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
-        assert_eq!(call(&app, "GET", c, None, "").await.1["config"]["site"]["lightning"], "channel@wallet.example");
-        let profile = relay.stored(nostr::prelude::Filter::new().author(keys.public_key()).kind(nostr::prelude::Kind::Metadata)).await.unwrap();
-        assert_eq!(serde_json::from_str::<serde_json::Value>(&profile[0].content).unwrap()["lud16"], "channel@wallet.example");
+        assert_eq!(
+            (status, &body["restart"]),
+            (StatusCode::OK, &serde_json::Value::Bool(false)),
+            "{body}"
+        );
+        assert_eq!(
+            call(&app, "GET", c, None, "").await.1["config"]["site"]["lightning"],
+            "channel@wallet.example"
+        );
+        let profile = relay
+            .stored(
+                nostr::prelude::Filter::new()
+                    .author(keys.public_key())
+                    .kind(nostr::prelude::Kind::Metadata),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&profile[0].content).unwrap()["lud16"],
+            "channel@wallet.example"
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn an_upload_shows_in_the_public_config_at_once_and_a_delete_takes_it_out() {
-        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, _, branding) =
+            studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let c = Some(cookie.as_str());
         assert!(public_site(&branding)["logo"].is_null());
-        let (status, body) = branding_call(&app, "PUT", "logo", c, Some("image/png"), PNG.to_vec()).await;
+        let (status, body) =
+            branding_call(&app, "PUT", "logo", c, Some("image/png"), PNG.to_vec()).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         let url = body["url"].as_str().unwrap().to_owned();
         assert!(url.starts_with("/branding/logo?v="), "{url}");
         // Same process, no restart: the public config and the studio already have it.
         let site = public_site(&branding);
         assert_eq!(site["logo"], url.as_str());
-        assert_eq!(site["tagline"], "", "the rest of the site config stays: {site}");
-        assert_eq!(call(&app, "GET", c, None, "").await.1["branding"]["logo"], url.as_str());
-        assert_eq!(std::fs::read(dir.join("branding").join("logo.png")).unwrap(), PNG);
+        assert_eq!(
+            site["tagline"], "",
+            "the rest of the site config stays: {site}"
+        );
+        assert_eq!(
+            call(&app, "GET", c, None, "").await.1["branding"]["logo"],
+            url.as_str()
+        );
+        assert_eq!(
+            std::fs::read(dir.join("branding").join("logo.png")).unwrap(),
+            PNG
+        );
 
         // Deleting is a write like the others: a session and JSON.
-        assert_eq!(branding_call(&app, "DELETE", "logo", c, None, vec![]).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(branding_call(&app, "DELETE", "logo", None, Some("application/json"), vec![]).await.0, StatusCode::UNAUTHORIZED);
-        assert_eq!(branding_call(&app, "DELETE", "logo", c, Some("application/json"), vec![]).await.0, StatusCode::OK);
+        assert_eq!(
+            branding_call(&app, "DELETE", "logo", c, None, vec![])
+                .await
+                .0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(
+            branding_call(
+                &app,
+                "DELETE",
+                "logo",
+                None,
+                Some("application/json"),
+                vec![]
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            branding_call(&app, "DELETE", "logo", c, Some("application/json"), vec![])
+                .await
+                .0,
+            StatusCode::OK
+        );
         let site = public_site(&branding);
         assert!(site.get("logo").is_none(), "{site}");
         assert!(!dir.join("branding").join("logo.png").exists());

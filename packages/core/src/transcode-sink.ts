@@ -174,7 +174,10 @@ async function openOpfsSink(jobDir: OpfsDirHandle): Promise<TranscodeSink> {
   return {
     kind: 'opfs',
     target(path) {
-      return new StreamTarget(createOpfsWritable(() => fileHandleFor(path)), { chunked: true })
+      return new StreamTarget(
+        createOpfsWritable(() => fileHandleFor(path)),
+        { chunked: true }
+      )
     },
     async file(path, mimeType) {
       const file = await (await fileHandleFor(path)).getFile()

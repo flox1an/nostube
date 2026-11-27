@@ -158,7 +158,10 @@ struct Ca {
 /// (keeping `names.router_name`), renews the leaf at 2/3 of its lifetime or on
 /// any SAN change, and hot-reloads the returned `rustls` config.
 pub async fn local_ca(dir: &Path, names: &LocalNames) -> Result<LocalCa, BoxError> {
-    fs::DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(dir)?;
     let (ca, created) = load_or_create_ca(dir, names)?;
     let (leaf, _) = ensure_leaf(dir, &ca, names, created)?;
     let rustls = RustlsConfig::from_config(server_config(&leaf)?);
@@ -209,7 +212,10 @@ fn ca_params(cn: &str) -> CertificateParams {
             GeneralSubtree::IpAddress(CidrSubnet::from_v4_prefix([10, 0, 0, 0], 8)),
             GeneralSubtree::IpAddress(CidrSubnet::from_v4_prefix([172, 16, 0, 0], 12)),
             GeneralSubtree::IpAddress(CidrSubnet::from_v4_prefix([192, 168, 0, 0], 16)),
-            GeneralSubtree::IpAddress(CidrSubnet::from_v6_prefix([0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8)),
+            GeneralSubtree::IpAddress(CidrSubnet::from_v6_prefix(
+                [0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                8,
+            )),
         ],
         excluded_subtrees: vec![],
     });
@@ -229,7 +235,12 @@ fn load_or_create_ca(dir: &Path, names: &LocalNames) -> Result<(Ca, bool), BoxEr
         let der = CertificateDer::from_pem_slice(pem.as_bytes())?;
         let (_, x509) = parse_x509_certificate(&der)?;
         if x509.public_key().subject_public_key.data.as_ref() != key.public_key_raw() {
-            return Err(format!("{} does not match {}", key_path.display(), cert_path.display()).into());
+            return Err(format!(
+                "{} does not match {}",
+                key_path.display(),
+                cert_path.display()
+            )
+            .into());
         }
         let cn = x509
             .subject()
@@ -238,7 +249,14 @@ fn load_or_create_ca(dir: &Path, names: &LocalNames) -> Result<(Ca, bool), BoxEr
             .and_then(|cn| cn.as_str().ok())
             .ok_or("CA certificate has no common name")?;
         let issuer = Issuer::new(ca_params(cn), key);
-        return Ok((Ca { issuer, der: der.to_vec(), pem }, false));
+        return Ok((
+            Ca {
+                issuer,
+                der: der.to_vec(),
+                pem,
+            },
+            false,
+        ));
     }
     let cn = format!("Nostube CA {}", names.local_name);
     let key = KeyPair::generate()?;
@@ -246,12 +264,21 @@ fn load_or_create_ca(dir: &Path, names: &LocalNames) -> Result<(Ca, bool), BoxEr
     // Key first: an existing ca.pem always has its key next to it.
     write_file(&key_path, &key.serialize_pem(), 0o600)?;
     write_file(&cert_path, &cert.pem(), 0o644)?;
-    let ca = Ca { pem: cert.pem(), der: cert.der().to_vec(), issuer: Issuer::new(ca_params(&cn), key) };
+    let ca = Ca {
+        pem: cert.pem(),
+        der: cert.der().to_vec(),
+        issuer: Issuer::new(ca_params(&cn), key),
+    };
     Ok((ca, true))
 }
 
 /// Returns the leaf PEM (cert + key) and whether it was (re)issued.
-fn ensure_leaf(dir: &Path, ca: &Ca, names: &LocalNames, force: bool) -> Result<(String, bool), BoxError> {
+fn ensure_leaf(
+    dir: &Path,
+    ca: &Ca,
+    names: &LocalNames,
+    force: bool,
+) -> Result<(String, bool), BoxError> {
     let path = dir.join("leaf.pem");
     if !force {
         if let Ok(pem) = fs::read_to_string(&path) {
@@ -268,11 +295,13 @@ fn ensure_leaf(dir: &Path, ca: &Ca, names: &LocalNames, force: bool) -> Result<(
 fn issue_leaf(ca: &Ca, names: &LocalNames) -> Result<String, BoxError> {
     let mut p = CertificateParams::default();
     p.distinguished_name = DistinguishedName::new();
-    p.distinguished_name.push(DnType::CommonName, names.local_name.as_str());
+    p.distinguished_name
+        .push(DnType::CommonName, names.local_name.as_str());
     for name in names.dns_names() {
         p.subject_alt_names.push(SanType::DnsName(name.try_into()?));
     }
-    p.subject_alt_names.extend(names.ips.iter().copied().map(SanType::IpAddress));
+    p.subject_alt_names
+        .extend(names.ips.iter().copied().map(SanType::IpAddress));
     p.is_ca = IsCa::ExplicitNoCa;
     p.key_usages = vec![KeyUsagePurpose::DigitalSignature];
     p.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
@@ -288,13 +317,22 @@ fn issue_leaf(ca: &Ca, names: &LocalNames) -> Result<String, BoxError> {
 
 /// Current = parseable, before 2/3 of its lifetime, and SANs exactly `names`.
 fn leaf_is_current(pem: &str, names: &LocalNames, now: i64) -> bool {
-    let Ok(der) = CertificateDer::from_pem_slice(pem.as_bytes()) else { return false };
-    let Ok((_, x509)) = parse_x509_certificate(&der) else { return false };
-    let (nb, na) = (x509.validity().not_before.timestamp(), x509.validity().not_after.timestamp());
+    let Ok(der) = CertificateDer::from_pem_slice(pem.as_bytes()) else {
+        return false;
+    };
+    let Ok((_, x509)) = parse_x509_certificate(&der) else {
+        return false;
+    };
+    let (nb, na) = (
+        x509.validity().not_before.timestamp(),
+        x509.validity().not_after.timestamp(),
+    );
     if now >= nb + (na - nb) * 2 / 3 {
         return false;
     }
-    let Ok(Some(san)) = x509.subject_alternative_name() else { return false };
+    let Ok(Some(san)) = x509.subject_alternative_name() else {
+        return false;
+    };
     let have: BTreeSet<String> = san
         .value
         .general_names
@@ -313,12 +351,15 @@ fn leaf_is_current(pem: &str, names: &LocalNames, now: i64) -> bool {
 }
 
 fn server_config(leaf_pem: &str) -> Result<Arc<ServerConfig>, BoxError> {
-    let certs = CertificateDer::pem_slice_iter(leaf_pem.as_bytes()).collect::<Result<Vec<_>, _>>()?;
+    let certs =
+        CertificateDer::pem_slice_iter(leaf_pem.as_bytes()).collect::<Result<Vec<_>, _>>()?;
     let key = PrivateKeyDer::from_pem_slice(leaf_pem.as_bytes())?;
-    let mut cfg = ServerConfig::builder_with_provider(Arc::new(rustls::crypto::aws_lc_rs::default_provider()))
-        .with_safe_default_protocol_versions()?
-        .with_no_client_auth()
-        .with_single_cert(certs, key)?;
+    let mut cfg = ServerConfig::builder_with_provider(Arc::new(
+        rustls::crypto::aws_lc_rs::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()?
+    .with_no_client_auth()
+    .with_single_cert(certs, key)?;
     cfg.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(Arc::new(cfg))
 }
@@ -326,18 +367,30 @@ fn server_config(leaf_pem: &str) -> Result<Arc<ServerConfig>, BoxError> {
 /// Atomic replace (tmp + rename) so a crash never leaves a torn key or cert.
 fn write_file(path: &Path, data: &str, mode: u32) -> std::io::Result<()> {
     let tmp = path.with_extension("tmp");
-    let mut f = OpenOptions::new().write(true).create(true).truncate(true).mode(mode).open(&tmp)?;
+    let mut f = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(mode)
+        .open(&tmp)?;
     f.write_all(data.as_bytes())?;
     f.sync_all()?;
     fs::rename(&tmp, path)
 }
 
 fn fingerprint(der: &[u8]) -> String {
-    Sha256::digest(der).iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(":")
+    Sha256::digest(der)
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(":")
 }
 
 fn esc(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// Port-80 router for `local-ca`: CA onboarding under `/ca*`, everything else 301 → HTTPS (#9).
@@ -393,9 +446,22 @@ pub fn onboarding_router(ca: &LocalCa, https_origin: String) -> Router {
 /// iOS configuration profile carrying the CA as a root payload.
 fn mobileconfig(ca: &LocalCa, origin: &str) -> String {
     let hex = ca.fingerprint_sha256.replace(':', "");
-    let uuid = |h: &str| format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32]);
+    let uuid = |h: &str| {
+        format!(
+            "{}-{}-{}-{}-{}",
+            &h[0..8],
+            &h[8..12],
+            &h[12..16],
+            &h[16..20],
+            &h[20..32]
+        )
+    };
     // A PEM body is the base64 of the DER, which is what `<data>` wants.
-    let b64: String = ca.ca_pem.lines().filter(|l| !l.starts_with("-----")).collect();
+    let b64: String = ca
+        .ca_pem
+        .lines()
+        .filter(|l| !l.starts_with("-----"))
+        .collect();
     let name = esc(&format!("Nostube CA for {origin}"));
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -512,12 +578,18 @@ mod tests {
 
     fn verify(ca_pem: &str, leaf_pem: &str, name: &str) -> Result<(), rustls::Error> {
         let mut roots = RootCertStore::empty();
-        roots.add(CertificateDer::from_pem_slice(ca_pem.as_bytes()).unwrap()).unwrap();
+        roots
+            .add(CertificateDer::from_pem_slice(ca_pem.as_bytes()).unwrap())
+            .unwrap();
         let provider = Arc::new(rustls::crypto::aws_lc_rs::default_provider());
-        let verifier = WebPkiServerVerifier::builder_with_provider(Arc::new(roots), provider).build().unwrap();
+        let verifier = WebPkiServerVerifier::builder_with_provider(Arc::new(roots), provider)
+            .build()
+            .unwrap();
         let cert = CertificateDer::from_pem_slice(leaf_pem.as_bytes()).unwrap();
         let name = ServerName::try_from(name).unwrap();
-        verifier.verify_server_cert(&cert, &[], &name, &[], UnixTime::now()).map(|_| ())
+        verifier
+            .verify_server_cert(&cert, &[], &name, &[], UnixTime::now())
+            .map(|_| ())
     }
 
     #[tokio::test]
@@ -526,13 +598,25 @@ mod tests {
         let n = names(&["192.168.1.10", "10.0.0.5", "172.20.0.1", "fd12::1"]);
         let ca = local_ca(&dir, &n).await.unwrap();
         let leaf = leaf(&dir);
-        for san in ["test-host.local", "nostube.home.arpa", "192.168.1.10", "10.0.0.5", "172.20.0.1", "fd12::1"] {
+        for san in [
+            "test-host.local",
+            "nostube.home.arpa",
+            "192.168.1.10",
+            "10.0.0.5",
+            "172.20.0.1",
+            "fd12::1",
+        ] {
             verify(&ca.ca_pem, &leaf, san).unwrap_or_else(|e| panic!("{san}: {e:?}"));
         }
         assert!(verify(&ca.ca_pem, &leaf, "other.local").is_err());
 
         let der = CertificateDer::from_pem_slice(ca.ca_pem.as_bytes()).unwrap();
-        assert!(parse_x509_certificate(&der).unwrap().1.name_constraints().unwrap().is_some());
+        assert!(parse_x509_certificate(&der)
+            .unwrap()
+            .1
+            .name_constraints()
+            .unwrap()
+            .is_some());
 
         // A leaf for public names, signed by the very same CA key, must not verify.
         let (signer, created) = load_or_create_ca(&dir, &n).unwrap();
@@ -545,7 +629,10 @@ mod tests {
         let bad = issue_leaf(&signer, &public).unwrap();
         for name in ["example.com", "8.8.8.8"] {
             let err = verify(&ca.ca_pem, &bad, name).unwrap_err();
-            assert!(format!("{err:?}").contains("NameConstraintViolation"), "{name}: {err:?}");
+            assert!(
+                format!("{err:?}").contains("NameConstraintViolation"),
+                "{name}: {err:?}"
+            );
         }
     }
 
@@ -570,7 +657,11 @@ mod tests {
 
         use std::os::unix::fs::PermissionsExt;
         for f in ["ca-key.pem", "leaf.pem"] {
-            assert_eq!(fs::metadata(dir.join(f)).unwrap().permissions().mode() & 0o777, 0o600, "{f}");
+            assert_eq!(
+                fs::metadata(dir.join(f)).unwrap().permissions().mode() & 0o777,
+                0o600,
+                "{f}"
+            );
         }
     }
 
@@ -590,11 +681,28 @@ mod tests {
 
     #[test]
     fn only_private_v4_and_ula_v6_count_as_lan() {
-        for ip in ["10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.0.1", "fd00::1", "fdff::2"] {
+        for ip in [
+            "10.1.2.3",
+            "172.16.0.1",
+            "172.31.255.255",
+            "192.168.0.1",
+            "fd00::1",
+            "fdff::2",
+        ] {
             assert!(is_lan(ip.parse().unwrap()), "{ip}");
         }
         // Public, loopback, link-local and CGNAT addresses fall outside the CA's name constraints.
-        for ip in ["8.8.8.8", "172.32.0.1", "127.0.0.1", "169.254.1.1", "100.64.0.1", "::1", "fe80::1", "fc00::1", "2001:db8::1"] {
+        for ip in [
+            "8.8.8.8",
+            "172.32.0.1",
+            "127.0.0.1",
+            "169.254.1.1",
+            "100.64.0.1",
+            "::1",
+            "fe80::1",
+            "fc00::1",
+            "2001:db8::1",
+        ] {
             assert!(!is_lan(ip.parse().unwrap()), "{ip}");
         }
     }
@@ -602,8 +710,19 @@ mod tests {
     #[test]
     fn covered_hosts_lists_every_san_the_leaf_carries() {
         let n = names(&["192.168.1.10", "fd12::1"]);
-        assert_eq!(covered_hosts(&n), ["test-host.local", "nostube.home.arpa", "192.168.1.10", "fd12::1"]);
-        let bare = LocalNames { router_name: None, ..names(&[]) };
+        assert_eq!(
+            covered_hosts(&n),
+            [
+                "test-host.local",
+                "nostube.home.arpa",
+                "192.168.1.10",
+                "fd12::1"
+            ]
+        );
+        let bare = LocalNames {
+            router_name: None,
+            ..names(&[])
+        };
         assert_eq!(covered_hosts(&bare), ["test-host.local"]);
         assert_eq!(n.sans(), covered_hosts(&n).into_iter().collect());
     }
@@ -615,43 +734,81 @@ mod tests {
         let ca = local_ca(&dir, &names(&["192.168.1.10"])).await.unwrap();
         let router = onboarding_router(&ca, "https://test-host.local:8443/".into());
         let call = |uri: &str| {
-            let req = axum::http::Request::builder().uri(uri).body(axum::body::Body::empty()).unwrap();
+            let req = axum::http::Request::builder()
+                .uri(uri)
+                .body(axum::body::Body::empty())
+                .unwrap();
             let router = router.clone();
             async move {
                 let res = router.oneshot(req).await.unwrap();
                 let (parts, body) = res.into_parts();
-                (parts, String::from_utf8(axum::body::to_bytes(body, 1 << 20).await.unwrap().to_vec()).unwrap())
+                (
+                    parts,
+                    String::from_utf8(axum::body::to_bytes(body, 1 << 20).await.unwrap().to_vec())
+                        .unwrap(),
+                )
             }
         };
 
         let (parts, pem) = call("/ca.pem").await;
         assert_eq!(parts.status, StatusCode::OK);
-        assert_eq!(parts.headers[header::CONTENT_TYPE], "application/x-x509-ca-cert");
+        assert_eq!(
+            parts.headers[header::CONTENT_TYPE],
+            "application/x-x509-ca-cert"
+        );
         assert_eq!(pem, ca.ca_pem);
 
         let (parts, page) = call("/ca").await;
-        assert_eq!(parts.headers[header::CONTENT_TYPE], "text/html; charset=utf-8");
-        assert!(page.contains(&ca.fingerprint_sha256), "the page shows the fingerprint to compare");
+        assert_eq!(
+            parts.headers[header::CONTENT_TYPE],
+            "text/html; charset=utf-8"
+        );
+        assert!(
+            page.contains(&ca.fingerprint_sha256),
+            "the page shows the fingerprint to compare"
+        );
 
         // The profile carries exactly the CA's DER and valid, distinct payload UUIDs.
         let (parts, profile) = call("/ca.mobileconfig").await;
-        assert_eq!(parts.headers[header::CONTENT_TYPE], "application/x-apple-aspen-config");
-        let data = profile.split("<data>").nth(1).and_then(|s| s.split("</data>").next()).unwrap();
+        assert_eq!(
+            parts.headers[header::CONTENT_TYPE],
+            "application/x-apple-aspen-config"
+        );
+        let data = profile
+            .split("<data>")
+            .nth(1)
+            .and_then(|s| s.split("</data>").next())
+            .unwrap();
         use base64::Engine;
-        let der = base64::engine::general_purpose::STANDARD.decode(data).unwrap();
+        let der = base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .unwrap();
         assert_eq!(fingerprint(&der), ca.fingerprint_sha256);
-        let uuids: Vec<&str> = profile.match_indices("<key>PayloadUUID</key><string>")
-            .map(|(i, m)| &profile[i + m.len()..i + m.len() + 36]).collect();
+        let uuids: Vec<&str> = profile
+            .match_indices("<key>PayloadUUID</key><string>")
+            .map(|(i, m)| &profile[i + m.len()..i + m.len() + 36])
+            .collect();
         assert_eq!(uuids.len(), 2);
         assert_ne!(uuids[0], uuids[1]);
-        assert!(uuids.iter().all(|u| u.split('-').map(str::len).eq([8, 4, 4, 4, 12])), "{uuids:?}");
+        assert!(
+            uuids
+                .iter()
+                .all(|u| u.split('-').map(str::len).eq([8, 4, 4, 4, 12])),
+            "{uuids:?}"
+        );
 
         // Everything else keeps its path and query on the HTTPS origin.
         let (parts, _) = call("/v/abc?t=30").await;
         assert_eq!(parts.status, StatusCode::MOVED_PERMANENTLY);
-        assert_eq!(parts.headers[header::LOCATION], "https://test-host.local:8443/v/abc?t=30");
+        assert_eq!(
+            parts.headers[header::LOCATION],
+            "https://test-host.local:8443/v/abc?t=30"
+        );
         let (parts, _) = call("/").await;
-        assert_eq!(parts.headers[header::LOCATION], "https://test-host.local:8443/");
+        assert_eq!(
+            parts.headers[header::LOCATION],
+            "https://test-host.local:8443/"
+        );
     }
 
     #[test]

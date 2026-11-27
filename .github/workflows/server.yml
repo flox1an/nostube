@@ -58,6 +58,14 @@ jobs:
         with:
           workspaces: apps/server
 
+      - name: cargo fmt
+        working-directory: apps/server
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        working-directory: apps/server
+        run: cargo clippy --locked --all-targets -- -D warnings
+
       - name: cargo check
         working-directory: apps/server
         run: cargo check --locked --all-targets

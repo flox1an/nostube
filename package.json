@@ -9,7 +9,8 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "husky apps/web/.husky"
+    "prepare": "husky apps/web/.husky",
+    "format:check": "prettier --check apps/web apps/site apps/studio packages"
   },
   "devDependencies": {
     "husky": "^9.1.7"

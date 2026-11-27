@@ -83,7 +83,8 @@ pub fn is_public_url(url: &str) -> bool {
         matches!(u.scheme(), "http" | "https" | "ws" | "wss")
             && u.username().is_empty()
             && u.password().is_none()
-            && u.host_str().is_some_and(|h| is_public_host(h.trim_start_matches('[').trim_end_matches(']')))
+            && u.host_str()
+                .is_some_and(|h| is_public_host(h.trim_start_matches('[').trim_end_matches(']')))
     })
 }
 
@@ -135,7 +136,10 @@ pub struct NsiteSettings {
 
 impl Default for NsiteSettings {
     fn default() -> Self {
-        NsiteSettings { gateway: "nsite.lol".into(), domain: String::new() }
+        NsiteSettings {
+            gateway: "nsite.lol".into(),
+            domain: String::new(),
+        }
     }
 }
 
@@ -149,14 +153,19 @@ fn is_dns_host(host: &str) -> bool {
             (1..=63).contains(&l.len())
                 && !l.starts_with('-')
                 && !l.ends_with('-')
-                && l.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+                && l.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
         })
         && !labels[labels.len() - 1].bytes().all(|b| b.is_ascii_digit())
 }
 
 fn check_nsite(nsite: &NsiteSettings) -> Result<(), BoxError> {
     if !is_dns_host(&nsite.gateway) {
-        return Err(format!("nsite.gateway must be a host name like nsite.lol (no scheme, port or path): {}", nsite.gateway).into());
+        return Err(format!(
+            "nsite.gateway must be a host name like nsite.lol (no scheme, port or path): {}",
+            nsite.gateway
+        )
+        .into());
     }
     if !nsite.domain.is_empty() && !is_dns_host(&nsite.domain) {
         return Err(format!("nsite.domain must be a host name like videos.example.org (no scheme, port or path): {}", nsite.domain).into());
@@ -238,7 +247,11 @@ pub struct Storage {
 
 impl Default for Storage {
     fn default() -> Self {
-        Storage { quota_gib: 0, free_space_reserve_gib: 5, s3: None }
+        Storage {
+            quota_gib: 0,
+            free_space_reserve_gib: 5,
+            s3: None,
+        }
     }
 }
 
@@ -269,7 +282,11 @@ impl S3Config {
     pub fn check(&self) -> Result<(), BoxError> {
         let url = nostr::prelude::Url::parse(&self.endpoint).ok();
         if !url.is_some_and(|u| matches!(u.scheme(), "http" | "https") && u.host().is_some()) {
-            return Err(format!("storage.s3.endpoint must be an http(s) URL: {}", self.endpoint).into());
+            return Err(format!(
+                "storage.s3.endpoint must be an http(s) URL: {}",
+                self.endpoint
+            )
+            .into());
         }
         if self.bucket.trim().is_empty() {
             return Err("storage.s3.bucket must not be empty".into());
@@ -278,14 +295,26 @@ impl S3Config {
             return Err("storage.s3.access_key_id must not be empty".into());
         }
         // Almond's rule for its region option.
-        if self.region.is_empty() || !self.region.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
-            return Err(format!("storage.s3.region must be a region name such as auto or us-east-1: {}", self.region).into());
+        if self.region.is_empty()
+            || !self
+                .region
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        {
+            return Err(format!(
+                "storage.s3.region must be a region name such as auto or us-east-1: {}",
+                self.region
+            )
+            .into());
         }
         Ok(())
     }
 
     /// Almond's settings; the secret comes from the secrets store.
-    pub fn settings(&self, secret_access_key: String) -> almond::services::native_storage::S3Settings {
+    pub fn settings(
+        &self,
+        secret_access_key: String,
+    ) -> almond::services::native_storage::S3Settings {
         almond::services::native_storage::S3Settings {
             endpoint: self.endpoint.clone(),
             bucket: self.bucket.clone(),
@@ -318,7 +347,9 @@ fn check_mirror(mirror: &Mirror) -> Result<(), BoxError> {
     check_relays(&[&mirror.relays])?;
     for url in &mirror.blossom {
         if !(url.starts_with("https://") || url.starts_with("http://")) {
-            return Err(format!("mirror Blossom URL must start with https:// or http://: {url}").into());
+            return Err(
+                format!("mirror Blossom URL must start with https:// or http://: {url}").into(),
+            );
         }
     }
     Ok(())
@@ -384,7 +415,9 @@ fn check_homepage(h: &SiteHomepage) -> Result<(), BoxError> {
         let label = link.label.trim();
         let url = &link.url;
         if label.is_empty() || link.label.chars().count() > 80 {
-            return Err(format!("site.homepage link label must be 1 to 80 characters: {label}").into());
+            return Err(
+                format!("site.homepage link label must be 1 to 80 characters: {label}").into(),
+            );
         }
         let ok = url.chars().count() <= 2048
             && url.starts_with("https://")
@@ -396,7 +429,10 @@ fn check_homepage(h: &SiteHomepage) -> Result<(), BoxError> {
                     && u.password().is_none()
             });
         if !ok {
-            return Err(format!("site.homepage link URL must be an https URL without credentials: {url}").into());
+            return Err(format!(
+                "site.homepage link URL must be an https URL without credentials: {url}"
+            )
+            .into());
         }
     }
     Ok(())
@@ -419,10 +455,17 @@ pub struct Pages {
 }
 
 fn check_pages(pages: &Pages) -> Result<(), BoxError> {
-    for (page, texts) in [("about", &pages.about), ("imprint", &pages.imprint), ("privacy", &pages.privacy)] {
+    for (page, texts) in [
+        ("about", &pages.about),
+        ("imprint", &pages.imprint),
+        ("privacy", &pages.privacy),
+    ] {
         for (lang, text) in texts {
             if !(lang.len() == 2 && lang.bytes().all(|b| b.is_ascii_lowercase())) {
-                return Err(format!("site.pages.{page}: language must be two lowercase letters: {lang}").into());
+                return Err(format!(
+                    "site.pages.{page}: language must be two lowercase letters: {lang}"
+                )
+                .into());
             }
             if text.trim().is_empty() || text.chars().count() > PAGE_MAX_CHARS {
                 return Err(format!(
@@ -462,7 +505,10 @@ fn check_link(name: &str, template: &str) -> Result<(), BoxError> {
     if ok {
         Ok(())
     } else {
-        Err(format!("site.links.{name} must be an https URL containing {{nip19}}: {template}").into())
+        Err(
+            format!("site.links.{name} must be an https URL containing {{nip19}}: {template}")
+                .into(),
+        )
     }
 }
 
@@ -504,7 +550,10 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
         !local.is_empty() && domain.contains('.') && !domain.contains('@')
     });
     if !l.is_empty() && (!valid || l.len() > 254 || l.chars().any(char::is_whitespace)) {
-        return Err(format!("site.lightning must be a lightning address like name@domain.tld: {l}").into());
+        return Err(format!(
+            "site.lightning must be a lightning address like name@domain.tld: {l}"
+        )
+        .into());
     }
     check_link("profile", &site.links.profile)?;
     check_link("video", &site.links.video)?;
@@ -520,7 +569,10 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
                     && !d.is_empty()
                     && !d.chars().any(char::is_control));
         if !ok {
-            return Err(format!("site.hidden_videos entry must be <kind>:<pubkey>:<d> or an event id: {v}").into());
+            return Err(format!(
+                "site.hidden_videos entry must be <kind>:<pubkey>:<d> or an event id: {v}"
+            )
+            .into());
         }
     }
     Ok(())
@@ -549,14 +601,22 @@ pub struct Edited {
 /// reaches, and where the channel's kinds 0 and 10002 go in public reach (ADR 0008, 0012); the
 /// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
 fn default_profile_relays() -> Vec<String> {
-    ["wss://purplepag.es", "wss://nos.lol", "wss://relay.damus.io"].map(String::from).to_vec()
+    [
+        "wss://purplepag.es",
+        "wss://nos.lol",
+        "wss://relay.damus.io",
+    ]
+    .map(String::from)
+    .to_vec()
 }
 
 /// Where a remote signer (NIP-46) and the browser meet besides the interaction relays: the same
 /// list as `DEFAULT_SIGNER_RELAYS` in `packages/core/src/instance-config.ts`. The instance relay
 /// refuses kind 24133 from anyone but its writers, so a phone outside the network needs these.
 fn default_signer_relays() -> Vec<String> {
-    ["wss://nos.lol", "wss://relay.damus.io"].map(String::from).to_vec()
+    ["wss://nos.lol", "wss://relay.damus.io"]
+        .map(String::from)
+        .to_vec()
 }
 
 /// A root relay as the site accepts it (`wss?://host[:port]` with an optional `/`): no
@@ -564,13 +624,21 @@ fn default_signer_relays() -> Vec<String> {
 /// reach it.
 fn check_signer_relays(urls: &[String]) -> Result<(), BoxError> {
     for url in urls {
-        let rest = url.strip_prefix("wss://").or_else(|| url.strip_prefix("ws://"));
+        let rest = url
+            .strip_prefix("wss://")
+            .or_else(|| url.strip_prefix("ws://"));
         let ok = rest.is_some_and(|r| {
             let host = r.strip_suffix('/').unwrap_or(r);
-            !host.is_empty() && !host.contains(['/', '?', '#', '@']) && !host.chars().any(|c| c.is_whitespace() || c.is_control())
-        }) && nostr::prelude::Url::parse(url).is_ok_and(|u| u.host_str().is_some_and(|h| !h.is_empty()));
+            !host.is_empty()
+                && !host.contains(['/', '?', '#', '@'])
+                && !host.chars().any(|c| c.is_whitespace() || c.is_control())
+        }) && nostr::prelude::Url::parse(url)
+            .is_ok_and(|u| u.host_str().is_some_and(|h| !h.is_empty()));
         if !ok {
-            return Err(format!("signer relay must be ws://host or wss://host with no path: {url}").into());
+            return Err(format!(
+                "signer relay must be ws://host or wss://host with no path: {url}"
+            )
+            .into());
         }
     }
     Ok(())
@@ -615,14 +683,20 @@ pub struct Config {
 
 impl Config {
     fn remove_retired_relays(&mut self) {
-        for relays in [&mut self.video_sources, &mut self.interaction_relays, &mut self.profile_relays,
-            &mut self.signer_relays, &mut self.mirror.relays] {
+        for relays in [
+            &mut self.video_sources,
+            &mut self.interaction_relays,
+            &mut self.profile_relays,
+            &mut self.signer_relays,
+            &mut self.mirror.relays,
+        ] {
             relays.retain(|url| !is_retired_relay(url));
         }
     }
 
     pub fn load(path: &std::path::Path) -> Result<Config, BoxError> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         Self::parse(&text).map_err(|e| format!("invalid {}: {e}", path.display()).into())
     }
 
@@ -633,12 +707,20 @@ impl Config {
         }
         let origin_host = origin_host(&raw.origin)?.to_owned();
         if matches!(raw.tls, Tls::LocalCa { .. }) && !raw.origin.starts_with("https://") {
-            return Err(format!("tls local-ca serves HTTPS, so the origin must be https://host: {}", raw.origin).into());
+            return Err(format!(
+                "tls local-ca serves HTTPS, so the origin must be https://host: {}",
+                raw.origin
+            )
+            .into());
         }
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
-        check_relays(&[&raw.video_sources, &raw.interaction_relays, &raw.profile_relays])?;
+        check_relays(&[
+            &raw.video_sources,
+            &raw.interaction_relays,
+            &raw.profile_relays,
+        ])?;
         check_signer_relays(&raw.signer_relays)?;
         check_site(&raw.site)?;
         check_mirror(&raw.mirror)?;
@@ -703,7 +785,11 @@ impl Config {
             site: e.site.clone(),
             mirror: e.mirror.clone(),
             // Switching to private turns the nsite off (#163).
-            site_hosting: if e.reach == Reach::Private { SiteHosting::Instance } else { e.site_hosting },
+            site_hosting: if e.reach == Reach::Private {
+                SiteHosting::Instance
+            } else {
+                e.site_hosting
+            },
             nsite: e.nsite.clone(),
         };
         cfg.remove_retired_relays();
@@ -733,7 +819,11 @@ impl Config {
             profile_relays: default_profile_relays(),
             signer_relays: default_signer_relays(),
             search: Search::Off,
-            tls: Tls::LocalCa { router_name: None, https_port, http_port },
+            tls: Tls::LocalCa {
+                router_name: None,
+                https_port,
+                http_port,
+            },
             storage: Storage::default(),
             site: Site::default(),
             mirror: Mirror::default(),
@@ -796,8 +886,18 @@ impl Config {
         let relay = self.instance_relay();
         let public_origin = self.origin_is_public();
         Mirror {
-            relays: public_urls(self.mirror.relays.iter().filter(|u| public_origin || u.trim_end_matches('/') != relay)),
-            blossom: public_urls(self.mirror.blossom.iter().filter(|u| public_origin || u.trim_end_matches('/') != self.origin)),
+            relays: public_urls(
+                self.mirror
+                    .relays
+                    .iter()
+                    .filter(|u| public_origin || u.trim_end_matches('/') != relay),
+            ),
+            blossom: public_urls(
+                self.mirror
+                    .blossom
+                    .iter()
+                    .filter(|u| public_origin || u.trim_end_matches('/') != self.origin),
+            ),
         }
     }
 
@@ -811,10 +911,13 @@ impl Config {
     fn check_reach(&self) -> Result<(), BoxError> {
         if self.reach == Reach::Public && !self.can_be_public() {
             let m = self.public_mirror();
-            let missing: Vec<&str> = [(m.relays.is_empty(), "a mirror relay"), (m.blossom.is_empty(), "a mirror Blossom server")]
-                .into_iter()
-                .filter_map(|(missing, what)| missing.then_some(what))
-                .collect();
+            let missing: Vec<&str> = [
+                (m.relays.is_empty(), "a mirror relay"),
+                (m.blossom.is_empty(), "a mirror Blossom server"),
+            ]
+            .into_iter()
+            .filter_map(|(missing, what)| missing.then_some(what))
+            .collect();
             return Err(format!(
                 "reach public needs a public origin (not local-ca, localhost, a local name or an IP address) or publicly \
                  reachable mirrors; missing {} on a public host name",
@@ -843,10 +946,21 @@ impl Config {
         let instance = self.instance_relay();
         let reachable = |configured: &[String]| {
             let own = self.origin_is_public().then_some(&instance);
-            public_urls(own.into_iter().chain(configured.iter().filter(|u| u.trim_end_matches('/') != instance)).chain(&mirror.relays))
+            public_urls(
+                own.into_iter()
+                    .chain(
+                        configured
+                            .iter()
+                            .filter(|u| u.trim_end_matches('/') != instance),
+                    )
+                    .chain(&mirror.relays),
+            )
         };
         let (video_sources, interaction_relays) = match self.reach {
-            Reach::Public => (reachable(&self.video_sources), reachable(&self.interaction_relays)),
+            Reach::Public => (
+                reachable(&self.video_sources),
+                reachable(&self.interaction_relays),
+            ),
             Reach::Private => (vec![instance.clone()], vec![instance.clone()]),
         };
         let start_page = creators
@@ -903,23 +1017,38 @@ impl Config {
     /// Blossom), the storage limits and S3 settings (Blossom) or the mirror targets (relay and outbox). Everything
     /// else the studio edits is the public config and the relay's name, which apply while running.
     pub fn needs_restart(&self, next: &Config) -> bool {
-        self.allowed_writers != next.allowed_writers || self.storage != next.storage || self.mirror != next.mirror
+        self.allowed_writers != next.allowed_writers
+            || self.storage != next.storage
+            || self.mirror != next.mirror
     }
 }
 
 /// `http(s)://host[:port]` with no path, query or fragment (ADR 0003 canonical origin).
 fn origin_host(origin: &str) -> Result<&str, BoxError> {
-    let bad = || -> BoxError { format!("origin must be http(s)://host with no path: {origin}").into() };
-    let rest = origin.strip_prefix("https://").or_else(|| origin.strip_prefix("http://")).ok_or_else(bad)?;
+    let bad =
+        || -> BoxError { format!("origin must be http(s)://host with no path: {origin}").into() };
+    let rest = origin
+        .strip_prefix("https://")
+        .or_else(|| origin.strip_prefix("http://"))
+        .ok_or_else(bad)?;
     if rest.is_empty() || rest.contains(['/', '?', '#', '@']) {
         return Err(bad());
     }
     let (host, port) = match rest.strip_prefix('[') {
         Some(v6) => {
             let (host, after) = v6.split_once(']').ok_or_else(bad)?;
-            (host, if after.is_empty() { None } else { Some(after.strip_prefix(':').ok_or_else(bad)?) })
+            (
+                host,
+                if after.is_empty() {
+                    None
+                } else {
+                    Some(after.strip_prefix(':').ok_or_else(bad)?)
+                },
+            )
         }
-        None => rest.split_once(':').map_or((rest, None), |(h, p)| (h, Some(p))),
+        None => rest
+            .split_once(':')
+            .map_or((rest, None), |(h, p)| (h, Some(p))),
     };
     if host.is_empty() || port.is_some_and(|p| p.parse::<u16>().is_err()) {
         return Err(bad());
@@ -930,7 +1059,9 @@ fn origin_host(origin: &str) -> Result<&str, BoxError> {
 fn keys(field: &str, values: &[String]) -> Result<Vec<PublicKey>, BoxError> {
     values
         .iter()
-        .map(|v| PublicKey::parse(v).map_err(|e| format!("{field}: invalid pubkey {v}: {e}").into()))
+        .map(|v| {
+            PublicKey::parse(v).map_err(|e| format!("{field}: invalid pubkey {v}: {e}").into())
+        })
         .collect()
 }
 
@@ -958,23 +1089,38 @@ tls = {{ mode = "local-ca" }}
     fn valid_config_maps_to_public_contract() {
         let cfg = Config::parse(&sample("")).unwrap();
         assert_eq!(cfg.origin_host, "flox-mac.local");
-        assert_eq!((cfg.storage.quota_gib, cfg.storage.free_space_reserve_gib), (0, 5));
+        assert_eq!(
+            (cfg.storage.quota_gib, cfg.storage.free_space_reserve_gib),
+            (0, 5)
+        );
         let json = cfg.public_json();
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
-        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://flox-mac.local"]), "private: the instance relay only");
+        assert_eq!(
+            json["interactionRelays"],
+            serde_json::json!(["wss://flox-mac.local"]),
+            "private: the instance relay only"
+        );
         assert_eq!(json["reach"], "private");
         // A config file from before the field keeps the public profile lookup list (ADR 0008),
         // served in private reach too: the visitor lookup does not depend on reach (ADR 0012).
         assert_eq!(cfg.profile_relays, default_profile_relays());
-        assert_eq!(json["profileRelays"], serde_json::json!(default_profile_relays()));
-        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#8b5cf6", "font": "sans" }));
+        assert_eq!(
+            json["profileRelays"],
+            serde_json::json!(default_profile_relays())
+        );
+        assert_eq!(
+            json["site"]["theme"],
+            serde_json::json!({ "accent": "#8b5cf6", "font": "sans" })
+        );
         assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
 
     #[test]
     fn no_creators_gives_null_start_page() {
-        let cfg = Config::parse(&sample("").replace(&format!("creators = [\"{PK}\"]"), "creators = []")).unwrap();
+        let cfg =
+            Config::parse(&sample("").replace(&format!("creators = [\"{PK}\"]"), "creators = []"))
+                .unwrap();
         assert!(cfg.public_json()["startPage"].is_null());
     }
 
@@ -989,7 +1135,10 @@ tls = {{ mode = "local-ca" }}
             ("wss://flox-mac.local\"", "https://flox-mac.local\""),
             (PK, "nope"),
         ] {
-            assert!(Config::parse(&sample("").replacen(from, to, 1)).is_err(), "{from} -> {to}");
+            assert!(
+                Config::parse(&sample("").replacen(from, to, 1)).is_err(),
+                "{from} -> {to}"
+            );
         }
     }
 
@@ -1015,38 +1164,86 @@ tls = {{ mode = "local-ca" }}
         // A file from before the field gets the public defaults, and keeps them through a save.
         let old = Config::parse(&sample("")).unwrap();
         assert_eq!(old.signer_relays, default_signer_relays());
-        assert_eq!(old.public_json()["signerRelays"], serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"]));
-        assert_eq!(Config::parse(&old.to_toml().unwrap()).unwrap().signer_relays, default_signer_relays());
-        assert_eq!(Config::default_for("macbook-2.local", 9376, 0).signer_relays, default_signer_relays());
+        assert_eq!(
+            old.public_json()["signerRelays"],
+            serde_json::json!(["wss://nos.lol", "wss://relay.damus.io"])
+        );
+        assert_eq!(
+            Config::parse(&old.to_toml().unwrap())
+                .unwrap()
+                .signer_relays,
+            default_signer_relays()
+        );
+        assert_eq!(
+            Config::default_for("macbook-2.local", 9376, 0).signer_relays,
+            default_signer_relays()
+        );
         // Empty stays empty.
         let none = Config::parse(&sample("signer_relays = []\n")).unwrap();
         assert_eq!(none.public_json()["signerRelays"], serde_json::json!([]));
-        assert!(Config::parse(&none.to_toml().unwrap()).unwrap().signer_relays.is_empty());
+        assert!(Config::parse(&none.to_toml().unwrap())
+            .unwrap()
+            .signer_relays
+            .is_empty());
         // Local and FIPS signer relays are served in both reaches, and nowhere else.
-        let mine = ["ws://npub1x.fips:8080", "wss://flox-mac.local/", "ws://192.168.1.5:7777", "wss://relay.example"];
+        let mine = [
+            "ws://npub1x.fips:8080",
+            "wss://flox-mac.local/",
+            "ws://192.168.1.5:7777",
+            "wss://relay.example",
+        ];
         let line = format!("signer_relays = {mine:?}\n");
-        for text in [sample(&line), public_sample(&format!("reach = \"public\"\n{line}"))] {
+        for text in [
+            sample(&line),
+            public_sample(&format!("reach = \"public\"\n{line}")),
+        ] {
             let json = Config::parse(&text).unwrap().public_json();
             assert_eq!(json["signerRelays"], serde_json::json!(mine));
             for key in ["videoSources", "interactionRelays", "profileRelays"] {
-                assert!(!json[key].as_array().unwrap().iter().any(|u| mine[..3].contains(&u.as_str().unwrap())), "{key}");
+                assert!(
+                    !json[key]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|u| mine[..3].contains(&u.as_str().unwrap())),
+                    "{key}"
+                );
             }
         }
         for bad in [
-            "https://relay.example", "wss://", "wss:///", "wss://relay.example/path", "wss://relay.example//",
-            "wss://relay.example?x=1", "wss://relay.example#x", "wss://user:pw@relay.example", "wss://user@relay.example",
-            " wss://relay.example", "wss://relay.example ", "WSS://relay.example", "wss://relay example",
+            "https://relay.example",
+            "wss://",
+            "wss:///",
+            "wss://relay.example/path",
+            "wss://relay.example//",
+            "wss://relay.example?x=1",
+            "wss://relay.example#x",
+            "wss://user:pw@relay.example",
+            "wss://user@relay.example",
+            " wss://relay.example",
+            "wss://relay.example ",
+            "WSS://relay.example",
+            "wss://relay example",
         ] {
-            assert!(Config::parse(&sample(&format!("signer_relays = [{bad:?}]\n"))).is_err(), "{bad}");
+            assert!(
+                Config::parse(&sample(&format!("signer_relays = [{bad:?}]\n"))).is_err(),
+                "{bad}"
+            );
         }
     }
 
     #[test]
     fn origin_host_handles_ports_and_ips() {
-        assert_eq!(origin_host("https://192.168.1.5:8443").unwrap(), "192.168.1.5");
+        assert_eq!(
+            origin_host("https://192.168.1.5:8443").unwrap(),
+            "192.168.1.5"
+        );
         assert_eq!(origin_host("https://[fd00::1]:8443").unwrap(), "fd00::1");
         assert!(origin_host("https://host:x").is_err());
-        assert_eq!(origin_host("http://npub1x.fips:8080").unwrap(), "npub1x.fips");
+        assert_eq!(
+            origin_host("http://npub1x.fips:8080").unwrap(),
+            "npub1x.fips"
+        );
         assert!(origin_host("ws://host").is_err());
     }
 
@@ -1054,7 +1251,10 @@ tls = {{ mode = "local-ca" }}
     fn default_config_is_loadable_and_local() {
         let cfg = Config::default_for("macbook-2.local", 9376, 0);
         assert_eq!(cfg.public_json()["origin"], "https://macbook-2.local:9376");
-        assert_eq!(cfg.video_sources, vec!["wss://macbook-2.local:9376".to_owned()]);
+        assert_eq!(
+            cfg.video_sources,
+            vec!["wss://macbook-2.local:9376".to_owned()]
+        );
         assert!(cfg.creators.is_empty());
         let re = Config::parse(&cfg.to_toml().unwrap()).unwrap();
         assert_eq!(re.origin_host, "macbook-2.local");
@@ -1072,10 +1272,16 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(again.storage.quota_gib, 0);
         // Off by default, and visible as `countPlays` in the public config when on.
         assert!(!again.site.count_plays);
-        assert_eq!(cfg.public_json()["site"]["countPlays"], serde_json::json!(false));
+        assert_eq!(
+            cfg.public_json()["site"]["countPlays"],
+            serde_json::json!(false)
+        );
         let counted = Config::parse(&sample("[site]\ncount_plays = true\n")).unwrap();
         assert!(counted.site.count_plays);
-        assert_eq!(counted.public_json()["site"]["countPlays"], serde_json::json!(true));
+        assert_eq!(
+            counted.public_json()["site"]["countPlays"],
+            serde_json::json!(true)
+        );
         let next = cfg
             .with_edits(&Edited {
                 title: "Renamed".into(),
@@ -1087,16 +1293,26 @@ tls = {{ mode = "local-ca" }}
                 profile_relays: vec![],
                 signer_relays: vec!["ws://npub1x.fips:8080".into()],
                 search: Search::Local,
-                storage: Storage { quota_gib: 100, free_space_reserve_gib: 5, s3: None },
+                storage: Storage {
+                    quota_gib: 100,
+                    free_space_reserve_gib: 5,
+                    s3: None,
+                },
                 site: Site::default(),
-                mirror: Mirror { relays: vec!["wss://m.example".into()], blossom: vec!["https://b.example".into()] },
+                mirror: Mirror {
+                    relays: vec!["wss://m.example".into()],
+                    blossom: vec!["https://b.example".into()],
+                },
                 site_hosting: SiteHosting::Instance,
                 nsite: NsiteSettings::default(),
             })
             .unwrap();
         // Off stays out of the file; set, it survives the round trip.
         assert!(!cfg.to_toml().unwrap().contains("[mirror]"));
-        assert_eq!(Config::parse(&next.to_toml().unwrap()).unwrap().mirror, next.mirror);
+        assert_eq!(
+            Config::parse(&next.to_toml().unwrap()).unwrap().mirror,
+            next.mirror
+        );
         assert_eq!(next.revision, 4);
         assert_eq!(next.title, "Renamed");
         assert_eq!(next.origin, cfg.origin);
@@ -1104,7 +1320,10 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(re.search, Search::Local);
         assert_eq!(re.signer_relays, vec!["ws://npub1x.fips:8080"]);
         // The removed external mode still starts, as off.
-        let old = sample("").replace("search = { mode = \"off\" }", "search = { mode = \"external\", url = \"https://search.example\" }");
+        let old = sample("").replace(
+            "search = { mode = \"off\" }",
+            "search = { mode = \"external\", url = \"https://search.example\" }",
+        );
         assert_eq!(Config::parse(&old).unwrap().search, Search::Off);
         assert!(cfg
             .with_edits(&Edited {
@@ -1136,7 +1355,10 @@ tls = {{ mode = "local-ca" }}
         .unwrap();
         let json = cfg.public_json();
         assert_eq!(json["site"]["tagline"], "Hello");
-        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#ff8800", "font": "serif" }));
+        assert_eq!(
+            json["site"]["theme"],
+            serde_json::json!({ "accent": "#ff8800", "font": "serif" })
+        );
         assert_eq!(json["site"]["videos"]["hidden"][0], hidden.as_str());
     }
 
@@ -1164,7 +1386,10 @@ tls = {{ mode = "local-ca" }}
 
     #[test]
     fn site_edits_round_trip_through_toml() {
-        let cfg = Config::parse(&sample("[site]\ntagline = \"Keep me\"\naccent = \"#00aa55\"\nfont = \"mono\"\n")).unwrap();
+        let cfg = Config::parse(&sample(
+            "[site]\ntagline = \"Keep me\"\naccent = \"#00aa55\"\nfont = \"mono\"\n",
+        ))
+        .unwrap();
         let edited = Edited {
             title: "Renamed".into(),
             reach: Reach::Private,
@@ -1176,7 +1401,12 @@ tls = {{ mode = "local-ca" }}
             signer_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
-            site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, ..Site::default() },
+            site: Site {
+                tagline: "New".into(),
+                accent: "#112233".into(),
+                font: Font::Serif,
+                ..Site::default()
+            },
             mirror: Mirror::default(),
             site_hosting: SiteHosting::Instance,
             nsite: NsiteSettings::default(),
@@ -1186,7 +1416,13 @@ tls = {{ mode = "local-ca" }}
         let reloaded = Config::parse(&next.to_toml().unwrap()).unwrap();
         assert_eq!(reloaded.site, next.site);
         assert_eq!(reloaded.revision, cfg.revision + 1);
-        let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
+        let bad = Edited {
+            site: Site {
+                accent: "red".into(),
+                ..Site::default()
+            },
+            ..edited
+        };
         assert!(cfg.with_edits(&bad).is_err());
     }
 
@@ -1204,7 +1440,11 @@ tls = {{ mode = "local-ca" }}
             profile_relays: vec![],
             signer_relays: vec![],
             search: Search::Off,
-            storage: Storage { quota_gib: 7, free_space_reserve_gib: 5, s3 },
+            storage: Storage {
+                quota_gib: 7,
+                free_space_reserve_gib: 5,
+                s3,
+            },
             site: Site::default(),
             mirror: Mirror::default(),
             site_hosting: SiteHosting::Instance,
@@ -1228,19 +1468,43 @@ tls = {{ mode = "local-ca" }}
         ))
         .unwrap();
         let minimal = minimal.storage.s3.unwrap();
-        assert_eq!((minimal.region.as_str(), minimal.force_path_style), ("auto", false));
+        assert_eq!(
+            (minimal.region.as_str(), minimal.force_path_style),
+            ("auto", false)
+        );
         // The secret has no place in the file; bad values are refused.
-        assert!(Config::parse(&text.replace("[storage.s3]\n", "[storage.s3]\nsecret_access_key = \"x\"\n")).is_err());
+        assert!(Config::parse(&text.replace(
+            "[storage.s3]\n",
+            "[storage.s3]\nsecret_access_key = \"x\"\n"
+        ))
+        .is_err());
         for bad in [
-            S3Config { endpoint: "s3.example".into(), ..s3.clone() },
-            S3Config { bucket: " ".into(), ..s3.clone() },
-            S3Config { access_key_id: String::new(), ..s3.clone() },
-            S3Config { region: "us east".into(), ..s3.clone() },
+            S3Config {
+                endpoint: "s3.example".into(),
+                ..s3.clone()
+            },
+            S3Config {
+                bucket: " ".into(),
+                ..s3.clone()
+            },
+            S3Config {
+                access_key_id: String::new(),
+                ..s3.clone()
+            },
+            S3Config {
+                region: "us east".into(),
+                ..s3.clone()
+            },
         ] {
             assert!(cfg.with_edits(&edit(Some(bad.clone()))).is_err(), "{bad:?}");
         }
         // A changed bucket restarts; turning S3 off is refused.
-        let moved = next.with_edits(&edit(Some(S3Config { bucket: "other".into(), ..s3 }))).unwrap();
+        let moved = next
+            .with_edits(&edit(Some(S3Config {
+                bucket: "other".into(),
+                ..s3
+            })))
+            .unwrap();
         assert!(next.needs_restart(&moved));
         let off = next.with_edits(&edit(None)).err().unwrap().to_string();
         assert!(off.contains("cannot be turned off"), "{off}");
@@ -1249,7 +1513,11 @@ tls = {{ mode = "local-ca" }}
     #[test]
     fn site_homepage_survives_save_and_reload_and_rejects_unsafe_values() {
         let cfg = Config::parse(&sample("")).unwrap();
-        assert_eq!(cfg.site.homepage, SiteHomepage::default(), "an old file starts without curation");
+        assert_eq!(
+            cfg.site.homepage,
+            SiteHomepage::default(),
+            "an old file starts without curation"
+        );
         assert_eq!(
             cfg.public_json()["site"]["homepage"],
             serde_json::json!({ "intro": "", "featuredText": "", "links": [], "action": null })
@@ -1265,12 +1533,18 @@ tls = {{ mode = "local-ca" }}
             signer_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
-            site: Site { homepage, ..Site::default() },
+            site: Site {
+                homepage,
+                ..Site::default()
+            },
             mirror: Mirror::default(),
             site_hosting: SiteHosting::Instance,
             nsite: NsiteSettings::default(),
         };
-        let link = |label: &str, url: &str| HomepageLink { label: label.into(), url: url.into() };
+        let link = |label: &str, url: &str| HomepageLink {
+            label: label.into(),
+            url: url.into(),
+        };
         let valid = SiteHomepage {
             intro: "Hallo — ".repeat(250),
             featured_text: "Start here".into(),
@@ -1282,24 +1556,69 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.site.homepage, valid);
         let json = reloaded.public_json();
         assert_eq!(json["site"]["homepage"]["featuredText"], "Start here");
-        assert_eq!(json["site"]["homepage"]["action"], serde_json::json!({ "label": "Contact", "url": "https://example.org/contact" }));
+        assert_eq!(
+            json["site"]["homepage"]["action"],
+            serde_json::json!({ "label": "Contact", "url": "https://example.org/contact" })
+        );
 
         let bad: Vec<SiteHomepage> = vec![
-            SiteHomepage { intro: "x".repeat(2001), ..valid.clone() },
-            SiteHomepage { featured_text: "x".repeat(501), ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "https://a.example"); 6], ..valid.clone() },
-            SiteHomepage { links: vec![link("  ", "https://a.example")], ..valid.clone() },
-            SiteHomepage { links: vec![link(&"x".repeat(81), "https://a.example")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "javascript:alert(1)")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "http://a.example")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "/relative")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "https://user:pw@a.example")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", "https://a.example/a b")], ..valid.clone() },
-            SiteHomepage { links: vec![link("x", &format!("https://a.example/{}", "p".repeat(2048)))], ..valid.clone() },
-            SiteHomepage { action: Some(link("x", "mailto:me@a.example")), ..valid.clone() },
+            SiteHomepage {
+                intro: "x".repeat(2001),
+                ..valid.clone()
+            },
+            SiteHomepage {
+                featured_text: "x".repeat(501),
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "https://a.example"); 6],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("  ", "https://a.example")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link(&"x".repeat(81), "https://a.example")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "javascript:alert(1)")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "http://a.example")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "/relative")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "https://user:pw@a.example")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link("x", "https://a.example/a b")],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                links: vec![link(
+                    "x",
+                    &format!("https://a.example/{}", "p".repeat(2048)),
+                )],
+                ..valid.clone()
+            },
+            SiteHomepage {
+                action: Some(link("x", "mailto:me@a.example")),
+                ..valid.clone()
+            },
         ];
         for homepage in bad {
-            assert!(cfg.with_edits(&edit(homepage.clone())).is_err(), "{homepage:?}");
+            assert!(
+                cfg.with_edits(&edit(homepage.clone())).is_err(),
+                "{homepage:?}"
+            );
         }
         assert!(Config::parse(&sample("[site.homepage]\nfeatured = \"nope\"\n")).is_err());
         assert!(Config::parse(&sample("[site.homepage]\nunknown = 1\n")).is_err());
@@ -1308,8 +1627,14 @@ tls = {{ mode = "local-ca" }}
     #[test]
     fn site_pages_are_per_language_empty_by_default_and_round_trip_through_toml() {
         let cfg = Config::parse(&sample("")).unwrap();
-        assert_eq!(cfg.public_json()["site"]["pages"], serde_json::json!({ "about": {}, "imprint": {}, "privacy": {} }));
-        assert!(!cfg.to_toml().unwrap().contains("pages.about"), "empty pages add no tables to the file");
+        assert_eq!(
+            cfg.public_json()["site"]["pages"],
+            serde_json::json!({ "about": {}, "imprint": {}, "privacy": {} })
+        );
+        assert!(
+            !cfg.to_toml().unwrap().contains("pages.about"),
+            "empty pages add no tables to the file"
+        );
 
         let cfg = Config::parse(&sample(
             "[site.pages.imprint]\nde = \"Zeile 1\\n\\nZeile 2\"\nen = \"Line 1\"\n[site.pages.about]\nfr = \"À propos\"\n",
@@ -1318,7 +1643,10 @@ tls = {{ mode = "local-ca" }}
         let json = cfg.public_json();
         assert_eq!(json["site"]["pages"]["imprint"]["de"], "Zeile 1\n\nZeile 2");
         assert_eq!(json["site"]["pages"]["about"]["fr"], "À propos");
-        assert_eq!(Config::parse(&cfg.to_toml().unwrap()).unwrap().site.pages, cfg.site.pages);
+        assert_eq!(
+            Config::parse(&cfg.to_toml().unwrap()).unwrap().site.pages,
+            cfg.site.pages
+        );
 
         for bad in [
             "[site.pages.about]\ndeu = \"x\"\n",
@@ -1328,16 +1656,28 @@ tls = {{ mode = "local-ca" }}
         ] {
             assert!(Config::parse(&sample(bad)).is_err(), "{bad}");
         }
-        let too_long = format!("[site.pages.about]\nde = \"{}\"\n", "x".repeat(PAGE_MAX_CHARS + 1));
+        let too_long = format!(
+            "[site.pages.about]\nde = \"{}\"\n",
+            "x".repeat(PAGE_MAX_CHARS + 1)
+        );
         assert!(Config::parse(&sample(&too_long)).is_err());
-        let at_limit = format!("[site.pages.about]\nde = \"{}\"\n", "ä".repeat(PAGE_MAX_CHARS));
-        assert!(Config::parse(&sample(&at_limit)).is_ok(), "the limit counts characters, not bytes");
+        let at_limit = format!(
+            "[site.pages.about]\nde = \"{}\"\n",
+            "ä".repeat(PAGE_MAX_CHARS)
+        );
+        assert!(
+            Config::parse(&sample(&at_limit)).is_ok(),
+            "the limit counts characters, not bytes"
+        );
     }
 
     #[test]
     fn site_links_have_defaults_and_must_be_https_templates() {
         let cfg = Config::parse(&sample("")).unwrap();
-        assert_eq!(cfg.public_json()["site"]["links"]["video"], "https://nostu.be/v/{nip19}");
+        assert_eq!(
+            cfg.public_json()["site"]["links"]["video"],
+            "https://nostu.be/v/{nip19}"
+        );
         let custom = Config::parse(&sample(
             "[site.links]\nprofile = \"https://example.org/p/{nip19}\"\nvideo = \"https://example.org/v/{nip19}\"\nnote = \"https://example.org/n/{nip19}\"\n",
         ))
@@ -1350,13 +1690,20 @@ tls = {{ mode = "local-ca" }}
             "profile = \"\"",
             "other = \"https://example.org/{nip19}\"",
         ] {
-            assert!(Config::parse(&sample(&format!("[site.links]\n{bad}\n"))).is_err(), "{bad}");
+            assert!(
+                Config::parse(&sample(&format!("[site.links]\n{bad}\n"))).is_err(),
+                "{bad}"
+            );
         }
     }
 
     #[test]
     fn a_proxy_config_parses_and_the_default_has_no_port_in_its_relay_urls() {
-        let cfg = Config::parse(&sample("").replace("tls = { mode = \"local-ca\" }", "tls = { mode = \"proxy\" }")).unwrap();
+        let cfg = Config::parse(&sample("").replace(
+            "tls = { mode = \"local-ca\" }",
+            "tls = { mode = \"proxy\" }",
+        ))
+        .unwrap();
         assert!(matches!(cfg.tls, Tls::Proxy { port: 8080 }));
         let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
         assert!(matches!(again.tls, Tls::Proxy { port: 8080 }));
@@ -1370,7 +1717,9 @@ tls = {{ mode = "local-ca" }}
         assert!(Config::parse(&first.to_toml().unwrap()).is_ok());
         // An origin on a port keeps it in the relay URL.
         assert_eq!(
-            Config::default_for_proxy("https://videos.example.org:8443", 8080).unwrap().video_sources,
+            Config::default_for_proxy("https://videos.example.org:8443", 8080)
+                .unwrap()
+                .video_sources,
             vec!["wss://videos.example.org:8443"]
         );
         // A plain HTTP origin (a FIPS mesh node) gets a plain ws relay on the same authority and,
@@ -1380,22 +1729,42 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(http.origin_host, "npub.fips");
         assert_eq!(http.video_sources, vec!["ws://npub.fips:8080"]);
         assert_eq!(http.interaction_relays, vec!["ws://npub.fips:8080"]);
-        assert_eq!(http.public_json()["videoSources"], serde_json::json!(["ws://npub.fips:8080"]), "private");
+        assert_eq!(
+            http.public_json()["videoSources"],
+            serde_json::json!(["ws://npub.fips:8080"]),
+            "private"
+        );
         http.reach = Reach::Public;
         let again = Config::parse(&http.to_toml().unwrap()).unwrap();
-        assert_eq!((again.origin.as_str(), again.instance_relay()), ("http://npub.fips:8080", "ws://npub.fips:8080".into()));
+        assert_eq!(
+            (again.origin.as_str(), again.instance_relay()),
+            ("http://npub.fips:8080", "ws://npub.fips:8080".into())
+        );
         assert_eq!(again.reach, Reach::Public);
         assert!(again.origin_is_public() && again.can_be_public());
         let json = again.public_json();
         assert_eq!(json["origin"], "http://npub.fips:8080");
         assert_eq!(json["originIsPublic"], true);
-        assert_eq!(json["videoSources"], serde_json::json!(["ws://npub.fips:8080"]));
-        assert_eq!(json["interactionRelays"], serde_json::json!(["ws://npub.fips:8080"]));
+        assert_eq!(
+            json["videoSources"],
+            serde_json::json!(["ws://npub.fips:8080"])
+        );
+        assert_eq!(
+            json["interactionRelays"],
+            serde_json::json!(["ws://npub.fips:8080"])
+        );
     }
 
     #[test]
     fn a_proxy_origin_must_be_http_or_https_without_a_path() {
-        for bad in ["videos.example.org", "https://videos.example.org/app", "http://videos.example.org/app", "https://", "http://", "ws://videos.example.org"] {
+        for bad in [
+            "videos.example.org",
+            "https://videos.example.org/app",
+            "http://videos.example.org/app",
+            "https://",
+            "http://",
+            "ws://videos.example.org",
+        ] {
             assert!(Config::default_for_proxy(bad, 8080).is_err(), "{bad}");
         }
     }
@@ -1403,7 +1772,10 @@ tls = {{ mode = "local-ca" }}
     fn public_sample(extra: &str) -> String {
         sample(extra)
             .replace("https://flox-mac.local\"", "https://videos.example.org\"")
-            .replace("tls = { mode = \"local-ca\" }", "tls = { mode = \"proxy\" }")
+            .replace(
+                "tls = { mode = \"local-ca\" }",
+                "tls = { mode = \"proxy\" }",
+            )
     }
 
     #[test]
@@ -1413,41 +1785,88 @@ tls = {{ mode = "local-ca" }}
         assert!(cfg.to_toml().unwrap().contains("reach = \"private\""));
         let public = Config::parse(&public_sample("reach = \"public\"\n")).unwrap();
         assert_eq!(public.reach, Reach::Public);
-        assert_eq!(Config::parse(&public.to_toml().unwrap()).unwrap().reach, Reach::Public);
+        assert_eq!(
+            Config::parse(&public.to_toml().unwrap()).unwrap().reach,
+            Reach::Public
+        );
         assert!(Config::parse(&sample("reach = \"open\"\n")).is_err());
     }
 
     #[test]
     fn private_reach_narrows_catalog_and_interactions_to_the_instance_relay() {
-        let text = public_sample("profile_relays = [\"wss://indexer.example\"]\n")
-            .replace("interaction_relays = []", "interaction_relays = [\"wss://comments.example\"]");
+        let text = public_sample("profile_relays = [\"wss://indexer.example\"]\n").replace(
+            "interaction_relays = []",
+            "interaction_relays = [\"wss://comments.example\"]",
+        );
         let private = Config::parse(&text).unwrap();
         let json = private.public_json();
         assert_eq!(json["reach"], "private");
-        assert_eq!(json["videoSources"], serde_json::json!(["wss://videos.example.org"]));
-        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://videos.example.org"]));
-        assert_eq!(json["profileRelays"], serde_json::json!(["wss://indexer.example"]), "visitor lookup in both reaches");
+        assert_eq!(
+            json["videoSources"],
+            serde_json::json!(["wss://videos.example.org"])
+        );
+        assert_eq!(
+            json["interactionRelays"],
+            serde_json::json!(["wss://videos.example.org"])
+        );
+        assert_eq!(
+            json["profileRelays"],
+            serde_json::json!(["wss://indexer.example"]),
+            "visitor lookup in both reaches"
+        );
         // Enforced, not rewritten: the stored lists survive for a switch to public.
         assert_eq!(private.interaction_relays, vec!["wss://comments.example"]);
-        assert_eq!(Config::parse(&private.to_toml().unwrap()).unwrap().profile_relays, vec!["wss://indexer.example"]);
+        assert_eq!(
+            Config::parse(&private.to_toml().unwrap())
+                .unwrap()
+                .profile_relays,
+            vec!["wss://indexer.example"]
+        );
 
         let public = Config::parse(&format!("{text}reach = \"public\"\n")).unwrap();
         let json = public.public_json();
         assert_eq!(json["reach"], "public");
-        assert_eq!(json["videoSources"], serde_json::json!(["wss://videos.example.org"]));
-        assert_eq!(json["interactionRelays"], serde_json::json!(["wss://videos.example.org", "wss://comments.example"]));
-        assert_eq!(json["profileRelays"], serde_json::json!(["wss://indexer.example"]));
+        assert_eq!(
+            json["videoSources"],
+            serde_json::json!(["wss://videos.example.org"])
+        );
+        assert_eq!(
+            json["interactionRelays"],
+            serde_json::json!(["wss://videos.example.org", "wss://comments.example"])
+        );
+        assert_eq!(
+            json["profileRelays"],
+            serde_json::json!(["wss://indexer.example"])
+        );
     }
 
     #[test]
     fn public_reach_needs_a_publicly_reachable_origin() {
         let proxy = Tls::Proxy { port: 8080 };
         assert!(origin_is_public(&proxy, "videos.example.org"));
-        assert!(!origin_is_public(&Tls::LocalCa { router_name: None, https_port: 443, http_port: 80 }, "videos.example.org"));
-        for host in ["flox-mac.local", "Flox-Mac.LOCAL", "192.168.1.5", "fd00::1", "localhost", "studio", "studio.localhost"] {
+        assert!(!origin_is_public(
+            &Tls::LocalCa {
+                router_name: None,
+                https_port: 443,
+                http_port: 80
+            },
+            "videos.example.org"
+        ));
+        for host in [
+            "flox-mac.local",
+            "Flox-Mac.LOCAL",
+            "192.168.1.5",
+            "fd00::1",
+            "localhost",
+            "studio",
+            "studio.localhost",
+        ] {
             assert!(!origin_is_public(&proxy, host), "{host}");
         }
-        assert!(Config::parse(&sample("reach = \"public\"\n")).is_err(), "local-ca cannot be public");
+        assert!(
+            Config::parse(&sample("reach = \"public\"\n")).is_err(),
+            "local-ca cannot be public"
+        );
         let local = Config::parse(&sample("")).unwrap();
         assert!(!local.can_be_public());
         assert!(Config::parse(&public_sample("")).unwrap().can_be_public());
@@ -1475,41 +1894,99 @@ tls = {{ mode = "local-ca" }}
     fn mirror_only_public_reach_requires_both_public_mirrors_and_filters_every_list() {
         let mut cfg = Config::default_for("tube.local", 443, 80);
         cfg.reach = Reach::Public;
-        cfg.mirror.relays = vec!["ws://localhost:9000".into(), "wss://relay.example".into(), "wss://relay.example/".into()];
-        assert!(cfg.check_reach().unwrap_err().to_string().contains("mirror Blossom"));
+        cfg.mirror.relays = vec![
+            "ws://localhost:9000".into(),
+            "wss://relay.example".into(),
+            "wss://relay.example/".into(),
+        ];
+        assert!(cfg
+            .check_reach()
+            .unwrap_err()
+            .to_string()
+            .contains("mirror Blossom"));
         cfg.mirror.blossom = vec!["https://blob.local".into()];
         assert!(!cfg.can_be_public());
         cfg.mirror.blossom.push("http://blobs.example".into());
         assert!(cfg.check_reach().is_ok());
         assert!(!cfg.origin_is_public());
-        cfg.video_sources.extend(["ws://single-label".into(), "wss://videos.example".into()]);
-        cfg.interaction_relays.push("wss://comments.localhost".into());
+        cfg.video_sources
+            .extend(["ws://single-label".into(), "wss://videos.example".into()]);
+        cfg.interaction_relays
+            .push("wss://comments.localhost".into());
         cfg.profile_relays.push("wss://indexer.local".into());
         let public = cfg.public_json();
-        assert_eq!(public["videoSources"], serde_json::json!(["wss://videos.example", "wss://relay.example"]));
-        assert_eq!(public["interactionRelays"], serde_json::json!(["wss://relay.example"]));
-        assert_eq!(public["mirror"]["blossom"], serde_json::json!(["http://blobs.example"]));
-        assert!(!public["profileRelays"].as_array().unwrap().iter().any(|v| v == "wss://indexer.local"));
-        assert!(Config::parse(&cfg.to_toml().unwrap()).unwrap().can_be_public());
+        assert_eq!(
+            public["videoSources"],
+            serde_json::json!(["wss://videos.example", "wss://relay.example"])
+        );
+        assert_eq!(
+            public["interactionRelays"],
+            serde_json::json!(["wss://relay.example"])
+        );
+        assert_eq!(
+            public["mirror"]["blossom"],
+            serde_json::json!(["http://blobs.example"])
+        );
+        assert!(!public["profileRelays"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v == "wss://indexer.local"));
+        assert!(Config::parse(&cfg.to_toml().unwrap())
+            .unwrap()
+            .can_be_public());
 
         cfg.origin = "https://tube.example".into();
         cfg.origin_host = "tube.example".into();
         cfg.tls = Tls::Proxy { port: 8080 };
         let public = cfg.public_json();
-        assert_eq!(public["videoSources"], serde_json::json!(["wss://tube.example", "wss://videos.example", "wss://relay.example"]));
-        assert_eq!(public["interactionRelays"], serde_json::json!(["wss://tube.example", "wss://relay.example"]));
+        assert_eq!(
+            public["videoSources"],
+            serde_json::json!([
+                "wss://tube.example",
+                "wss://videos.example",
+                "wss://relay.example"
+            ])
+        );
+        assert_eq!(
+            public["interactionRelays"],
+            serde_json::json!(["wss://tube.example", "wss://relay.example"])
+        );
     }
 
     #[test]
     fn public_url_names_and_nsite_hosts_reject_local_names() {
-        for host in ["localhost", "localhost.", "studio", "studio.localhost", "studio.LOCALHOST.", "studio.local", "127.0.0.1", "[::1]"] {
+        for host in [
+            "localhost",
+            "localhost.",
+            "studio",
+            "studio.localhost",
+            "studio.LOCALHOST.",
+            "studio.local",
+            "127.0.0.1",
+            "[::1]",
+        ] {
             assert!(!is_public_url(&format!("https://{host}")), "{host}");
         }
         assert!(is_public_url("http://blobs.127.0.0.1.nip.io:9000"));
         assert!(!is_public_url("ftp://blobs.example"));
         assert!(!is_public_url("https://user:secret@blobs.example"));
-        for host in ["nsite.local", "nsite.localhost", "localhost", "https://nsite.lol", "nsite.lol/path", "nsite.lol:443"] {
-            assert!(check_nsite(&NsiteSettings { gateway: host.into(), domain: String::new() }).is_err(), "{host}");
+        for host in [
+            "nsite.local",
+            "nsite.localhost",
+            "localhost",
+            "https://nsite.lol",
+            "nsite.lol/path",
+            "nsite.lol:443",
+        ] {
+            assert!(
+                check_nsite(&NsiteSettings {
+                    gateway: host.into(),
+                    domain: String::new()
+                })
+                .is_err(),
+                "{host}"
+            );
         }
     }
 
@@ -1517,7 +1994,10 @@ tls = {{ mode = "local-ca" }}
     fn a_local_ca_origin_cannot_count_its_own_endpoints_as_public_mirrors() {
         let mut cfg = Config::default_for("tube.example", 443, 80);
         cfg.reach = Reach::Public;
-        cfg.mirror = Mirror { relays: vec!["wss://tube.example/".into()], blossom: vec!["https://tube.example/".into()] };
+        cfg.mirror = Mirror {
+            relays: vec!["wss://tube.example/".into()],
+            blossom: vec!["https://tube.example/".into()],
+        };
         assert!(!cfg.can_be_public());
         assert!(cfg.public_mirror().is_off());
     }

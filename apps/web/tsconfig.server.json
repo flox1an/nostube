@@ -2,9 +2,10 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023"],
-    "module": "nodenext",
+    "types": ["node"],
+    "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,

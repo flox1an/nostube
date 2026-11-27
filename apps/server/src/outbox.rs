@@ -7,7 +7,15 @@
 //! Delivery is idempotent on the target side (a relay answers `duplicate`, a Blossom server
 //! keeps one copy per hash), so a job that is interrupted is simply delivered again.
 
-use std::{collections::HashSet, path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{
+    collections::HashSet,
+    path::Path,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 use axum::{
     body::Body,
@@ -122,15 +130,21 @@ const PROBLEMS: i64 = 50;
 pub(crate) static MEDIA_LIFECYCLE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
-    let existing: Option<String> = conn.query_row(
-        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'", [], |r| r.get(0),
-    ).optional()?;
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
     let unmarked: bool = conn.query_row(
         "SELECT NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_retain')", [], |r| r.get(0),
     )?;
     if existing.is_some_and(|sql| !sql.contains("'cleanup'")) {
         let tx = conn.unchecked_transaction()?;
-        tx.execute_batch("DROP INDEX IF EXISTS outbox_due; ALTER TABLE outbox RENAME TO outbox_old;")?;
+        tx.execute_batch(
+            "DROP INDEX IF EXISTS outbox_due; ALTER TABLE outbox RENAME TO outbox_old;",
+        )?;
         tx.execute_batch(SCHEMA)?;
         tx.execute_batch("INSERT INTO outbox SELECT * FROM outbox_old; DROP TABLE outbox_old;")?;
         tx.commit()?;
@@ -153,7 +167,9 @@ pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
 
 /// Queued inside the accepted event transaction; ownership is proved by the worker.
 pub(crate) fn enqueue_cleanup(
-    conn: &Connection, author: &nostr::prelude::PublicKey, hash: &str,
+    conn: &Connection,
+    author: &nostr::prelude::PublicKey,
+    hash: &str,
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO outbox (kind,target,ref_id,next_attempt_at,created_at,updated_at)
@@ -175,14 +191,20 @@ pub fn is_mirror_delivery(headers: &HeaderMap) -> bool {
 
 /// Inside `persist`'s transaction: one job per mirror relay for a newly stored event. A replay
 /// of the same event adds nothing (`UNIQUE (kind, target, ref_id)`).
-pub(crate) fn enqueue_event(conn: &Connection, targets: &[String], id: &EventId) -> rusqlite::Result<()> {
+pub(crate) fn enqueue_event(
+    conn: &Connection,
+    targets: &[String],
+    id: &EventId,
+) -> rusqlite::Result<()> {
     let now = now();
     let mut add = conn.prepare_cached(
         "INSERT OR IGNORE INTO outbox (kind, target, ref_id, next_attempt_at, created_at, updated_at)
          VALUES ('event', ?1, ?2, ?3, ?3, ?3)",
     )?;
     for target in targets {
-        if crate::config::is_retired_relay(target) { continue; }
+        if crate::config::is_retired_relay(target) {
+            continue;
+        }
         add.execute(params![target, id.to_hex(), now])?;
     }
     Ok(())
@@ -190,7 +212,13 @@ pub(crate) fn enqueue_event(conn: &Connection, targets: &[String], id: &EventId)
 
 /// One blob job per target. A confirmed copy stays as it is; a failed or canceled job starts
 /// over; a pending one keeps going.
-fn enqueue_blob(conn: &Connection, targets: &[String], hash: &str, size: u64, source_url: &str) -> rusqlite::Result<()> {
+fn enqueue_blob(
+    conn: &Connection,
+    targets: &[String],
+    hash: &str,
+    size: u64,
+    source_url: &str,
+) -> rusqlite::Result<()> {
     let now = now();
     let mut add = conn.prepare_cached(
         "INSERT INTO outbox (kind, target, ref_id, size, source_url, next_attempt_at, created_at, updated_at)
@@ -208,7 +236,11 @@ fn enqueue_blob(conn: &Connection, targets: &[String], hash: &str, size: u64, so
 
 /// Closes every blob job of `hash` without a confirmed copy, then a BUD-02 `DELETE` job per
 /// target. Answers the delete jobs' ids.
-fn enqueue_deletes(conn: &Connection, targets: &[String], hash: &str) -> rusqlite::Result<Vec<i64>> {
+fn enqueue_deletes(
+    conn: &Connection,
+    targets: &[String],
+    hash: &str,
+) -> rusqlite::Result<Vec<i64>> {
     let now = now();
     conn.execute(
         "UPDATE outbox SET status='done', last_error=?1, updated_at=?2 WHERE kind='blob' AND ref_id=?3",
@@ -221,7 +253,10 @@ fn enqueue_deletes(conn: &Connection, targets: &[String], hash: &str) -> rusqlit
          next_attempt_at=excluded.next_attempt_at,last_error=NULL,updated_at=excluded.updated_at
          RETURNING id",
     )?;
-    targets.iter().map(|target| add.query_row(params![target, hash, now], |r| r.get(0))).collect()
+    targets
+        .iter()
+        .map(|target| add.query_row(params![target, hash, now], |r| r.get(0)))
+        .collect()
 }
 
 fn now() -> i64 {
@@ -248,7 +283,9 @@ fn runnable(targets: usize, indexers: usize) -> String {
 /// most `BACKOFF_CAP`, scaled into [½, 1] of that by `jitter` ∈ [0, 1) so that jobs failing
 /// together do not all come back at the same second.
 fn backoff(attempt: u32, jitter: f64) -> u64 {
-    let full = BACKOFF_BASE.saturating_mul(1 << attempt.saturating_sub(1).min(20)).min(BACKOFF_CAP);
+    let full = BACKOFF_BASE
+        .saturating_mul(1 << attempt.saturating_sub(1).min(20))
+        .min(BACKOFF_CAP);
     full / 2 + (full as f64 / 2.0 * jitter) as u64
 }
 
@@ -291,17 +328,34 @@ impl Outbox {
     pub fn open(db: &Path, mirror: Mirror) -> rusqlite::Result<Outbox> {
         let conn = crate::relay::connect(db)?;
         initialize(&conn)?;
-        conn.execute("INSERT OR IGNORE INTO outbox_indexer VALUES ('wss://purplepag.es')", [])?;
+        conn.execute(
+            "INSERT OR IGNORE INTO outbox_indexer VALUES ('wss://purplepag.es')",
+            [],
+        )?;
         {
             let mut stmt = conn.prepare("SELECT DISTINCT target FROM outbox WHERE kind='event'")?;
-            let targets = stmt.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-            for target in targets.into_iter().filter(|target| crate::config::is_retired_relay(target)) {
-                conn.execute("DELETE FROM outbox_forced WHERE job IN (SELECT id FROM outbox WHERE target=?)", [&target])?;
-                conn.execute("DELETE FROM outbox WHERE kind='event' AND target=?", [&target])?;
+            let targets = stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            for target in targets
+                .into_iter()
+                .filter(|target| crate::config::is_retired_relay(target))
+            {
+                conn.execute(
+                    "DELETE FROM outbox_forced WHERE job IN (SELECT id FROM outbox WHERE target=?)",
+                    [&target],
+                )?;
+                conn.execute(
+                    "DELETE FROM outbox WHERE kind='event' AND target=?",
+                    [&target],
+                )?;
             }
         }
         Ok(Outbox(Arc::new(Inner {
-            conn: Mutex::new(conn), mirror, indexers: Default::default(), storage: parking_lot::RwLock::new(None),
+            conn: Mutex::new(conn),
+            mirror,
+            indexers: Default::default(),
+            storage: parking_lot::RwLock::new(None),
             origin_public: AtomicBool::new(true),
             migration: Default::default(),
         })))
@@ -316,7 +370,11 @@ impl Outbox {
     }
 
     pub(crate) fn moving_blob(&self, hash: Option<&str>) -> bool {
-        self.0.migration.read().as_ref().is_some_and(|migration| migration.moving(hash))
+        self.0
+            .migration
+            .read()
+            .as_ref()
+            .is_some_and(|migration| migration.moving(hash))
     }
 
     pub fn set_origin_public(&self, public: bool) {
@@ -327,11 +385,19 @@ impl Outbox {
         self.0.mirror.clone()
     }
 
-    pub async fn queue_blob(&self, hash: String, size: u64, source_url: String) -> Result<(), String> {
+    pub async fn queue_blob(
+        &self,
+        hash: String,
+        size: u64,
+        source_url: String,
+    ) -> Result<(), String> {
         almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
-        if size > i64::MAX as u64 { return Err("blob size exceeds database range".into()); }
+        if size > i64::MAX as u64 {
+            return Err("blob size exceeds database range".into());
+        }
         let targets = self.0.mirror.blossom.clone();
-        self.db(move |conn| enqueue_blob(conn, &targets, &hash, size, &source_url)).await
+        self.db(move |conn| enqueue_blob(conn, &targets, &hash, size, &source_url))
+            .await
     }
 
     /// Confirmed copies on current targets only; canceled jobs are not copies.
@@ -357,23 +423,38 @@ impl Outbox {
 
     pub async fn retain(&self, scope: &str, hashes: Vec<String>) -> Result<(), String> {
         for hash in &hashes {
-            almond::services::file_storage::validate_sha256_format(hash).map_err(|e| e.to_string())?;
+            almond::services::file_storage::validate_sha256_format(hash)
+                .map_err(|e| e.to_string())?;
         }
         let _guard = MEDIA_LIFECYCLE.lock().await;
         let scope = scope.to_owned();
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
             tx.execute("DELETE FROM outbox_retain WHERE owner=?", [&scope])?;
-            for hash in hashes { tx.execute("INSERT OR IGNORE INTO outbox_retain VALUES (?,?)", params![scope, hash])?; }
+            for hash in hashes {
+                tx.execute(
+                    "INSERT OR IGNORE INTO outbox_retain VALUES (?,?)",
+                    params![scope, hash],
+                )?;
+            }
             tx.commit()
-        }).await
+        })
+        .await
     }
 
-    pub async fn store_local(&self, bytes: &[u8], mime: &str, ext: &str, owner: &str) -> Result<(String, u64), String> {
+    pub async fn store_local(
+        &self,
+        bytes: &[u8],
+        mime: &str,
+        ext: &str,
+        owner: &str,
+    ) -> Result<(String, u64), String> {
         let owner = nostr::prelude::PublicKey::from_hex(owner).map_err(|e| e.to_string())?;
         let _guard = MEDIA_LIFECYCLE.lock().await;
         let state = storage(self)?;
-        let hash = crate::branding::store_blob(&state, bytes, mime, (!ext.is_empty()).then_some(ext)).await?;
+        let hash =
+            crate::branding::store_blob(&state, bytes, mime, (!ext.is_empty()).then_some(ext))
+                .await?;
         self.record_owner(hash.clone(), owner, false).await?;
         Ok((hash, bytes.len() as u64))
     }
@@ -383,14 +464,21 @@ impl Outbox {
         let targets = self.0.mirror.blossom.clone();
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
-            tx.execute("INSERT OR IGNORE INTO outbox_explicit (event_id) VALUES (?)", [event.to_hex()])?;
+            tx.execute(
+                "INSERT OR IGNORE INTO outbox_explicit (event_id) VALUES (?)",
+                [event.to_hex()],
+            )?;
             for hash in hashes {
                 for target in &targets {
-                    tx.execute("INSERT OR IGNORE INTO outbox_requires VALUES (?,?,?)", params![event.to_hex(), hash, target])?;
+                    tx.execute(
+                        "INSERT OR IGNORE INTO outbox_requires VALUES (?,?,?)",
+                        params![event.to_hex(), hash, target],
+                    )?;
                 }
             }
             tx.commit()
-        }).await
+        })
+        .await
     }
 
     /// Explicit owner-authorized targets stay eligible after removal from mirror configuration.
@@ -421,7 +509,7 @@ impl Outbox {
                        AND target NOT IN (SELECT target FROM outbox_event_target WHERE event_id=?3)",
                     params![CANCELED, now(), id.to_hex()],
                 )?;
-                enqueue_event(&tx, &targets, &id)?;
+                enqueue_event(&tx, targets, &id)?;
                 for target in targets {
                     tx.execute("INSERT OR IGNORE INTO outbox_forced SELECT id FROM outbox WHERE kind='event' AND target=? AND ref_id=?", params![target, id.to_hex()])?;
                 }
@@ -455,40 +543,67 @@ impl Outbox {
         }).await
     }
 
-    pub async fn delete_blobs(&self, hash: String, owner: String, targets: Vec<String>) -> Result<(), String> {
+    pub async fn delete_blobs(
+        &self,
+        hash: String,
+        owner: String,
+        targets: Vec<String>,
+    ) -> Result<(), String> {
         almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
         let author = nostr::prelude::PublicKey::from_hex(&owner).map_err(|e| e.to_string())?;
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
             for target in targets {
-                tx.execute("INSERT OR IGNORE INTO outbox_delete_target VALUES (?,?)", params![hash, target])?;
+                tx.execute(
+                    "INSERT OR IGNORE INTO outbox_delete_target VALUES (?,?)",
+                    params![hash, target],
+                )?;
             }
             enqueue_cleanup(&tx, &author, &hash)?;
             tx.commit()
-        }).await
+        })
+        .await
     }
 
     /// May `author` delete the local blob `hash` (BUD-02 `DELETE`)? Only its owner (the recorded
     /// uploader, else Almond's indexed pubkey for blobs from before ownership was recorded), and
     /// only while no stored event, scheduled video or retained set uses it. Call it under
     /// `MEDIA_LIFECYCLE`.
-    pub async fn may_delete(&self, hash: String, author: nostr::prelude::PublicKey) -> Result<bool, String> {
+    pub async fn may_delete(
+        &self,
+        hash: String,
+        author: nostr::prelude::PublicKey,
+    ) -> Result<bool, String> {
         let key = hash.clone();
-        let recorded = self.db(move |conn| {
-            conn.query_row("SELECT author FROM blob_owner WHERE hash = ?", [key], |r| r.get::<_, String>(0)).optional()
-        }).await?;
+        let recorded = self
+            .db(move |conn| {
+                conn.query_row("SELECT author FROM blob_owner WHERE hash = ?", [key], |r| {
+                    r.get::<_, String>(0)
+                })
+                .optional()
+            })
+            .await?;
         let owner = match recorded {
             Some(owner) => Some(owner),
-            None => almond::services::file_storage::get_file_metadata(&storage(self)?, &hash).await
-                .and_then(|m| m.pubkey).map(|p| p.to_hex()),
+            None => almond::services::file_storage::get_file_metadata(&storage(self)?, &hash)
+                .await
+                .and_then(|m| m.pubkey)
+                .map(|p| p.to_hex()),
         };
-        if owner.as_deref() != Some(author.to_hex().as_str()) { return Ok(false); }
+        if owner.as_deref() != Some(author.to_hex().as_str()) {
+            return Ok(false);
+        }
         Ok(!retained_hashes(self).await?.contains(&hash))
     }
 
     /// Only profile metadata, relay lists and Blossom lists may go to indexers, including old
     /// mirror jobs and explicit deliveries. Remember indexer targets across private reach/restarts.
-    pub async fn announce(&self, indexers: Vec<String>, ids: Vec<EventId>, public: bool) -> Result<(), String> {
+    pub async fn announce(
+        &self,
+        indexers: Vec<String>,
+        ids: Vec<EventId>,
+        public: bool,
+    ) -> Result<(), String> {
         *self.0.indexers.write() = if public { indexers.clone() } else { vec![] };
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
@@ -514,7 +629,12 @@ impl Outbox {
     }
 
     /// Called only after Almond accepted an upload. Its index does not retain auth authors.
-    pub async fn record_owner(&self, hash: String, author: nostr::prelude::PublicKey, mirrored: bool) -> Result<(), String> {
+    pub async fn record_owner(
+        &self,
+        hash: String,
+        author: nostr::prelude::PublicKey,
+        mirrored: bool,
+    ) -> Result<(), String> {
         almond::services::file_storage::validate_sha256_format(&hash).map_err(|e| e.to_string())?;
         self.db(move |conn| {
             let tx = conn.unchecked_transaction()?;
@@ -686,7 +806,9 @@ impl Outbox {
 
     /// Current mirror jobs for the specific files the studio is waiting for.
     pub async fn media_jobs(&self, hashes: Vec<String>) -> Result<Vec<serde_json::Value>, String> {
-        if hashes.is_empty() { return Ok(vec![]); }
+        if hashes.is_empty() {
+            return Ok(vec![]);
+        }
         let (targets, indexers) = self.targets();
         self.db(move |conn| {
             let marks = vec!["?"; hashes.len()].join(",");
@@ -712,7 +834,11 @@ impl Outbox {
     }
 
     /// `retry` limited to one event's failed jobs and the blob jobs of the media it references.
-    pub async fn retry_event(&self, event: EventId, target: Option<String>) -> Result<usize, String> {
+    pub async fn retry_event(
+        &self,
+        event: EventId,
+        target: Option<String>,
+    ) -> Result<usize, String> {
         self.db(move |conn| {
             conn.execute(
                 "UPDATE outbox SET status = 'pending', attempts = 0, next_attempt_at = ?1, last_error = NULL, updated_at = ?1
@@ -727,7 +853,14 @@ impl Outbox {
 
     /// Mirror targets, then the current indexers: the arguments of `runnable`'s placeholders.
     fn targets(&self) -> (Vec<String>, Vec<String>) {
-        let targets = self.0.mirror.relays.iter().chain(&self.0.mirror.blossom).cloned().collect();
+        let targets = self
+            .0
+            .mirror
+            .relays
+            .iter()
+            .chain(&self.0.mirror.blossom)
+            .cloned()
+            .collect();
         (targets, self.0.indexers.read().clone())
     }
 
@@ -772,8 +905,12 @@ impl Outbox {
     async fn event_json(&self, id: &str) -> Result<Option<String>, String> {
         let id = EventId::from_hex(id).map_err(|e| format!("broken event id: {e}"))?;
         self.db(move |conn| {
-            conn.query_row("SELECT content FROM event WHERE event_hash = ?", [id.as_bytes().as_slice()], |r| r.get(0))
-                .optional()
+            conn.query_row(
+                "SELECT content FROM event WHERE event_hash = ?",
+                [id.as_bytes().as_slice()],
+                |r| r.get(0),
+            )
+            .optional()
         })
         .await
     }
@@ -861,9 +998,13 @@ pub fn spawn(outbox: Outbox, keys: crate::signer::Shared) -> Option<tokio::task:
             };
             let mut started = 0;
             for job in jobs {
-                if started == free { break; }
+                if started == free {
+                    break;
+                }
                 let key = (job.target.clone(), job.ref_id.clone());
-                if !busy.insert(key.clone()) { continue; }
+                if !busy.insert(key.clone()) {
+                    continue;
+                }
                 started += 1;
                 let (outbox, keys, http) = (outbox.clone(), keys.clone(), http.clone());
                 running.spawn(async move {
@@ -879,21 +1020,39 @@ pub fn spawn(outbox: Outbox, keys: crate::signer::Shared) -> Option<tokio::task:
 /// retained check) runs under `MEDIA_LIFECYCLE`; the lock is released before any request to a
 /// mirror target, which may take up to `MIRROR_TIMEOUT`.
 async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Client, job: &Job) {
-    let media_guard = if job.kind != "event" { Some(MEDIA_LIFECYCLE.lock().await) } else { None };
+    let media_guard = if job.kind != "event" {
+        Some(MEDIA_LIFECYCLE.lock().await)
+    } else {
+        None
+    };
     // A selected job may have been canceled by cleanup (or superseded by an upload) since `due`.
     let id = job.id;
-    match outbox.db(move |conn| conn.query_row("SELECT status FROM outbox WHERE id = ?", [id], |r| r.get::<_, String>(0))).await {
+    match outbox
+        .db(move |conn| {
+            conn.query_row("SELECT status FROM outbox WHERE id = ?", [id], |r| {
+                r.get::<_, String>(0)
+            })
+        })
+        .await
+    {
         Ok(status) if status == "pending" => {}
         Ok(_) => return,
-        Err(e) => { outbox.record(job, Outcome::Retry(e)).await; return; }
+        Err(e) => {
+            outbox.record(job, Outcome::Retry(e)).await;
+            return;
+        }
     }
     let outcome = match job.kind.as_str() {
         "event" => match outbox.event_json(&job.ref_id).await {
-            Ok(Some(json)) => match tokio::time::timeout(RELAY_TIMEOUT, publish(&job.target, &json, &job.ref_id)).await {
-                Ok(Ok(())) => Outcome::Done,
-                Ok(Err(e)) => Outcome::Retry(e),
-                Err(_) => Outcome::Retry(format!("no OK within {} s", RELAY_TIMEOUT.as_secs())),
-            },
+            Ok(Some(json)) => {
+                match tokio::time::timeout(RELAY_TIMEOUT, publish(&job.target, &json, &job.ref_id))
+                    .await
+                {
+                    Ok(Ok(())) => Outcome::Done,
+                    Ok(Err(e)) => Outcome::Retry(e),
+                    Err(_) => Outcome::Retry(format!("no OK within {} s", RELAY_TIMEOUT.as_secs())),
+                }
+            }
             Ok(None) => Outcome::Done,
             Err(e) => Outcome::Retry(e),
         },
@@ -928,7 +1087,10 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
                 // Cleanup may remove the local blob while the target fetches it: the target then
                 // fails the fetch (a retry that `record` drops) or keeps a copy that the queued
                 // blob-delete removes after this job (`busy`).
-                let (size, url) = (job.size.unwrap_or_default() as u64, job.source_url.as_deref().unwrap_or_default());
+                let (size, url) = (
+                    job.size.unwrap_or_default() as u64,
+                    job.source_url.as_deref().unwrap_or_default(),
+                );
                 match mirror(outbox, http, &k, &job.target, &job.ref_id, size, url).await {
                     Ok(()) => Outcome::Done,
                     Err(e) => Outcome::Retry(e),
@@ -943,31 +1105,63 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
 }
 
 pub(crate) fn storage(outbox: &Outbox) -> Result<almond::models::AppState, String> {
-    outbox.0.storage.read().clone().ok_or_else(|| "local Blossom storage is unavailable".into())
+    outbox
+        .0
+        .storage
+        .read()
+        .clone()
+        .ok_or_else(|| "local Blossom storage is unavailable".into())
 }
 
 /// Walk only indexed local playlists. Read errors and excessive graphs are not absence.
-async fn media_tree(state: &almond::models::AppState, roots: HashSet<String>) -> Result<HashSet<String>, String> {
+async fn media_tree(
+    state: &almond::models::AppState,
+    roots: HashSet<String>,
+) -> Result<HashSet<String>, String> {
     use almond::services::{file_storage, hls};
     let mut seen = HashSet::new();
     let mut pending: Vec<_> = roots.into_iter().collect();
     while let Some(hash) = pending.pop() {
-        if !seen.insert(hash.clone()) { continue; }
-        if seen.len() > 1024 { return Err("local HLS graph exceeds 1024 blobs".into()); }
+        if !seen.insert(hash.clone()) {
+            continue;
+        }
+        if seen.len() > 1024 {
+            return Err("local HLS graph exceeds 1024 blobs".into());
+        }
         let location_read = crate::storage_move::local_read(state, &hash).await;
-        let Some(metadata) = file_storage::get_file_metadata(state, &hash).await else { continue };
+        let Some(metadata) = file_storage::get_file_metadata(state, &hash).await else {
+            continue;
+        };
         if metadata.extension.as_deref() != Some("m3u8")
-            && !metadata.mime_type.as_deref().is_some_and(hls::is_hls_playlist) { continue; }
-        if metadata.size > 1 << 20 { return Err(format!("local playlist {hash} exceeds 1 MiB")); }
-        let text = file_storage::read_text(state, &metadata).await
+            && !metadata
+                .mime_type
+                .as_deref()
+                .is_some_and(hls::is_hls_playlist)
+        {
+            continue;
+        }
+        if metadata.size > 1 << 20 {
+            return Err(format!("local playlist {hash} exceeds 1 MiB"));
+        }
+        let text = file_storage::read_text(state, &metadata)
+            .await
             .map_err(|e| format!("cannot read local playlist {hash}: {e}"))?;
         drop(location_read);
-        pending.extend(hls::parse_playlist_references(&text).into_iter().map(|r| r.sha256.to_ascii_lowercase()));
+        pending.extend(
+            hls::parse_playlist_references(&text)
+                .into_iter()
+                .map(|r| r.sha256.to_ascii_lowercase()),
+        );
         // Initialization segments and encryption keys use URI attributes on comment lines.
         for part in text.split("URI=\"").skip(1) {
             let value = part.split('"').next().unwrap_or_default();
-            let filename = nostr::prelude::Url::parse(value).ok()
-                .and_then(|url| url.path_segments().and_then(|mut p| p.next_back()).map(str::to_owned))
+            let filename = nostr::prelude::Url::parse(value)
+                .ok()
+                .and_then(|url| {
+                    url.path_segments()
+                        .and_then(|mut p| p.next_back())
+                        .map(str::to_owned)
+                })
                 .unwrap_or_else(|| value.to_owned());
             if let Some(hash) = file_storage::extract_sha256_from_filename(&filename) {
                 pending.push(hash.to_ascii_lowercase());
@@ -978,16 +1172,22 @@ async fn media_tree(state: &almond::models::AppState, roots: HashSet<String>) ->
 }
 
 async fn retained_hashes(outbox: &Outbox) -> Result<HashSet<String>, String> {
-    let roots = outbox.db(|conn| {
-        let mut stmt = conn.prepare("SELECT DISTINCT hash FROM media_ref")?;
-        let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
-        let mut roots = rows.collect::<rusqlite::Result<HashSet<_>>>()?;
-        // Scheduled videos are not in the relay yet, but their blobs must outlive any cleanup.
-        roots.extend(crate::schedule::pending_media(conn)?);
-        let mut retained = conn.prepare("SELECT DISTINCT hash FROM outbox_retain")?;
-        roots.extend(retained.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
-        Ok(roots)
-    }).await?;
+    let roots = outbox
+        .db(|conn| {
+            let mut stmt = conn.prepare("SELECT DISTINCT hash FROM media_ref")?;
+            let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
+            let mut roots = rows.collect::<rusqlite::Result<HashSet<_>>>()?;
+            // Scheduled videos are not in the relay yet, but their blobs must outlive any cleanup.
+            roots.extend(crate::schedule::pending_media(conn)?);
+            let mut retained = conn.prepare("SELECT DISTINCT hash FROM outbox_retain")?;
+            roots.extend(
+                retained
+                    .query_map([], |r| r.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?,
+            );
+            Ok(roots)
+        })
+        .await?;
     let state = outbox.0.storage.read().clone();
     match state {
         Some(state) => media_tree(&state, roots).await,
@@ -1002,59 +1202,113 @@ async fn cleanup(outbox: &Outbox, job: &Job) -> Result<(), Outcome> {
         return Err(Outcome::Retry("blob is being moved to S3".into()));
     }
     let retained = retained_hashes(outbox).await.map_err(Outcome::Retry)?;
-    if retained.contains(&job.ref_id) { return Ok(()); }
+    if retained.contains(&job.ref_id) {
+        return Ok(());
+    }
     let hash = job.ref_id.clone();
-    let owner = outbox.db(move |conn| {
-        conn.query_row("SELECT author, mirrored FROM blob_owner WHERE hash = ?", [hash],
-            |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?))).optional()
-    }).await.map_err(Outcome::Retry)?;
+    let owner = outbox
+        .db(move |conn| {
+            conn.query_row(
+                "SELECT author, mirrored FROM blob_owner WHERE hash = ?",
+                [hash],
+                |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)),
+            )
+            .optional()
+        })
+        .await
+        .map_err(Outcome::Retry)?;
     let Some((author, mirrored)) = owner else {
         // ponytail: Almond-mirrored HLS children have no owner and no cancel hook; they
         // stay as safe leaks until Almond exposes child ownership/cancellation.
-        return Err(Outcome::Fail("blob has no recorded owner; not deleting".into()));
+        return Err(Outcome::Fail(
+            "blob has no recorded owner; not deleting".into(),
+        ));
     };
     if author != job.target {
-        return Err(Outcome::Fail("blob owner differs from video author; not deleting".into()));
+        return Err(Outcome::Fail(
+            "blob owner differs from video author; not deleting".into(),
+        ));
     }
     let state = storage(outbox).map_err(Outcome::Retry)?;
     let metadata = file_storage::get_file_metadata(&state, &job.ref_id).await;
-    if metadata.as_ref().is_some_and(|m| m.pubkey.is_some_and(|owner| owner.to_hex() != author)) {
-        return Err(Outcome::Fail("indexed blob owner differs from video author; not deleting".into()));
+    if metadata
+        .as_ref()
+        .is_some_and(|m| m.pubkey.is_some_and(|owner| owner.to_hex() != author))
+    {
+        return Err(Outcome::Fail(
+            "indexed blob owner differs from video author; not deleting".into(),
+        ));
     }
-    let tree = media_tree(&state, HashSet::from([job.ref_id.clone()])).await.map_err(Outcome::Retry)?;
-    let descendants: Vec<_> = tree.difference(&retained).filter(|hash| *hash != &job.ref_id).cloned().collect();
-    let public_key = nostr::prelude::PublicKey::from_hex(&author).map_err(|e| Outcome::Fail(e.to_string()))?;
-    let targets = if mirrored { vec![] } else { outbox.0.mirror.blossom.clone() };
+    let tree = media_tree(&state, HashSet::from([job.ref_id.clone()]))
+        .await
+        .map_err(Outcome::Retry)?;
+    let descendants: Vec<_> = tree
+        .difference(&retained)
+        .filter(|hash| *hash != &job.ref_id)
+        .cloned()
+        .collect();
+    let public_key =
+        nostr::prelude::PublicKey::from_hex(&author).map_err(|e| Outcome::Fail(e.to_string()))?;
+    let targets = if mirrored {
+        vec![]
+    } else {
+        outbox.0.mirror.blossom.clone()
+    };
     let hash = job.ref_id.clone();
     // Persist children before removing their parent, and DELETE intents before touching bytes:
     // either crash point can be resumed without losing the playlist or the mirror work.
-    outbox.db(move |conn| {
-        let tx = conn.unchecked_transaction()?;
-        for child in descendants { enqueue_cleanup(&tx, &public_key, &child)?; }
-        let mut targets = targets;
-        let mut explicit = tx.prepare("SELECT target FROM outbox_delete_target WHERE hash=?")?;
-        let historical = explicit.query_map([&hash], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-        drop(explicit);
-        targets.extend(historical.iter().cloned());
-        targets.sort();
-        targets.dedup();
-        let ids = enqueue_deletes(&tx, &targets, &hash)?;
-        for (target, id) in targets.iter().zip(ids) {
-            if historical.contains(target) { tx.execute("INSERT OR IGNORE INTO outbox_forced VALUES (?)", [id])?; }
-        }
-        tx.commit()
-    }).await.map_err(Outcome::Retry)?;
+    outbox
+        .db(move |conn| {
+            let tx = conn.unchecked_transaction()?;
+            for child in descendants {
+                enqueue_cleanup(&tx, &public_key, &child)?;
+            }
+            let mut targets = targets;
+            let mut explicit =
+                tx.prepare("SELECT target FROM outbox_delete_target WHERE hash=?")?;
+            let historical = explicit
+                .query_map([&hash], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            drop(explicit);
+            targets.extend(historical.iter().cloned());
+            targets.sort();
+            targets.dedup();
+            let ids = enqueue_deletes(&tx, &targets, &hash)?;
+            for (target, id) in targets.iter().zip(ids) {
+                if historical.contains(target) {
+                    tx.execute("INSERT OR IGNORE INTO outbox_forced VALUES (?)", [id])?;
+                }
+            }
+            tx.commit()
+        })
+        .await
+        .map_err(Outcome::Retry)?;
     if let Some(metadata) = metadata {
-        let removed = file_storage::remove_indexed_blob(&state, &job.ref_id, Removal::Requested, Some(&metadata))
-            .await.map_err(|e| Outcome::Retry(format!("cannot remove local blob: {e}")))?;
-        if !removed && file_storage::get_file_metadata(&state, &job.ref_id).await.is_some() {
+        let removed = file_storage::remove_indexed_blob(
+            &state,
+            &job.ref_id,
+            Removal::Requested,
+            Some(&metadata),
+        )
+        .await
+        .map_err(|e| Outcome::Retry(format!("cannot remove local blob: {e}")))?;
+        if !removed
+            && file_storage::get_file_metadata(&state, &job.ref_id)
+                .await
+                .is_some()
+        {
             return Err(Outcome::Retry("local blob changed during cleanup".into()));
         }
     }
     Ok(())
 }
 
-async fn delete_mirror(http: &reqwest::Client, keys: &Keys, target: &str, hash: &str) -> Result<(), String> {
+async fn delete_mirror(
+    http: &reqwest::Client,
+    keys: &Keys,
+    target: &str,
+    hash: &str,
+) -> Result<(), String> {
     almond::services::file_storage::validate_sha256_format(hash).map_err(|e| e.to_string())?;
     let expiration = (Timestamp::now().as_secs() + 600).to_string();
     let auth = EventBuilder::new(Kind::Custom(24242), "Delete blob")
@@ -1062,17 +1316,29 @@ async fn delete_mirror(http: &reqwest::Client, keys: &Keys, target: &str, hash: 
             Tag::parse(["t", "delete"]).map_err(|e| e.to_string())?,
             Tag::parse(["x", hash]).map_err(|e| e.to_string())?,
             Tag::parse(["expiration", expiration.as_str()]).map_err(|e| e.to_string())?,
-        ]).finalize(keys).map_err(|e| format!("cannot sign delete token: {e}"))?;
+        ])
+        .finalize(keys)
+        .map_err(|e| format!("cannot sign delete token: {e}"))?;
     let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
-    let res = http.delete(format!("{}/{hash}", target.trim_end_matches('/')))
+    let res = http
+        .delete(format!("{}/{hash}", target.trim_end_matches('/')))
         .header(header::AUTHORIZATION, format!("Nostr {token}"))
-        .send().await.map_err(|e| format!("delete request failed: {e}"))?;
+        .send()
+        .await
+        .map_err(|e| format!("delete request failed: {e}"))?;
     let status = res.status();
     // Almond's delete is idempotent and answers 204 even for an absent blob. Other
     // targets' 404s are not success: a wrong route must remain visible.
     if !status.is_success() {
-        let reason = res.headers().get("x-reason").and_then(|v| v.to_str().ok()).map(str::to_owned);
-        let reason = match reason { Some(r) => r, None => res.text().await.unwrap_or_default() };
+        let reason = res
+            .headers()
+            .get("x-reason")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let reason = match reason {
+            Some(r) => r,
+            None => res.text().await.unwrap_or_default(),
+        };
         return Err(format!("{status}: {}", short(&reason)));
     }
     Ok(())
@@ -1082,10 +1348,17 @@ async fn delete_mirror(http: &reqwest::Client, keys: &Keys, target: &str, hash: 
 /// has it already, which is what we want.
 async fn publish(target: &str, json: &str, id: &str) -> Result<(), String> {
     use tokio_tungstenite::tungstenite::{client::IntoClientRequest, Message};
-    let mut req = target.into_client_request().map_err(|e| format!("invalid relay URL: {e}"))?;
-    req.headers_mut().insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
-    let (mut ws, _) = tokio_tungstenite::connect_async(req).await.map_err(|e| format!("cannot connect: {e}"))?;
-    ws.send(Message::text(format!("[\"EVENT\",{json}]"))).await.map_err(|e| format!("cannot send: {e}"))?;
+    let mut req = target
+        .into_client_request()
+        .map_err(|e| format!("invalid relay URL: {e}"))?;
+    req.headers_mut()
+        .insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
+    let (mut ws, _) = tokio_tungstenite::connect_async(req)
+        .await
+        .map_err(|e| format!("cannot connect: {e}"))?;
+    ws.send(Message::text(format!("[\"EVENT\",{json}]")))
+        .await
+        .map_err(|e| format!("cannot send: {e}"))?;
     while let Some(msg) = ws.next().await {
         let Message::Text(text) = msg.map_err(|e| format!("connection lost: {e}"))? else {
             continue;
@@ -1093,12 +1366,16 @@ async fn publish(target: &str, json: &str, id: &str) -> Result<(), String> {
         let Ok(serde_json::Value::Array(m)) = serde_json::from_str(text.as_str()) else {
             continue;
         };
-        if m.first().and_then(|v| v.as_str()) != Some("OK") || m.get(1).and_then(|v| v.as_str()) != Some(id) {
+        if m.first().and_then(|v| v.as_str()) != Some("OK")
+            || m.get(1).and_then(|v| v.as_str()) != Some(id)
+        {
             continue;
         }
         let _ = ws.close(None).await;
         let message = m.get(3).and_then(|v| v.as_str()).unwrap_or_default();
-        return if m.get(2).and_then(|v| v.as_bool()) == Some(true) || message.starts_with("duplicate") {
+        return if m.get(2).and_then(|v| v.as_bool()) == Some(true)
+            || message.starts_with("duplicate")
+        {
             Ok(())
         } else {
             Err(format!("refused: {}", short(message)))
@@ -1108,65 +1385,144 @@ async fn publish(target: &str, json: &str, id: &str) -> Result<(), String> {
 }
 
 /// S1 keeps BUD-04 pull; S2 sends a streaming BUD-02 upload from the attached storage.
-async fn mirror(outbox: &Outbox, http: &reqwest::Client, keys: &Keys, target: &str, sha256: &str, size: u64, url: &str) -> Result<(), String> {
+async fn mirror(
+    outbox: &Outbox,
+    http: &reqwest::Client,
+    keys: &Keys,
+    target: &str,
+    sha256: &str,
+    size: u64,
+    url: &str,
+) -> Result<(), String> {
     let base = target.trim_end_matches('/');
     // A matching strong ETag and length confirm an existing content-addressed copy. Never trust
     // an arbitrary 200 (a gateway may answer HTML); without both values do the normal upload.
-    if let Ok(existing) = http.head(format!("{base}/{sha256}")).timeout(PROBE_TIMEOUT).send().await {
+    if let Ok(existing) = http
+        .head(format!("{base}/{sha256}"))
+        .timeout(PROBE_TIMEOUT)
+        .send()
+        .await
+    {
         if existing.status().is_success() {
-            let confirmed = existing.headers().get("x-sha-256").and_then(|v| v.to_str().ok())
-                .or_else(|| existing.headers().get(header::ETAG).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix('"')?.strip_suffix('"')));
-            let length = existing.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
-            if confirmed == Some(sha256) && length == Some(size) { return Ok(()); }
+            let confirmed = existing
+                .headers()
+                .get("x-sha-256")
+                .and_then(|v| v.to_str().ok())
+                .or_else(|| {
+                    existing
+                        .headers()
+                        .get(header::ETAG)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.strip_prefix('"')?.strip_suffix('"'))
+                });
+            let length = existing
+                .headers()
+                .get(header::CONTENT_LENGTH)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok());
+            if confirmed == Some(sha256) && length == Some(size) {
+                return Ok(());
+            }
         }
     }
     let push = !outbox.0.origin_public.load(Ordering::Relaxed);
-    let timeout = if push { MIRROR_TIMEOUT.saturating_add(Duration::from_secs(size / MIN_UPLOAD_RATE)) } else { MIRROR_TIMEOUT };
-    let expiration = Timestamp::now().as_secs().saturating_add(timeout.as_secs()).saturating_add(60).to_string();
-    let tag = |t: &[&str]| Tag::parse(t.iter().copied()).map_err(|e| format!("cannot build the auth token: {e}"));
+    let timeout = if push {
+        MIRROR_TIMEOUT.saturating_add(Duration::from_secs(size / MIN_UPLOAD_RATE))
+    } else {
+        MIRROR_TIMEOUT
+    };
+    let expiration = Timestamp::now()
+        .as_secs()
+        .saturating_add(timeout.as_secs())
+        .saturating_add(60)
+        .to_string();
+    let tag = |t: &[&str]| {
+        Tag::parse(t.iter().copied()).map_err(|e| format!("cannot build the auth token: {e}"))
+    };
     let auth = EventBuilder::new(Kind::Custom(24242), "Mirror blob")
-        .tags([tag(&["t", "upload"])?, tag(&["x", sha256])?, tag(&["expiration", &expiration])?])
-        .finalize(keys).map_err(|e| format!("cannot sign the auth token: {e}"))?;
+        .tags([
+            tag(&["t", "upload"])?,
+            tag(&["x", sha256])?,
+            tag(&["expiration", &expiration])?,
+        ])
+        .finalize(keys)
+        .map_err(|e| format!("cannot sign the auth token: {e}"))?;
     let token = base64::engine::general_purpose::STANDARD.encode(auth.as_json());
     let request = if push {
         let state = storage(outbox)?;
         let location_read = crate::storage_move::local_read(&state, sha256).await;
-        let metadata = almond::services::file_storage::get_file_metadata(&state, sha256).await
+        let metadata = almond::services::file_storage::get_file_metadata(&state, sha256)
+            .await
             .ok_or_else(|| format!("local blob {sha256} is unavailable"))?;
         if metadata.size != size {
-            return Err(format!("local blob {sha256} has size {}, expected {size}", metadata.size));
+            return Err(format!(
+                "local blob {sha256} has size {}, expected {size}",
+                metadata.size
+            ));
         }
         let body = match &metadata.location {
             almond::models::FileLocation::Local(path) => {
-                let file = tokio::fs::File::open(path).await.map_err(|e| format!("cannot open local blob {sha256}: {e}"))?;
+                let file = tokio::fs::File::open(path)
+                    .await
+                    .map_err(|e| format!("cannot open local blob {sha256}: {e}"))?;
                 reqwest::Body::from(file)
             }
             almond::models::FileLocation::S3 { key } => {
-                let s3 = state.native_s3.as_ref().ok_or("S3 storage is unavailable")?;
+                let s3 = state
+                    .native_s3
+                    .as_ref()
+                    .ok_or("S3 storage is unavailable")?;
                 let output = s3.get(key, None).await.map_err(|e| e.to_string())?;
-                reqwest::Body::wrap_stream(futures_util::stream::try_unfold(output.body, |mut body| async move {
-                    body.next().await.transpose().map(|chunk| chunk.map(|chunk| (chunk, body)))
-                }))
+                reqwest::Body::wrap_stream(futures_util::stream::try_unfold(
+                    output.body,
+                    |mut body| async move {
+                        body.next()
+                            .await
+                            .transpose()
+                            .map(|chunk| chunk.map(|chunk| (chunk, body)))
+                    },
+                ))
             }
         };
         drop(location_read);
         http.put(format!("{base}/upload"))
             .header("x-sha-256", sha256)
             .header(header::CONTENT_LENGTH, size)
-            .header(header::CONTENT_TYPE, metadata.mime_type.as_deref().unwrap_or("application/octet-stream"))
+            .header(
+                header::CONTENT_TYPE,
+                metadata
+                    .mime_type
+                    .as_deref()
+                    .unwrap_or("application/octet-stream"),
+            )
             .body(body)
     } else {
-        http.put(format!("{base}/mirror")).json(&serde_json::json!({ "url": url }))
+        http.put(format!("{base}/mirror"))
+            .json(&serde_json::json!({ "url": url }))
     };
-    let res = request.header(header::AUTHORIZATION, format!("Nostr {token}"))
-        .timeout(timeout).send().await.map_err(|e| format!("request failed: {e}"))?;
+    let res = request
+        .header(header::AUTHORIZATION, format!("Nostr {token}"))
+        .timeout(timeout)
+        .send()
+        .await
+        .map_err(|e| format!("request failed: {e}"))?;
     let status = res.status();
     if !status.is_success() {
-        let reason = res.headers().get("x-reason").and_then(|v| v.to_str().ok()).map(str::to_owned);
-        let reason = match reason { Some(r) => r, None => res.text().await.unwrap_or_default() };
+        let reason = res
+            .headers()
+            .get("x-reason")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let reason = match reason {
+            Some(r) => r,
+            None => res.text().await.unwrap_or_default(),
+        };
         return Err(format!("{status}: {}", short(&reason)));
     }
-    let d: serde_json::Value = res.json().await.map_err(|e| format!("not a blob descriptor: {e}"))?;
+    let d: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("not a blob descriptor: {e}"))?;
     if d["sha256"].as_str() != Some(sha256) || d["size"].as_u64() != Some(size) {
         return Err(format!(
             "the target confirmed sha256 {} and size {}, expected {sha256} and {size}",
@@ -1262,7 +1618,8 @@ mod tests {
                     while let Some(Ok(Message::Text(text))) = socket.recv().await {
                         let msg: serde_json::Value = serde_json::from_str(text.as_str()).unwrap();
                         seen.fetch_add(1, Ordering::Relaxed);
-                        let ok = serde_json::json!(["OK", msg[1]["id"], accept, message]).to_string();
+                        let ok =
+                            serde_json::json!(["OK", msg[1]["id"], accept, message]).to_string();
                         socket.send(Message::Text(ok.into())).await.unwrap();
                     }
                 })
@@ -1273,7 +1630,11 @@ mod tests {
 
     /// A Blossom server whose `/mirror` answers a descriptor with `sha256`/`size`, after checking
     /// the request carries an upload token for `SHA` signed by `signer` and the source URL.
-    async fn fake_blossom(sha256: &'static str, size: u64, signer: nostr::prelude::PublicKey) -> String {
+    async fn fake_blossom(
+        sha256: &'static str,
+        size: u64,
+        signer: nostr::prelude::PublicKey,
+    ) -> String {
         let app = Router::new().route(
             "/mirror",
             put(move |headers: HeaderMap, Json(body): Json<serde_json::Value>| async move {
@@ -1313,19 +1674,39 @@ mod tests {
 
     #[tokio::test]
     async fn blob_jobs_are_queued_once_per_target_and_only_for_descriptors() {
-        let blossom = vec!["https://a.example".to_owned(), "https://b.example".to_owned()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() });
+        let blossom = vec![
+            "https://a.example".to_owned(),
+            "https://b.example".to_owned(),
+        ];
+        let (outbox, _relay, path) = fixture(Mirror {
+            relays: vec![],
+            blossom: blossom.clone(),
+        });
         // The answer goes back to the client unchanged.
         let res = outbox.after_upload(descriptor()).await;
         assert_eq!(res.status(), axum::http::StatusCode::CREATED);
-        let body = axum::body::to_bytes(res.into_body(), 1 << 16).await.unwrap();
-        assert_eq!(serde_json::from_slice::<serde_json::Value>(&body).unwrap()["sha256"], SHA);
+        let body = axum::body::to_bytes(res.into_body(), 1 << 16)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&body).unwrap()["sha256"],
+            SHA
+        );
         // A replay (or the same blob uploaded again) adds nothing.
         outbox.after_upload(descriptor()).await;
         // A refused upload and a PATCH chunk (204, no body) queue nothing.
-        outbox.after_upload(axum::http::StatusCode::UNAUTHORIZED.into_response()).await;
-        outbox.after_upload(axum::http::StatusCode::NO_CONTENT.into_response()).await;
-        let n: i64 = outbox.0.conn.lock().query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0)).unwrap();
+        outbox
+            .after_upload(axum::http::StatusCode::UNAUTHORIZED.into_response())
+            .await;
+        outbox
+            .after_upload(axum::http::StatusCode::NO_CONTENT.into_response())
+            .await;
+        let n: i64 = outbox
+            .0
+            .conn
+            .lock()
+            .query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 2);
         for target in &blossom {
             assert_eq!(row(&outbox, "blob", target).0, "pending");
@@ -1345,8 +1726,13 @@ mod tests {
             format!("ws://{}", l.local_addr().unwrap())
         };
         let relays = vec![ok.clone(), dup.clone(), refusing.clone(), gone.clone()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: relays.clone(), blossom: vec![] });
-        let ev = EventBuilder::new(Kind::TextNote, "hi").finalize(&Keys::generate()).unwrap();
+        let (outbox, _relay, path) = fixture(Mirror {
+            relays: relays.clone(),
+            blossom: vec![],
+        });
+        let ev = EventBuilder::new(Kind::TextNote, "hi")
+            .finalize(&Keys::generate())
+            .unwrap();
         {
             let conn = outbox.0.conn.lock();
             conn.execute(
@@ -1365,7 +1751,10 @@ mod tests {
         let (status, attempts, next, error) = row(&outbox, "event", &refusing);
         assert_eq!((status.as_str(), attempts), ("pending", 1));
         assert_eq!(error.as_deref(), Some("refused: blocked: not on the list"));
-        assert!(next >= before + (BACKOFF_BASE / 2) as i64 - 1 && next <= before + BACKOFF_BASE as i64, "{next}");
+        assert!(
+            next >= before + (BACKOFF_BASE / 2) as i64 - 1 && next <= before + BACKOFF_BASE as i64,
+            "{next}"
+        );
         let (status, _, _, error) = row(&outbox, "event", &gone);
         assert_eq!(status, "pending");
         assert!(error.unwrap().starts_with("cannot connect"));
@@ -1379,18 +1768,29 @@ mod tests {
             .0
             .conn
             .lock()
-            .execute("UPDATE outbox SET attempts = ?, next_attempt_at = 0 WHERE target = ?", params![MAX_ATTEMPTS - 1, refusing])
+            .execute(
+                "UPDATE outbox SET attempts = ?, next_attempt_at = 0 WHERE target = ?",
+                params![MAX_ATTEMPTS - 1, refusing],
+            )
             .unwrap();
         run_due(&outbox, &shared(None)).await;
         assert_eq!(row(&outbox, "event", &refusing).0, "failed");
         let status = outbox.status().await.unwrap();
         let problems = status["problems"].as_array().unwrap();
         let problem = |t: &str| problems.iter().find(|p| p["target"] == t).unwrap().clone();
-        assert_eq!((problem(&refusing)["status"].as_str(), problem(&refusing)["nextAttemptAt"].is_null()), (Some("failed"), true));
+        assert_eq!(
+            (
+                problem(&refusing)["status"].as_str(),
+                problem(&refusing)["nextAttemptAt"].is_null()
+            ),
+            (Some("failed"), true)
+        );
         assert_eq!(problem(&gone)["status"], "pending");
         assert!(problem(&gone)["nextAttemptAt"].as_i64().unwrap() > before);
         let counts = status["counts"].as_array().unwrap();
-        assert!(counts.iter().any(|c| c["target"] == ok.as_str() && c["done"] == 1));
+        assert!(counts
+            .iter()
+            .any(|c| c["target"] == ok.as_str() && c["done"] == 1));
         assert_eq!(outbox.retry(Some(gone.clone())).await.unwrap(), 0);
         assert_eq!(outbox.retry(Some(refusing.clone())).await.unwrap(), 1);
         let (status, attempts, _, error) = row(&outbox, "event", &refusing);
@@ -1405,14 +1805,20 @@ mod tests {
         let wrong_hash = fake_blossom("00ff", 42, keys.public_key()).await;
         let wrong_size = fake_blossom(SHA, 41, keys.public_key()).await;
         let blossom = vec![good.clone(), wrong_hash.clone(), wrong_size.clone()];
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: blossom.clone() });
+        let (outbox, _relay, path) = fixture(Mirror {
+            relays: vec![],
+            blossom: blossom.clone(),
+        });
         outbox.after_upload(descriptor()).await;
 
         // Without the managed key nothing else may sign: failed at once, with the reason.
         run_due(&outbox, &shared(None)).await;
         for target in &blossom {
             let (status, attempts, _, error) = row(&outbox, "blob", target);
-            assert_eq!((status.as_str(), attempts, error.as_deref()), ("failed", 1, Some(NEEDS_KEY)));
+            assert_eq!(
+                (status.as_str(), attempts, error.as_deref()),
+                ("failed", 1, Some(NEEDS_KEY))
+            );
         }
 
         // Created later in the studio: a retry delivers.
@@ -1427,13 +1833,22 @@ mod tests {
         std::fs::remove_file(path).ok();
     }
 
-    async fn lifecycle_fixture(keys: &Keys, mirror: Mirror) -> (Outbox, crate::relay::Relay, almond::models::AppState) {
+    async fn lifecycle_fixture(
+        keys: &Keys,
+        mirror: Mirror,
+    ) -> (Outbox, crate::relay::Relay, almond::models::AppState) {
         let (outbox, old_relay, path) = fixture(mirror.clone());
         drop(old_relay);
-        let relay = crate::relay::Relay::open(&path, crate::relay::RelayConfig {
-            writers: vec![keys.public_key()], name: "test".into(), description: "test".into(),
-            mirror_relays: mirror.relays,
-        }).unwrap();
+        let relay = crate::relay::Relay::open(
+            &path,
+            crate::relay::RelayConfig {
+                writers: vec![keys.public_key()],
+                name: "test".into(),
+                description: "test".into(),
+                mirror_relays: mirror.relays,
+            },
+        )
+        .unwrap();
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = path.with_extension("blossom");
         cfg.public_url = Some("https://instance.example".into());
@@ -1446,71 +1861,183 @@ mod tests {
     }
 
     async fn stored(
-        outbox: &Outbox, state: &almond::models::AppState, keys: &Keys,
-        bytes: &[u8], extension: &str, mirrored: bool,
+        outbox: &Outbox,
+        state: &almond::models::AppState,
+        keys: &Keys,
+        bytes: &[u8],
+        extension: &str,
+        mirrored: bool,
     ) -> (String, std::path::PathBuf) {
         use sha2::Digest;
         let hash = hex::encode(sha2::Sha256::digest(bytes));
         let path = state.storage.uploads.join(format!("{hash}.{extension}"));
-        tokio::fs::create_dir_all(&state.storage.uploads).await.unwrap();
+        tokio::fs::create_dir_all(&state.storage.uploads)
+            .await
+            .unwrap();
         tokio::fs::write(&path, bytes).await.unwrap();
-        state.file_index.insert(hash.clone(), almond::models::FileMetadata {
-            location: almond::models::FileLocation::Local(path.clone()), extension: Some(extension.into()),
-            mime_type: Some(mime_guess::from_ext(extension).first_or_octet_stream().to_string()),
-            size: bytes.len() as u64, created_at: now() as u64, pubkey: None, expiration: None,
-            origin: Default::default(),
-        }).await;
-        outbox.record_owner(hash.clone(), keys.public_key(), mirrored).await.unwrap();
+        state
+            .file_index
+            .insert(
+                hash.clone(),
+                almond::models::FileMetadata {
+                    location: almond::models::FileLocation::Local(path.clone()),
+                    extension: Some(extension.into()),
+                    mime_type: Some(
+                        mime_guess::from_ext(extension)
+                            .first_or_octet_stream()
+                            .to_string(),
+                    ),
+                    size: bytes.len() as u64,
+                    created_at: now() as u64,
+                    pubkey: None,
+                    expiration: None,
+                    origin: Default::default(),
+                },
+            )
+            .await;
+        outbox
+            .record_owner(hash.clone(), keys.public_key(), mirrored)
+            .await
+            .unwrap();
         (hash, path)
     }
 
-    fn video_event(keys: &Keys, at: u64, d: &str, hashes: &[(&str, &str)]) -> nostr::prelude::Event {
-        let mut tags = vec![Tag::parse(["d", d]).unwrap(), Tag::parse(["title", "clip"]).unwrap()];
+    fn video_event(
+        keys: &Keys,
+        at: u64,
+        d: &str,
+        hashes: &[(&str, &str)],
+    ) -> nostr::prelude::Event {
+        let mut tags = vec![
+            Tag::parse(["d", d]).unwrap(),
+            Tag::parse(["title", "clip"]).unwrap(),
+        ];
         tags.extend(hashes.iter().map(|(tag, hash)| {
             let url = format!("https://instance.example/{hash}");
             if *tag == "imeta" {
-                Tag::parse(["imeta", format!("url {url}").as_str(), format!("x {hash}").as_str()]).unwrap()
-            } else { Tag::parse([*tag, url.as_str()]).unwrap() }
+                Tag::parse([
+                    "imeta",
+                    format!("url {url}").as_str(),
+                    format!("x {hash}").as_str(),
+                ])
+                .unwrap()
+            } else {
+                Tag::parse([*tag, url.as_str()]).unwrap()
+            }
         }));
-        EventBuilder::new(Kind::Custom(34235), "description").tags(tags)
-            .custom_created_at(Timestamp::from(at)).finalize(keys).unwrap()
+        EventBuilder::new(Kind::Custom(34235), "description")
+            .tags(tags)
+            .custom_created_at(Timestamp::from(at))
+            .finalize(keys)
+            .unwrap()
     }
 
     async fn accepted(relay: &crate::relay::Relay, event: nostr::prelude::Event) {
-        assert!(matches!(relay.ingest(event).await, nostr::prelude::RelayMessage::Ok { status: true, .. }));
+        assert!(matches!(
+            relay.ingest(event).await,
+            nostr::prelude::RelayMessage::Ok { status: true, .. }
+        ));
     }
 
     #[tokio::test]
     async fn replacement_cleans_real_storage_and_hls_children_then_delivers_mirror_deletes() {
         let keys = Keys::generate();
-        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let (remote_outbox, _remote_relay, remote) =
+            lifecycle_fixture(&keys, Mirror::default()).await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
-        let (segment, segment_path) = stored(&outbox, &state, &keys, b"shared segment", "ts", false).await;
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
+        let (segment, segment_path) =
+            stored(&outbox, &state, &keys, b"shared segment", "ts", false).await;
         let (init, init_path) = stored(&outbox, &state, &keys, b"init bytes", "mp4", false).await;
         let playlist = format!("#EXTM3U\n#EXT-X-MAP:URI=\"{init}.mp4\"\n{segment}.ts\n");
-        let (old, old_path) = stored(&outbox, &state, &keys, playlist.as_bytes(), "m3u8", false).await;
-        let (thumb, thumb_path) = stored(&outbox, &state, &keys, b"old thumbnail", "jpg", false).await;
-        let (track, track_path) = stored(&outbox, &state, &keys, b"WEBVTT\nold", "vtt", false).await;
+        let (old, old_path) =
+            stored(&outbox, &state, &keys, playlist.as_bytes(), "m3u8", false).await;
+        let (thumb, thumb_path) =
+            stored(&outbox, &state, &keys, b"old thumbnail", "jpg", false).await;
+        let (track, track_path) =
+            stored(&outbox, &state, &keys, b"WEBVTT\nold", "vtt", false).await;
         let (new, new_path) = stored(&outbox, &state, &keys, b"replacement", "mp4", false).await;
         for (bytes, ext) in [
-            (b"shared segment".as_slice(), "ts"), (b"init bytes".as_slice(), "mp4"),
-            (playlist.as_bytes(), "m3u8"), (b"old thumbnail".as_slice(), "jpg"), (b"WEBVTT\nold".as_slice(), "vtt"),
-        ] { stored(&remote_outbox, &remote, &keys, bytes, ext, true).await; }
-        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)])).await;
-        accepted(&relay, video_event(&keys, 11, "shared", &[("imeta", &segment)])).await;
-        accepted(&relay, video_event(&keys, 20, "clip", &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)])).await;
-        let queued: i64 = outbox.0.conn.lock().query_row("SELECT COUNT(*) FROM outbox WHERE kind='cleanup'", [], |r| r.get(0)).unwrap();
+            (b"shared segment".as_slice(), "ts"),
+            (b"init bytes".as_slice(), "mp4"),
+            (playlist.as_bytes(), "m3u8"),
+            (b"old thumbnail".as_slice(), "jpg"),
+            (b"WEBVTT\nold".as_slice(), "vtt"),
+        ] {
+            stored(&remote_outbox, &remote, &keys, bytes, ext, true).await;
+        }
+        accepted(
+            &relay,
+            video_event(
+                &keys,
+                10,
+                "clip",
+                &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)],
+            ),
+        )
+        .await;
+        accepted(
+            &relay,
+            video_event(&keys, 11, "shared", &[("imeta", &segment)]),
+        )
+        .await;
+        accepted(
+            &relay,
+            video_event(
+                &keys,
+                20,
+                "clip",
+                &[("imeta", &old), ("thumb", &thumb), ("text-track", &track)],
+            ),
+        )
+        .await;
+        let queued: i64 = outbox
+            .0
+            .conn
+            .lock()
+            .query_row(
+                "SELECT COUNT(*) FROM outbox WHERE kind='cleanup'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(queued, 0, "metadata update cannot delete media");
         // A pending mirror upload selected before deletion cannot run after cleanup.
         outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
             "sha256": old, "size": playlist.len(), "url": format!("https://instance.example/{old}.m3u8")
         }))).into_response()).await;
-        let selected_upload = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "blob").unwrap();
+        let selected_upload = outbox
+            .due(100)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|j| j.kind == "blob")
+            .unwrap();
         accepted(&relay, video_event(&keys, 30, "clip", &[("imeta", &new)])).await;
-        let cleanup_jobs: Vec<_> = outbox.due(100).await.unwrap().into_iter().filter(|j| j.kind == "cleanup").collect();
-        for job in cleanup_jobs { work(&outbox, &shared(Some(keys.clone())), &http_client(), &job).await; }
-        work(&outbox, &shared(Some(keys.clone())), &http_client(), &selected_upload).await;
+        let cleanup_jobs: Vec<_> = outbox
+            .due(100)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|j| j.kind == "cleanup")
+            .collect();
+        for job in cleanup_jobs {
+            work(&outbox, &shared(Some(keys.clone())), &http_client(), &job).await;
+        }
+        work(
+            &outbox,
+            &shared(Some(keys.clone())),
+            &http_client(),
+            &selected_upload,
+        )
+        .await;
         assert_eq!(row(&outbox, "blob", &target).0, "done");
         assert!(!old_path.exists() && !thumb_path.exists() && !track_path.exists());
         assert!(segment_path.exists() && new_path.exists());
@@ -1519,19 +2046,34 @@ mod tests {
         assert!(!init_path.exists(), "HLS URI attributes are cleaned too");
         for hash in [&old, &thumb, &track, &init] {
             assert!(state.file_index.get(hash).await.is_none());
-            assert!(remote.file_index.get(hash).await.is_none(), "real Almond DELETE removed {hash}");
+            assert!(
+                remote.file_index.get(hash).await.is_none(),
+                "real Almond DELETE removed {hash}"
+            );
         }
-        assert!(remote.file_index.get(&segment).await.is_some(), "shared active segment remains on mirror");
+        assert!(
+            remote.file_index.get(&segment).await.is_some(),
+            "shared active segment remains on mirror"
+        );
         assert!(outbox.due(100).await.unwrap().is_empty());
-        let count: i64 = outbox.0.conn.lock().query_row(
-            "SELECT COUNT(*) FROM outbox WHERE kind IN ('cleanup','blob-delete') AND ref_id=?", [&segment], |r| r.get(0),
-        ).unwrap();
+        let count: i64 = outbox
+            .0
+            .conn
+            .lock()
+            .query_row(
+                "SELECT COUNT(*) FROM outbox WHERE kind IN ('cleanup','blob-delete') AND ref_id=?",
+                [&segment],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(count, 0);
         // The coordinate deletion cleans the replacement, too.
         let coordinate = format!("34235:{}:clip", keys.public_key());
         let deletion = EventBuilder::new(Kind::EventDeletion, "")
             .tags([Tag::parse(["a", &coordinate]).unwrap()])
-            .custom_created_at(Timestamp::from(40)).finalize(&keys).unwrap();
+            .custom_created_at(Timestamp::from(40))
+            .finalize(&keys)
+            .unwrap();
         accepted(&relay, deletion).await;
         run_due(&outbox, &shared(Some(keys.clone()))).await;
         run_due(&outbox, &shared(Some(keys))).await;
@@ -1542,18 +2084,46 @@ mod tests {
     async fn cleanup_requires_ownership_and_mirrored_blobs_never_chain_deletion() {
         let keys = Keys::generate();
         let foreign = Keys::generate();
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
-            relays: vec![], blossom: vec!["http://unreachable.invalid".into()],
-        }).await;
-        let (mirrored, mirrored_path) = stored(&outbox, &state, &keys, b"mirrored copy", "mp4", true).await;
-        let (wrong_owner, wrong_owner_path) = stored(&outbox, &state, &foreign, b"foreign copy", "mp4", false).await;
-        let (unowned, unowned_path) = stored(&outbox, &state, &keys, b"old unowned copy", "mp4", false).await;
-        outbox.0.conn.lock().execute("DELETE FROM blob_owner WHERE hash=?", [&unowned]).unwrap();
-        accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &mirrored), ("thumb", &wrong_owner), ("text-track", &unowned)])).await;
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec!["http://unreachable.invalid".into()],
+            },
+        )
+        .await;
+        let (mirrored, mirrored_path) =
+            stored(&outbox, &state, &keys, b"mirrored copy", "mp4", true).await;
+        let (wrong_owner, wrong_owner_path) =
+            stored(&outbox, &state, &foreign, b"foreign copy", "mp4", false).await;
+        let (unowned, unowned_path) =
+            stored(&outbox, &state, &keys, b"old unowned copy", "mp4", false).await;
+        outbox
+            .0
+            .conn
+            .lock()
+            .execute("DELETE FROM blob_owner WHERE hash=?", [&unowned])
+            .unwrap();
+        accepted(
+            &relay,
+            video_event(
+                &keys,
+                10,
+                "clip",
+                &[
+                    ("imeta", &mirrored),
+                    ("thumb", &wrong_owner),
+                    ("text-track", &unowned),
+                ],
+            ),
+        )
+        .await;
         let coordinate = format!("34235:{}:clip", keys.public_key());
         let deletion = EventBuilder::new(Kind::EventDeletion, "")
             .tags([Tag::parse(["a", &coordinate]).unwrap()])
-            .custom_created_at(Timestamp::from(20)).finalize(&keys).unwrap();
+            .custom_created_at(Timestamp::from(20))
+            .finalize(&keys)
+            .unwrap();
         accepted(&relay, deletion).await;
         run_due(&outbox, &shared(None)).await;
         assert!(!mirrored_path.exists());
@@ -1562,28 +2132,62 @@ mod tests {
         let problems = status["problems"].as_array().unwrap();
         assert_eq!(problems.len(), 2);
         assert!(problems.iter().all(|p| p["status"] == "failed"));
-        assert!(problems.iter().any(|p| p["lastError"] == "blob has no recorded owner; not deleting"));
-        assert!(problems.iter().any(|p| p["lastError"] == "blob owner differs from video author; not deleting"));
-        let outbound: i64 = outbox.0.conn.lock().query_row(
-            "SELECT COUNT(*) FROM outbox WHERE kind IN ('blob','blob-delete')", [], |r| r.get(0),
-        ).unwrap();
-        assert_eq!(outbound, 0, "mirrored-origin cleanup must not chain to this instance's targets");
+        assert!(problems
+            .iter()
+            .any(|p| p["lastError"] == "blob has no recorded owner; not deleting"));
+        assert!(problems
+            .iter()
+            .any(|p| p["lastError"] == "blob owner differs from video author; not deleting"));
+        let outbound: i64 = outbox
+            .0
+            .conn
+            .lock()
+            .query_row(
+                "SELECT COUNT(*) FROM outbox WHERE kind IN ('blob','blob-delete')",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            outbound, 0,
+            "mirrored-origin cleanup must not chain to this instance's targets"
+        );
     }
 
     #[tokio::test]
     async fn durable_delete_missing_key_and_remote_errors_remain_real_failures() {
         let keys = Keys::generate();
-        let target = format!("http://{}", serve(Router::new().route("/{hash}", axum::routing::delete(|| async {
-            (axum::http::StatusCode::SERVICE_UNAVAILABLE, "disk unavailable")
-        }))).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let target = format!(
+            "http://{}",
+            serve(Router::new().route(
+                "/{hash}",
+                axum::routing::delete(|| async {
+                    (
+                        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                        "disk unavailable",
+                    )
+                })
+            ))
+            .await
+        );
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         let (hash, path) = stored(&outbox, &state, &keys, b"delete copy", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
         run_due(&outbox, &shared(None)).await;
         assert!(!path.exists());
         run_due(&outbox, &shared(None)).await;
-        assert_eq!(row(&outbox, "blob-delete", &target).3.as_deref(), Some(NEEDS_KEY));
+        assert_eq!(
+            row(&outbox, "blob-delete", &target).3.as_deref(),
+            Some(NEEDS_KEY)
+        );
         assert_eq!(outbox.retry(None).await.unwrap(), 1);
         run_due(&outbox, &shared(Some(keys))).await;
         let (status, _, _, error) = row(&outbox, "blob-delete", &target);
@@ -1602,9 +2206,21 @@ mod tests {
         use sha2::Digest;
         let hash = hex::encode(sha2::Sha256::digest(bytes));
         let upload = {
-            let (started, release, present, order, hash) = (started.clone(), release.clone(), present.clone(), order.clone(), hash.clone());
+            let (started, release, present, order, hash) = (
+                started.clone(),
+                release.clone(),
+                present.clone(),
+                order.clone(),
+                hash.clone(),
+            );
             put(move || {
-                let (started, release, present, order, hash) = (started.clone(), release.clone(), present.clone(), order.clone(), hash.clone());
+                let (started, release, present, order, hash) = (
+                    started.clone(),
+                    release.clone(),
+                    present.clone(),
+                    order.clone(),
+                    hash.clone(),
+                );
                 async move {
                     started.notify_one();
                     release.notified().await;
@@ -1625,8 +2241,23 @@ mod tests {
                 }
             })
         };
-        let target = format!("http://{}", serve(Router::new().route("/mirror", upload).route("/{hash}", delete)).await);
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let target = format!(
+            "http://{}",
+            serve(
+                Router::new()
+                    .route("/mirror", upload)
+                    .route("/{hash}", delete)
+            )
+            .await
+        );
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         let (_, path) = stored(&outbox, &state, &keys, bytes, "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         outbox.after_upload((axum::http::StatusCode::CREATED, Json(serde_json::json!({
@@ -1635,19 +2266,43 @@ mod tests {
         let job = outbox.due(1).await.unwrap().remove(0);
         let sending = {
             let (outbox, keys) = (outbox.clone(), keys.clone());
-            tokio::spawn(async move { work(&outbox, &shared(Some(keys)), &http_client(), &job).await })
+            tokio::spawn(
+                async move { work(&outbox, &shared(Some(keys)), &http_client(), &job).await },
+            )
         };
         started.notified().await;
         // The edit and its cleanup do not wait for the mirror request.
         let wait = Duration::from_secs(5);
-        tokio::time::timeout(wait, accepted(&relay, video_event(&keys, 20, "clip", &[]))).await.expect("edit waited for the mirror");
-        let cleanup = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "cleanup").unwrap();
-        tokio::time::timeout(wait, work(&outbox, &shared(Some(keys.clone())), &http_client(), &cleanup)).await.expect("cleanup waited for the mirror");
+        tokio::time::timeout(wait, accepted(&relay, video_event(&keys, 20, "clip", &[])))
+            .await
+            .expect("edit waited for the mirror");
+        let cleanup = outbox
+            .due(100)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|j| j.kind == "cleanup")
+            .unwrap();
+        tokio::time::timeout(
+            wait,
+            work(
+                &outbox,
+                &shared(Some(keys.clone())),
+                &http_client(),
+                &cleanup,
+            ),
+        )
+        .await
+        .expect("cleanup waited for the mirror");
         assert!(!path.exists());
         release.notify_one();
         sending.await.unwrap();
         let (status, attempts, _, _) = row(&outbox, "blob", &target);
-        assert_eq!((status.as_str(), attempts), ("done", 0), "the late answer leaves the canceled job alone");
+        assert_eq!(
+            (status.as_str(), attempts),
+            ("done", 0),
+            "the late answer leaves the canceled job alone"
+        );
         run_due(&outbox, &shared(Some(keys))).await;
         assert!(!present.load(Ordering::SeqCst));
         assert_eq!(*order.lock(), ["upload", "delete"]);
@@ -1658,18 +2313,35 @@ mod tests {
         // Accepts the connection, reads nothing, answers nothing.
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let target = format!("http://{}", listener.local_addr().unwrap());
-        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: vec![target] });
+        let (outbox, _relay, path) = fixture(Mirror {
+            relays: vec![],
+            blossom: vec![target],
+        });
         outbox.after_upload(descriptor()).await;
         let job = outbox.due(1).await.unwrap().remove(0);
         let sending = {
             let outbox = outbox.clone();
-            tokio::spawn(async move { work(&outbox, &shared(Some(Keys::generate())), &http_client(), &job).await })
+            tokio::spawn(async move {
+                work(
+                    &outbox,
+                    &shared(Some(Keys::generate())),
+                    &http_client(),
+                    &job,
+                )
+                .await
+            })
         };
         // Once the target has the connection, the mirror request is in flight.
-        let (_held, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept()).await.unwrap().unwrap();
+        let (_held, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+            .await
+            .unwrap()
+            .unwrap();
         // What every upload and relay write takes first.
         let lock = tokio::time::timeout(Duration::from_secs(1), MEDIA_LIFECYCLE.lock()).await;
-        assert!(lock.is_ok(), "the mirror request holds the media lifecycle lock");
+        assert!(
+            lock.is_ok(),
+            "the mirror request holds the media lifecycle lock"
+        );
         drop(lock);
         assert!(!sending.is_finished());
         sending.abort();
@@ -1679,10 +2351,22 @@ mod tests {
     #[tokio::test]
     async fn cleanup_and_delete_intents_survive_reopening_the_database() {
         let keys = Keys::generate();
-        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
-        stored(&remote_outbox, &remote, &keys, b"durable bytes", "mp4", true).await;
+        let (remote_outbox, _remote_relay, remote) =
+            lifecycle_fixture(&keys, Mirror::default()).await;
+        stored(
+            &remote_outbox,
+            &remote,
+            &keys,
+            b"durable bytes",
+            "mp4",
+            true,
+        )
+        .await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
-        let mirror = Mirror { relays: vec![], blossom: vec![target] };
+        let mirror = Mirror {
+            relays: vec![],
+            blossom: vec![target],
+        };
         let (outbox, relay, state) = lifecycle_fixture(&keys, mirror.clone()).await;
         let (hash, path) = stored(&outbox, &state, &keys, b"durable bytes", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
@@ -1717,24 +2401,44 @@ mod tests {
                42,'https://instance.example/a','failed',3,99,'offline',1,2);"
         ).unwrap();
         initialize(&conn).unwrap();
-        let preserved: (i64, String, u32, String) = conn.query_row(
-            "SELECT id,status,attempts,last_error FROM outbox", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)),
-        ).unwrap();
+        let preserved: (i64, String, u32, String) = conn
+            .query_row(
+                "SELECT id,status,attempts,last_error FROM outbox",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
         assert_eq!(preserved, (7, "failed".into(), 3, "offline".into()));
         enqueue_cleanup(&conn, &Keys::generate().public_key(), SHA).unwrap();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0)).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count, 2);
     }
 
     #[tokio::test]
-    async fn authenticated_republication_cancels_old_cleanup_and_delete_intents_for_the_same_hash() {
+    async fn authenticated_republication_cancels_old_cleanup_and_delete_intents_for_the_same_hash()
+    {
         let keys = Keys::generate();
         let target = "http://unreachable.invalid".to_owned();
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         let (hash, path) = stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
         accepted(&relay, video_event(&keys, 10, "clip", &[("imeta", &hash)])).await;
         accepted(&relay, video_event(&keys, 20, "clip", &[])).await;
-        let selected = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "cleanup").unwrap();
+        let selected = outbox
+            .due(100)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|j| j.kind == "cleanup")
+            .unwrap();
         // Republish before cleanup starts: a previously selected job is now stale.
         stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
         work(&outbox, &shared(None), &http_client(), &selected).await;
@@ -1742,7 +2446,12 @@ mod tests {
         enqueue_cleanup(&outbox.0.conn.lock(), &keys.public_key(), &hash).unwrap();
         run_due(&outbox, &shared(None)).await;
         assert!(!path.exists());
-        assert!(outbox.due(100).await.unwrap().iter().any(|j| j.kind == "blob-delete"));
+        assert!(outbox
+            .due(100)
+            .await
+            .unwrap()
+            .iter()
+            .any(|j| j.kind == "blob-delete"));
         // A successful fresh upload also invalidates old pending mirror deletion.
         stored(&outbox, &state, &keys, b"reused bytes", "mp4", false).await;
         assert!(path.exists());
@@ -1757,31 +2466,76 @@ mod tests {
         let mirror_seen = Arc::new(AtomicUsize::new(0));
         let index = fake_relay(true, "", index_seen.clone()).await;
         let mirror = fake_relay(true, "", mirror_seen.clone()).await;
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
-            relays: vec![mirror.clone()], blossom: vec![],
-        }).await;
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![mirror.clone()],
+                blossom: vec![],
+            },
+        )
+        .await;
         let mut ids = Vec::new();
         for kind in [0, 10002, 10063, 21, 5, 15128] {
-            let event = EventBuilder::new(Kind::Custom(kind), "").finalize(&keys).unwrap();
+            let event = EventBuilder::new(Kind::Custom(kind), "")
+                .finalize(&keys)
+                .unwrap();
             accepted(&relay, event.clone()).await;
             // Old versions queued these jobs, including exhausted retries.
-            enqueue_event(&outbox.0.conn.lock(), &[index.clone()], &event.id).unwrap();
+            enqueue_event(
+                &outbox.0.conn.lock(),
+                std::slice::from_ref(&index),
+                &event.id,
+            )
+            .unwrap();
             if kind == 5 {
-                outbox.deliver(vec![index.clone(), mirror.clone()], vec![event.id]).await.unwrap();
+                outbox
+                    .deliver(vec![index.clone(), mirror.clone()], vec![event.id])
+                    .await
+                    .unwrap();
                 outbox.0.conn.lock().execute("UPDATE outbox SET status='failed',last_error='blocked' WHERE target=? AND ref_id=?", params![index, event.id.to_hex()]).unwrap();
             }
             ids.push(event.id);
         }
-        outbox.announce(vec![index.clone()], ids, true).await.unwrap();
-        assert!(outbox.status().await.unwrap()["problems"].as_array().unwrap().is_empty(), "obsolete index jobs must not remain in Studio");
-        assert_eq!(outbox.due(100).await.unwrap().iter().filter(|j| j.target == index).count(), 3);
+        outbox
+            .announce(vec![index.clone()], ids, true)
+            .await
+            .unwrap();
+        assert!(
+            outbox.status().await.unwrap()["problems"]
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "obsolete index jobs must not remain in Studio"
+        );
+        assert_eq!(
+            outbox
+                .due(100)
+                .await
+                .unwrap()
+                .iter()
+                .filter(|j| j.target == index)
+                .count(),
+            3
+        );
         run_due(&outbox, &shared(None)).await;
         assert_eq!(index_seen.load(Ordering::SeqCst), 3);
         assert_eq!(mirror_seen.load(Ordering::SeqCst), 6);
         // A mirror URL cannot bypass the index-only policy when the roles overlap.
-        let reopened = Outbox::open(&state.storage.root.with_extension("sqlite"), Mirror { relays: vec![index.clone()], blossom: vec![] }).unwrap();
-        reopened.announce(vec![index.clone()], vec![], false).await.unwrap();
-        let video = EventBuilder::new(Kind::Custom(22), "new video").finalize(&keys).unwrap();
+        let reopened = Outbox::open(
+            &state.storage.root.with_extension("sqlite"),
+            Mirror {
+                relays: vec![index.clone()],
+                blossom: vec![],
+            },
+        )
+        .unwrap();
+        reopened
+            .announce(vec![index.clone()], vec![], false)
+            .await
+            .unwrap();
+        let video = EventBuilder::new(Kind::Custom(22), "new video")
+            .finalize(&keys)
+            .unwrap();
         accepted(&relay, video.clone()).await;
         reopened.deliver(vec![index], vec![video.id]).await.unwrap();
         run_due(&reopened, &shared(None)).await;
@@ -1791,27 +2545,71 @@ mod tests {
     #[tokio::test]
     async fn s2_streams_every_output_to_real_blossom_and_accepts_existing_copies() {
         let keys = Keys::generate();
-        let (_remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let (_remote_outbox, _remote_relay, remote) =
+            lifecycle_fixture(&keys, Mirror::default()).await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
-        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, _relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         outbox.set_origin_public(false);
         let large = vec![7u8; 3 * 1024 * 1024];
-        for (bytes, ext) in [(large.as_slice(), "mp4"), (b"thumbnail".as_slice(), "jpg"), (b"WEBVTT\ncaptions".as_slice(), "vtt")] {
+        for (bytes, ext) in [
+            (large.as_slice(), "mp4"),
+            (b"thumbnail".as_slice(), "jpg"),
+            (b"WEBVTT\ncaptions".as_slice(), "vtt"),
+        ] {
             let (hash, _) = stored(&outbox, &state, &keys, bytes, ext, false).await;
-            outbox.queue_blob(hash.clone(), bytes.len() as u64, format!("https://unreachable.local/{hash}.{ext}")).await.unwrap();
+            outbox
+                .queue_blob(
+                    hash.clone(),
+                    bytes.len() as u64,
+                    format!("https://unreachable.local/{hash}.{ext}"),
+                )
+                .await
+                .unwrap();
             run_due(&outbox, &shared(Some(keys.clone()))).await;
-            assert_eq!(outbox.blob_copies(hash.clone()).await.unwrap(), [target.clone()]);
-            let res = http_client().get(format!("{target}/{hash}")).send().await.unwrap();
+            assert_eq!(
+                outbox.blob_copies(hash.clone()).await.unwrap(),
+                std::slice::from_ref(&target)
+            );
+            let res = http_client()
+                .get(format!("{target}/{hash}"))
+                .send()
+                .await
+                .unwrap();
             assert_eq!(res.bytes().await.unwrap().as_ref(), bytes);
             // Simulate the successful request's response being lost before durable recording.
-            outbox.db({
-                let hash = hash.clone();
-                move |conn| conn.execute("UPDATE outbox SET status='pending' WHERE kind='blob' AND ref_id=?", [hash]).map(|_| ())
-            }).await.unwrap();
+            outbox
+                .db({
+                    let hash = hash.clone();
+                    move |conn| {
+                        conn.execute(
+                            "UPDATE outbox SET status='pending' WHERE kind='blob' AND ref_id=?",
+                            [hash],
+                        )
+                        .map(|_| ())
+                    }
+                })
+                .await
+                .unwrap();
             run_due(&outbox, &shared(Some(keys.clone()))).await;
-            assert_eq!(outbox.blob_copies(hash.clone()).await.unwrap(), [target.clone()]);
-            outbox.queue_blob(hash.clone(), bytes.len() as u64, "ignored replay".into()).await.unwrap();
-            assert_eq!(outbox.blob_copies(hash).await.unwrap(), [target.clone()]);
+            assert_eq!(
+                outbox.blob_copies(hash.clone()).await.unwrap(),
+                std::slice::from_ref(&target)
+            );
+            outbox
+                .queue_blob(hash.clone(), bytes.len() as u64, "ignored replay".into())
+                .await
+                .unwrap();
+            assert_eq!(
+                outbox.blob_copies(hash).await.unwrap(),
+                std::slice::from_ref(&target)
+            );
         }
     }
 
@@ -1822,48 +2620,102 @@ mod tests {
         let signer = keys.public_key();
         let target = {
             let seen = seen.clone();
-            format!("http://{}", serve(Router::new().route("/upload", put(move |headers: HeaderMap, body: Body| {
-                let seen = seen.clone();
-                async move {
-                    let token = headers[header::AUTHORIZATION].to_str().unwrap().strip_prefix("Nostr ").unwrap();
-                    let auth = nostr::prelude::Event::from_json(base64::engine::general_purpose::STANDARD.decode(token).unwrap()).unwrap();
-                    auth.verify().unwrap();
-                    assert_eq!((auth.pubkey, auth.kind), (signer, Kind::Custom(24242)));
-                    let hash = headers["x-sha-256"].to_str().unwrap().to_owned();
-                    assert!(auth.tags.iter().any(|t| t.as_slice() == ["t", "upload"]));
-                    assert!(auth.tags.iter().any(|t| t.as_slice() == ["x", hash.as_str()]));
-                    assert_eq!(headers[header::CONTENT_TYPE], "video/mp4");
-                    assert_eq!(headers[header::CONTENT_LENGTH], "12");
-                    let bytes = axum::body::to_bytes(body, 1024).await.unwrap();
-                    assert_eq!(bytes.as_ref(), b"upload bytes");
-                    match seen.fetch_add(1, Ordering::SeqCst) {
-                        0 => Response::new(Body::from_stream(futures_util::stream::once(async {
-                            Err::<axum::body::Bytes, _>(std::io::Error::other("connection lost after upload"))
-                        }))),
-                        1 => Json(serde_json::json!({"sha256":"wrong-hash","size":999})).into_response(),
-                        _ => Json(serde_json::json!({"sha256":hash,"size":12})).into_response(),
-                    }
-                }
-            }))).await)
+            format!(
+                "http://{}",
+                serve(Router::new().route(
+                    "/upload",
+                    put(move |headers: HeaderMap, body: Body| {
+                        let seen = seen.clone();
+                        async move {
+                            let token = headers[header::AUTHORIZATION]
+                                .to_str()
+                                .unwrap()
+                                .strip_prefix("Nostr ")
+                                .unwrap();
+                            let auth = nostr::prelude::Event::from_json(
+                                base64::engine::general_purpose::STANDARD
+                                    .decode(token)
+                                    .unwrap(),
+                            )
+                            .unwrap();
+                            auth.verify().unwrap();
+                            assert_eq!((auth.pubkey, auth.kind), (signer, Kind::Custom(24242)));
+                            let hash = headers["x-sha-256"].to_str().unwrap().to_owned();
+                            assert!(auth.tags.iter().any(|t| t.as_slice() == ["t", "upload"]));
+                            assert!(auth
+                                .tags
+                                .iter()
+                                .any(|t| t.as_slice() == ["x", hash.as_str()]));
+                            assert_eq!(headers[header::CONTENT_TYPE], "video/mp4");
+                            assert_eq!(headers[header::CONTENT_LENGTH], "12");
+                            let bytes = axum::body::to_bytes(body, 1024).await.unwrap();
+                            assert_eq!(bytes.as_ref(), b"upload bytes");
+                            match seen.fetch_add(1, Ordering::SeqCst) {
+                                0 => Response::new(Body::from_stream(futures_util::stream::once(
+                                    async {
+                                        Err::<axum::body::Bytes, _>(std::io::Error::other(
+                                            "connection lost after upload",
+                                        ))
+                                    },
+                                ))),
+                                1 => Json(serde_json::json!({"sha256":"wrong-hash","size":999}))
+                                    .into_response(),
+                                _ => Json(serde_json::json!({"sha256":hash,"size":12}))
+                                    .into_response(),
+                            }
+                        }
+                    })
+                ))
+                .await
+            )
         };
-        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, _relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         outbox.set_origin_public(false);
         let (hash, _) = stored(&outbox, &state, &keys, b"upload bytes", "mp4", false).await;
-        outbox.queue_blob(hash.clone(), 12, "https://private.local/video".into()).await.unwrap();
+        outbox
+            .queue_blob(hash.clone(), 12, "https://private.local/video".into())
+            .await
+            .unwrap();
         run_due(&outbox, &shared(None)).await;
-        assert_eq!(outbox.blob_problems(hash.clone()).await.unwrap(), Some(format!("{target}: {NEEDS_KEY}")));
+        assert_eq!(
+            outbox.blob_problems(hash.clone()).await.unwrap(),
+            Some(format!("{target}: {NEEDS_KEY}"))
+        );
         assert_eq!(seen.load(Ordering::SeqCst), 0);
         outbox.retry(None).await.unwrap();
         run_due(&outbox, &shared(Some(keys.clone()))).await;
         let first = row(&outbox, "blob", &target);
         assert_eq!((first.0.as_str(), first.1), ("pending", 1));
         assert!(first.2 > now());
-        outbox.0.conn.lock().execute("UPDATE outbox SET next_attempt_at=0", []).unwrap();
+        outbox
+            .0
+            .conn
+            .lock()
+            .execute("UPDATE outbox SET next_attempt_at=0", [])
+            .unwrap();
         run_due(&outbox, &shared(Some(keys.clone()))).await;
         let error = outbox.blob_problems(hash.clone()).await.unwrap().unwrap();
-        assert!(error.contains("wrong-hash") && error.contains("999") && error.contains(&hash) && error.contains("12"), "{error}");
+        assert!(
+            error.contains("wrong-hash")
+                && error.contains("999")
+                && error.contains(&hash)
+                && error.contains("12"),
+            "{error}"
+        );
         assert!(outbox.blob_copies(hash.clone()).await.unwrap().is_empty());
-        outbox.0.conn.lock().execute("UPDATE outbox SET next_attempt_at=0", []).unwrap();
+        outbox
+            .0
+            .conn
+            .lock()
+            .execute("UPDATE outbox SET next_attempt_at=0", [])
+            .unwrap();
         run_due(&outbox, &shared(Some(keys))).await;
         assert_eq!(outbox.blob_copies(hash).await.unwrap(), [target]);
         assert_eq!(seen.load(Ordering::SeqCst), 3);
@@ -1877,15 +2729,34 @@ mod tests {
         let forbidden_seen = Arc::new(AtomicUsize::new(0));
         let forbidden = fake_relay(true, "", forbidden_seen.clone()).await;
         let remote = "https://blossom.example".to_owned();
-        let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror {
-            relays: vec![target.clone(), forbidden.clone()], blossom: vec![remote.clone()],
-        }).await;
-        let event = EventBuilder::new(Kind::Custom(15128), "").finalize(&keys).unwrap();
-        outbox.require_blobs(event.id, vec![SHA.into()]).await.unwrap();
-        outbox.queue_blob(SHA.into(), 42, "https://instance.example/file".into()).await.unwrap();
+        let (outbox, relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![target.clone(), forbidden.clone()],
+                blossom: vec![remote.clone()],
+            },
+        )
+        .await;
+        let event = EventBuilder::new(Kind::Custom(15128), "")
+            .finalize(&keys)
+            .unwrap();
+        outbox
+            .require_blobs(event.id, vec![SHA.into()])
+            .await
+            .unwrap();
+        outbox
+            .queue_blob(SHA.into(), 42, "https://instance.example/file".into())
+            .await
+            .unwrap();
         accepted(&relay, event.clone()).await;
-        assert!(!outbox.event_delivery(event.id).await.unwrap(), "registered event is held until explicit delivery");
-        outbox.deliver(vec![target.clone()], vec![event.id]).await.unwrap();
+        assert!(
+            !outbox.event_delivery(event.id).await.unwrap(),
+            "registered event is held until explicit delivery"
+        );
+        outbox
+            .deliver(vec![target.clone()], vec![event.id])
+            .await
+            .unwrap();
         // Pending and failed blob jobs both keep the manifest behind the barrier.
         run_due(&outbox, &shared(None)).await;
         assert_eq!(seen.load(Ordering::SeqCst), 0);
@@ -1893,19 +2764,44 @@ mod tests {
         let db = state.storage.root.with_extension("sqlite");
         drop(outbox);
         drop(relay);
-        let reopened = Outbox::open(&db, Mirror { relays: vec![target.clone(), forbidden], blossom: vec![remote.clone()] }).unwrap();
-        reopened.require_blobs(event.id, vec![SHA.into()]).await.unwrap();
+        let reopened = Outbox::open(
+            &db,
+            Mirror {
+                relays: vec![target.clone(), forbidden],
+                blossom: vec![remote.clone()],
+            },
+        )
+        .unwrap();
+        reopened
+            .require_blobs(event.id, vec![SHA.into()])
+            .await
+            .unwrap();
         run_due(&reopened, &shared(None)).await;
         assert_eq!(seen.load(Ordering::SeqCst), 0);
-        reopened.db(|conn| conn.execute("UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob'", []).map(|_| ())).await.unwrap();
+        reopened
+            .db(|conn| {
+                conn.execute(
+                    "UPDATE outbox SET status='done',last_error=NULL WHERE kind='blob'",
+                    [],
+                )
+                .map(|_| ())
+            })
+            .await
+            .unwrap();
         run_due(&reopened, &shared(None)).await;
         assert_eq!(seen.load(Ordering::SeqCst), 1);
         assert!(reopened.event_delivery(event.id).await.unwrap());
-        assert_eq!(forbidden_seen.load(Ordering::SeqCst), 0, "nsite never leaks to an unlisted mirror relay");
+        assert_eq!(
+            forbidden_seen.load(Ordering::SeqCst),
+            0,
+            "nsite never leaks to an unlisted mirror relay"
+        );
         // Explicit delivery remains eligible after a relay leaves configuration.
         let historical = Outbox::open(&db, Mirror::default()).unwrap();
         let other = EventBuilder::new(Kind::Custom(15128), "")
-            .custom_created_at(Timestamp::from(Timestamp::now().as_secs() + 1)).finalize(&keys).unwrap();
+            .custom_created_at(Timestamp::from(Timestamp::now().as_secs() + 1))
+            .finalize(&keys)
+            .unwrap();
         historical.db({
             let other = other.clone();
             move |conn| conn.execute(
@@ -1913,12 +2809,21 @@ mod tests {
                 params![other.id.as_bytes().as_slice(), other.created_at.as_secs() as i64, other.pubkey.as_bytes().as_slice(), 15128, other.as_json()],
             ).map(|_| ())
         }).await.unwrap();
-        historical.deliver(vec![target.clone()], vec![other.id]).await.unwrap();
+        historical
+            .deliver(vec![target.clone()], vec![other.id])
+            .await
+            .unwrap();
         historical.cancel_event(other.id).await.unwrap();
         run_due(&historical, &shared(None)).await;
-        assert_eq!(seen.load(Ordering::SeqCst), 1, "disable prevents queued manifest delivery");
+        assert_eq!(
+            seen.load(Ordering::SeqCst),
+            1,
+            "disable prevents queued manifest delivery"
+        );
         assert!(!historical.event_delivery(other.id).await.unwrap());
-        let deletion = EventBuilder::new(Kind::EventDeletion, "").finalize(&keys).unwrap();
+        let deletion = EventBuilder::new(Kind::EventDeletion, "")
+            .finalize(&keys)
+            .unwrap();
         historical.db({
             let deletion = deletion.clone();
             move |conn| conn.execute(
@@ -1926,7 +2831,10 @@ mod tests {
                 params![deletion.id.as_bytes().as_slice(), deletion.created_at.as_secs() as i64, deletion.pubkey.as_bytes().as_slice(), 5, deletion.as_json()],
             ).map(|_| ())
         }).await.unwrap();
-        historical.deliver(vec![target], vec![deletion.id]).await.unwrap();
+        historical
+            .deliver(vec![target], vec![deletion.id])
+            .await
+            .unwrap();
         run_due(&historical, &shared(None)).await;
         assert_eq!(seen.load(Ordering::SeqCst), 2);
         assert!(historical.event_delivery(deletion.id).await.unwrap());
@@ -1935,36 +2843,82 @@ mod tests {
     #[tokio::test]
     async fn explicit_nsite_deletion_spares_retained_media_and_reaches_removed_targets() {
         let keys = Keys::generate();
-        let (remote_outbox, _remote_relay, remote) = lifecycle_fixture(&keys, Mirror::default()).await;
+        let (remote_outbox, _remote_relay, remote) =
+            lifecycle_fixture(&keys, Mirror::default()).await;
         let target = format!("http://{}", serve(almond::create_app(remote.clone())).await);
         let (outbox, relay, state) = lifecycle_fixture(&keys, Mirror::default()).await;
         let mut assets = Vec::new();
         for bytes in [
-            b"nsite asset".as_slice(), b"pending profile image".as_slice(), b"video thumb".as_slice(),
-            b"scheduled thumb".as_slice(), b"signed profile image".as_slice(), b"note attachment".as_slice(), b"obsolete asset".as_slice(),
+            b"nsite asset".as_slice(),
+            b"pending profile image".as_slice(),
+            b"video thumb".as_slice(),
+            b"scheduled thumb".as_slice(),
+            b"signed profile image".as_slice(),
+            b"note attachment".as_slice(),
+            b"obsolete asset".as_slice(),
         ] {
             let (hash, path) = stored(&outbox, &state, &keys, bytes, "jpg", false).await;
             stored(&remote_outbox, &remote, &keys, bytes, "jpg", true).await;
             assets.push((hash, path));
         }
-        outbox.retain("nsite", vec![assets[0].0.clone()]).await.unwrap();
-        outbox.retain("profile", vec![assets[1].0.clone()]).await.unwrap();
-        accepted(&relay, video_event(&keys, 10, "clip", &[("thumb", &assets[2].0)])).await;
+        outbox
+            .retain("nsite", vec![assets[0].0.clone()])
+            .await
+            .unwrap();
+        outbox
+            .retain("profile", vec![assets[1].0.clone()])
+            .await
+            .unwrap();
+        accepted(
+            &relay,
+            video_event(&keys, 10, "clip", &[("thumb", &assets[2].0)]),
+        )
+        .await;
         let due = (Timestamp::now().as_secs() + 3600).to_string();
         let scheduled_url = format!("https://instance.example/{}.jpg", assets[3].0);
-        let scheduled = EventBuilder::new(Kind::Custom(34235), "").tags([
-            Tag::parse(["d", "scheduled"]).unwrap(), Tag::parse(["published_at", due.as_str()]).unwrap(),
-            Tag::parse(["imeta", format!("url {scheduled_url}").as_str()]).unwrap(),
-        ]).finalize(&keys).unwrap();
-        assert!(crate::schedule::submit(&outbox, &[keys.public_key()], &[keys.public_key()], scheduled.as_json().as_bytes()).await.is_ok());
-        let profile = EventBuilder::new(Kind::Metadata, serde_json::json!({
-            "picture": format!("https://instance.example/{}.jpg", assets[4].0),
-        }).to_string()).finalize(&keys).unwrap();
+        let scheduled = EventBuilder::new(Kind::Custom(34235), "")
+            .tags([
+                Tag::parse(["d", "scheduled"]).unwrap(),
+                Tag::parse(["published_at", due.as_str()]).unwrap(),
+                Tag::parse(["imeta", format!("url {scheduled_url}").as_str()]).unwrap(),
+            ])
+            .finalize(&keys)
+            .unwrap();
+        assert!(crate::schedule::submit(
+            &outbox,
+            &[keys.public_key()],
+            &[keys.public_key()],
+            scheduled.as_json().as_bytes()
+        )
+        .await
+        .is_ok());
+        let profile = EventBuilder::new(
+            Kind::Metadata,
+            serde_json::json!({
+                "picture": format!("https://instance.example/{}.jpg", assets[4].0),
+            })
+            .to_string(),
+        )
+        .finalize(&keys)
+        .unwrap();
         accepted(&relay, profile).await;
-        accepted(&relay, EventBuilder::new(Kind::TextNote, "attachment")
-            .tags([Tag::parse(["x", assets[5].0.as_str()]).unwrap()]).finalize(&keys).unwrap()).await;
+        accepted(
+            &relay,
+            EventBuilder::new(Kind::TextNote, "attachment")
+                .tags([Tag::parse(["x", assets[5].0.as_str()]).unwrap()])
+                .finalize(&keys)
+                .unwrap(),
+        )
+        .await;
         for (hash, _) in &assets {
-            outbox.delete_blobs(hash.clone(), keys.public_key().to_hex(), vec![target.clone()]).await.unwrap();
+            outbox
+                .delete_blobs(
+                    hash.clone(),
+                    keys.public_key().to_hex(),
+                    vec![target.clone()],
+                )
+                .await
+                .unwrap();
         }
         let db = state.storage.root.with_extension("sqlite");
         drop(outbox);
@@ -1974,13 +2928,26 @@ mod tests {
         run_due(&reopened, &shared(Some(keys.clone()))).await;
         for (hash, path) in &assets[..6] {
             assert!(path.exists(), "live reference keeps local {hash}");
-            assert!(remote.file_index.get(hash).await.is_some(), "live reference keeps historical remote {hash}");
+            assert!(
+                remote.file_index.get(hash).await.is_some(),
+                "live reference keeps historical remote {hash}"
+            );
         }
         assert!(!assets[6].1.exists());
-        assert!(remote.file_index.get(&assets[6].0).await.is_none(), "explicit DELETE reaches removed mirror");
+        assert!(
+            remote.file_index.get(&assets[6].0).await.is_none(),
+            "explicit DELETE reaches removed mirror"
+        );
         // Clearing only nsite retention does not release profile/video media.
         reopened.retain("nsite", vec![]).await.unwrap();
-        reopened.delete_blobs(assets[0].0.clone(), keys.public_key().to_hex(), vec![target]).await.unwrap();
+        reopened
+            .delete_blobs(
+                assets[0].0.clone(),
+                keys.public_key().to_hex(),
+                vec![target],
+            )
+            .await
+            .unwrap();
         run_due(&reopened, &shared(Some(keys.clone()))).await;
         run_due(&reopened, &shared(Some(keys))).await;
         assert!(!assets[0].1.exists() && remote.file_index.get(&assets[0].0).await.is_none());
@@ -1998,38 +2965,60 @@ mod tests {
         let release = Arc::new(tokio::sync::Notify::new());
         let target = {
             let (started, release, expected) = (started.clone(), release.clone(), hash.clone());
-            format!("http://{}", serve(Router::new().route("/upload", put(move |body: Body| {
-                let (started, release, expected) = (started.clone(), release.clone(), expected.clone());
-                async move {
-                    let mut stream = body.into_data_stream();
-                    let first = stream.next().await.unwrap().unwrap();
-                    assert!(!first.is_empty() && first.len() < size as usize);
-                    let mut digest = Sha256::new();
-                    digest.update(&first);
-                    let mut received = first.len() as u64;
-                    started.notify_one();
-                    release.notified().await;
-                    while let Some(chunk) = stream.next().await {
-                        let chunk = chunk.unwrap();
-                        received += chunk.len() as u64;
-                        digest.update(&chunk);
-                    }
-                    assert_eq!(received, size);
-                    assert_eq!(hex::encode(digest.finalize()), expected);
-                    Json(serde_json::json!({"sha256":expected,"size":size}))
-                }
-            }))).await)
+            format!(
+                "http://{}",
+                serve(Router::new().route(
+                    "/upload",
+                    put(move |body: Body| {
+                        let (started, release, expected) =
+                            (started.clone(), release.clone(), expected.clone());
+                        async move {
+                            let mut stream = body.into_data_stream();
+                            let first = stream.next().await.unwrap().unwrap();
+                            assert!(!first.is_empty() && first.len() < size as usize);
+                            let mut digest = Sha256::new();
+                            digest.update(&first);
+                            let mut received = first.len() as u64;
+                            started.notify_one();
+                            release.notified().await;
+                            while let Some(chunk) = stream.next().await {
+                                let chunk = chunk.unwrap();
+                                received += chunk.len() as u64;
+                                digest.update(&chunk);
+                            }
+                            assert_eq!(received, size);
+                            assert_eq!(hex::encode(digest.finalize()), expected);
+                            Json(serde_json::json!({"sha256":expected,"size":size}))
+                        }
+                    })
+                ))
+                .await
+            )
         };
-        let (outbox, _relay, state) = lifecycle_fixture(&keys, Mirror { relays: vec![], blossom: vec![target.clone()] }).await;
+        let (outbox, _relay, state) = lifecycle_fixture(
+            &keys,
+            Mirror {
+                relays: vec![],
+                blossom: vec![target.clone()],
+            },
+        )
+        .await;
         outbox.set_origin_public(false);
         stored(&outbox, &state, &keys, &bytes, "mp4", false).await;
-        outbox.queue_blob(hash.clone(), size, "https://private.local/video".into()).await.unwrap();
+        outbox
+            .queue_blob(hash.clone(), size, "https://private.local/video".into())
+            .await
+            .unwrap();
         let sending = {
             let outbox = outbox.clone();
             tokio::spawn(async move { run_due(&outbox, &shared(Some(keys))).await })
         };
-        tokio::time::timeout(Duration::from_secs(5), started.notified()).await.unwrap();
-        let guard = tokio::time::timeout(Duration::from_secs(1), MEDIA_LIFECYCLE.lock()).await.expect("streaming upload holds lifecycle lock");
+        tokio::time::timeout(Duration::from_secs(5), started.notified())
+            .await
+            .unwrap();
+        let guard = tokio::time::timeout(Duration::from_secs(1), MEDIA_LIFECYCLE.lock())
+            .await
+            .expect("streaming upload holds lifecycle lock");
         drop(guard);
         assert!(!sending.is_finished());
         release.notify_one();

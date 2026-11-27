@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check formatting
+        run: npm run format:check
+
       - name: Check core, widgets, site and studio (lint, typecheck, test)
         run: |
           npm run lint --workspace @nostube/core --workspace @nostube/widgets --workspace @nostube/site --workspace @nostube/studio
@@ -38,3 +41,38 @@ jobs:
       - name: Run tests
         working-directory: apps/web
         run: npm run test
+
+  # The desktop shell is otherwise only compiled by the release workflow.
+  desktop:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web/src-tauri
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/web/src-tauri
+
+      # tauri-build wants the frontend dist and the sidecar binary to exist; clippy needs neither's content.
+      - name: Stub frontend and sidecar
+        run: |
+          mkdir -p ../dist binaries
+          touch binaries/almond-x86_64-unknown-linux-gnu
+
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings

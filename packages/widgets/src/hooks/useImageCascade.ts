@@ -240,9 +240,7 @@ export function useImageCascadeChain(
   candidates: (string | null | undefined)[],
   input: Omit<ImageCascadeInput, 'src'> = {}
 ): ImageCascadeResult {
-  const urls = candidates.filter(
-    (url, i, all): url is string => !!url && all.indexOf(url) === i
-  )
+  const urls = candidates.filter((url, i, all): url is string => !!url && all.indexOf(url) === i)
   const key = urls.join('\n')
   const [state, setState] = useState({ key, index: 0 })
   const index = state.key === key ? state.index : 0

@@ -8,7 +8,13 @@
 use nostr::prelude::*;
 use serde_json::{Map, Value};
 
-use crate::{branding::Branding, config::{is_public_url, public_urls, relay_url}, nsite, outbox::Outbox, relay::Relay};
+use crate::{
+    branding::Branding,
+    config::{is_public_url, public_urls, relay_url},
+    nsite,
+    outbox::Outbox,
+    relay::Relay,
+};
 
 /// One sync at a time, so the newest settings always end in the newest profile.
 static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -23,8 +29,14 @@ fn public_origin(public: &Value) -> bool {
 
 fn blossom_servers(public: &Value) -> Vec<String> {
     let origin = public["origin"].as_str().unwrap_or_default().to_owned();
-    let mirrors: Vec<String> = serde_json::from_value(public["mirror"]["blossom"].clone()).unwrap_or_default();
-    public_urls(public_origin(public).then_some(&origin).into_iter().chain(&mirrors))
+    let mirrors: Vec<String> =
+        serde_json::from_value(public["mirror"]["blossom"].clone()).unwrap_or_default();
+    public_urls(
+        public_origin(public)
+            .then_some(&origin)
+            .into_iter()
+            .chain(&mirrors),
+    )
 }
 
 /// The profile from the public config: `name` is the title, `about` the tagline, `picture` and
@@ -34,15 +46,30 @@ fn blossom_servers(public: &Value) -> Vec<String> {
 fn derive(public: &Value, key: PublicKey) -> Value {
     let origin = public["origin"].as_str().unwrap_or_default();
     let site = &public["site"];
-    let image = |slot: &str| site[slot].as_str().and_then(|url| {
-        let url = if url.starts_with('/') { format!("{origin}{url}") } else { url.to_owned() };
-        (is_public_url(&url) && (public_origin(public) || !url.starts_with(origin))).then_some(url)
-    });
-    let host = public_origin(public).then(|| Url::parse(origin).ok().and_then(|url| url.host_str().map(str::to_owned))).flatten();
+    let image = |slot: &str| {
+        site[slot].as_str().and_then(|url| {
+            let url = if url.starts_with('/') {
+                format!("{origin}{url}")
+            } else {
+                url.to_owned()
+            };
+            (is_public_url(&url) && (public_origin(public) || !url.starts_with(origin)))
+                .then_some(url)
+        })
+    };
+    let host = public_origin(public)
+        .then(|| {
+            Url::parse(origin)
+                .ok()
+                .and_then(|url| url.host_str().map(str::to_owned))
+        })
+        .flatten();
     let website = if !is_public(public) {
         None
     } else if public["siteHosting"] == "nsite" {
-        nsite::url(public, key).ok().filter(|url| is_public_url(url))
+        nsite::url(public, key)
+            .ok()
+            .filter(|url| is_public_url(url))
     } else {
         public_origin(public).then(|| origin.to_owned())
     };
@@ -56,7 +83,12 @@ fn derive(public: &Value, key: PublicKey) -> Value {
         ("website", website),
     ]
     .into_iter()
-    .filter_map(|(field, value)| Some((field.to_owned(), Value::from(value.filter(|v| !v.is_empty())?))))
+    .filter_map(|(field, value)| {
+        Some((
+            field.to_owned(),
+            Value::from(value.filter(|v| !v.is_empty())?),
+        ))
+    })
     .collect::<Map<_, _>>()
     .into()
 }
@@ -68,8 +100,14 @@ fn relays(public: &Value, mirror: &[String]) -> Vec<String> {
     if !is_public(public) {
         return vec![instance];
     }
-    let configured: Vec<String> = serde_json::from_value(public["mirror"]["relays"].clone()).unwrap_or_else(|_| mirror.to_vec());
-    public_urls(public_origin(public).then_some(&instance).into_iter().chain(&configured))
+    let configured: Vec<String> = serde_json::from_value(public["mirror"]["relays"].clone())
+        .unwrap_or_else(|_| mirror.to_vec());
+    public_urls(
+        public_origin(public)
+            .then_some(&instance)
+            .into_iter()
+            .chain(&configured),
+    )
 }
 
 /// NIP-65: the instance relay for reading and writing (no marker), the others for writing.
@@ -77,14 +115,27 @@ fn relay_list(relays: &[String]) -> Vec<Tag> {
     relays
         .iter()
         .enumerate()
-        .map(|(i, url)| if i == 0 { Tag::custom("r", [url.as_str()]) } else { Tag::custom("r", [url.as_str(), "write"]) })
+        .map(|(i, url)| {
+            if i == 0 {
+                Tag::custom("r", [url.as_str()])
+            } else {
+                Tag::custom("r", [url.as_str(), "write"])
+            }
+        })
         .collect()
 }
 
 /// `/.well-known/nostr.json` (NIP-05): `_` is the managed key, else the first creator (own
 /// identity); its relays are the announced ones. Any other name, or no identity, is unknown.
-pub fn nostr_json(public: &Value, managed: Option<PublicKey>, mirror: &[String], name: Option<&str>) -> Value {
-    let pubkey = managed.map(|k| k.to_hex()).or_else(|| public["creators"][0].as_str().map(str::to_owned));
+pub fn nostr_json(
+    public: &Value,
+    managed: Option<PublicKey>,
+    mirror: &[String],
+    name: Option<&str>,
+) -> Value {
+    let pubkey = managed
+        .map(|k| k.to_hex())
+        .or_else(|| public["creators"][0].as_str().map(str::to_owned));
     match pubkey {
         Some(pubkey) if matches!(name, None | Some("_")) => serde_json::json!({
             "names": { "_": pubkey },
@@ -97,7 +148,12 @@ pub fn nostr_json(public: &Value, managed: Option<PublicKey>, mirror: &[String],
 /// Rebuilds the derived events at startup, config/branding changes and periodically.
 /// S2 image jobs are durable: no profile with unreachable or unconfirmed images is signed;
 /// a later sync completes after the outbox confirms a copy, without holding a config save open.
-pub async fn sync(relay: &Relay, branding: &Branding, outbox: &Outbox, keys: &crate::signer::Shared) {
+pub async fn sync(
+    relay: &Relay,
+    branding: &Branding,
+    outbox: &Outbox,
+    keys: &crate::signer::Shared,
+) {
     let _one = SYNC.lock().await;
     let snapshot = branding.public_config();
     let public: Value = match serde_json::from_slice(&snapshot) {
@@ -113,7 +169,16 @@ pub async fn sync(relay: &Relay, branding: &Branding, outbox: &Outbox, keys: &cr
             return; // A newer config/branding sync must win after asynchronous storage work.
         }
         match ready {
-            Ok(Some(ready)) => ids.extend(replace(relay, &keys, Kind::Metadata, derive(&ready, keys.public_key()).to_string(), vec![]).await),
+            Ok(Some(ready)) => ids.extend(
+                replace(
+                    relay,
+                    &keys,
+                    Kind::Metadata,
+                    derive(&ready, keys.public_key()).to_string(),
+                    vec![],
+                )
+                .await,
+            ),
             Ok(None) => {}
             Err(e) => tracing::warn!("profile: preparing branding mirrors: {e}"),
         }
@@ -121,25 +186,47 @@ pub async fn sync(relay: &Relay, branding: &Branding, outbox: &Outbox, keys: &cr
             let tags = relay_list(&relays(&public, relay.mirror_relays()));
             ids.extend(replace(relay, &keys, Kind::RelayList, String::new(), tags).await);
         }
-        let tags = blossom_servers(&public).iter().map(|url| Tag::custom("server", [url.as_str()])).collect();
+        let tags = blossom_servers(&public)
+            .iter()
+            .map(|url| Tag::custom("server", [url.as_str()]))
+            .collect();
         ids.extend(replace(relay, &keys, Kind::Custom(10063), String::new(), tags).await);
     }
-    let targets: Vec<String> = serde_json::from_value(public["profileRelays"].clone()).unwrap_or_default();
+    let targets: Vec<String> =
+        serde_json::from_value(public["profileRelays"].clone()).unwrap_or_default();
     let indexers = public_urls(&targets);
     let announcing = is_public(&public);
-    if !announcing { ids.clear(); }
+    if !announcing {
+        ids.clear();
+    }
     if let Err(e) = outbox.announce(indexers, ids, announcing).await {
         tracing::warn!("profile: queueing for the indexers: {e}");
     }
 }
 
-async fn profile_images(branding: &Branding, outbox: &Outbox, keys: &Keys, public: &Value) -> Result<Option<Value>, String> {
+async fn profile_images(
+    branding: &Branding,
+    outbox: &Outbox,
+    keys: &Keys,
+    public: &Value,
+) -> Result<Option<Value>, String> {
     let mut ready = public.clone();
-    let images: Vec<_> = branding.files().into_iter()
-        .filter(|(path, _, _)| matches!(*path, "/branding/logo" | "/branding/banner")).collect();
+    let images: Vec<_> = branding
+        .files()
+        .into_iter()
+        .filter(|(path, _, _)| matches!(*path, "/branding/logo" | "/branding/banner"))
+        .collect();
     // Pin desired bytes before publication: a superseded nsite may share these very blobs.
     use sha2::{Digest, Sha256};
-    outbox.retain("profile", images.iter().map(|(_, _, bytes)| hex::encode(Sha256::digest(bytes))).collect()).await?;
+    outbox
+        .retain(
+            "profile",
+            images
+                .iter()
+                .map(|(_, _, bytes)| hex::encode(Sha256::digest(bytes)))
+                .collect(),
+        )
+        .await?;
     if public_origin(public) || public["reach"] != "public" {
         return Ok(Some(ready));
     }
@@ -147,12 +234,22 @@ async fn profile_images(branding: &Branding, outbox: &Outbox, keys: &Keys, publi
     let servers = blossom_servers(public);
     let mut pending = false;
     for (path, mime, bytes) in images {
-        let ext = crate::branding::Kind::sniff(&bytes).ok_or("unknown branding image format")?.ext();
-        let (hash, size) = outbox.store_local(&bytes, mime, ext, &keys.public_key().to_hex()).await?;
-        outbox.queue_blob(hash.clone(), size, format!("{origin}/{hash}.{ext}")).await?;
+        let ext = crate::branding::Kind::sniff(&bytes)
+            .ok_or("unknown branding image format")?
+            .ext();
+        let (hash, size) = outbox
+            .store_local(&bytes, mime, ext, &keys.public_key().to_hex())
+            .await?;
+        outbox
+            .queue_blob(hash.clone(), size, format!("{origin}/{hash}.{ext}"))
+            .await?;
         let copies = outbox.blob_copies(hash.clone()).await?;
         // A removed or LAN-only target must not become the public profile URL.
-        let target = servers.iter().find(|server| copies.iter().any(|copy| copy.trim_end_matches('/') == server.as_str()));
+        let target = servers.iter().find(|server| {
+            copies
+                .iter()
+                .any(|copy| copy.trim_end_matches('/') == server.as_str())
+        });
         if let Some(target) = target {
             let slot = path.rsplit('/').next().unwrap();
             ready["site"][slot] = format!("{target}/{hash}.{ext}").into();
@@ -165,8 +262,18 @@ async fn profile_images(branding: &Branding, outbox: &Outbox, keys: &Keys, publi
 
 /// Makes `content` and `tags` the managed key's current `kind` (a replaceable kind) unless the
 /// stored one says the same already. Answers the id of the current event.
-async fn replace(relay: &Relay, keys: &Keys, kind: Kind, content: String, tags: Vec<Tag>) -> Option<EventId> {
-    let what = match kind { Kind::Metadata => "profile", Kind::RelayList => "relay list", _ => "Blossom server list" };
+async fn replace(
+    relay: &Relay,
+    keys: &Keys,
+    kind: Kind,
+    content: String,
+    tags: Vec<Tag>,
+) -> Option<EventId> {
+    let what = match kind {
+        Kind::Metadata => "profile",
+        Kind::RelayList => "relay list",
+        _ => "Blossom server list",
+    };
     let filter = Filter::new().author(keys.public_key()).kind(kind).limit(1);
     let current = match relay.stored(filter).await {
         Ok(events) => events.into_iter().next(),
@@ -178,13 +285,21 @@ async fn replace(relay: &Relay, keys: &Keys, kind: Kind, content: String, tags: 
     let json = |s: &str| serde_json::from_str::<Value>(s).ok();
     if let Some(e) = current.as_ref().filter(|e| {
         e.tags.iter().eq(tags.iter())
-            && (kind == Kind::Custom(10063) || e.content == content || json(&e.content).is_some_and(|v| json(&content) == Some(v)))
+            && (kind == Kind::Custom(10063)
+                || e.content == content
+                || json(&e.content).is_some_and(|v| json(&content) == Some(v)))
     }) {
         return Some(e.id);
     }
     // Strictly newer than the stored one, also for two changes within a second.
-    let created_at = current.map_or(0, |e| e.created_at.as_secs() + 1).max(Timestamp::now().as_secs());
-    let event = match EventBuilder::new(kind, content).tags(tags).custom_created_at(Timestamp::from(created_at)).finalize(keys) {
+    let created_at = current
+        .map_or(0, |e| e.created_at.as_secs() + 1)
+        .max(Timestamp::now().as_secs());
+    let event = match EventBuilder::new(kind, content)
+        .tags(tags)
+        .custom_created_at(Timestamp::from(created_at))
+        .finalize(keys)
+    {
         Ok(event) => event,
         Err(e) => {
             tracing::warn!("profile: cannot sign the {what}: {e}");
@@ -239,17 +354,36 @@ mod tests {
         }
 
         fn with_blossom(writer: PublicKey, blossom: Vec<String>) -> Fixture {
-            let dir = std::env::temp_dir().join(format!("nss-profile-test-{}", crate::admin::random_boot_id()));
+            let dir = std::env::temp_dir().join(format!(
+                "nss-profile-test-{}",
+                crate::admin::random_boot_id()
+            ));
             std::fs::create_dir_all(&dir).unwrap();
-            let relay = Relay::open(&dir.join("relay.sqlite"), crate::relay::RelayConfig {
-                writers: vec![writer], name: "t".into(), description: "t".into(),
-                mirror_relays: vec![MIRROR.into()],
-            }).unwrap();
-            let outbox = Outbox::open(&dir.join("relay.sqlite"), crate::config::Mirror {
-                relays: vec![MIRROR.into()], blossom,
-            }).unwrap();
+            let relay = Relay::open(
+                &dir.join("relay.sqlite"),
+                crate::relay::RelayConfig {
+                    writers: vec![writer],
+                    name: "t".into(),
+                    description: "t".into(),
+                    mirror_relays: vec![MIRROR.into()],
+                },
+            )
+            .unwrap();
+            let outbox = Outbox::open(
+                &dir.join("relay.sqlite"),
+                crate::config::Mirror {
+                    relays: vec![MIRROR.into()],
+                    blossom,
+                },
+            )
+            .unwrap();
             let branding = Branding::open(&dir, public("Channel", "Videos about things"));
-            Fixture { dir, relay, branding, outbox }
+            Fixture {
+                dir,
+                relay,
+                branding,
+                outbox,
+            }
         }
 
         async fn sync(&self, keys: &crate::signer::Shared) {
@@ -257,14 +391,24 @@ mod tests {
         }
 
         async fn stored(&self, author: PublicKey, kind: Kind) -> Vec<Event> {
-            self.relay.stored(Filter::new().author(author).kind(kind)).await.unwrap()
+            self.relay
+                .stored(Filter::new().author(author).kind(kind))
+                .await
+                .unwrap()
         }
 
         /// Event ids queued for `target`.
         fn jobs(&self, target: &str) -> Vec<String> {
             let conn = rusqlite::Connection::open(self.dir.join("relay.sqlite")).unwrap();
-            let mut stmt = conn.prepare("SELECT ref_id FROM outbox WHERE kind = 'event' AND target = ? ORDER BY id").unwrap();
-            stmt.query_map([target], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+            let mut stmt = conn
+                .prepare(
+                    "SELECT ref_id FROM outbox WHERE kind = 'event' AND target = ? ORDER BY id",
+                )
+                .unwrap();
+            stmt.query_map([target], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect()
         }
     }
 
@@ -290,32 +434,55 @@ mod tests {
         p["site"]["banner"] = "/branding/banner?v=2".into();
         p["site"]["favicon"] = "/branding/favicon?v=3".into();
         p["site"]["lightning"] = "channel@wallet.example".into();
-        assert_eq!(derive(&p, key), serde_json::json!({
-            "name": "Channel",
-            "about": "Videos",
-            "picture": "https://tube.example/branding/logo?v=1",
-            "banner": "https://tube.example/branding/banner?v=2",
-            "lud16": "channel@wallet.example",
-            "nip05": "_@tube.example",
-        }));
+        assert_eq!(
+            derive(&p, key),
+            serde_json::json!({
+                "name": "Channel",
+                "about": "Videos",
+                "picture": "https://tube.example/branding/logo?v=1",
+                "banner": "https://tube.example/branding/banner?v=2",
+                "lud16": "channel@wallet.example",
+                "nip05": "_@tube.example",
+            })
+        );
         let mut empty = public("Channel", "");
         empty["site"]["lightning"] = "".into();
         empty["origin"] = "https://tube.example:8443".into();
-        assert_eq!(derive(&empty, key), serde_json::json!({ "name": "Channel", "nip05": "_@tube.example" }));
+        assert_eq!(
+            derive(&empty, key),
+            serde_json::json!({ "name": "Channel", "nip05": "_@tube.example" })
+        );
     }
 
     #[test]
     fn the_relay_list_is_the_instance_relay_then_the_mirror_relays_in_public_reach() {
-        let mirror = ["wss://tube.example".to_owned(), MIRROR.into(), MIRROR.into()];
-        assert_eq!(relays(&public("C", ""), &mirror), ["wss://tube.example"], "private: the instance relay only");
+        let mirror = [
+            "wss://tube.example".to_owned(),
+            MIRROR.into(),
+            MIRROR.into(),
+        ];
+        assert_eq!(
+            relays(&public("C", ""), &mirror),
+            ["wss://tube.example"],
+            "private: the instance relay only"
+        );
         let announced = relays(&public_reach("C"), &mirror);
         assert_eq!(announced, ["wss://tube.example", MIRROR]);
-        let tags: Vec<Vec<String>> = relay_list(&announced).into_iter().map(Tag::to_vec).collect();
-        assert_eq!(tags, [vec!["r", "wss://tube.example"], vec!["r", MIRROR, "write"]]);
+        let tags: Vec<Vec<String>> = relay_list(&announced)
+            .into_iter()
+            .map(Tag::to_vec)
+            .collect();
+        assert_eq!(
+            tags,
+            [vec!["r", "wss://tube.example"], vec!["r", MIRROR, "write"]]
+        );
         // A plain HTTP origin (a FIPS mesh node) announces its ws relay.
         let mut http = public_reach("C");
         http["origin"] = "http://npub.fips:8080".into();
-        assert_eq!(relays(&http, &mirror), ["ws://npub.fips:8080", "wss://tube.example", MIRROR]);
+        assert_eq!(
+            relays(&http, &mirror),
+            ["ws://npub.fips:8080", "wss://tube.example", MIRROR]
+        );
     }
 
     #[test]
@@ -324,19 +491,34 @@ mod tests {
         let mut p = public_reach("C");
         p["creators"] = serde_json::json!([creator.to_hex()]);
         let mirror = [MIRROR.to_owned()];
-        assert_eq!(nostr_json(&p, Some(key), &mirror, None), serde_json::json!({
-            "names": { "_": key.to_hex() },
-            "relays": { key.to_hex(): ["wss://tube.example", MIRROR] },
-        }));
-        assert_eq!(nostr_json(&p, Some(key), &mirror, Some("_"))["names"]["_"], key.to_hex());
-        assert_eq!(nostr_json(&p, Some(key), &mirror, Some("bob")), serde_json::json!({ "names": {} }));
+        assert_eq!(
+            nostr_json(&p, Some(key), &mirror, None),
+            serde_json::json!({
+                "names": { "_": key.to_hex() },
+                "relays": { key.to_hex(): ["wss://tube.example", MIRROR] },
+            })
+        );
+        assert_eq!(
+            nostr_json(&p, Some(key), &mirror, Some("_"))["names"]["_"],
+            key.to_hex()
+        );
+        assert_eq!(
+            nostr_json(&p, Some(key), &mirror, Some("bob")),
+            serde_json::json!({ "names": {} })
+        );
         let mut private = public("C", "");
         private["creators"] = serde_json::json!([creator.to_hex()]);
-        assert_eq!(nostr_json(&private, None, &mirror, None), serde_json::json!({
-            "names": { "_": creator.to_hex() },
-            "relays": { creator.to_hex(): ["wss://tube.example"] },
-        }));
-        assert_eq!(nostr_json(&public("C", ""), None, &mirror, None), serde_json::json!({ "names": {} }));
+        assert_eq!(
+            nostr_json(&private, None, &mirror, None),
+            serde_json::json!({
+                "names": { "_": creator.to_hex() },
+                "relays": { creator.to_hex(): ["wss://tube.example"] },
+            })
+        );
+        assert_eq!(
+            nostr_json(&public("C", ""), None, &mirror, None),
+            serde_json::json!({ "names": {} })
+        );
     }
 
     #[tokio::test]
@@ -349,10 +531,16 @@ mod tests {
         p["originIsPublic"] = false.into();
         p["reach"] = "private".into();
         f.branding.set_base(p.clone());
-        let logo = f.branding.store(Slot::Logo, Image::Png, Bytes::from_static(PNG)).unwrap();
+        let logo = f
+            .branding
+            .store(Slot::Logo, Image::Png, Bytes::from_static(PNG))
+            .unwrap();
         f.sync(&shared).await;
         let first = f.stored(keys.public_key(), Kind::Metadata).await;
-        assert!(content(&first[0]).get("picture").is_none(), "derive omits the unreachable LAN image URL ({logo})");
+        assert!(
+            content(&first[0]).get("picture").is_none(),
+            "derive omits the unreachable LAN image URL ({logo})"
+        );
         p["title"] = "Renamed offline".into();
         p["site"]["lightning"] = "local@wallet.example".into();
         f.branding.set_base(p);
@@ -372,9 +560,15 @@ mod tests {
         f.sync(&shared).await;
         let first = f.stored(keys.public_key(), Kind::Metadata).await;
         assert_eq!(first.len(), 1);
-        assert_eq!(content(&first[0]), serde_json::json!({ "name": "Channel", "about": "Videos about things", "nip05": "_@tube.example" }));
+        assert_eq!(
+            content(&first[0]),
+            serde_json::json!({ "name": "Channel", "about": "Videos about things", "nip05": "_@tube.example" })
+        );
         let blossom = f.stored(keys.public_key(), Kind::Custom(10063)).await;
-        assert_eq!(f.jobs(MIRROR), [first[0].id.to_hex(), blossom[0].id.to_hex()]);
+        assert_eq!(
+            f.jobs(MIRROR),
+            [first[0].id.to_hex(), blossom[0].id.to_hex()]
+        );
 
         // Unchanged settings (an unrelated save, a restart): nothing new is signed or queued.
         f.sync(&shared).await;
@@ -382,34 +576,59 @@ mod tests {
         assert_eq!(f.jobs(MIRROR).len(), 2);
 
         // A new title replaces the profile with a newer one, within the same second too.
-        f.branding.set_base(public("Renamed", "Videos about things"));
+        f.branding
+            .set_base(public("Renamed", "Videos about things"));
         f.sync(&shared).await;
         let renamed = f.stored(keys.public_key(), Kind::Metadata).await;
         assert_eq!(content(&renamed[0])["name"], "Renamed");
         assert!(renamed[0].created_at > first[0].created_at);
 
-        let url = f.branding.store(Slot::Logo, Image::Png, Bytes::from_static(PNG)).unwrap();
-        f.branding.store(Slot::Banner, Image::Png, Bytes::from_static(PNG)).unwrap();
+        let url = f
+            .branding
+            .store(Slot::Logo, Image::Png, Bytes::from_static(PNG))
+            .unwrap();
+        f.branding
+            .store(Slot::Banner, Image::Png, Bytes::from_static(PNG))
+            .unwrap();
         f.sync(&shared).await;
         let branded = content(&f.stored(keys.public_key(), Kind::Metadata).await[0]);
         assert_eq!(branded["picture"], format!("https://tube.example{url}"));
-        assert!(branded["banner"].as_str().unwrap().starts_with("https://tube.example/branding/banner?v="));
+        assert!(branded["banner"]
+            .as_str()
+            .unwrap()
+            .starts_with("https://tube.example/branding/banner?v="));
 
         f.branding.remove(Slot::Logo).unwrap();
         f.sync(&shared).await;
         let stored = f.stored(keys.public_key(), Kind::Metadata).await;
-        assert_eq!(stored.len(), 1, "a replaceable event keeps only its newest version");
+        assert_eq!(
+            stored.len(),
+            1,
+            "a replaceable event keeps only its newest version"
+        );
         assert!(content(&stored[0]).get("picture").is_none());
         assert!(content(&stored[0]).get("banner").is_some());
-        assert_eq!(f.jobs(MIRROR).len(), 5, "each new profile and the initial Blossom list go to the mirror relay");
+        assert_eq!(
+            f.jobs(MIRROR).len(),
+            5,
+            "each new profile and the initial Blossom list go to the mirror relay"
+        );
         // Private reach: no relay list, nothing for any indexer.
-        assert!(f.stored(keys.public_key(), Kind::RelayList).await.is_empty());
+        assert!(f
+            .stored(keys.public_key(), Kind::RelayList)
+            .await
+            .is_empty());
         assert_eq!(f.jobs(MIRROR).len() as i64, count_event_jobs(&f));
     }
 
     fn count_event_jobs(f: &Fixture) -> i64 {
         let conn = rusqlite::Connection::open(f.dir.join("relay.sqlite")).unwrap();
-        conn.query_row("SELECT COUNT(*) FROM outbox WHERE kind = 'event'", [], |r| r.get(0)).unwrap()
+        conn.query_row(
+            "SELECT COUNT(*) FROM outbox WHERE kind = 'event'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap()
     }
 
     #[tokio::test]
@@ -423,11 +642,34 @@ mod tests {
         let profile = f.stored(keys.public_key(), Kind::Metadata).await;
         let list = f.stored(keys.public_key(), Kind::RelayList).await;
         assert_eq!(list.len(), 1);
-        let tags: Vec<Vec<String>> = list[0].tags.clone().to_vec().into_iter().map(Tag::to_vec).collect();
-        assert_eq!(tags, [vec!["r", "wss://tube.example"], vec!["r", MIRROR, "write"]]);
+        let tags: Vec<Vec<String>> = list[0]
+            .tags
+            .clone()
+            .to_vec()
+            .into_iter()
+            .map(Tag::to_vec)
+            .collect();
+        assert_eq!(
+            tags,
+            [vec!["r", "wss://tube.example"], vec!["r", MIRROR, "write"]]
+        );
         let blossom = f.stored(keys.public_key(), Kind::Custom(10063)).await;
-        assert_eq!(f.jobs(INDEXER), [profile[0].id.to_hex(), list[0].id.to_hex(), blossom[0].id.to_hex()]);
-        assert_eq!(f.jobs(MIRROR), [profile[0].id.to_hex(), list[0].id.to_hex(), blossom[0].id.to_hex()]);
+        assert_eq!(
+            f.jobs(INDEXER),
+            [
+                profile[0].id.to_hex(),
+                list[0].id.to_hex(),
+                blossom[0].id.to_hex()
+            ]
+        );
+        assert_eq!(
+            f.jobs(MIRROR),
+            [
+                profile[0].id.to_hex(),
+                list[0].id.to_hex(),
+                blossom[0].id.to_hex()
+            ]
+        );
 
         // Identical content is not signed again.
         f.sync(&shared).await;
@@ -441,21 +683,29 @@ mod tests {
         f.branding.set_base(private);
         f.sync(&shared).await;
         assert_eq!(f.stored(keys.public_key(), Kind::RelayList).await, list);
-        assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["name"], "Renamed");
+        assert_eq!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["name"],
+            "Renamed"
+        );
         let private_profile = f.stored(keys.public_key(), Kind::Metadata).await;
         assert!(!f.jobs(INDEXER).contains(&private_profile[0].id.to_hex()));
     }
 
     #[tokio::test]
-    async fn the_profile_website_follows_public_site_hosting_without_advertising_private_addresses() {
-        let keys = Keys::parse("0000000000000000000000000000000000000000000000000000000000000001").unwrap();
+    async fn the_profile_website_follows_public_site_hosting_without_advertising_private_addresses()
+    {
+        let keys = Keys::parse("0000000000000000000000000000000000000000000000000000000000000001")
+            .unwrap();
         let shared = managed(&keys);
         let f = Fixture::new(keys.public_key());
         let mut p = public_reach("Channel");
         p["siteHosting"] = "instance".into();
         f.branding.set_base(p.clone());
         f.sync(&shared).await;
-        assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"], "https://tube.example");
+        assert_eq!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"],
+            "https://tube.example"
+        );
 
         p["origin"] = "https://tube.local".into();
         p["originIsPublic"] = false.into();
@@ -463,7 +713,10 @@ mod tests {
         p["nsite"] = serde_json::json!({ "domain": "videos.example", "gateway": "nsite.lol" });
         f.branding.set_base(p.clone());
         f.sync(&shared).await;
-        assert_eq!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"], "https://videos.example");
+        assert_eq!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])["website"],
+            "https://videos.example"
+        );
 
         p["nsite"]["domain"] = "".into();
         f.branding.set_base(p.clone());
@@ -476,19 +729,31 @@ mod tests {
         p["nsite"]["gateway"] = "gateway.local".into();
         f.branding.set_base(p.clone());
         f.sync(&shared).await;
-        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+        assert!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])
+                .get("website")
+                .is_none()
+        );
 
         p["nsite"]["gateway"] = "nsite.lol".into();
         p["reach"] = "private".into();
         f.branding.set_base(p.clone());
         f.sync(&shared).await;
-        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+        assert!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])
+                .get("website")
+                .is_none()
+        );
 
         p["reach"] = "public".into();
         p["siteHosting"] = "instance".into();
         f.branding.set_base(p);
         f.sync(&shared).await;
-        assert!(content(&f.stored(keys.public_key(), Kind::Metadata).await[0]).get("website").is_none());
+        assert!(
+            content(&f.stored(keys.public_key(), Kind::Metadata).await[0])
+                .get("website")
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -498,7 +763,12 @@ mod tests {
         f.sync(&Default::default()).await;
         f.branding.set_base(public_reach("Renamed"));
         f.sync(&Default::default()).await;
-        assert!(f.relay.stored(Filter::new().kinds([Kind::Metadata, Kind::RelayList, Kind::Custom(10063)])).await.unwrap().is_empty());
+        assert!(f
+            .relay
+            .stored(Filter::new().kinds([Kind::Metadata, Kind::RelayList, Kind::Custom(10063)]))
+            .await
+            .unwrap()
+            .is_empty());
         assert_eq!(count_event_jobs(&f), 0);
     }
 
@@ -520,15 +790,26 @@ mod tests {
         assert_eq!(profile["banner"], "https://blobs.example/hash.png");
         assert_eq!(relays(&p, &[]), [MIRROR]);
         assert_eq!(blossom_servers(&p), ["https://blobs.example"]);
-        assert_eq!(nostr_json(&p, Some(key), &[], None)["relays"][key.to_hex()], serde_json::json!([MIRROR]));
+        assert_eq!(
+            nostr_json(&p, Some(key), &[], None)["relays"][key.to_hex()],
+            serde_json::json!([MIRROR])
+        );
         p["origin"] = "https://tube.example".into();
         p["originIsPublic"] = true.into();
-        p["mirror"]["blossom"] = serde_json::json!(["https://tube.example/", "https://blobs.example", "https://blobs.example/"]);
-        assert_eq!(blossom_servers(&p), ["https://tube.example", "https://blobs.example"]);
+        p["mirror"]["blossom"] = serde_json::json!([
+            "https://tube.example/",
+            "https://blobs.example",
+            "https://blobs.example/"
+        ]);
+        assert_eq!(
+            blossom_servers(&p),
+            ["https://tube.example", "https://blobs.example"]
+        );
     }
 
     #[tokio::test]
-    async fn blossom_list_republishes_only_changed_tags_and_advances_past_future_stored_timestamp() {
+    async fn blossom_list_republishes_only_changed_tags_and_advances_past_future_stored_timestamp()
+    {
         let keys = Keys::generate();
         let f = Fixture::new(keys.public_key());
         let mut p = public_reach("Channel");
@@ -536,29 +817,76 @@ mod tests {
         f.branding.set_base(p.clone());
         f.sync(&managed(&keys)).await;
         let first = f.stored(keys.public_key(), Kind::Custom(10063)).await;
-        let tags: Vec<_> = first[0].tags.clone().to_vec().into_iter().map(Tag::to_vec).collect();
-        assert_eq!(tags, [vec!["server", "https://tube.example"], vec!["server", "https://blobs.example"]]);
+        let tags: Vec<_> = first[0]
+            .tags
+            .clone()
+            .to_vec()
+            .into_iter()
+            .map(Tag::to_vec)
+            .collect();
+        assert_eq!(
+            tags,
+            [
+                vec!["server", "https://tube.example"],
+                vec!["server", "https://blobs.example"]
+            ]
+        );
         f.sync(&managed(&keys)).await;
-        assert_eq!(f.stored(keys.public_key(), Kind::Custom(10063)).await, first);
+        assert_eq!(
+            f.stored(keys.public_key(), Kind::Custom(10063)).await,
+            first
+        );
 
-        let future = EventBuilder::new(Kind::Custom(10063), "unused list content").tags(first[0].tags.clone().to_vec())
-            .custom_created_at(Timestamp::from(Timestamp::now().as_secs() + 60)).finalize(&keys).unwrap();
-        assert!(matches!(f.relay.ingest(future.clone()).await, RelayMessage::Ok { status: true, .. }));
+        let future = EventBuilder::new(Kind::Custom(10063), "unused list content")
+            .tags(first[0].tags.clone().to_vec())
+            .custom_created_at(Timestamp::from(Timestamp::now().as_secs() + 60))
+            .finalize(&keys)
+            .unwrap();
+        assert!(matches!(
+            f.relay.ingest(future.clone()).await,
+            RelayMessage::Ok { status: true, .. }
+        ));
         p["origin"] = "https://tube.local".into();
         p["originIsPublic"] = false.into();
         f.branding.set_base(p.clone());
         f.sync(&managed(&keys)).await;
         let second = f.stored(keys.public_key(), Kind::Custom(10063)).await;
-        assert_eq!(second, [future.clone()], "Blossom lists depend on tags, not unused content");
-        let tags: Vec<_> = second[0].tags.clone().to_vec().into_iter().map(Tag::to_vec).collect();
-        assert_eq!(tags, [vec!["server", "https://tube.example"], vec!["server", "https://blobs.example"]], "explicit public mirror remains even when origin moves");
+        assert_eq!(
+            second,
+            std::slice::from_ref(&future),
+            "Blossom lists depend on tags, not unused content"
+        );
+        let tags: Vec<_> = second[0]
+            .tags
+            .clone()
+            .to_vec()
+            .into_iter()
+            .map(Tag::to_vec)
+            .collect();
+        assert_eq!(
+            tags,
+            [
+                vec!["server", "https://tube.example"],
+                vec!["server", "https://blobs.example"]
+            ],
+            "explicit public mirror remains even when origin moves"
+        );
         // Remove the former origin from mirrors: this actually changes the announced tags.
         p["mirror"]["blossom"] = serde_json::json!(["https://blobs.example"]);
         f.branding.set_base(p.clone());
         f.sync(&managed(&keys)).await;
         let changed = f.stored(keys.public_key(), Kind::Custom(10063)).await;
         assert!(changed[0].created_at > future.created_at);
-        assert_eq!(changed[0].tags.clone().to_vec().into_iter().map(Tag::to_vec).collect::<Vec<_>>(), [vec!["server", "https://blobs.example"]]);
+        assert_eq!(
+            changed[0]
+                .tags
+                .clone()
+                .to_vec()
+                .into_iter()
+                .map(Tag::to_vec)
+                .collect::<Vec<_>>(),
+            [vec!["server", "https://blobs.example"]]
+        );
         p["reach"] = "private".into();
         p["mirror"]["blossom"] = serde_json::json!(["https://other.example"]);
         f.branding.set_base(p);
@@ -570,7 +898,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mirror_only_profile_waits_for_each_public_copy_then_retries_without_duplicate_uploads() {
+    async fn mirror_only_profile_waits_for_each_public_copy_then_retries_without_duplicate_uploads()
+    {
         use sha2::{Digest, Sha256};
         const BLOSSOM: &str = "https://blobs.example";
         const LAN: &str = "http://blobs.local";
@@ -590,25 +919,52 @@ mod tests {
         p["mirror"] = serde_json::json!({ "relays": [MIRROR], "blossom": [BLOSSOM] });
         f.branding.set_base(p);
         let banner = b"\x89PNG\r\n\x1a\nbanner";
-        f.branding.store(Slot::Logo, Image::Png, Bytes::from_static(PNG)).unwrap();
-        f.branding.store(Slot::Banner, Image::Png, Bytes::from_static(banner)).unwrap();
+        f.branding
+            .store(Slot::Logo, Image::Png, Bytes::from_static(PNG))
+            .unwrap();
+        f.branding
+            .store(Slot::Banner, Image::Png, Bytes::from_static(banner))
+            .unwrap();
         let logo_hash = hex::encode(Sha256::digest(PNG));
         let banner_hash = hex::encode(Sha256::digest(banner));
         f.sync(&managed(&keys)).await;
-        assert!(f.stored(keys.public_key(), Kind::Metadata).await.is_empty(), "unconfirmed images defer the entire profile");
+        assert!(
+            f.stored(keys.public_key(), Kind::Metadata).await.is_empty(),
+            "unconfirmed images defer the entire profile"
+        );
         for (hash, bytes) in [(&logo_hash, PNG), (&banner_hash, &banner[..])] {
-            let metadata = almond::services::file_storage::get_file_metadata(&state, hash).await.unwrap();
+            let metadata = almond::services::file_storage::get_file_metadata(&state, hash)
+                .await
+                .unwrap();
             let path = almond::services::file_storage::local_path(&metadata).unwrap();
             assert_eq!(std::fs::read(path).unwrap(), bytes);
         }
         let conn = rusqlite::Connection::open(f.dir.join("relay.sqlite")).unwrap();
-        conn.execute("UPDATE outbox SET status='done' WHERE kind='blob' AND target=?", [LAN]).unwrap();
+        conn.execute(
+            "UPDATE outbox SET status='done' WHERE kind='blob' AND target=?",
+            [LAN],
+        )
+        .unwrap();
         f.sync(&managed(&keys)).await;
-        assert!(f.stored(keys.public_key(), Kind::Metadata).await.is_empty(), "a LAN copy is never announced");
-        conn.execute("UPDATE outbox SET status='done' WHERE kind='blob' AND target=? AND ref_id=?", [BLOSSOM, &logo_hash]).unwrap();
+        assert!(
+            f.stored(keys.public_key(), Kind::Metadata).await.is_empty(),
+            "a LAN copy is never announced"
+        );
+        conn.execute(
+            "UPDATE outbox SET status='done' WHERE kind='blob' AND target=? AND ref_id=?",
+            [BLOSSOM, &logo_hash],
+        )
+        .unwrap();
         f.sync(&managed(&keys)).await;
-        assert!(f.stored(keys.public_key(), Kind::Metadata).await.is_empty(), "banner must also be confirmed");
-        conn.execute("UPDATE outbox SET status='done' WHERE kind='blob' AND target=? AND ref_id=?", [BLOSSOM, &banner_hash]).unwrap();
+        assert!(
+            f.stored(keys.public_key(), Kind::Metadata).await.is_empty(),
+            "banner must also be confirmed"
+        );
+        conn.execute(
+            "UPDATE outbox SET status='done' WHERE kind='blob' AND target=? AND ref_id=?",
+            [BLOSSOM, &banner_hash],
+        )
+        .unwrap();
         f.sync(&managed(&keys)).await;
         let complete = f.stored(keys.public_key(), Kind::Metadata).await;
         let profile = content(&complete[0]);
@@ -617,7 +973,11 @@ mod tests {
         assert!(profile.get("nip05").is_none());
         f.sync(&managed(&keys)).await;
         assert_eq!(f.stored(keys.public_key(), Kind::Metadata).await, complete);
-        let jobs: i64 = conn.query_row("SELECT COUNT(*) FROM outbox WHERE kind='blob'", [], |r| r.get(0)).unwrap();
+        let jobs: i64 = conn
+            .query_row("SELECT COUNT(*) FROM outbox WHERE kind='blob'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
         assert_eq!(jobs, 4, "two shared blobs, one durable job per mirror each");
     }
 }

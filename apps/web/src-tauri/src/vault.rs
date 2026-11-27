@@ -34,22 +34,12 @@ struct ActiveAccount {
     secret_key: Zeroizing<Vec<u8>>,
 }
 
+#[derive(Default)]
 pub struct Vault {
     metadata_path: Option<PathBuf>,
     accounts: Vec<DesktopAccount>,
     active: Option<ActiveAccount>,
     selected_pubkey: Option<String>,
-}
-
-impl Default for Vault {
-    fn default() -> Self {
-        Self {
-            metadata_path: None,
-            accounts: Vec::new(),
-            active: None,
-            selected_pubkey: None,
-        }
-    }
 }
 
 impl Vault {
@@ -200,7 +190,7 @@ fn parse_credential(credential: &str, password: Option<&str>) -> Result<Keys, St
 fn store_credential(pubkey: &str, credential: &[u8]) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        return store_keychain_credential(pubkey, credential);
+        store_keychain_credential(pubkey, credential)
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -222,7 +212,7 @@ fn store_keychain_credential(pubkey: &str, credential: &[u8]) -> Result<(), Stri
 fn load_credential(pubkey: &str) -> Result<Vec<u8>, String> {
     #[cfg(target_os = "macos")]
     {
-        return load_keychain_credential(pubkey);
+        load_keychain_credential(pubkey)
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -244,7 +234,7 @@ fn load_keychain_credential(pubkey: &str) -> Result<Vec<u8>, String> {
 fn delete_credential(pubkey: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        return delete_keychain_credential(pubkey);
+        delete_keychain_credential(pubkey)
     }
 
     #[cfg(not(target_os = "macos"))]

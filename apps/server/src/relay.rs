@@ -174,7 +174,9 @@ const SEARCH_RANK: &str = "bm25(event_search, 10.0, 1.0, 3.0)";
 fn init_search(conn: &Connection) -> rusqlite::Result<()> {
     let tx = conn.unchecked_transaction()?;
     let exists: bool = tx.query_row(
-        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE name = 'event_search')", [], |r| r.get(0),
+        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE name = 'event_search')",
+        [],
+        |r| r.get(0),
     )?;
     if !exists {
         let new = SEARCH_FIELDS.replace("{j}", "new.content");
@@ -202,14 +204,23 @@ fn init_search(conn: &Connection) -> rusqlite::Result<()> {
 fn fts_query(search: &str) -> Option<String> {
     let extension = |word: &&str| {
         word.split_once(':').is_some_and(|(key, _)| {
-            !key.is_empty() && key.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')
+            !key.is_empty()
+                && key
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')
         })
     };
     let terms: Vec<String> = search
         .split_whitespace()
         .filter(|word| !extension(word))
-        .flat_map(|word| word.split(|c: char| !c.is_alphanumeric() && !('\u{300}'..='\u{36f}').contains(&c)))
-        .map(|term| term.chars().filter(|c| c.is_alphanumeric()).collect::<String>())
+        .flat_map(|word| {
+            word.split(|c: char| !c.is_alphanumeric() && !('\u{300}'..='\u{36f}').contains(&c))
+        })
+        .map(|term| {
+            term.chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>()
+        })
         .filter(|term| !term.is_empty())
         .map(|term| format!("\"{term}\"*"))
         .collect();
@@ -299,12 +310,16 @@ impl Relay {
         crate::outbox::initialize(&writer)?;
         // Older databases did not record historical timestamps. Superseded versions predate
         // the active version; the conservative migration value is zero.
-        let has_timestamp = writer.prepare("PRAGMA table_info(video_version)")?
+        let has_timestamp = writer
+            .prepare("PRAGMA table_info(video_version)")?
             .query_map([], |r| r.get::<_, String>(1))?
             .collect::<rusqlite::Result<Vec<_>>>()?
-            .iter().any(|name| name == "created_at");
+            .iter()
+            .any(|name| name == "created_at");
         if !has_timestamp {
-            writer.execute_batch("ALTER TABLE video_version ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")?;
+            writer.execute_batch(
+                "ALTER TABLE video_version ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0",
+            )?;
         }
         writer.execute_batch(
             "UPDATE video_version SET created_at = COALESCE(
@@ -313,15 +328,22 @@ impl Relay {
         )?;
         {
             // Only writer events keep media: a visitor naming a video's hash must not pin it.
-            writer.execute_batch("DELETE FROM media_ref WHERE event_hash IN (SELECT event_hash FROM visitor_event)")?;
+            writer.execute_batch(
+                "DELETE FROM media_ref WHERE event_hash IN (SELECT event_hash FROM visitor_event)",
+            )?;
             let mut rows = writer.prepare(
                 "SELECT event_hash, content FROM event e
                  WHERE NOT EXISTS (SELECT 1 FROM visitor_event v WHERE v.event_hash = e.event_hash)",
             )?;
-            for row in rows.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)))? {
+            for row in rows.query_map([], |r| {
+                Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?))
+            })? {
                 let (id, content) = row?;
                 for hash in media_hashes(&content) {
-                    writer.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
+                    writer.execute(
+                        "INSERT OR IGNORE INTO media_ref VALUES (?, ?)",
+                        params![id, hash],
+                    )?;
                 }
             }
         }
@@ -341,9 +363,14 @@ impl Relay {
                 )?;
                 let now = Timestamp::now().as_secs() as i64;
                 for author in &cfg.writers {
-                    let ids = current.query_map(params![author.as_bytes().as_slice(), now], |r| r.get::<_, Vec<u8>>(0))?;
+                    let ids = current
+                        .query_map(params![author.as_bytes().as_slice(), now], |r| {
+                            r.get::<_, Vec<u8>>(0)
+                        })?;
                     for id in ids {
-                        let Ok(id) = EventId::from_slice(&id?) else { continue };
+                        let Ok(id) = EventId::from_slice(&id?) else {
+                            continue;
+                        };
                         crate::outbox::enqueue_event(&tx, &cfg.mirror_relays, &id)?;
                     }
                 }
@@ -382,7 +409,11 @@ impl Relay {
             return RelayMessage::ok(id, false, "invalid: bad event id or signature");
         }
         if !self.0.writers.contains(&ev.pubkey) && visitor_scope(&ev).is_none() {
-            return RelayMessage::ok(id, false, "restricted: only this instance's allowed writers may publish");
+            return RelayMessage::ok(
+                id,
+                false,
+                "restricted: only this instance's allowed writers may publish",
+            );
         }
         if ev.created_at.as_secs() > Timestamp::now().as_secs() + MAX_FUTURE_SECS {
             return RelayMessage::ok(id, false, "invalid: created_at is too far in the future");
@@ -397,7 +428,13 @@ impl Relay {
             let row = ev.clone();
             let saved = tokio::task::spawn_blocking(move || {
                 let mirror: &[String] = if mirrored { &[] } else { &inner.mirror_relays };
-                admit(&mut inner.writer.lock(), &inner.writers, mirror, mirrored, &row)
+                admit(
+                    &mut inner.writer.lock(),
+                    &inner.writers,
+                    mirror,
+                    mirrored,
+                    &row,
+                )
             })
             .await;
             match saved {
@@ -406,10 +443,18 @@ impl Relay {
                     return RelayMessage::ok(id, true, "duplicate: already have this event")
                 }
                 Ok(Ok(Ok(Saved::Superseded))) => {
-                    return RelayMessage::ok(id, true, "duplicate: a newer version of this event is stored")
+                    return RelayMessage::ok(
+                        id,
+                        true,
+                        "duplicate: a newer version of this event is stored",
+                    )
                 }
                 Ok(Ok(Ok(Saved::Deleted))) => {
-                    return RelayMessage::ok(id, false, "blocked: this event was deleted by its author")
+                    return RelayMessage::ok(
+                        id,
+                        false,
+                        "blocked: this event was deleted by its author",
+                    )
                 }
                 Ok(Ok(Err(refusal))) => return RelayMessage::ok(id, false, refusal.to_owned()),
                 Ok(Err(e)) => return RelayMessage::ok(id, false, format!("error: {e}")),
@@ -427,7 +472,9 @@ impl Relay {
         let (tx, rx) = mpsc::channel(256);
         let prefix = format!("[\"EVENT\",{},", serde_json::Value::from(sub.as_str()));
         let inner = self.0.clone();
-        let Ok(permit) = inner.queries.clone().acquire_owned().await else { return rx };
+        let Ok(permit) = inner.queries.clone().acquire_owned().await else {
+            return rx;
+        };
         tokio::task::spawn_blocking(move || {
             let _permit = permit;
             let conn = match inner.reader() {
@@ -435,7 +482,9 @@ impl Relay {
                 Err(e) => return tracing::warn!("relay: opening read connection: {e}"),
             };
             let now = Timestamp::now().as_secs() as i64;
-            if let Err(e) = run_query(&conn, &filters, now, |content| tx.blocking_send(format!("{prefix}{content}]")).is_ok()) {
+            if let Err(e) = run_query(&conn, &filters, now, |content| {
+                tx.blocking_send(format!("{prefix}{content}]")).is_ok()
+            }) {
                 tracing::warn!("relay: query failed: {e}");
             }
             inner.release(conn);
@@ -450,10 +499,15 @@ impl Relay {
         tokio::task::spawn_blocking(move || -> Result<Vec<Event>, BoxError> {
             let conn = inner.reader()?;
             let mut events = Vec::new();
-            let result = run_query(&conn, &[filter], Timestamp::now().as_secs() as i64, |json| {
-                events.extend(Event::from_json(json).ok());
-                true
-            });
+            let result = run_query(
+                &conn,
+                &[filter],
+                Timestamp::now().as_secs() as i64,
+                |json| {
+                    events.extend(Event::from_json(json).ok());
+                    true
+                },
+            );
             inner.release(conn);
             result?;
             Ok(events)
@@ -480,7 +534,10 @@ impl Relay {
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => 0,
                 Err(e) => return Err(e.into()),
             };
-            Ok(RelayStats { by_kind: by_kind?, database_bytes: std::fs::metadata(&inner.path)?.len() + wal })
+            Ok(RelayStats {
+                by_kind: by_kind?,
+                database_bytes: std::fs::metadata(&inner.path)?.len() + wal,
+            })
         })
         .await?
     }
@@ -549,7 +606,9 @@ impl Relay {
                 })?;
                 for row in rows {
                     let (bytes, plays) = row?;
-                    let Ok(id) = EventId::from_slice(&bytes) else { continue };
+                    let Ok(id) = EventId::from_slice(&bytes) else {
+                        continue;
+                    };
                     out.insert(id.to_hex(), plays.max(0) as u64);
                 }
             }
@@ -617,7 +676,11 @@ impl Relay {
                 },
             };
             for m in out {
-                if !matches!(tokio::time::timeout(SEND_TIMEOUT, ws.send(Message::Text(m.as_json().into()))).await, Ok(Ok(()))) {
+                if !matches!(
+                    tokio::time::timeout(SEND_TIMEOUT, ws.send(Message::Text(m.as_json().into())))
+                        .await,
+                    Ok(Ok(()))
+                ) {
                     return;
                 }
             }
@@ -633,7 +696,9 @@ impl Relay {
                 continue;
             }
             let Some(search) = &f.search else { return true };
-            let Some(query) = fts_query(search) else { continue };
+            let Some(query) = fts_query(search) else {
+                continue;
+            };
             let (inner, id) = (self.0.clone(), ev.id);
             let hit = tokio::task::spawn_blocking(move || -> rusqlite::Result<bool> {
                 let conn = inner.reader()?;
@@ -756,14 +821,30 @@ fn video_by_id(conn: &Connection, id: &EventId) -> Option<VideoRef> {
     if let Ok((author, kind, d_tag)) = conn.query_row(
         "SELECT author, kind, d_tag FROM event WHERE event_hash = ?",
         params![id],
-        |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?, r.get::<_, Option<String>>(2)?)),
+        |r| {
+            Ok((
+                r.get::<_, Vec<u8>>(0)?,
+                r.get::<_, u16>(1)?,
+                r.get::<_, Option<String>>(2)?,
+            ))
+        },
     ) {
-        return Some(VideoRef { author, kind, d_tag });
+        return Some(VideoRef {
+            author,
+            kind,
+            d_tag,
+        });
     }
     conn.query_row(
         "SELECT author, kind, d_tag FROM video_version WHERE event_hash = ?",
         params![id],
-        |r| Ok(VideoRef { author: r.get(0)?, kind: r.get(1)?, d_tag: r.get(2)? }),
+        |r| {
+            Ok(VideoRef {
+                author: r.get(0)?,
+                kind: r.get(1)?,
+                d_tag: r.get(2)?,
+            })
+        },
     )
     .optional()
     .ok()
@@ -789,7 +870,11 @@ fn video_by_coordinate(conn: &Connection, value: &str) -> Option<VideoRef> {
         .optional()
         .ok()
         .flatten()?;
-    Some(VideoRef { author: row, kind, d_tag: Some(d_tag.to_owned()) })
+    Some(VideoRef {
+        author: row,
+        kind,
+        d_tag: Some(d_tag.to_owned()),
+    })
 }
 
 /// Root video of a comment/reaction id already stored here: kind 1111 resolves via its
@@ -812,7 +897,9 @@ fn interaction_root_video(
     let tags = stored_tags(&content);
     match kind {
         1111 => {
-            let root = tags_named(&tags, "A").next().or_else(|| tags_named(&tags, "E").next())?;
+            let root = tags_named(&tags, "A")
+                .next()
+                .or_else(|| tags_named(&tags, "E").next())?;
             let video = match root[0].as_str() {
                 "A" => video_by_coordinate(conn, &root[1])?,
                 _ => video_by_id(conn, &EventId::from_hex(&root[1]).ok()?)?,
@@ -820,8 +907,7 @@ fn interaction_root_video(
             video_is_allowed(writers, &video).then_some(video)
         }
         1 => {
-            let root = tags_named(&tags, "e")
-                .find(|t| t.len() >= 4 && t[3] == "root")?;
+            let root = tags_named(&tags, "e").find(|t| t.len() >= 4 && t[3] == "root")?;
             let video = video_by_id(conn, &EventId::from_hex(&root[1]).ok()?)?;
             video_is_allowed(writers, &video).then_some(video)
         }
@@ -886,7 +972,11 @@ fn check_visitor_comment(
     if kinds.len() != 1 || kinds[0][1] != video.kind.to_string() {
         return Err("restricted: comment K tag must name the referenced video kind");
     }
-    if tags_named(&tags, "P").any(|p| p[1] != PublicKey::from_slice(&video.author).expect("stored key").to_hex()) {
+    if tags_named(&tags, "P").any(|p| {
+        p[1] != PublicKey::from_slice(&video.author)
+            .expect("stored key")
+            .to_hex()
+    }) {
         return Err("restricted: comment P tag does not match the video author");
     }
 
@@ -907,14 +997,16 @@ fn check_visitor_comment(
     }
     for a in tags_named(&tags, "a") {
         video_by_coordinate(conn, &a[1])
-            .filter(|v| same_video(&v, &video))
+            .filter(|v| same_video(v, &video))
             .ok_or("restricted: comment a tag does not match the referenced video")?;
     }
     let expected_parent = match &parent {
         Some((_, author)) => author.clone(),
         None => video.author.clone(),
     };
-    let expected = PublicKey::from_slice(&expected_parent).expect("stored key").to_hex();
+    let expected = PublicKey::from_slice(&expected_parent)
+        .expect("stored key")
+        .to_hex();
     if tags_named(&tags, "p").any(|p| p[1] != expected) {
         return Err("restricted: comment p tag does not match its parent author");
     }
@@ -936,12 +1028,18 @@ fn stored_interaction_author(
         )
         .optional()
         .map_err(|_| "error: lookup failed")?;
-    let Some((author, kind)) = row else { return Ok(None) };
+    let Some((author, kind)) = row else {
+        return Ok(None);
+    };
     match kind {
         1111 | 1 => {
             let root = interaction_root_video(conn, writers, id)
                 .ok_or("restricted: comment parent is not rooted at an allowed video")?;
-            if same_video(&root, video) { Ok(Some(author)) } else { Ok(None) }
+            if same_video(&root, video) {
+                Ok(Some(author))
+            } else {
+                Ok(None)
+            }
         }
         _ => Ok(None),
     }
@@ -981,13 +1079,15 @@ fn check_legacy_reply(
             reply = Some(author);
         } else if e.len() < 4 || (e[3] != "root" && e[3] != "reply") {
             let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid reply reference")?;
-            if video_by_id(conn, &id).map_or(true, |v| !same_video(&v, &video)) {
+            if video_by_id(conn, &id).is_none_or(|v| !same_video(&v, &video)) {
                 return Err("restricted: reply references something other than its video");
             }
         }
     }
 
-    let video_author = PublicKey::from_slice(&video.author).expect("stored key").to_hex();
+    let video_author = PublicKey::from_slice(&video.author)
+        .expect("stored key")
+        .to_hex();
     let parent_author = reply
         .map(|a| PublicKey::from_slice(&a).expect("stored key").to_hex())
         .unwrap_or_default();
@@ -1010,8 +1110,8 @@ fn check_visitor_reaction(
     if es.is_empty() {
         return Err("restricted: reactions need an e target");
     }
-    let target_id =
-        EventId::from_hex(&es[es.len() - 1][1]).map_err(|_| "restricted: invalid reaction target")?;
+    let target_id = EventId::from_hex(&es[es.len() - 1][1])
+        .map_err(|_| "restricted: invalid reaction target")?;
 
     let row = conn
         .query_row(
@@ -1054,14 +1154,14 @@ fn check_visitor_reaction(
             kind: k,
             d_tag: target_d_tag,
         },
-        1111 | 1 => {
-            interaction_root_video(conn, writers, &target_id)
-                .ok_or("restricted: reaction target is not rooted at an allowed video")?
-        }
+        1111 | 1 => interaction_root_video(conn, writers, &target_id)
+            .ok_or("restricted: reaction target is not rooted at an allowed video")?,
         _ => return Err("restricted: reactions may only target videos or their comments"),
     };
     if !video_is_allowed(writers, &video) {
-        return Err("restricted: reactions may only target videos of this instance's allowed writers");
+        return Err(
+            "restricted: reactions may only target videos of this instance's allowed writers",
+        );
     }
 
     // Every e reference must belong to this video: the video itself (any version) or a
@@ -1071,15 +1171,15 @@ fn check_visitor_reaction(
         if video_by_id(conn, &id).is_some_and(|v| same_video(&v, &video)) {
             continue;
         }
-        let in_scope = stored_interaction_author(conn, &id, &video, writers)?
-            .is_some();
+        let in_scope = stored_interaction_author(conn, &id, &video, writers)?.is_some();
         if !in_scope {
             return Err("restricted: reaction references something outside the target video");
         }
     }
 
-    let target_author_hex =
-        PublicKey::from_slice(&target_author).expect("stored key").to_hex();
+    let target_author_hex = PublicKey::from_slice(&target_author)
+        .expect("stored key")
+        .to_hex();
     if tags_named(&tags, "p").any(|p| p[1] != target_author_hex) {
         return Err("restricted: reaction p tag does not match the target author");
     }
@@ -1103,7 +1203,11 @@ fn check_visitor_reaction(
 /// who filed it; `x` must be one of the target video's own media hashes (or, with no `e` at
 /// all, one of a locally stored writer video's media hashes via the `media_ref` index), so a
 /// report cannot flag a file no local video ever referenced.
-fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) -> Result<(), &'static str> {
+fn check_visitor_report(
+    conn: &Connection,
+    writers: &[PublicKey],
+    ev: &Event,
+) -> Result<(), &'static str> {
     let tags = tag_list(ev);
     let es: Vec<&[String]> = tags_named(&tags, "e").collect();
     let ps: Vec<&[String]> = tags_named(&tags, "p").collect();
@@ -1130,13 +1234,17 @@ fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) ->
                 .prepare("SELECT e.author, e.kind FROM media_ref m JOIN event e ON e.event_hash = m.event_hash WHERE m.hash = ?")
                 .map_err(|_| "error: lookup failed")?;
             let rows = stmt
-                .query_map(params![hash], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?)))
+                .query_map(params![hash], |r| {
+                    Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?))
+                })
                 .map_err(|_| "error: lookup failed")?
                 .collect::<rusqlite::Result<Vec<_>>>()
                 .map_err(|_| "error: lookup failed")?;
             let mut resolved = false;
             for (author, kind) in rows {
-                if is_video_kind(kind) && PublicKey::from_slice(&author).is_ok_and(|a| writers.contains(&a)) {
+                if is_video_kind(kind)
+                    && PublicKey::from_slice(&author).is_ok_and(|a| writers.contains(&a))
+                {
                     hash_authors.insert(author);
                     resolved = true;
                 }
@@ -1146,21 +1254,22 @@ fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) ->
             }
         }
         for p in &ps {
-            let author =
-                PublicKey::from_hex(p[1].as_str()).map_err(|_| "restricted: invalid report p tag")?;
+            let author = PublicKey::from_hex(p[1].as_str())
+                .map_err(|_| "restricted: invalid report p tag")?;
             // With an x present, p is a claim about that specific blob's author, not about
             // any locally known account — the general fallback below does not apply.
             let known = !xs.is_empty() && hash_authors.contains(author.as_bytes().as_slice())
                 || xs.is_empty() && writers.contains(&author)
-                || xs.is_empty() && conn
-                    .query_row(
-                        "SELECT 1 FROM visitor_event WHERE author = ? LIMIT 1",
-                        params![author.as_bytes().as_slice()],
-                        |_| Ok(()),
-                    )
-                    .optional()
-                    .map_err(|_| "error: lookup failed")?
-                    .is_some();
+                || xs.is_empty()
+                    && conn
+                        .query_row(
+                            "SELECT 1 FROM visitor_event WHERE author = ? LIMIT 1",
+                            params![author.as_bytes().as_slice()],
+                            |_| Ok(()),
+                        )
+                        .optional()
+                        .map_err(|_| "error: lookup failed")?
+                        .is_some();
             if !known {
                 return Err("restricted: report p tag is not a locally known account");
             }
@@ -1188,37 +1297,56 @@ fn check_visitor_report(conn: &Connection, writers: &[PublicKey], ev: &Event) ->
     let (video, target_author_hex) = match row {
         Some((target_author, target_kind, target_d_tag, target_content)) => {
             let video = match target_kind {
-                k if is_video_kind(k) => VideoRef { author: target_author.clone(), kind: k, d_tag: target_d_tag },
+                k if is_video_kind(k) => VideoRef {
+                    author: target_author.clone(),
+                    kind: k,
+                    d_tag: target_d_tag,
+                },
                 1111 | 1 => interaction_root_video(conn, writers, &target_id)
                     .ok_or("restricted: report target is not rooted at an allowed video")?,
-                _ => return Err("restricted: reports may only target videos or their interactions"),
+                _ => {
+                    return Err("restricted: reports may only target videos or their interactions")
+                }
             };
             if !video_is_allowed(writers, &video) {
                 return Err("restricted: reports may only reference videos of this instance's allowed writers");
             }
             if !xs.is_empty() {
                 if !is_video_kind(target_kind) {
-                    return Err("restricted: report x tag must target the video itself, not a comment");
+                    return Err(
+                        "restricted: report x tag must target the video itself, not a comment",
+                    );
                 }
                 let hashes = media_hashes(&target_content);
                 for x in &xs {
                     if !hashes.contains(&x[1].to_ascii_lowercase()) {
-                        return Err("restricted: report x tag is not part of the referenced video's media");
+                        return Err(
+                            "restricted: report x tag is not part of the referenced video's media",
+                        );
                     }
                 }
             }
-            (video, PublicKey::from_slice(&target_author).expect("stored key").to_hex())
+            (
+                video,
+                PublicKey::from_slice(&target_author)
+                    .expect("stored key")
+                    .to_hex(),
+            )
         }
         None => {
             // A superseded video id: resolvable as a video, but its content (and so its
             // media hashes) is gone, so an x claim on it can never be verified.
             if !xs.is_empty() {
-                return Err("restricted: report x tag targets a video version no longer stored here");
+                return Err(
+                    "restricted: report x tag targets a video version no longer stored here",
+                );
             }
             let video = video_by_id(conn, &target_id)
                 .filter(|v| video_is_allowed(writers, v))
                 .ok_or("restricted: reports may only reference videos of this instance's allowed writers")?;
-            let author = PublicKey::from_slice(&video.author).expect("stored key").to_hex();
+            let author = PublicKey::from_slice(&video.author)
+                .expect("stored key")
+                .to_hex();
             (video, author)
         }
     };
@@ -1284,14 +1412,19 @@ fn admit(
         return persist(conn, ev, mirror, mirrored).map(Ok);
     }
     let Some(scope) = visitor_scope(ev) else {
-        return Ok(Err("restricted: only this instance's allowed writers may publish"));
+        return Ok(Err(
+            "restricted: only this instance's allowed writers may publish",
+        ));
     };
     if let Err(refusal) = check_visitor(conn, writers, ev, scope) {
         return Ok(Err(refusal));
     }
     let saved = persist(conn, ev, &[], false)?;
     // A visitor's media tags are only text: they never keep a creator's blob alive.
-    conn.execute("DELETE FROM media_ref WHERE event_hash = ?", params![ev.id.as_bytes().as_slice()])?;
+    conn.execute(
+        "DELETE FROM media_ref WHERE event_hash = ?",
+        params![ev.id.as_bytes().as_slice()],
+    )?;
     if matches!(saved, Saved::Stored | Saved::Duplicate) && ev.kind.as_u16() != 5 {
         conn.execute(
             "INSERT OR IGNORE INTO visitor_event (event_hash, author) VALUES (?, ?)",
@@ -1307,14 +1440,18 @@ fn parse_coordinate(value: &str) -> Option<(u16, PublicKey, &str)> {
     let kind = parts.next()?.parse::<u16>().ok()?;
     let author = PublicKey::from_hex(parts.next()?).ok()?;
     let identifier = parts.next()?;
-    if !(30000..40000).contains(&kind) && !(is_replaceable(kind) && identifier.is_empty()) { return None; }
+    if !(30000..40000).contains(&kind) && !(is_replaceable(kind) && identifier.is_empty()) {
+        return None;
+    }
     Some((kind, author, identifier))
 }
 
 /// Only declared media fields count. URLs are parsed for their hash filename, never fetched.
 pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
     let mut hashes = HashSet::new();
-    let Ok(mut event) = serde_json::from_str::<serde_json::Value>(json) else { return hashes };
+    let Ok(mut event) = serde_json::from_str::<serde_json::Value>(json) else {
+        return hashes;
+    };
     let tags: Vec<Vec<String>> = serde_json::from_value(event["tags"].take()).unwrap_or_default();
     let mut add_hash = |value: &str| {
         if almond::services::file_storage::validate_sha256_format(value).is_ok() {
@@ -1324,27 +1461,40 @@ pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
     for tag in &tags {
         if tag.first().is_some_and(|name| name == "imeta") {
             for field in tag.iter().skip(1) {
-                if let Some(hash) = field.strip_prefix("x ") { add_hash(hash); }
+                if let Some(hash) = field.strip_prefix("x ") {
+                    add_hash(hash);
+                }
             }
         } else if tag.first().is_some_and(|name| name == "x") {
-            if let Some(hash) = tag.get(1) { add_hash(hash); }
+            if let Some(hash) = tag.get(1) {
+                add_hash(hash);
+            }
         } else if tag.first().is_some_and(|name| name == "path") {
-            if let Some(hash) = tag.get(2) { add_hash(hash); }
+            if let Some(hash) = tag.get(2) {
+                add_hash(hash);
+            }
         }
     }
     let mut add_url = |value: &str| {
         if let Ok(url) = nostr::prelude::Url::parse(value) {
             if let Some(filename) = url.path_segments().and_then(|mut p| p.next_back()) {
-                if let Some(hash) = almond::services::file_storage::extract_sha256_from_filename(filename) {
+                if let Some(hash) =
+                    almond::services::file_storage::extract_sha256_from_filename(filename)
+                {
                     hashes.insert(hash.to_ascii_lowercase());
                 }
             }
         }
     };
     if event["kind"] == 0 {
-        if let Some(profile) = event["content"].as_str().and_then(|content| serde_json::from_str::<serde_json::Value>(content).ok()) {
+        if let Some(profile) = event["content"]
+            .as_str()
+            .and_then(|content| serde_json::from_str::<serde_json::Value>(content).ok())
+        {
             for field in ["picture", "banner"] {
-                if let Some(url) = profile[field].as_str() { add_url(url); }
+                if let Some(url) = profile[field].as_str() {
+                    add_url(url);
+                }
             }
         }
     }
@@ -1353,12 +1503,16 @@ pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
             Some("imeta") => {
                 for field in tag.iter().skip(1) {
                     for prefix in ["url ", "image ", "thumb ", "fallback "] {
-                        if let Some(url) = field.strip_prefix(prefix) { add_url(url); }
+                        if let Some(url) = field.strip_prefix(prefix) {
+                            add_url(url);
+                        }
                     }
                 }
             }
             Some("url" | "image" | "thumb" | "text-track") => {
-                if let Some(url) = tag.get(1) { add_url(url); }
+                if let Some(url) = tag.get(1) {
+                    add_url(url);
+                }
             }
             _ => {}
         }
@@ -1367,20 +1521,31 @@ pub(crate) fn media_hashes(json: &str) -> HashSet<String> {
 }
 
 fn queue_removed_media(
-    conn: &Connection, sql: &str, args: impl rusqlite::Params, retained: &HashSet<String>,
+    conn: &Connection,
+    sql: &str,
+    args: impl rusqlite::Params,
+    retained: &HashSet<String>,
 ) -> rusqlite::Result<()> {
     let mut stmt = conn.prepare(sql)?;
-    let events = stmt.query_map(args, |r| r.get::<_, String>(0))?
+    let events = stmt
+        .query_map(args, |r| r.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?
-        .into_iter().filter_map(|json| Event::from_json(json).ok())
-        .filter(|event| is_video_kind(event.kind.as_u16())).collect::<Vec<_>>();
-    let removed: HashSet<_> = events.iter().map(|event| event.id.as_bytes().to_vec()).collect();
+        .into_iter()
+        .filter_map(|json| Event::from_json(json).ok())
+        .filter(|event| is_video_kind(event.kind.as_u16()))
+        .collect::<Vec<_>>();
+    let removed: HashSet<_> = events
+        .iter()
+        .map(|event| event.id.as_bytes().to_vec())
+        .collect();
     let mut refs = conn.prepare("SELECT event_hash FROM media_ref WHERE hash = ?")?;
     for event in events {
         for hash in media_hashes(&event.as_json()).difference(retained) {
-            let referenced_elsewhere = refs.query_map([hash], |r| r.get::<_, Vec<u8>>(0))?
+            let referenced_elsewhere = refs
+                .query_map([hash], |r| r.get::<_, Vec<u8>>(0))?
                 .collect::<rusqlite::Result<Vec<_>>>()?
-                .iter().any(|id| !removed.contains(id));
+                .iter()
+                .any(|id| !removed.contains(id));
             if !referenced_elsewhere {
                 crate::outbox::enqueue_cleanup(conn, &event.pubkey, hash)?;
             }
@@ -1389,18 +1554,25 @@ fn queue_removed_media(
     Ok(())
 }
 
-
 /// Upstream `persist_event`, minus NIP-26 and with deletion as real deletes: keeps only the
 /// newest replaceable/addressable version (tie: lowest id), applies kind-5 `e` deletions of
 /// the same author, and refuses events their author already deleted. A stored event gets an
 /// outbox job per `mirror` target in the same transaction; a `mirrored` one records its origin.
-fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool) -> rusqlite::Result<Saved> {
+fn persist(
+    conn: &mut Connection,
+    ev: &Event,
+    mirror: &[String],
+    mirrored: bool,
+) -> rusqlite::Result<Saved> {
     let tx = conn.transaction()?;
     let id = ev.id.as_bytes().as_slice();
     let author = ev.pubkey.as_bytes().as_slice();
     let kind = ev.kind.as_u16();
     let created_at = ev.created_at.as_secs() as i64;
-    let d_tag = ev.kind.is_addressable().then(|| ev.tags.identifier().unwrap_or_default());
+    let d_tag = ev
+        .kind
+        .is_addressable()
+        .then(|| ev.tags.identifier().unwrap_or_default());
 
     if kind != 5 {
         let deleted = tx
@@ -1414,7 +1586,10 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool)
         if deleted.is_some() {
             return Ok(Saved::Deleted);
         }
-        if let Some(d) = d_tag.as_deref().or_else(|| is_replaceable(kind).then_some("")) {
+        if let Some(d) = d_tag
+            .as_deref()
+            .or_else(|| is_replaceable(kind).then_some(""))
+        {
             let deleted = tx.query_row(
                 "SELECT 1 FROM deleted_coordinate WHERE author = ? AND kind = ? AND d_tag = ? AND deleted_at >= ?",
                 params![author, kind, d, created_at], |_| Ok(()),
@@ -1470,12 +1645,16 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool)
         )?;
     }
     for hash in &retained {
-        tx.execute("INSERT OR IGNORE INTO media_ref VALUES (?, ?)", params![id, hash])?;
+        tx.execute(
+            "INSERT OR IGNORE INTO media_ref VALUES (?, ?)",
+            params![id, hash],
+        )?;
     }
 
     {
-        let mut add_tag =
-            tx.prepare_cached("INSERT INTO tag (event_id, name, value, kind, created_at) VALUES (?, ?, ?, ?, ?)")?;
+        let mut add_tag = tx.prepare_cached(
+            "INSERT INTO tag (event_id, name, value, kind, created_at) VALUES (?, ?, ?, ?, ?)",
+        )?;
         for tag in ev.tags.iter() {
             if let (Some(name), Some(value)) = (tag.single_letter_tag(), tag.content()) {
                 add_tag.execute(params![row, name.to_string(), value, kind, created_at])?;
@@ -1496,18 +1675,33 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool)
     if kind == 5 {
         // An e deletion affects only the named event, never a foreign author's history.
         for target in ev.tags.event_ids() {
-            queue_removed_media(&tx,
+            queue_removed_media(
+                &tx,
                 "SELECT content FROM event WHERE event_hash = ?1 AND author = ?2 AND kind != 5",
-                params![target.as_bytes().as_slice(), author], &HashSet::new())?;
-            tx.execute("DELETE FROM event WHERE event_hash = ? AND author = ? AND kind != 5",
-                params![target.as_bytes().as_slice(), author])?;
-            tx.execute("DELETE FROM video_version WHERE event_hash = ? AND author = ?",
-                params![target.as_bytes().as_slice(), author])?;
+                params![target.as_bytes().as_slice(), author],
+                &HashSet::new(),
+            )?;
+            tx.execute(
+                "DELETE FROM event WHERE event_hash = ? AND author = ? AND kind != 5",
+                params![target.as_bytes().as_slice(), author],
+            )?;
+            tx.execute(
+                "DELETE FROM video_version WHERE event_hash = ? AND author = ?",
+                params![target.as_bytes().as_slice(), author],
+            )?;
         }
         for tag in tags_named(&tag_list(ev), "a") {
-            let Some((target_kind, target_author, identifier)) = parse_coordinate(&tag[1]) else { continue };
-            if target_author != ev.pubkey { continue; }
-            let target_d = if is_replaceable(target_kind) { None } else { Some(identifier) };
+            let Some((target_kind, target_author, identifier)) = parse_coordinate(&tag[1]) else {
+                continue;
+            };
+            if target_author != ev.pubkey {
+                continue;
+            }
+            let target_d = if is_replaceable(target_kind) {
+                None
+            } else {
+                Some(identifier)
+            };
             tx.execute(
                 "INSERT INTO deleted_coordinate VALUES (?, ?, ?, ?)
                  ON CONFLICT(author,kind,d_tag) DO UPDATE SET deleted_at = MAX(deleted_at, excluded.deleted_at)",
@@ -1528,7 +1722,10 @@ fn persist(conn: &mut Connection, ev: &Event, mirror: &[String], mirrored: bool)
     }
 
     if mirrored {
-        tx.execute("INSERT OR IGNORE INTO mirrored_event (event_hash) VALUES (?)", [id])?;
+        tx.execute(
+            "INSERT OR IGNORE INTO mirrored_event (event_hash) VALUES (?)",
+            [id],
+        )?;
     }
     crate::outbox::enqueue_event(&tx, mirror, &ev.id)?;
     tx.commit()?;
@@ -1554,7 +1751,11 @@ fn filter_sql(f: &Filter, now: i64, params: &mut Vec<Value>) -> String {
         Some(Some(query)) => {
             w.push("event_search MATCH ?".to_owned());
             params.push(Value::Text(query));
-            (" JOIN event_search ON event_search.rowid = e.id", SEARCH_RANK, "score, ")
+            (
+                " JOIN event_search ON event_search.rowid = e.id",
+                SEARCH_RANK,
+                "score, ",
+            )
         }
     };
     if let Some(ids) = f.ids.as_ref().filter(|s| !s.is_empty()) {
@@ -1600,12 +1801,20 @@ fn filter_sql(f: &Filter, now: i64, params: &mut Vec<Value>) -> String {
 /// Runs a REQ's filters as one query (per-filter `limit`, deduplicated by UNION), newest
 /// first then lowest id — with a search, best match first — and hands each stored event's JSON
 /// to `each` until it returns false.
-fn run_query(conn: &Connection, filters: &[Filter], now: i64, mut each: impl FnMut(String) -> bool) -> rusqlite::Result<()> {
+fn run_query(
+    conn: &Connection,
+    filters: &[Filter],
+    now: i64,
+    mut each: impl FnMut(String) -> bool,
+) -> rusqlite::Result<()> {
     if filters.is_empty() {
         return Ok(());
     }
     let mut params = Vec::new();
-    let parts: Vec<String> = filters.iter().map(|f| filter_sql(f, now, &mut params)).collect();
+    let parts: Vec<String> = filters
+        .iter()
+        .map(|f| filter_sql(f, now, &mut params))
+        .collect();
     let sql = if filters.iter().any(|f| f.search.is_some()) {
         // Materialize before aggregation: FTS5 auxiliary functions need their match cursor,
         // and SQLite must not flatten bm25 into the outer MIN().
@@ -1616,7 +1825,10 @@ fn run_query(conn: &Connection, filters: &[Filter], now: i64, mut each: impl FnM
             parts.join(" UNION ALL ")
         )
     } else {
-        format!("{} ORDER BY created_at DESC, event_hash", parts.join(" UNION "))
+        format!(
+            "{} ORDER BY created_at DESC, event_hash",
+            parts.join(" UNION ")
+        )
     };
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
@@ -1636,7 +1848,10 @@ async fn purge_expired(relay: Weak<Inner>) {
             let conn = inner.writer.lock();
             let now = Timestamp::now().as_secs() as i64;
             conn.execute("DELETE FROM event WHERE expires_at < ?", [now])?;
-            conn.execute("DELETE FROM blob_view WHERE day < ?", [now / 86_400 - PLAY_RETENTION_DAYS])?;
+            conn.execute(
+                "DELETE FROM blob_view WHERE day < ?",
+                [now / 86_400 - PLAY_RETENTION_DAYS],
+            )?;
             Ok(())
         })
         .await;
@@ -1729,14 +1944,24 @@ pub async fn handle_report(relay: Relay, req: Request<Body>) -> Response {
     }
     let bytes = match axum::body::to_bytes(req.into_body(), MAX_MESSAGE_BYTES).await {
         Ok(bytes) => bytes,
-        Err(_) => return report_response(StatusCode::PAYLOAD_TOO_LARGE, "invalid: report body too large"),
+        Err(_) => {
+            return report_response(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "invalid: report body too large",
+            )
+        }
     };
     let event = match Event::from_json(&bytes) {
         Ok(event) if event.kind.as_u16() == 1984 => event,
-        Ok(_) => return report_response(StatusCode::BAD_REQUEST, "invalid: not a kind 1984 report"),
+        Ok(_) => {
+            return report_response(StatusCode::BAD_REQUEST, "invalid: not a kind 1984 report")
+        }
         Err(_) => return report_response(StatusCode::BAD_REQUEST, "invalid: not a valid event"),
     };
-    let RelayMessage::Ok { status, message, .. } = relay.ingest(event).await else {
+    let RelayMessage::Ok {
+        status, message, ..
+    } = relay.ingest(event).await
+    else {
         unreachable!("ingest always answers with RelayMessage::Ok")
     };
     let code = if status {
@@ -1753,7 +1978,12 @@ pub async fn handle_report(relay: Relay, req: Request<Body>) -> Response {
 }
 
 fn report_response(code: StatusCode, message: &str) -> Response {
-    (code, [(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")], Json(serde_json::json!({ "message": message }))).into_response()
+    (
+        code,
+        [(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")],
+        Json(serde_json::json!({ "message": message })),
+    )
+        .into_response()
 }
 
 #[cfg(test)]
@@ -1770,7 +2000,12 @@ mod tests {
             N.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_file(&path);
-        let cfg = RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays: vec![] };
+        let cfg = RelayConfig {
+            writers,
+            name: "t".into(),
+            description: "t".into(),
+            mirror_relays: vec![],
+        };
         Relay::open(&path, cfg).unwrap()
     }
 
@@ -1802,7 +2037,9 @@ mod tests {
 
     fn ok_status(msg: RelayMessage) -> (bool, String) {
         match msg {
-            RelayMessage::Ok { status, message, .. } => (status, message.into_owned()),
+            RelayMessage::Ok {
+                status, message, ..
+            } => (status, message.into_owned()),
             other => panic!("not OK: {other:?}"),
         }
     }
@@ -1816,7 +2053,13 @@ mod tests {
             ev(&a, 1, 100, "one", &[&["t", "video"], &["p", &p]]),
             ev(&a, 1, 200, "two", &[&["t", "music"]]),
             ev(&b, 1111, 300, "three", &[&["E", "root"], &["t", "video"]]),
-            ev(&b, 34235, 400, "four", &[&["d", "clip"], &["t", "video"], &["x", "abc"]]),
+            ev(
+                &b,
+                34235,
+                400,
+                "four",
+                &[&["d", "clip"], &["t", "video"], &["x", "abc"]],
+            ),
             ev(&a, 7, 200, "five", &[&["e", "ffff"], &["k", "34235"]]),
             ev(&b, 1, 500, "six", &[]),
         ];
@@ -1839,14 +2082,24 @@ mod tests {
         ];
         for case in &cases {
             let f = filter(case);
-            let mut want: Vec<&Event> = events.iter().filter(|e| f.match_event(e, MatchEventOptions::new())).collect();
+            let mut want: Vec<&Event> = events
+                .iter()
+                .filter(|e| f.match_event(e, MatchEventOptions::new()))
+                .collect();
             want.sort_by(|x, y| y.created_at.cmp(&x.created_at).then(x.id.cmp(&y.id)));
             want.truncate(f.limit.unwrap_or(usize::MAX));
             let got = get(&relay, &[f], 0);
             assert_eq!(got.iter().collect::<Vec<_>>(), want, "filter {case}");
         }
         // Several filters: per-filter limit, union without duplicates, newest first.
-        let got = get(&relay, &[filter(r#"{"kinds":[1],"limit":1}"#), filter(r##"{"#t":["video"]}"##)], 0);
+        let got = get(
+            &relay,
+            &[
+                filter(r#"{"kinds":[1],"limit":1}"#),
+                filter(r##"{"#t":["video"]}"##),
+            ],
+            0,
+        );
         let ids: Vec<_> = got.iter().map(|e| e.content.as_str()).collect();
         assert_eq!(ids, ["six", "four", "three", "one"]);
     }
@@ -1860,7 +2113,13 @@ mod tests {
         assert_eq!(put(&relay, &ev(&a, 0, 10, "old", &[])), Saved::Stored);
         assert_eq!(put(&relay, &ev(&a, 0, 20, "new", &[])), Saved::Stored);
         assert_eq!(put(&relay, &ev(&a, 0, 15, "older", &[])), Saved::Superseded);
-        assert_eq!(get(&relay, &[only(0)], 0).iter().map(|e| e.content.as_str()).collect::<Vec<_>>(), ["new"]);
+        assert_eq!(
+            get(&relay, &[only(0)], 0)
+                .iter()
+                .map(|e| e.content.as_str())
+                .collect::<Vec<_>>(),
+            ["new"]
+        );
 
         // Same created_at: the lowest id wins, whichever arrives first.
         let (x, y) = (ev(&a, 10002, 50, "x", &[]), ev(&a, 10002, 50, "y", &[]));
@@ -1868,20 +2127,50 @@ mod tests {
         assert_eq!(put(&relay, &high), Saved::Stored);
         assert_eq!(put(&relay, &low), Saved::Stored);
         assert_eq!(put(&relay, &high), Saved::Superseded);
-        assert_eq!(get(&relay, &[only(10002)], 0).iter().map(|e| e.id).collect::<Vec<_>>(), [low.id]);
+        assert_eq!(
+            get(&relay, &[only(10002)], 0)
+                .iter()
+                .map(|e| e.id)
+                .collect::<Vec<_>>(),
+            [low.id]
+        );
 
         // Addressable: per d tag; a missing d tag counts as "".
-        assert_eq!(put(&relay, &ev(&a, 34235, 10, "a1", &[&["d", "a"]])), Saved::Stored);
-        assert_eq!(put(&relay, &ev(&a, 34235, 10, "b1", &[&["d", "b"]])), Saved::Stored);
-        assert_eq!(put(&relay, &ev(&a, 34235, 20, "a2", &[&["d", "a"]])), Saved::Stored);
-        assert_eq!(put(&relay, &ev(&a, 34235, 5, "a0", &[&["d", "a"]])), Saved::Superseded);
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 10, "a1", &[&["d", "a"]])),
+            Saved::Stored
+        );
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 10, "b1", &[&["d", "b"]])),
+            Saved::Stored
+        );
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 20, "a2", &[&["d", "a"]])),
+            Saved::Stored
+        );
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 5, "a0", &[&["d", "a"]])),
+            Saved::Superseded
+        );
         assert_eq!(put(&relay, &ev(&a, 34235, 30, "none", &[])), Saved::Stored);
-        assert_eq!(put(&relay, &ev(&a, 34235, 40, "empty", &[&["d", ""]])), Saved::Stored);
-        let mut got: Vec<_> = get(&relay, &[only(34235)], 0).into_iter().map(|e| e.content).collect();
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 40, "empty", &[&["d", ""]])),
+            Saved::Stored
+        );
+        let mut got: Vec<_> = get(&relay, &[only(34235)], 0)
+            .into_iter()
+            .map(|e| e.content)
+            .collect();
         got.sort();
         assert_eq!(got, ["a2", "b1", "empty"]);
         // Another author's version is separate.
-        assert_eq!(put(&relay, &ev(&Keys::generate(), 34235, 1, "other", &[&["d", "a"]])), Saved::Stored);
+        assert_eq!(
+            put(
+                &relay,
+                &ev(&Keys::generate(), 34235, 1, "other", &[&["d", "a"]])
+            ),
+            Saved::Stored
+        );
     }
 
     #[tokio::test]
@@ -1892,16 +2181,33 @@ mod tests {
         let by_id = filter(&format!(r#"{{"ids":["{}"]}}"#, target.id));
         assert_eq!(put(&relay, &target), Saved::Stored);
 
-        assert_eq!(put(&relay, &ev(&b, 5, 20, "", &[&["e", &target.id.to_hex()]])), Saved::Stored);
-        assert_eq!(get(&relay, &[by_id.clone()], 0).len(), 1, "other author's deletion is ignored");
+        assert_eq!(
+            put(&relay, &ev(&b, 5, 20, "", &[&["e", &target.id.to_hex()]])),
+            Saved::Stored
+        );
+        assert_eq!(
+            get(&relay, std::slice::from_ref(&by_id), 0).len(),
+            1,
+            "other author's deletion is ignored"
+        );
 
-        assert_eq!(put(&relay, &ev(&a, 5, 30, "", &[&["e", &target.id.to_hex()]])), Saved::Stored);
-        assert!(get(&relay, &[by_id.clone()], 0).is_empty());
-        assert_eq!(put(&relay, &target), Saved::Deleted, "re-publish of a deleted id");
+        assert_eq!(
+            put(&relay, &ev(&a, 5, 30, "", &[&["e", &target.id.to_hex()]])),
+            Saved::Stored
+        );
+        assert!(get(&relay, std::slice::from_ref(&by_id), 0).is_empty());
+        assert_eq!(
+            put(&relay, &target),
+            Saved::Deleted,
+            "re-publish of a deleted id"
+        );
 
         // Deletion arriving before the event it deletes.
         let late = ev(&a, 1, 40, "late", &[]);
-        assert_eq!(put(&relay, &ev(&a, 5, 50, "", &[&["e", &late.id.to_hex()]])), Saved::Stored);
+        assert_eq!(
+            put(&relay, &ev(&a, 5, 50, "", &[&["e", &late.id.to_hex()]])),
+            Saved::Stored
+        );
         assert_eq!(put(&relay, &late), Saved::Deleted);
     }
 
@@ -1921,12 +2227,27 @@ mod tests {
         put(&relay, &ev(&a, 5, 15, "", &[&["a", &address]]));
         assert!(video_by_id(&relay.0.writer.lock(), &old.id).is_none());
         assert!(video_by_id(&relay.0.writer.lock(), &current.id).is_some());
-        put(&relay, &ev(&a, 5, 30, "", &[&["a", &address], &["e", &current.id.to_hex()]]));
+        put(
+            &relay,
+            &ev(
+                &a,
+                5,
+                30,
+                "",
+                &[&["a", &address], &["e", &current.id.to_hex()]],
+            ),
+        );
         assert!(video_by_id(&relay.0.writer.lock(), &current.id).is_none());
         assert!(video_by_id(&relay.0.writer.lock(), &other.id).is_some());
         assert_eq!(put(&relay, &old), Saved::Deleted);
-        assert_eq!(put(&relay, &ev(&a, 34235, 30, "stale", &[&["d", "clip:part"]])), Saved::Deleted);
-        assert_eq!(put(&relay, &ev(&a, 34235, 31, "new", &[&["d", "clip:part"]])), Saved::Stored);
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 30, "stale", &[&["d", "clip:part"]])),
+            Saved::Deleted
+        );
+        assert_eq!(
+            put(&relay, &ev(&a, 34235, 31, "new", &[&["d", "clip:part"]])),
+            Saved::Stored
+        );
         // Even a foreign e target cannot erase another author's history.
         put(&relay, &ev(&a, 5, 40, "", &[&["e", &other.id.to_hex()]]));
         assert!(video_by_id(&relay.0.writer.lock(), &other.id).is_some());
@@ -1942,13 +2263,25 @@ mod tests {
         put(&relay, &site);
         put(&relay, &foreign);
         let sites = filter(r#"{"kinds":[15128]}"#);
-        put(&relay, &ev(&stranger, 5, 20, "", &[&["a", &address], &["k", "15128"]]));
-        assert_eq!(get(&relay, &[sites.clone()], 0).len(), 2);
-        put(&relay, &ev(&owner, 5, 20, "", &[&["a", &address], &["k", "15128"]]));
-        assert_eq!(get(&relay, &[sites.clone()], 0), vec![foreign]);
+        put(
+            &relay,
+            &ev(&stranger, 5, 20, "", &[&["a", &address], &["k", "15128"]]),
+        );
+        assert_eq!(get(&relay, std::slice::from_ref(&sites), 0).len(), 2);
+        put(
+            &relay,
+            &ev(&owner, 5, 20, "", &[&["a", &address], &["k", "15128"]]),
+        );
+        assert_eq!(get(&relay, std::slice::from_ref(&sites), 0), vec![foreign]);
         assert_eq!(put(&relay, &site), Saved::Deleted);
-        assert_eq!(put(&relay, &ev(&owner, 15128, 20, "stale", &[])), Saved::Deleted);
-        assert_eq!(put(&relay, &ev(&owner, 15128, 21, "new", &[])), Saved::Stored);
+        assert_eq!(
+            put(&relay, &ev(&owner, 15128, 20, "stale", &[])),
+            Saved::Deleted
+        );
+        assert_eq!(
+            put(&relay, &ev(&owner, 15128, 21, "new", &[])),
+            Saved::Stored
+        );
         assert_eq!(get(&relay, &[sites], 0).len(), 2);
     }
 
@@ -1956,32 +2289,91 @@ mod tests {
     async fn accepted_video_changes_queue_only_removed_unshared_media() {
         let relay = open(vec![]);
         let key = Keys::generate();
-        let (video, old_thumb, subtitle, new_video) = ("a".repeat(64), "b".repeat(64), "c".repeat(64), "d".repeat(64));
+        let (video, old_thumb, subtitle, new_video) = (
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            "d".repeat(64),
+        );
         let url = format!("url https://media.example/{video}.mp4");
         let thumb = format!("image https://media.example/{old_thumb}.jpg");
         let track = format!("https://media.example/{subtitle}.vtt");
-        let original = ev(&key, 34235, 10, "first", &[&["d", "clip"], &["imeta", &url, &thumb], &["text-track", &track, "en"]]);
+        let original = ev(
+            &key,
+            34235,
+            10,
+            "first",
+            &[
+                &["d", "clip"],
+                &["imeta", &url, &thumb],
+                &["text-track", &track, "en"],
+            ],
+        );
         put(&relay, &original);
-        let unchanged = ev(&key, 34235, 20, "metadata only", &[&["d", "clip"], &["imeta", &url, &thumb], &["text-track", &track, "de"]]);
+        let unchanged = ev(
+            &key,
+            34235,
+            20,
+            "metadata only",
+            &[
+                &["d", "clip"],
+                &["imeta", &url, &thumb],
+                &["text-track", &track, "de"],
+            ],
+        );
         put(&relay, &unchanged);
         let cleanup_hashes = || {
             let conn = relay.0.writer.lock();
-            let mut stmt = conn.prepare("SELECT ref_id FROM outbox WHERE kind='cleanup' ORDER BY ref_id").unwrap();
-            let hashes = stmt.query_map([], |r| r.get::<_, String>(0)).unwrap().collect::<rusqlite::Result<Vec<_>>>().unwrap();
+            let mut stmt = conn
+                .prepare("SELECT ref_id FROM outbox WHERE kind='cleanup' ORDER BY ref_id")
+                .unwrap();
+            let hashes = stmt
+                .query_map([], |r| r.get::<_, String>(0))
+                .unwrap()
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .unwrap();
             hashes
         };
-        assert!(cleanup_hashes().is_empty(), "title/description/language edits retain bytes");
+        assert!(
+            cleanup_hashes().is_empty(),
+            "title/description/language edits retain bytes"
+        );
         // The old video is also referenced by another active coordinate.
-        put(&relay, &ev(&key, 34235, 21, "shared", &[&["d", "other"], &["imeta", &url]]));
+        put(
+            &relay,
+            &ev(
+                &key,
+                34235,
+                21,
+                "shared",
+                &[&["d", "other"], &["imeta", &url]],
+            ),
+        );
         let replacement = format!("url https://media.example/{new_video}.mp4");
-        put(&relay, &ev(&key, 34235, 30, "replacement", &[&["d", "clip"], &["imeta", &replacement]]));
+        put(
+            &relay,
+            &ev(
+                &key,
+                34235,
+                30,
+                "replacement",
+                &[&["d", "clip"], &["imeta", &replacement]],
+            ),
+        );
         assert_eq!(cleanup_hashes(), vec![old_thumb, subtitle]);
         assert_eq!(put(&relay, &original), Saved::Superseded);
-        assert_eq!(cleanup_hashes().len(), 2, "rejected stale events queue nothing");
+        assert_eq!(
+            cleanup_hashes().len(),
+            2,
+            "rejected stale events queue nothing"
+        );
         let address = format!("34235:{}:clip", key.public_key());
         put(&relay, &ev(&key, 5, 40, "", &[&["a", &address]]));
         assert_eq!(cleanup_hashes().len(), 3);
-        assert!(!cleanup_hashes().contains(&video), "shared hash never gets a cleanup job");
+        assert!(
+            !cleanup_hashes().contains(&video),
+            "shared hash never gets a cleanup job"
+        );
     }
 
     #[tokio::test]
@@ -1990,17 +2382,42 @@ mod tests {
         let relay = open(vec![writer.public_key()]);
         let now = Timestamp::now().as_secs();
         let media = "e".repeat(64);
-        let video = ev(&writer, 21, now, "video", &[&["imeta", &format!("url https://m.example/{media}.mp4")]]);
+        let video = ev(
+            &writer,
+            21,
+            now,
+            "video",
+            &[&["imeta", &format!("url https://m.example/{media}.mp4")]],
+        );
         assert!(ok_status(relay.ingest(video.clone()).await).0);
         let (id, author) = (video.id.to_hex(), writer.public_key().to_hex());
-        let comment = ev(&visitor, 1111, now, "pin", &[
-            &["E", &id, "", &author], &["K", "21"], &["P", &author],
-            &["e", &id, "", &author], &["k", "21"], &["p", &author], &["x", &media],
-        ]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "pin",
+            &[
+                &["E", &id, "", &author],
+                &["K", "21"],
+                &["P", &author],
+                &["e", &id, "", &author],
+                &["k", "21"],
+                &["p", &author],
+                &["x", &media],
+            ],
+        );
         assert!(ok_status(relay.ingest(comment).await).0);
         assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &id]])).await).0);
-        let queued: i64 = relay.0.writer.lock().query_row(
-            "SELECT COUNT(*) FROM outbox WHERE kind='cleanup' AND ref_id=?", [&media], |r| r.get(0)).unwrap();
+        let queued: i64 = relay
+            .0
+            .writer
+            .lock()
+            .query_row(
+                "SELECT COUNT(*) FROM outbox WHERE kind='cleanup' AND ref_id=?",
+                [&media],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(queued, 1);
     }
 
@@ -2010,15 +2427,30 @@ mod tests {
         let relay = open(vec![a.public_key()]);
         let now = Timestamp::now().as_secs();
 
-        let expired = ev(&a, 1, now - 100, "gone", &[&["expiration", &(now - 10).to_string()]]);
+        let expired = ev(
+            &a,
+            1,
+            now - 100,
+            "gone",
+            &[&["expiration", &(now - 10).to_string()]],
+        );
         let (ok, msg) = ok_status(relay.ingest(expired).await);
         assert!(!ok && msg.starts_with("invalid:"), "{msg}");
 
-        let expiring = ev(&a, 1, now, "soon", &[&["expiration", &(now + 100).to_string()]]);
+        let expiring = ev(
+            &a,
+            1,
+            now,
+            "soon",
+            &[&["expiration", &(now + 100).to_string()]],
+        );
         assert!(ok_status(relay.ingest(expiring).await).0);
         let all = filter("{}");
-        assert_eq!(get(&relay, &[all.clone()], now as i64).len(), 1);
-        assert!(get(&relay, &[all], now as i64 + 200).is_empty(), "hidden once expired");
+        assert_eq!(get(&relay, std::slice::from_ref(&all), now as i64).len(), 1);
+        assert!(
+            get(&relay, &[all], now as i64 + 200).is_empty(),
+            "hidden once expired"
+        );
     }
 
     #[tokio::test]
@@ -2032,7 +2464,9 @@ mod tests {
         // Ephemeral events from strangers too (#11: views 22236 are rejected).
         assert!(!ok_status(relay.ingest(ev(&stranger, 22236, now, "", &[])).await).0);
         assert!(ok_status(relay.ingest(ev(&writer, 1, now, "hi", &[])).await).0);
-        assert!(get(&relay, &[filter("{}")], 0).iter().all(|e| e.pubkey == writer.public_key()));
+        assert!(get(&relay, &[filter("{}")], 0)
+            .iter()
+            .all(|e| e.pubkey == writer.public_key()));
     }
 
     #[tokio::test]
@@ -2050,7 +2484,9 @@ mod tests {
     }
 
     async fn queried(relay: &Relay) -> Vec<Event> {
-        let mut rx = relay.query(&SubscriptionId::new("test"), vec![Filter::new()]).await;
+        let mut rx = relay
+            .query(&SubscriptionId::new("test"), vec![Filter::new()])
+            .await;
         let mut events = Vec::new();
         while let Some(json) = rx.recv().await {
             let value: serde_json::Value = serde_json::from_str(&json).unwrap();
@@ -2068,61 +2504,162 @@ mod tests {
         let id = video.id.to_hex();
         let author = writer.public_key().to_hex();
         assert!(ok_status(relay.ingest(video.clone()).await).0);
-        let comment = ev(&visitor, 1111, now, "comment", &[
-            &["E", &id, "", &author], &["K", "21"], &["P", &author],
-            &["e", &id, "", &author], &["k", "21"], &["p", &author],
-        ]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "comment",
+            &[
+                &["E", &id, "", &author],
+                &["K", "21"],
+                &["P", &author],
+                &["e", &id, "", &author],
+                &["k", "21"],
+                &["p", &author],
+            ],
+        );
         assert!(ok_status(relay.ingest(comment.clone()).await).0);
         let cid = comment.id.to_hex();
         let cauthor = visitor.public_key().to_hex();
-        let reply = ev(&other, 1111, now, "reply", &[
-            &["E", &id], &["K", "21"], &["P", &author],
-            &["e", &cid, "", &cauthor], &["k", "1111"], &["p", &cauthor],
-        ]);
+        let reply = ev(
+            &other,
+            1111,
+            now,
+            "reply",
+            &[
+                &["E", &id],
+                &["K", "21"],
+                &["P", &author],
+                &["e", &cid, "", &cauthor],
+                &["k", "1111"],
+                &["p", &cauthor],
+            ],
+        );
         assert!(ok_status(relay.ingest(reply.clone()).await).0);
-        let reaction = ev(&visitor, 7, now, "+", &[
-            &["e", &id], &["e", &reply.id.to_hex()], &["k", "1111"],
-            &["p", &other.public_key().to_hex()],
-        ]);
+        let reaction = ev(
+            &visitor,
+            7,
+            now,
+            "+",
+            &[
+                &["e", &id],
+                &["e", &reply.id.to_hex()],
+                &["k", "1111"],
+                &["p", &other.public_key().to_hex()],
+            ],
+        );
         assert!(ok_status(relay.ingest(reaction.clone()).await).0);
         let legacy = ev(&visitor, 1, now, "legacy", &[&["e", &id, "", "root"]]);
         assert!(ok_status(relay.ingest(legacy.clone()).await).0);
-        let legacy_reply = ev(&other, 1, now, "legacy reply", &[
-            &["e", &id, "", "root"], &["e", &legacy.id.to_hex(), "", "reply"],
-        ]);
+        let legacy_reply = ev(
+            &other,
+            1,
+            now,
+            "legacy reply",
+            &[
+                &["e", &id, "", "root"],
+                &["e", &legacy.id.to_hex(), "", "reply"],
+            ],
+        );
         assert!(ok_status(relay.ingest(legacy_reply.clone()).await).0);
         assert_eq!(queried(&relay).await.len(), 6);
 
-        let deletion = ev(&visitor, 5, now, "", &[
-            &["e", &cid], &["e", &reaction.id.to_hex()], &["e", &legacy.id.to_hex()],
-        ]);
+        let deletion = ev(
+            &visitor,
+            5,
+            now,
+            "",
+            &[
+                &["e", &cid],
+                &["e", &reaction.id.to_hex()],
+                &["e", &legacy.id.to_hex()],
+            ],
+        );
         assert!(ok_status(relay.ingest(deletion.clone()).await).0);
-        assert!(ok_status(relay.ingest(deletion).await).0, "duplicate deletion");
-        assert!(ok_status(relay.ingest(ev(&visitor, 5, now + 1, "again", &[&["e", &cid]])).await).0);
-        assert!(!ok_status(relay.ingest(comment).await).0, "deleted event cannot return");
+        assert!(
+            ok_status(relay.ingest(deletion).await).0,
+            "duplicate deletion"
+        );
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(&visitor, 5, now + 1, "again", &[&["e", &cid]]))
+                    .await
+            )
+            .0
+        );
+        assert!(
+            !ok_status(relay.ingest(comment).await).0,
+            "deleted event cannot return"
+        );
         let remaining = queried(&relay).await;
         assert!(remaining.iter().any(|e| e.id == video.id));
-        assert!(!remaining.iter().any(|e| e.id == reaction.id || e.id == legacy.id));
-        assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &reply.id.to_hex()]])).await).0);
+        assert!(!remaining
+            .iter()
+            .any(|e| e.id == reaction.id || e.id == legacy.id));
+        assert!(
+            !ok_status(
+                relay
+                    .ingest(ev(&visitor, 5, now, "", &[&["e", &reply.id.to_hex()]]))
+                    .await
+            )
+            .0
+        );
         assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &id]])).await).0);
-        assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["a", &format!("34235:{author}:fake")]])).await).0);
+        assert!(
+            !ok_status(
+                relay
+                    .ingest(ev(
+                        &visitor,
+                        5,
+                        now,
+                        "",
+                        &[&["a", &format!("34235:{author}:fake")]]
+                    ))
+                    .await
+            )
+            .0
+        );
     }
 
     #[tokio::test]
     async fn visitors_report_only_locally_resolvable_targets() {
-        let (writer, visitor, other, foreign) =
-            (Keys::generate(), Keys::generate(), Keys::generate(), Keys::generate());
+        let (writer, visitor, other, foreign) = (
+            Keys::generate(),
+            Keys::generate(),
+            Keys::generate(),
+            Keys::generate(),
+        );
         let relay = open(vec![writer.public_key()]);
         let now = Timestamp::now().as_secs();
         let author = writer.public_key().to_hex();
         let video_hash = "a".repeat(64);
-        let video = ev(&writer, 21, now, "video", &[&["imeta", &format!("url https://media.example/{video_hash}.mp4")]]);
+        let video = ev(
+            &writer,
+            21,
+            now,
+            "video",
+            &[&[
+                "imeta",
+                &format!("url https://media.example/{video_hash}.mp4"),
+            ]],
+        );
         let id = video.id.to_hex();
         assert!(ok_status(relay.ingest(video.clone()).await).0);
-        let comment = ev(&visitor, 1111, now, "comment", &[
-            &["E", &id, "", &author], &["K", "21"], &["P", &author],
-            &["e", &id, "", &author], &["k", "21"], &["p", &author],
-        ]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "comment",
+            &[
+                &["E", &id, "", &author],
+                &["K", "21"],
+                &["P", &author],
+                &["e", &id, "", &author],
+                &["k", "21"],
+                &["p", &author],
+            ],
+        );
         assert!(ok_status(relay.ingest(comment.clone()).await).0);
         let cid = comment.id.to_hex();
         let cauthor = visitor.public_key().to_hex();
@@ -2134,43 +2671,166 @@ mod tests {
         assert!(ok_status(relay.ingest(clip.clone()).await).0);
 
         // Accept: the video itself, with an x tag matching its own media.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "bad video", &[
-            &["e", &id, "illegal"], &["p", &author], &["x", &video_hash, "illegal"],
-        ])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &other,
+                        1984,
+                        now,
+                        "bad video",
+                        &[
+                            &["e", &id, "illegal"],
+                            &["p", &author],
+                            &["x", &video_hash, "illegal"],
+                        ]
+                    ))
+                    .await
+            )
+            .0
+        );
         // Accept: a visitor's comment — p is the commenter, not the video author.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "spam", &[&["e", &cid, "spam"], &["p", &cauthor]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &other,
+                        1984,
+                        now,
+                        "spam",
+                        &[&["e", &cid, "spam"], &["p", &cauthor]]
+                    ))
+                    .await
+            )
+            .0
+        );
         // Accept: a profile report against an allowed writer, no e tag.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["p", &author, "impersonation"]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &other,
+                        1984,
+                        now,
+                        "",
+                        &[&["p", &author, "impersonation"]]
+                    ))
+                    .await
+            )
+            .0
+        );
         // Accept: a profile report against a visitor who has interacted here.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["p", &cauthor, "harassment"]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(&other, 1984, now, "", &[&["p", &cauthor, "harassment"]]))
+                    .await
+            )
+            .0
+        );
         // Accept: an addressable video's own coordinate, matching its e target.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &address], &["p", &author]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &other,
+                        1984,
+                        now,
+                        "",
+                        &[&["e", &clip_id], &["a", &address], &["p", &author]]
+                    ))
+                    .await
+            )
+            .0
+        );
         // Accept: a bare x (no e), resolved through the media index — the BUD-09 fallback.
-        assert!(ok_status(relay.ingest(ev(&other, 1984, now, "", &[&["x", &video_hash], &["p", &author]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &other,
+                        1984,
+                        now,
+                        "",
+                        &[&["x", &video_hash], &["p", &author]]
+                    ))
+                    .await
+            )
+            .0
+        );
 
         let bad = [
             // A pubkey that has never shown up here.
-            ev(&other, 1984, now, "", &[&["p", &foreign.public_key().to_hex()]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[&["p", &foreign.public_key().to_hex()]],
+            ),
             // A video stored here but no longer an allowed writer's.
-            ev(&other, 1984, now, "", &[&["e", &foreign_video.id.to_hex()], &["p", &foreign.public_key().to_hex()]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[
+                    &["e", &foreign_video.id.to_hex()],
+                    &["p", &foreign.public_key().to_hex()],
+                ],
+            ),
             // An id that does not resolve to anything stored here.
-            ev(&other, 1984, now, "", &[&["e", &"00".repeat(32)], &["p", &author]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[&["e", &"00".repeat(32)], &["p", &author]],
+            ),
             // p does not match the e target's actual author.
             ev(&other, 1984, now, "", &[&["e", &id], &["p", &cauthor]]),
             // x is not among the video's own media hashes.
-            ev(&other, 1984, now, "", &[&["e", &id], &["x", &"f".repeat(64)]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[&["e", &id], &["x", &"f".repeat(64)]],
+            ),
             // No e, p or x target at all.
             ev(&other, 1984, now, "", &[]),
             // a tag is a coordinate nobody owns.
-            ev(&other, 1984, now, "", &[&["e", &clip_id], &["a", &format!("34235:{}:nope", foreign.public_key())], &["p", &author]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[
+                    &["e", &clip_id],
+                    &["a", &format!("34235:{}:nope", foreign.public_key())],
+                    &["p", &author],
+                ],
+            ),
             // a tag resolves but to a different video than e.
-            ev(&other, 1984, now, "", &[&["e", &id], &["a", &address], &["p", &author]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[&["e", &id], &["a", &address], &["p", &author]],
+            ),
             // A bare a cannot be resolved without an e.
             ev(&other, 1984, now, "", &[&["a", &address]]),
             // A bare x whose hash is not stored in any video here.
             ev(&other, 1984, now, "", &[&["x", &"f".repeat(64)]]),
             // A bare x resolves, but p does not match any of that blob's video authors.
-            ev(&other, 1984, now, "", &[&["x", &video_hash], &["p", &cauthor]]),
+            ev(
+                &other,
+                1984,
+                now,
+                "",
+                &[&["x", &video_hash], &["p", &cauthor]],
+            ),
         ];
         for event in bad {
             assert!(!ok_status(relay.ingest(event).await).0);
@@ -2179,7 +2839,14 @@ mod tests {
         // A reporter can retract their own report, same as any other accepted interaction.
         let own_report = ev(&other, 1984, now, "mine", &[&["e", &id], &["p", &author]]);
         assert!(ok_status(relay.ingest(own_report.clone()).await).0);
-        assert!(ok_status(relay.ingest(ev(&other, 5, now, "", &[&["e", &own_report.id.to_hex()]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(&other, 5, now, "", &[&["e", &own_report.id.to_hex()]]))
+                    .await
+            )
+            .0
+        );
         assert!(!queried(&relay).await.iter().any(|e| e.id == own_report.id));
     }
 
@@ -2192,19 +2859,51 @@ mod tests {
         assert!(ok_status(relay.ingest(video.clone()).await).0);
         let author = writer.public_key().to_hex();
         let id = video.id.to_hex();
-        let put = |body: Vec<u8>| Request::builder().method(Method::PUT).uri("/report").body(Body::from(body)).unwrap();
+        let put = |body: Vec<u8>| {
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/report")
+                .body(Body::from(body))
+                .unwrap()
+        };
 
-        let preflight = Request::builder().method(Method::OPTIONS).uri("/report").body(Body::empty()).unwrap();
+        let preflight = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/report")
+            .body(Body::empty())
+            .unwrap();
         let res = handle_report(relay.clone(), preflight).await;
         assert_eq!(res.status(), StatusCode::NO_CONTENT);
-        assert_eq!(res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
+        assert_eq!(
+            res.headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .unwrap(),
+            "*"
+        );
 
-        let good = ev(&Keys::generate(), 1984, now, "", &[&["e", &id], &["p", &author]]);
+        let good = ev(
+            &Keys::generate(),
+            1984,
+            now,
+            "",
+            &[&["e", &id], &["p", &author]],
+        );
         let res = handle_report(relay.clone(), put(good.as_json().into_bytes())).await;
         assert_eq!(res.status(), StatusCode::ACCEPTED);
-        assert_eq!(res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
+        assert_eq!(
+            res.headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .unwrap(),
+            "*"
+        );
 
-        let unresolvable = ev(&Keys::generate(), 1984, now, "", &[&["e", &"00".repeat(32)], &["p", &author]]);
+        let unresolvable = ev(
+            &Keys::generate(),
+            1984,
+            now,
+            "",
+            &[&["e", &"00".repeat(32)], &["p", &author]],
+        );
         let res = handle_report(relay.clone(), put(unresolvable.as_json().into_bytes())).await;
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
@@ -2231,35 +2930,148 @@ mod tests {
         // Public writer policy permits an event before the writer is removed.
         let prior = open(vec![writer.public_key(), foreign.public_key()]);
         assert!(ok_status(prior.ingest(foreign_video.clone()).await).0);
-        let relay_foreign = Relay::open(&prior.0.path, RelayConfig {
-            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
-        }).unwrap();
+        let relay_foreign = Relay::open(
+            &prior.0.path,
+            RelayConfig {
+                writers: vec![writer.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: vec![],
+            },
+        )
+        .unwrap();
         let id = video.id.to_hex();
         let author = writer.public_key().to_hex();
         let unknown = "00".repeat(32);
         let bad = [
-            ev(&visitor, 1111, now, "", &[&["E", &unknown], &["K", "22"], &["P", &author], &["e", &unknown], &["k", "22"]]),
-            ev(&visitor, 1111, now, "", &[&["E", &note.id.to_hex()], &["K", "1"], &["P", &author], &["e", &note.id.to_hex()], &["k", "1"]]),
-            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "21"], &["P", &author], &["e", &id], &["k", "22"]]),
-            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "22"], &["P", &foreign.public_key().to_hex()], &["e", &id], &["k", "22"]]),
-            ev(&visitor, 1111, now, "", &[&["E", &id], &["E", &other_video.id.to_hex()], &["K", "22"], &["P", &author], &["e", &id], &["k", "22"]]),
-            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "22"], &["P", &author], &["e", &other_video.id.to_hex()], &["k", "21"]]),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &unknown],
+                    &["K", "22"],
+                    &["P", &author],
+                    &["e", &unknown],
+                    &["k", "22"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &note.id.to_hex()],
+                    &["K", "1"],
+                    &["P", &author],
+                    &["e", &note.id.to_hex()],
+                    &["k", "1"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &id],
+                    &["K", "21"],
+                    &["P", &author],
+                    &["e", &id],
+                    &["k", "22"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &id],
+                    &["K", "22"],
+                    &["P", &foreign.public_key().to_hex()],
+                    &["e", &id],
+                    &["k", "22"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &id],
+                    &["E", &other_video.id.to_hex()],
+                    &["K", "22"],
+                    &["P", &author],
+                    &["e", &id],
+                    &["k", "22"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1111,
+                now,
+                "",
+                &[
+                    &["E", &id],
+                    &["K", "22"],
+                    &["P", &author],
+                    &["e", &other_video.id.to_hex()],
+                    &["k", "21"],
+                ],
+            ),
             ev(&visitor, 7, now, "+", &[&["e", &id], &["e", &unknown]]),
-            ev(&visitor, 7, now, "+", &[&["e", &id], &["p", &foreign.public_key().to_hex()]]),
+            ev(
+                &visitor,
+                7,
+                now,
+                "+",
+                &[&["e", &id], &["p", &foreign.public_key().to_hex()]],
+            ),
             ev(&visitor, 7, now, "+", &[&["e", &id], &["k", "21"]]),
             ev(&visitor, 7, now, "+", &[&["e", &unknown], &["e", &id]]),
-            ev(&visitor, 1, now, "", &[&["e", &id, "", "root"], &["e", &note.id.to_hex(), "", "reply"]]),
-            ev(&visitor, 1, now, "", &[&["e", &id, "", "root"], &["e", &other_video.id.to_hex(), "", "root"]]),
+            ev(
+                &visitor,
+                1,
+                now,
+                "",
+                &[
+                    &["e", &id, "", "root"],
+                    &["e", &note.id.to_hex(), "", "reply"],
+                ],
+            ),
+            ev(
+                &visitor,
+                1,
+                now,
+                "",
+                &[
+                    &["e", &id, "", "root"],
+                    &["e", &other_video.id.to_hex(), "", "root"],
+                ],
+            ),
             ev(&visitor, 1063, now, "", &[&["e", &id]]),
             ev(&visitor, 24242, now, "", &[]),
         ];
         for event in bad {
             assert!(!ok_status(relay.ingest(event).await).0);
         }
-        let forged = ev(&visitor, 1111, now, "", &[
-            &["E", &foreign_video.id.to_hex()], &["K", "21"], &["P", &author],
-            &["e", &foreign_video.id.to_hex()], &["k", "21"],
-        ]);
+        let forged = ev(
+            &visitor,
+            1111,
+            now,
+            "",
+            &[
+                &["E", &foreign_video.id.to_hex()],
+                &["K", "21"],
+                &["P", &author],
+                &["e", &foreign_video.id.to_hex()],
+                &["k", "21"],
+            ],
+        );
         assert!(!ok_status(relay_foreign.ingest(forged).await).0);
         let mut invalid = ev(&visitor, 7, now, "+", &[&["e", &id]]);
         invalid.content = "-".into();
@@ -2280,26 +3092,108 @@ mod tests {
         assert!(ok_status(relay.ingest(old.clone()).await).0);
         assert!(ok_status(relay.ingest(new.clone()).await).0);
         let old_id = old.id.to_hex();
-        let comment = ev(&visitor, 1111, now, "on old", &[
-            &["A", &address], &["K", "34235"], &["P", &author],
-            &["a", &address], &["e", &old_id], &["k", "34235"], &["p", &author],
-        ]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "on old",
+            &[
+                &["A", &address],
+                &["K", "34235"],
+                &["P", &author],
+                &["a", &address],
+                &["e", &old_id],
+                &["k", "34235"],
+                &["p", &author],
+            ],
+        );
         assert!(ok_status(relay.ingest(comment.clone()).await).0);
-        assert!(ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[
-            &["a", &address], &["e", &old_id], &["k", "34235"], &["p", &author],
-        ])).await).0);
-        assert!(ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[&["e", &comment.id.to_hex()]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(
+                        &visitor,
+                        7,
+                        now,
+                        "+",
+                        &[
+                            &["a", &address],
+                            &["e", &old_id],
+                            &["k", "34235"],
+                            &["p", &author],
+                        ]
+                    ))
+                    .await
+            )
+            .0
+        );
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(&visitor, 7, now, "+", &[&["e", &comment.id.to_hex()]]))
+                    .await
+            )
+            .0
+        );
         for target in ["00".repeat(32), new.id.to_hex()] {
-            let addr = if target == new.id.to_hex() { format!("34235:{author}:invented") } else { address.clone() };
-            assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[&["a", &addr], &["e", &target]])).await).0);
-            assert!(!ok_status(relay.ingest(ev(&visitor, 1111, now, "", &[
-                &["A", &addr], &["K", "34235"], &["P", &author],
-                &["a", &addr], &["e", &target], &["k", "34235"],
-            ])).await).0);
+            let addr = if target == new.id.to_hex() {
+                format!("34235:{author}:invented")
+            } else {
+                address.clone()
+            };
+            assert!(
+                !ok_status(
+                    relay
+                        .ingest(ev(&visitor, 7, now, "+", &[&["a", &addr], &["e", &target]]))
+                        .await
+                )
+                .0
+            );
+            assert!(
+                !ok_status(
+                    relay
+                        .ingest(ev(
+                            &visitor,
+                            1111,
+                            now,
+                            "",
+                            &[
+                                &["A", &addr],
+                                &["K", "34235"],
+                                &["P", &author],
+                                &["a", &addr],
+                                &["e", &target],
+                                &["k", "34235"],
+                            ]
+                        ))
+                        .await
+                )
+                .0
+            );
         }
         assert!(!queried(&relay).await.iter().any(|e| e.id == old.id));
-        assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &new.id.to_hex()]])).await).0);
-        assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "-", &[&["a", &address], &["e", &old_id]])).await).0);
+        assert!(
+            ok_status(
+                relay
+                    .ingest(ev(&writer, 5, now, "", &[&["e", &new.id.to_hex()]]))
+                    .await
+            )
+            .0
+        );
+        assert!(
+            !ok_status(
+                relay
+                    .ingest(ev(
+                        &visitor,
+                        7,
+                        now,
+                        "-",
+                        &[&["a", &address], &["e", &old_id]]
+                    ))
+                    .await
+            )
+            .0
+        );
     }
 
     #[tokio::test]
@@ -2316,12 +3210,19 @@ mod tests {
             "clip",
             &[
                 &["d", "clip"],
-                &["imeta", &format!("url https://cdn.example/{video_hash}.mp4"), &format!("image https://cdn.example/{image_hash}.jpg")],
+                &[
+                    "imeta",
+                    &format!("url https://cdn.example/{video_hash}.mp4"),
+                    &format!("image https://cdn.example/{image_hash}.jpg"),
+                ],
             ],
         );
         assert!(ok_status(relay.ingest(video.clone()).await).0);
         relay.count_view(video_hash.clone()).await;
-        assert!(relay.plays(365).await.unwrap().is_empty(), "counting is off by default");
+        assert!(
+            relay.plays(365).await.unwrap().is_empty(),
+            "counting is off by default"
+        );
         relay.set_count_plays(true);
         relay.count_view(video_hash.clone()).await;
         relay.count_view(video_hash.clone()).await;
@@ -2334,7 +3235,15 @@ mod tests {
         assert_eq!(plays.len(), 1);
         relay.set_count_plays(false);
         relay.count_view(video_hash.clone()).await;
-        assert_eq!(relay.plays(365).await.unwrap().get(&video.id.to_hex()).copied(), Some(3));
+        assert_eq!(
+            relay
+                .plays(365)
+                .await
+                .unwrap()
+                .get(&video.id.to_hex())
+                .copied(),
+            Some(3)
+        );
     }
 
     #[tokio::test]
@@ -2369,13 +3278,27 @@ mod tests {
     async fn only_new_writer_events_are_queued_for_the_mirror_relays() {
         let (writer, visitor) = (Keys::generate(), Keys::generate());
         let targets = vec!["wss://a.example".to_owned(), "wss://b.example".to_owned()];
-        let relay = Relay::open(&open(vec![]).0.path, RelayConfig {
-            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(), mirror_relays: targets.clone(),
-        }).unwrap();
+        let relay = Relay::open(
+            &open(vec![]).0.path,
+            RelayConfig {
+                writers: vec![writer.public_key()],
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays: targets.clone(),
+            },
+        )
+        .unwrap();
         let queued = |id: &EventId| -> Vec<String> {
             let conn = relay.0.writer.lock();
-            let mut stmt = conn.prepare("SELECT target FROM outbox WHERE kind = 'event' AND ref_id = ? ORDER BY target").unwrap();
-            stmt.query_map([id.to_hex()], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+            let mut stmt = conn
+                .prepare(
+                    "SELECT target FROM outbox WHERE kind = 'event' AND ref_id = ? ORDER BY target",
+                )
+                .unwrap();
+            stmt.query_map([id.to_hex()], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect()
         };
         let now = Timestamp::now().as_secs();
         let video = ev(&writer, 21, now, "video", &[]);
@@ -2383,21 +3306,56 @@ mod tests {
         assert_eq!(queued(&video.id), targets);
         // A replay is a duplicate: no second job.
         assert!(ok_status(relay.ingest(video.clone()).await).0);
-        let n: i64 = relay.0.writer.lock().query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0)).unwrap();
+        let n: i64 = relay
+            .0
+            .writer
+            .lock()
+            .query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 2);
         // A visitor's comment is stored, but it is not this instance's content.
-        let comment = ev(&visitor, 1111, now, "nice", &[&["E", &video.id.to_hex()], &["K", "21"], &["P", &writer.public_key().to_hex()], &["e", &video.id.to_hex()], &["k", "21"], &["p", &writer.public_key().to_hex()]]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "nice",
+            &[
+                &["E", &video.id.to_hex()],
+                &["K", "21"],
+                &["P", &writer.public_key().to_hex()],
+                &["e", &video.id.to_hex()],
+                &["k", "21"],
+                &["p", &writer.public_key().to_hex()],
+            ],
+        );
         assert!(ok_status(relay.ingest(comment.clone()).await).0);
         assert!(queued(&comment.id).is_empty());
         // A writer event another instance's outbox delivered is stored, not passed on.
         let copy = ev(&writer, 1, now, "from a mirror", &[]);
         assert!(ok_status(relay.ingest_from(copy.clone(), true).await).0);
         assert!(queued(&copy.id).is_empty());
-        assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
+        assert_eq!(
+            get(
+                &relay,
+                &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))],
+                now as i64
+            )
+            .len(),
+            1
+        );
     }
 
     fn reopen(path: &Path, writers: Vec<PublicKey>, mirror_relays: Vec<String>) -> Relay {
-        Relay::open(path, RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays }).unwrap()
+        Relay::open(
+            path,
+            RelayConfig {
+                writers,
+                name: "t".into(),
+                description: "t".into(),
+                mirror_relays,
+            },
+        )
+        .unwrap()
     }
 
     /// Event jobs as (event id, target, status, attempts), sorted.
@@ -2406,7 +3364,11 @@ mod tests {
         let mut stmt = conn
             .prepare("SELECT ref_id, target, status, attempts FROM outbox WHERE kind = 'event' ORDER BY ref_id, target")
             .unwrap();
-        let jobs = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap().map(Result::unwrap).collect();
+        let jobs = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
         jobs
     }
 
@@ -2422,17 +3384,52 @@ mod tests {
         let clip = ev(&writer, 34235, now - 30, "v2", &[&["d", "clip"]]);
         let doomed = ev(&writer, 1, now - 20, "doomed", &[]);
         let deletion = ev(&writer, 5, now - 10, "", &[&["e", &doomed.id.to_hex()]]);
-        let comment = ev(&visitor, 1111, now, "nice", &[&["E", &video.id.to_hex()], &["K", "21"], &["P", &w], &["e", &video.id.to_hex()], &["k", "21"], &["p", &w]]);
+        let comment = ev(
+            &visitor,
+            1111,
+            now,
+            "nice",
+            &[
+                &["E", &video.id.to_hex()],
+                &["K", "21"],
+                &["P", &w],
+                &["e", &video.id.to_hex()],
+                &["k", "21"],
+                &["p", &w],
+            ],
+        );
         let removed_writer = ev(&former, 1, now, "former writer", &[]);
-        for e in [&video, &old_clip, &clip, &doomed, &deletion, &comment, &removed_writer] {
+        for e in [
+            &video,
+            &old_clip,
+            &clip,
+            &doomed,
+            &deletion,
+            &comment,
+            &removed_writer,
+        ] {
             assert!(ok_status(relay.ingest(e.clone()).await).0);
         }
         // Stored while valid, lapsed by the time the mirrors are added.
-        let expired = ev(&writer, 1, now - 100, "expired", &[&["expiration", &(now - 1).to_string()]]);
+        let expired = ev(
+            &writer,
+            1,
+            now - 100,
+            "expired",
+            &[&["expiration", &(now - 1).to_string()]],
+        );
         assert_eq!(put(&relay, &expired), Saved::Stored);
         // An owner-held explicit event keeps its own target allowlist.
         let explicit = ev(&writer, 1, now, "explicit", &[]);
-        relay.0.writer.lock().execute("INSERT INTO outbox_explicit (event_id) VALUES (?)", [explicit.id.to_hex()]).unwrap();
+        relay
+            .0
+            .writer
+            .lock()
+            .execute(
+                "INSERT INTO outbox_explicit (event_id) VALUES (?)",
+                [explicit.id.to_hex()],
+            )
+            .unwrap();
         assert!(ok_status(relay.ingest(explicit).await).0);
         let copy = ev(&writer, 1, now, "from another instance", &[]);
         assert!(ok_status(relay.ingest_from(copy.clone(), true).await).0);
@@ -2440,35 +3437,70 @@ mod tests {
 
         let (a, b) = ("wss://a.example", "wss://b.example");
         let expected = |targets: &[&str]| {
-            let mut jobs: Vec<(String, String)> = [&video, &clip, &deletion].iter()
+            let mut jobs: Vec<(String, String)> = [&video, &clip, &deletion]
+                .iter()
                 .flat_map(|e| targets.iter().map(move |t| (e.id.to_hex(), t.to_string())))
                 .collect();
             jobs.sort();
             jobs
         };
-        let queued = |relay: &Relay| event_jobs(relay).into_iter().map(|(id, target, ..)| (id, target)).collect::<Vec<_>>();
+        let queued = |relay: &Relay| {
+            event_jobs(relay)
+                .into_iter()
+                .map(|(id, target, ..)| (id, target))
+                .collect::<Vec<_>>()
+        };
         let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned()]);
         assert_eq!(queued(&relay), expected(&[a]));
-        relay.0.writer.lock().execute_batch(&format!(
-            "UPDATE outbox SET status = 'failed', attempts = 24 WHERE ref_id = '{}';
+        relay
+            .0
+            .writer
+            .lock()
+            .execute_batch(&format!(
+                "UPDATE outbox SET status = 'failed', attempts = 24 WHERE ref_id = '{}';
              UPDATE outbox SET status = 'done', attempts = 1 WHERE ref_id = '{}';",
-            video.id.to_hex(), clip.id.to_hex(),
-        )).unwrap();
+                video.id.to_hex(),
+                clip.id.to_hex(),
+            ))
+            .unwrap();
 
-        let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned(), b.to_owned()]);
+        let relay = reopen(
+            &path,
+            vec![writer.public_key()],
+            vec![a.to_owned(), b.to_owned()],
+        );
         assert_eq!(queued(&relay), expected(&[a, b]));
         let jobs = event_jobs(&relay);
         let job = |id: &EventId, target: &str| {
-            jobs.iter().find(|j| j.0 == id.to_hex() && j.1 == target).map(|j| (j.2.as_str(), j.3)).unwrap()
+            jobs.iter()
+                .find(|j| j.0 == id.to_hex() && j.1 == target)
+                .map(|j| (j.2.as_str(), j.3))
+                .unwrap()
         };
         assert_eq!(job(&video.id, a), ("failed", 24));
         assert_eq!(job(&clip.id, a), ("done", 1));
         assert_eq!(job(&deletion.id, a), ("pending", 0));
         assert_eq!(job(&video.id, b), ("pending", 0));
 
-        let relay = reopen(&path, vec![writer.public_key()], vec![a.to_owned(), b.to_owned()]);
-        assert_eq!(event_jobs(&relay), jobs, "a restart neither duplicates nor resets jobs");
-        assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
+        let relay = reopen(
+            &path,
+            vec![writer.public_key()],
+            vec![a.to_owned(), b.to_owned()],
+        );
+        assert_eq!(
+            event_jobs(&relay),
+            jobs,
+            "a restart neither duplicates nor resets jobs"
+        );
+        assert_eq!(
+            get(
+                &relay,
+                &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))],
+                now as i64
+            )
+            .len(),
+            1
+        );
     }
 
     #[tokio::test]
@@ -2476,33 +3508,133 @@ mod tests {
         let relay = open(vec![]);
         let (a, b) = (Keys::generate(), Keys::generate());
         let ah = a.public_key().to_hex();
-        let titled = ev(&a, 34235, 100, "A walk through the old town.", &[&["d", "1"], &["title", "Rust Café Tour"], &["t", "travel"]]);
-        let described = ev(&a, 34235, 300, "We talk about rust, and more rust.", &[&["d", "2"], &["title", "Morning show"]]);
-        let summarized = ev(&a, 34235, 200, "", &[&["d", "3"], &["title", "Clip"], &["summary", "Zebra migration"]]);
-        let alt = ev(&a, 34235, 200, "", &[&["d", "4"], &["title", "Clip"], &["imeta", "url https://example.com/x.mp4", "alt Sunset over Lisbon"]]);
-        let topic = ev(&a, 34235, 200, "", &[&["d", "5"], &["title", "Clip"], &["t", "gardening"]]);
-        let tagged = ev(&a, 34235, 200, "", &[&["d", "6"], &["description", "Quokka selfie"], &["alt", "Kayak trip"]]);
+        let titled = ev(
+            &a,
+            34235,
+            100,
+            "A walk through the old town.",
+            &[&["d", "1"], &["title", "Rust Café Tour"], &["t", "travel"]],
+        );
+        let described = ev(
+            &a,
+            34235,
+            300,
+            "We talk about rust, and more rust.",
+            &[&["d", "2"], &["title", "Morning show"]],
+        );
+        let summarized = ev(
+            &a,
+            34235,
+            200,
+            "",
+            &[
+                &["d", "3"],
+                &["title", "Clip"],
+                &["summary", "Zebra migration"],
+            ],
+        );
+        let alt = ev(
+            &a,
+            34235,
+            200,
+            "",
+            &[
+                &["d", "4"],
+                &["title", "Clip"],
+                &[
+                    "imeta",
+                    "url https://example.com/x.mp4",
+                    "alt Sunset over Lisbon",
+                ],
+            ],
+        );
+        let topic = ev(
+            &a,
+            34235,
+            200,
+            "",
+            &[&["d", "5"], &["title", "Clip"], &["t", "gardening"]],
+        );
+        let tagged = ev(
+            &a,
+            34235,
+            200,
+            "",
+            &[
+                &["d", "6"],
+                &["description", "Quokka selfie"],
+                &["alt", "Kayak trip"],
+            ],
+        );
         let foreign = ev(&b, 34235, 400, "", &[&["d", "1"], &["title", "Rust"]]);
         let note = ev(&a, 1, 500, "rust note", &[]);
-        let profile = ev(&a, 0, 500, r#"{"name":"Quinoa","display_name":"Quinoa"}"#, &[]);
-        let german = ev(&a, 34235, 200, "", &[&["d", "7"], &["title", "Führung durch die Altstadt"]]);
-        for e in [&titled, &described, &summarized, &alt, &topic, &tagged, &foreign, &note, &profile, &german] {
+        let profile = ev(
+            &a,
+            0,
+            500,
+            r#"{"name":"Quinoa","display_name":"Quinoa"}"#,
+            &[],
+        );
+        let german = ev(
+            &a,
+            34235,
+            200,
+            "",
+            &[&["d", "7"], &["title", "Führung durch die Altstadt"]],
+        );
+        for e in [
+            &titled,
+            &described,
+            &summarized,
+            &alt,
+            &topic,
+            &tagged,
+            &foreign,
+            &note,
+            &profile,
+            &german,
+        ] {
             assert_eq!(put(&relay, e), Saved::Stored);
         }
         let found = |filters: &[&str]| -> Vec<EventId> {
-            get(&relay, &filters.iter().map(|f| filter(f)).collect::<Vec<_>>(), 0).into_iter().map(|e| e.id).collect()
+            get(
+                &relay,
+                &filters.iter().map(|f| filter(f)).collect::<Vec<_>>(),
+                0,
+            )
+            .into_iter()
+            .map(|e| e.id)
+            .collect()
         };
         let search = |q: &str| found(&[&format!(r#"{{"search":"{q}"}}"#)]);
         let mine = |extra: &str| format!(r#"{{"kinds":[34235],"authors":["{ah}"]{extra}}}"#);
 
         // Title outranks the newer description hit, before the limit applies.
-        assert_eq!(found(&[&mine(r#","search":"rust""#)]), [titled.id, described.id]);
-        assert_eq!(found(&[&mine(r#","search":"rust","limit":1"#)]), [titled.id]);
-        assert_eq!(found(&[&mine(r#","search":"rust include:spam language:en""#)]), [titled.id, described.id]);
+        assert_eq!(
+            found(&[&mine(r#","search":"rust""#)]),
+            [titled.id, described.id]
+        );
+        assert_eq!(
+            found(&[&mine(r#","search":"rust","limit":1"#)]),
+            [titled.id]
+        );
+        assert_eq!(
+            found(&[&mine(r#","search":"rust include:spam language:en""#)]),
+            [titled.id, described.id]
+        );
         // Standard filters still apply.
-        assert_eq!(found(&[r##"{"search":"rust","#t":["travel"]}"##]), [titled.id]);
+        assert_eq!(
+            found(&[r##"{"search":"rust","#t":["travel"]}"##]),
+            [titled.id]
+        );
         assert_eq!(found(&[r#"{"search":"rust","kinds":[1]}"#]), [note.id]);
-        assert_eq!(found(&[&format!(r#"{{"search":"rust","kinds":[34235],"authors":["{}"]}}"#, b.public_key().to_hex())]), [foreign.id]);
+        assert_eq!(
+            found(&[&format!(
+                r#"{{"search":"rust","kinds":[34235],"authors":["{}"]}}"#,
+                b.public_key().to_hex()
+            )]),
+            [foreign.id]
+        );
         // Every metadata field, case- and diacritic-insensitive word prefixes, all words required.
         assert_eq!(search("ZEBRA"), [summarized.id]);
         assert_eq!(search("lisbon"), [alt.id]);
@@ -2516,22 +3648,59 @@ mod tests {
         assert_eq!(search("fu\u{308}hr"), [german.id]);
         assert_eq!(search("führ"), [german.id]);
         assert!(search("rust nowhere").is_empty());
-        assert!(search("quinoa").is_empty(), "profiles (author names) are not indexed");
+        assert!(
+            search("quinoa").is_empty(),
+            "profiles (author names) are not indexed"
+        );
         // Several filters: union without duplicates, best match first.
-        assert_eq!(found(&[&mine(r#","search":"rust""#), r#"{"search":"tour"}"#]), [titled.id, described.id]);
-        assert_eq!(found(&[r#"{"search":"lisbon"}"#, r#"{"kinds":[1]}"#]), [alt.id, note.id]);
+        assert_eq!(
+            found(&[&mine(r#","search":"rust""#), r#"{"search":"tour"}"#]),
+            [titled.id, described.id]
+        );
+        assert_eq!(
+            found(&[r#"{"search":"lisbon"}"#, r#"{"kinds":[1]}"#]),
+            [alt.id, note.id]
+        );
 
         // Hostile input is never FTS5 syntax or SQL; nothing searchable left matches nothing.
-        for q in ["", "   ", "\"", "*", ":", "(((", "^", "include:spam", "nsfw:false", "-- ;"] {
-            assert!(get(&relay, &[Filter::new().search(q)], 0).is_empty(), "{q:?}");
+        for q in [
+            "",
+            "   ",
+            "\"",
+            "*",
+            ":",
+            "(((",
+            "^",
+            "include:spam",
+            "nsfw:false",
+            "-- ;",
+        ] {
+            assert!(
+                get(&relay, &[Filter::new().search(q)], 0).is_empty(),
+                "{q:?}"
+            );
         }
-        for q in ["rust\" OR \"x", "NEAR(rust tour)", "rust' ; DROP TABLE event; --", "AND OR NOT", "title:rust", "² ① Ⅻ"] {
-            assert!(get(&relay, &[Filter::new().search(q)], 0).is_empty(), "{q:?}");
+        for q in [
+            "rust\" OR \"x",
+            "NEAR(rust tour)",
+            "rust' ; DROP TABLE event; --",
+            "AND OR NOT",
+            "title:rust",
+            "² ① Ⅻ",
+        ] {
+            assert!(
+                get(&relay, &[Filter::new().search(q)], 0).is_empty(),
+                "{q:?}"
+            );
         }
         assert_eq!(search("rust*"), search("rust"));
 
-        let nips = serde_json::from_str::<serde_json::Value>(&nip11_doc("t".into(), "t".into())).unwrap();
-        assert!(nips["supported_nips"].as_array().unwrap().contains(&50.into()));
+        let nips =
+            serde_json::from_str::<serde_json::Value>(&nip11_doc("t".into(), "t".into())).unwrap();
+        assert!(nips["supported_nips"]
+            .as_array()
+            .unwrap()
+            .contains(&50.into()));
     }
 
     #[tokio::test]
@@ -2540,7 +3709,10 @@ mod tests {
         let relay = open(vec![a.public_key()]);
         let now = Timestamp::now().as_secs();
         let found = |relay: &Relay, q: &str, at: u64| -> Vec<EventId> {
-            get(relay, &[Filter::new().search(q)], at as i64).into_iter().map(|e| e.id).collect()
+            get(relay, &[Filter::new().search(q)], at as i64)
+                .into_iter()
+                .map(|e| e.id)
+                .collect()
         };
         // Index rows without an event row, plus indexable event rows without an index row.
         let stale = |relay: &Relay| -> i64 {
@@ -2552,8 +3724,20 @@ mod tests {
         };
 
         // Replacement: only the current version's words.
-        let v1 = ev(&a, 34235, now - 50, "", &[&["d", "clip"], &["title", "Alpha"]]);
-        let v2 = ev(&a, 34235, now - 40, "", &[&["d", "clip"], &["title", "Beta"]]);
+        let v1 = ev(
+            &a,
+            34235,
+            now - 50,
+            "",
+            &[&["d", "clip"], &["title", "Alpha"]],
+        );
+        let v2 = ev(
+            &a,
+            34235,
+            now - 40,
+            "",
+            &[&["d", "clip"], &["title", "Beta"]],
+        );
         assert_eq!(put(&relay, &v1), Saved::Stored);
         assert_eq!(put(&relay, &v2), Saved::Stored);
         assert!(found(&relay, "alpha", now).is_empty());
@@ -2562,32 +3746,78 @@ mod tests {
         // NIP-09 by id and by coordinate; a deleted event sent again stays unsearchable.
         let note = ev(&a, 1, now - 30, "gamma", &[]);
         assert_eq!(put(&relay, &note), Saved::Stored);
-        assert_eq!(put(&relay, &ev(&a, 5, now - 20, "", &[&["e", &note.id.to_hex()]])), Saved::Stored);
+        assert_eq!(
+            put(
+                &relay,
+                &ev(&a, 5, now - 20, "", &[&["e", &note.id.to_hex()]])
+            ),
+            Saved::Stored
+        );
         assert_eq!(put(&relay, &note), Saved::Deleted);
         assert!(found(&relay, "gamma", now).is_empty());
-        let doomed = ev(&a, 34235, now - 30, "", &[&["d", "doomed"], &["title", "Delta"]]);
+        let doomed = ev(
+            &a,
+            34235,
+            now - 30,
+            "",
+            &[&["d", "doomed"], &["title", "Delta"]],
+        );
         assert_eq!(put(&relay, &doomed), Saved::Stored);
         let coordinate = format!("34235:{}:doomed", a.public_key().to_hex());
-        assert_eq!(put(&relay, &ev(&a, 5, now - 20, "", &[&["a", &coordinate]])), Saved::Stored);
+        assert_eq!(
+            put(&relay, &ev(&a, 5, now - 20, "", &[&["a", &coordinate]])),
+            Saved::Stored
+        );
         assert!(found(&relay, "delta", now).is_empty());
 
         // Expiry: hidden once lapsed, and the purge takes the index row along.
-        let expiring = ev(&a, 1, now - 10, "epsilon", &[&["expiration", &(now + 100).to_string()]]);
+        let expiring = ev(
+            &a,
+            1,
+            now - 10,
+            "epsilon",
+            &[&["expiration", &(now + 100).to_string()]],
+        );
         assert_eq!(put(&relay, &expiring), Saved::Stored);
         assert_eq!(found(&relay, "epsilon", now), [expiring.id]);
         assert!(found(&relay, "epsilon", now + 200).is_empty());
-        relay.0.writer.lock().execute("DELETE FROM event WHERE expires_at < ?", [now as i64 + 200]).unwrap();
+        relay
+            .0
+            .writer
+            .lock()
+            .execute("DELETE FROM event WHERE expires_at < ?", [now as i64 + 200])
+            .unwrap();
         assert_eq!(stale(&relay), 0);
 
         // Live: decided by the same index, so title words match and unstored events never do.
         let live = |json: &str| vec![filter(json)];
-        assert!(relay.live_match(&v2, &live(r#"{"search":"bet","kinds":[34235]}"#)).await);
+        assert!(
+            relay
+                .live_match(&v2, &live(r#"{"search":"bet","kinds":[34235]}"#))
+                .await
+        );
         assert!(!relay.live_match(&v2, &live(r#"{"search":"alpha"}"#)).await);
-        assert!(!relay.live_match(&v2, &live(r#"{"search":"beta","kinds":[1]}"#)).await);
-        assert!(!relay.live_match(&v2, &live(r#"{"search":"include:spam"}"#)).await);
+        assert!(
+            !relay
+                .live_match(&v2, &live(r#"{"search":"beta","kinds":[1]}"#))
+                .await
+        );
+        assert!(
+            !relay
+                .live_match(&v2, &live(r#"{"search":"include:spam"}"#))
+                .await
+        );
         let ephemeral = ev(&a, 20001, now, "beta", &[]);
-        assert!(!relay.live_match(&ephemeral, &live(r#"{"search":"beta"}"#)).await);
-        assert!(relay.live_match(&ephemeral, &live(r#"{"kinds":[20001]}"#)).await);
+        assert!(
+            !relay
+                .live_match(&ephemeral, &live(r#"{"search":"beta"}"#))
+                .await
+        );
+        assert!(
+            relay
+                .live_match(&ephemeral, &live(r#"{"kinds":[20001]}"#))
+                .await
+        );
 
         // A database from before the index: the next start fills it, later starts keep it.
         relay.0.writer.lock().execute_batch(
@@ -2604,5 +3834,4 @@ mod tests {
         assert_eq!(stale(&relay), 0);
         assert_eq!(found(&relay, "omega", now), [legacy.id]);
     }
-
 }

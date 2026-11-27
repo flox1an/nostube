@@ -92,8 +92,8 @@ export function startInstallPromptCapture() {
     dismissed: localStorage.getItem(DISMISSED_KEY) === '1',
     // The site's manifest asks for fullscreen (Android honours it, iOS falls back to standalone).
     standalone:
-      window.matchMedia?.('(display-mode: standalone), (display-mode: fullscreen)').matches === true ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true,
+      window.matchMedia?.('(display-mode: standalone), (display-mode: fullscreen)').matches ===
+        true || (navigator as Navigator & { standalone?: boolean }).standalone === true,
     // iPadOS reports itself as a Mac; the touch points give it away.
     ios:
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||

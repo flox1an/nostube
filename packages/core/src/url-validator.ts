@@ -375,30 +375,44 @@ export function getUrlCacheStats(mediaType?: MediaType) {
   }
 }
 
-/**
- * Get validation metrics for debugging
- */
-export function getValidationMetrics(mediaType?: MediaType) {
-  if (mediaType) {
-    const m = metrics[mediaType]
-    const avgValidationTime =
-      m.validationTimes.length > 0
-        ? m.validationTimes.reduce((a, b) => a + b, 0) / m.validationTimes.length
-        : 0
+interface ValidationSummary {
+  mediaType: MediaType
+  totalRequests: number
+  cacheHits: number
+  cacheMisses: number
+  cacheHitRate: number
+  avgValidationTime: number
+  validationSamples: number
+}
 
-    return {
-      mediaType,
-      totalRequests: m.totalRequests,
-      cacheHits: m.cacheHits,
-      cacheMisses: m.cacheMisses,
-      cacheHitRate: m.totalRequests > 0 ? (m.cacheHits / m.totalRequests) * 100 : 0,
-      avgValidationTime: Math.round(avgValidationTime),
-      validationSamples: m.validationTimes.length,
-    }
-  } else {
-    // Return metrics for all media types
-    return Object.keys(metrics).map(type => getValidationMetrics(type as MediaType))
+function summarizeMetrics(mediaType: MediaType): ValidationSummary {
+  const m = metrics[mediaType]
+  const avgValidationTime =
+    m.validationTimes.length > 0
+      ? m.validationTimes.reduce((a, b) => a + b, 0) / m.validationTimes.length
+      : 0
+
+  return {
+    mediaType,
+    totalRequests: m.totalRequests,
+    cacheHits: m.cacheHits,
+    cacheMisses: m.cacheMisses,
+    cacheHitRate: m.totalRequests > 0 ? (m.cacheHits / m.totalRequests) * 100 : 0,
+    avgValidationTime: Math.round(avgValidationTime),
+    validationSamples: m.validationTimes.length,
   }
+}
+
+/**
+ * Get validation metrics for debugging: one media type, or all of them
+ */
+export function getValidationMetrics(mediaType: MediaType): ValidationSummary
+export function getValidationMetrics(): ValidationSummary[]
+export function getValidationMetrics(
+  mediaType?: MediaType
+): ValidationSummary | ValidationSummary[] {
+  if (mediaType) return summarizeMetrics(mediaType)
+  return (Object.keys(metrics) as MediaType[]).map(summarizeMetrics)
 }
 
 /**

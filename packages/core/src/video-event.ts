@@ -190,6 +190,7 @@ function extractYouTubeOriginFromUrls(urls: string[]): VideoOrigin | undefined {
       return { platform: 'youtube', externalId: match[1], originalUrl: url }
     }
   }
+  return undefined
 }
 
 export function isAudioVideo(video: VideoEvent): boolean {

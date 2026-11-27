@@ -167,6 +167,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
       setIsLoading(false)
       setError('HLS playback is not supported in this browser.')
     }, 0)
+    return undefined
   }, [url, open, blossomServers, cachingServers, videoElement])
 
   useEffect(() => {

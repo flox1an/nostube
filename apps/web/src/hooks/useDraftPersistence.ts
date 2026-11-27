@@ -17,7 +17,7 @@ import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 // Debounce utility
 // ---------------------------------------------------------------------------
 
-function debounce<T extends (...args: unknown[]) => unknown>(
+function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
 ): {

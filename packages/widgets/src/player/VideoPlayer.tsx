@@ -440,6 +440,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       el.addEventListener('loadedmetadata', setInitialPosition, { once: true })
       return () => el.removeEventListener('loadedmetadata', setInitialPosition)
     }
+    return undefined
     // Include videoUrl so effect re-runs when video element becomes available after loading
   }, [initialPlayPos, videoUrl])
 
@@ -481,6 +482,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         el.removeEventListener('loadeddata', attemptAutoplay)
       }
     }
+    return undefined
   }, [videoUrl, contentWarning, autoPlay])
 
   // Notify parent when video element is ready

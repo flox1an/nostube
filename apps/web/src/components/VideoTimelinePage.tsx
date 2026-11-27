@@ -61,7 +61,7 @@ export function VideoTimelinePage({
     subscriptionActive,
   })
   const triggerRef = useCallback(
-    (node: Element | null) => {
+    (node?: Element | null) => {
       loadMoreRef(node)
       prefetchRef(node)
     },

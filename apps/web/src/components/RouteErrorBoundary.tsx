@@ -14,22 +14,22 @@ interface RouteErrorBoundaryProps {
  * cached and can't be fetched offline, instead of blanking the whole app.
  */
 export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { error: unknown }> {
-  state = { error: null as unknown }
+  override state = { error: null as unknown }
 
   static getDerivedStateFromError(error: unknown) {
     return { error }
   }
 
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     // Still let main.tsx see it: a stale chunk after a deploy triggers its reload.
     reportError(error)
   }
 
-  componentDidUpdate(prev: RouteErrorBoundaryProps) {
+  override componentDidUpdate(prev: RouteErrorBoundaryProps) {
     if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null })
   }
 
-  render() {
+  override render() {
     return this.state.error ? <RouteErrorFallback /> : this.props.children
   }
 }

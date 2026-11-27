@@ -524,7 +524,7 @@ export function Mp4DebugPage() {
                                 <div className="mt-1">
                                   First 100 bytes (hex):{' '}
                                   {Array.from(box.data.slice(0, 100))
-                                    .map((b: number) => b.toString(16).padStart(2, '0'))
+                                    .map(b => Number(b).toString(16).padStart(2, '0'))
                                     .join(' ')}
                                 </div>
                                 <div className="mt-1">

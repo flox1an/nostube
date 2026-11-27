@@ -50,7 +50,7 @@ const serve = (admin: AdminState) =>
   fakeAdminApi({
     'GET /api/admin/config': admin,
     'GET /api/admin/signer': { mode: 'managed', pubkey: PK },
-    'POST /api/admin/config/check': ({ body }) => {
+    'POST /api/admin/config/check': ({ body }: { body: unknown }) => {
       const config = body as AdminState['config']
       const canBePublic = config.mirror.relays.length > 0 && config.mirror.blossom.length > 0
       return {

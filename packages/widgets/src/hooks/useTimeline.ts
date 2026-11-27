@@ -387,6 +387,7 @@ export function useTimeline(
         cancelled = true
       }
     }
+    return undefined
   }, [loader, reset, startLoad])
 
   return {

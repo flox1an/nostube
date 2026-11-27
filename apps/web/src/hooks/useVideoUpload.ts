@@ -443,7 +443,7 @@ export function useVideoUpload(
     ? async (draft: EventTemplate) => await user.signer.signEvent(draft)
     : undefined
 
-  const uploadSigner = signer || ((async d => d) as unknown as Signer)
+  const uploadSigner = signer || ((async (d: unknown) => d) as unknown as Signer)
   const fileUpload = useFileUpload({
     initialServers: uploadServers,
     mirrorServers: [],
@@ -943,6 +943,7 @@ export function useVideoUpload(
     } finally {
       setDeletingIndex(null)
     }
+    return undefined
   }
 
   // Handler to add a transcoded video variant (from DVM)

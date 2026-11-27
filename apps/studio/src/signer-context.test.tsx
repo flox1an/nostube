@@ -25,7 +25,7 @@ const serve = (info: SignerInfo) =>
   fakeAdminApi({
     'POST /api/admin/signer': { mode: 'managed', pubkey: MANAGED },
     'GET /api/admin/signer': info,
-    'POST /api/admin/signer/sign': ({ body }) => ({
+    'POST /api/admin/signer/sign': ({ body }: { body: unknown }) => ({
       ...(body as object),
       id: 'i',
       pubkey: MANAGED,

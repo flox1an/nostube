@@ -9,8 +9,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "types": ["vitest/globals"],
-    "strict": false,
-    "strictNullChecks": true,
+    "strict": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },

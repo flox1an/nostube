@@ -39,6 +39,7 @@ function zapError(fn: () => unknown): string | undefined {
   } catch (err) {
     return err instanceof ZapError ? err.code : 'other'
   }
+  return undefined
 }
 
 function receipt({

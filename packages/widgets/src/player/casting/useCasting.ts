@@ -182,6 +182,7 @@ export function useCasting({ videoRef, source, googleCastEnabled }: UseCastingOp
     }
     if (el.readyState >= HTMLMediaElement.HAVE_METADATA) resume()
     else el.addEventListener('loadedmetadata', resume, { once: true })
+    return undefined
   }, [castingThis, videoRef])
 
   useEffect(() => {

@@ -120,6 +120,7 @@
     "@tauri-apps/cli": "^2.12.6",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",
+    "@types/ngeohash": "^0.6.8",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

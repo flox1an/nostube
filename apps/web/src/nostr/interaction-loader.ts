@@ -2,7 +2,7 @@ import type { IEventStore } from 'applesauce-core'
 import type { RelayPool } from 'applesauce-relay'
 import type { GroupReqMessage } from 'applesauce-relay/types'
 import type { Filter } from 'nostr-tools'
-import { map, tap } from 'rxjs'
+import { map, tap, type Observable } from 'rxjs'
 
 const FRESH_MS = 30_000
 interface Entry {
@@ -89,7 +89,7 @@ export async function loadInteractions(
                   [relay],
                   batch.map(item => item.filter),
                   {
-                    complete: messages =>
+                    complete: (messages: Observable<GroupReqMessage>) =>
                       messages.pipe(
                         map((message: GroupReqMessage) => {
                           if (message.type === 'ERROR') throw message.error

@@ -56,11 +56,12 @@ export function DesktopPlayerShell({
       }
       setIsFullscreen(document.fullscreenElement !== null)
     }
-    void updateFullscreen()
-    document.addEventListener('fullscreenchange', updateFullscreen)
+    const onFullscreenChange = () => void updateFullscreen()
+    onFullscreenChange()
+    document.addEventListener('fullscreenchange', onFullscreenChange)
     if (isTauri()) {
       void getCurrentWindow()
-        .onResized(() => void updateFullscreen())
+        .onResized(onFullscreenChange)
         .then(unlisten => {
           if (disposed) unlisten()
           else unlistenResize = unlisten
@@ -68,7 +69,7 @@ export function DesktopPlayerShell({
     }
     return () => {
       disposed = true
-      document.removeEventListener('fullscreenchange', updateFullscreen)
+      document.removeEventListener('fullscreenchange', onFullscreenChange)
       unlistenResize?.()
     }
   }, [])

@@ -16,6 +16,7 @@ export function ZapNotificationItem({ notification, onClick }: ZapNotificationIt
   const { t, i18n } = useTranslation()
   const profile = useProfile({ pubkey: notification.zapperPubkey })
 
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- old kind 0 events still carry displayName
   const displayName = profile?.displayName || profile?.name || notification.zapperPubkey.slice(0, 8)
 
   const relativeTime = formatDistance(new Date(notification.timestamp * 1000), new Date(), {

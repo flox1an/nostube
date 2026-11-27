@@ -5,7 +5,8 @@
  * Handles comment creation, reply threading, and NIP-22/NIP-65 relay targeting.
  */
 
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import type React from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useTranslation } from 'react-i18next'
 import { map } from 'rxjs/operators'
@@ -234,7 +235,7 @@ export function VideoComments({
     setCommentParentMap(filteredComments)
   }, [filteredComments, setCommentParentMap])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!user || !newComment.trim()) return
 
@@ -276,7 +277,7 @@ export function VideoComments({
     }
   }
 
-  const handleReplySubmit = async (e: React.FormEvent) => {
+  const handleReplySubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!user || !replyContent.trim() || !replyTo) return
 

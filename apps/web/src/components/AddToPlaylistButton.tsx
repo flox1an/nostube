@@ -153,7 +153,7 @@ export function AddToPlaylistButton({
                 onKeyDown={e => {
                   if (e.key === 'Enter' && newPlaylistName.trim()) {
                     e.preventDefault()
-                    handleCreateAndAdd()
+                    void handleCreateAndAdd()
                   }
                 }}
                 autoFocus

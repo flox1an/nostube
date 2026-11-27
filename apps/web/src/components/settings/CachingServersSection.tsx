@@ -206,7 +206,7 @@ export function CachingServersSection() {
           placeholder={t('settings.caching.addPlaceholder')}
           value={newServerUrl}
           onChange={e => setNewServerUrl(e.target.value)}
-          onKeyPress={e => {
+          onKeyDown={e => {
             if (e.key === 'Enter') {
               handleAddServer()
             }

@@ -121,7 +121,7 @@ export function Mp4DebugPage() {
           totalBytes += value.length
         }
 
-        reader.cancel()
+        void reader.cancel()
 
         const combined = new Uint8Array(Math.min(totalBytes, CHUNK_SIZE))
         let offset = 0

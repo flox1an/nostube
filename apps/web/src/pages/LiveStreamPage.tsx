@@ -109,6 +109,7 @@ function StreamViewer({
                 </h1>
                 {stream.status === 'planned' &&
                   stream.starts &&
+                  // eslint-disable-next-line react-hooks/purity -- the label must reflect the current time at render
                   stream.starts * 1000 > Date.now() && (
                     <p className="text-sm">
                       {t('live.startsAt', {

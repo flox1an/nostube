@@ -177,7 +177,7 @@ export function useLiveStreamPlayback(feed: boolean) {
  * (see useStreamQuery), one older than 12h is ended (see parseLiveStream).
  */
 export function useLiveStreams(status: LiveStream['status'] = 'live') {
-  const since = useMemo(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS, [])
+  const [since] = useState(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS)
   const filters = useMemo<Filter[]>(
     () => [{ kinds: [kinds.LiveEvent], since, limit: DISCOVERY_LIMIT }],
     [since]
@@ -229,7 +229,7 @@ export function useLiveStream(
  * provider, host in `p`), newest start first. Empty in server-instance builds.
  */
 export function useAuthorLiveStreams(pubkey: string | undefined, hints: string[] = []) {
-  const since = useMemo(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS, [])
+  const [since] = useState(() => Math.floor(Date.now() / 1000) - DISCOVERY_WINDOW_SECONDS)
   const filters = useMemo<Filter[] | null>(
     () =>
       pubkey && isHexKey(pubkey) && !getInstanceConfig()

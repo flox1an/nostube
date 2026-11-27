@@ -231,7 +231,7 @@ export function useSearchVideos({
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_SEARCH_TIMEOUT_MS)
 
-    fetchExternalSearchResults(
+    void fetchExternalSearchResults(
       query,
       controller.signal,
       config.searchServiceUrl || SEARCH_SERVICE_URL,

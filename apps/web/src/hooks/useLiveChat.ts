@@ -35,6 +35,7 @@ export function useLiveChat(stream: LiveStream) {
   )
 
   const events = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- drops events dated in the future, relative to now
     const maxCreatedAt = Math.floor(Date.now() / 1000) + MAX_FUTURE_SKEW_SECONDS
     return (timeline ?? [])
       .filter(event => event.created_at <= maxCreatedAt)

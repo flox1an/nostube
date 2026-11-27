@@ -54,7 +54,7 @@ export function useFormDialog<T extends Record<string, unknown>>({
   const { toast } = useToast()
 
   const handleSubmit = useCallback(
-    async (e?: React.FormEvent) => {
+    async (e?: React.SyntheticEvent) => {
       if (e) {
         e.preventDefault()
       }

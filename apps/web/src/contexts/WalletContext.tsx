@@ -312,7 +312,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     async (bolt11: string): Promise<{ preimage: string }> => {
       if (walletType === 'nwc' && nwcClient) {
         const result = await nwcClient.payInvoice(bolt11)
-        refreshBalance()
+        void refreshBalance()
         return result
       }
 

@@ -39,7 +39,7 @@ export function useContinueWatching() {
       return
     }
     let cancelled = false
-    getRecentlyPlayedVideos(pubkey, Date.now() - SINCE_MS).then(entries => {
+    void getRecentlyPlayedVideos(pubkey, Date.now() - SINCE_MS).then(entries => {
       if (!cancelled) setPositions(entries)
     })
     return () => {

@@ -31,7 +31,7 @@ export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
     }
 
     let cancelled = false
-    readPlayPosition(pubkey, videoId).then(data => {
+    void readPlayPosition(pubkey, videoId).then(data => {
       if (!cancelled) setPosData(data)
     })
     return () => {

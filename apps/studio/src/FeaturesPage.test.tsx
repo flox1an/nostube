@@ -37,6 +37,7 @@ const config: AdminState['config'] = {
 let latest: Draft
 function Harness() {
   const [draft, setDraft] = useState(() => toDraft(config))
+  // eslint-disable-next-line react-hooks/globals -- test harness exposes the latest render to assertions
   latest = draft
   return (
     <SignerProvider creatorKey={null}>

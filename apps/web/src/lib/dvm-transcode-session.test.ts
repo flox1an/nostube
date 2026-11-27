@@ -522,7 +522,7 @@ describe('DVMTranscodeSession.cancel', () => {
     }
     const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
 
-    session.collectBids('req-id', 60_000)
+    void session.collectBids('req-id', 60_000)
     session.cancel()
 
     expect(unsubscribe).toHaveBeenCalledTimes(1)

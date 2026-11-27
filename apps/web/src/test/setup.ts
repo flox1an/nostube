@@ -5,7 +5,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
 // Initialize i18n for tests
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   lng: 'en',
   fallbackLng: 'en',
   resources: {
@@ -104,8 +104,6 @@ Object.defineProperty(window, 'matchMedia', {
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),

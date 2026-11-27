@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import type { SyntheticEvent } from 'react'
 import { vi } from 'vitest'
 import type { ThumbnailUploadInfo, UploadInfo } from '@/hooks/useVideoUpload'
 import type { BrowserTranscodeState, SubtitleVariant } from '@/types/upload-draft'
@@ -162,7 +162,7 @@ export interface VideoUploadStateStub {
   handleStartBrowserTranscodeUpload: (...args: unknown[]) => Promise<void>
   handleCancelBrowserTranscodeUpload: () => void
   handleReset: () => void
-  handleSubmit: (e: FormEvent) => Promise<void>
+  handleSubmit: (e: SyntheticEvent) => Promise<void>
   handleAddVideo: (files: File[]) => Promise<void>
   handleRemoveVideo: (index: number) => void
   handleRemoveVideoFromFormOnly: () => void

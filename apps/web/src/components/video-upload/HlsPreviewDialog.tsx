@@ -35,6 +35,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
   const blossomServers = appContext?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
   const cachingServers = appContext?.config.cachingServers ?? EMPTY_CACHING_SERVERS
 
+  /* eslint-disable react-hooks/immutability -- the video element is a DOM node held in state; the effect drives it imperatively */
   useEffect(() => {
     console.log(LOG, 'effect triggered', {
       url,
@@ -169,6 +170,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
     }, 0)
     return undefined
   }, [url, open, blossomServers, cachingServers, videoElement])
+  /* eslint-enable react-hooks/immutability */
 
   useEffect(() => {
     if (!open) {

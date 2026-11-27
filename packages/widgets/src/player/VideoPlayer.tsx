@@ -471,15 +471,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
     // If video is ready to play, attempt autoplay immediately
     if (el.readyState >= 3) {
-      attemptAutoplay()
+      void attemptAutoplay()
     } else {
       // Listen for multiple events to catch all cases
-      el.addEventListener('canplay', attemptAutoplay)
-      el.addEventListener('loadeddata', attemptAutoplay)
+      const onReady = () => void attemptAutoplay()
+      el.addEventListener('canplay', onReady)
+      el.addEventListener('loadeddata', onReady)
 
       return () => {
-        el.removeEventListener('canplay', attemptAutoplay)
-        el.removeEventListener('loadeddata', attemptAutoplay)
+        el.removeEventListener('canplay', onReady)
+        el.removeEventListener('loadeddata', onReady)
       }
     }
     return undefined
@@ -902,13 +903,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       const video = videoRef.current
       if (orientation.matches && video && !video.paused) {
         if (nativeWindow || !containerRef.current?.requestFullscreen) {
-          enterFullscreen()
+          void enterFullscreen()
         } else if (!document.fullscreenElement) {
           setRotationFullscreen(true)
         }
       } else if (!orientation.matches) {
         setRotationFullscreen(false)
-        if (document.fullscreenElement) exitFullscreen()
+        if (document.fullscreenElement) void exitFullscreen()
       }
     }
     orientation.addEventListener('change', handleOrientationChange)
@@ -1020,7 +1021,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           if (playback.isPlaying) {
             playback.pause()
           } else {
-            playback.play()
+            void playback.play()
           }
           break
         case 'm':
@@ -1053,12 +1054,12 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         case 'f':
         case 'F':
           e.preventDefault()
-          toggleFullscreen()
+          void toggleFullscreen()
           break
         case 'p':
         case 'P':
           e.preventDefault()
-          togglePip()
+          void togglePip()
           break
         case 't':
         case 'T':
@@ -1099,14 +1100,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (playback.isPlaying) {
       playback.pause()
     } else {
-      playback.play()
+      void playback.play()
     }
   }, [playback])
 
   // Memoized play/pause handlers for ControlBar
   const handlePlay = useCallback(() => {
     userInitiatedRef.current = true
-    playback.play()
+    void playback.play()
   }, [playback])
 
   const handlePause = useCallback(() => {

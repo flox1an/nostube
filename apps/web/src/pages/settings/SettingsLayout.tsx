@@ -112,7 +112,7 @@ function SettingsSidebar() {
 
   const handleCategoryChange = useCallback(
     (categoryId: string) => {
-      navigate(`/settings/${categoryId}`)
+      void navigate(`/settings/${categoryId}`)
     },
     [navigate]
   )

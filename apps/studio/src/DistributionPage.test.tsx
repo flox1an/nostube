@@ -75,6 +75,7 @@ const renderPage = (s: AdminState, draft = toDraft(s.config)) => {
 let latest: Draft
 function Harness({ s, initial }: { s: AdminState; initial?: Partial<Draft> }) {
   const [draft, setDraft] = useState(() => ({ ...toDraft(s.config), ...initial }))
+  // eslint-disable-next-line react-hooks/globals -- test harness exposes the latest render to assertions
   latest = draft
   return page(s, draft, patch => setDraft(d => ({ ...d, ...patch })))
 }

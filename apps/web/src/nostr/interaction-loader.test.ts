@@ -44,19 +44,19 @@ it('reuses empty completed reads briefly, then refreshes; additional relays are 
   const store = new EventStore()
   const request = vi.spyOn(pool, 'request').mockReturnValue(EMPTY)
   const first = loadInteractions(pool, store, relays, { eventIds: [id] })
-  await vi.runAllTicks()
+  vi.runAllTicks()
   await first
   await loadInteractions(pool, store, relays, { eventIds: [id] })
   expect(request).toHaveBeenCalledTimes(1)
   const extra = loadInteractions(pool, store, [...relays, 'wss://other.example'], {
     eventIds: [id],
   })
-  await vi.runAllTicks()
+  vi.runAllTicks()
   await extra
   expect(request).toHaveBeenCalledTimes(2)
   vi.advanceTimersByTime(30_001)
   const refresh = loadInteractions(pool, store, relays, { eventIds: [id] })
-  await vi.runAllTicks()
+  vi.runAllTicks()
   await refresh
   expect(request).toHaveBeenCalledTimes(3)
 })

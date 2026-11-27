@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -84,7 +84,7 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
   })
 
   // Initialize people from note.pubkeys whenever the note changes
-  useMemo(() => {
+  useEffect(() => {
     if (note) {
       setPeople(note.pubkeys.map(({ pubkey, relays }) => ({ pubkey, name: '', relays })))
     } else {
@@ -198,7 +198,7 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === 'Enter' && title.trim()) handlePublish()
+                  if (e.key === 'Enter' && title.trim()) void handlePublish()
                 }}
               />
             </div>

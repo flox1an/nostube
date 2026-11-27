@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, type FormEvent } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, type SyntheticEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Input } from '@nostube/widgets/components/input'
 import { Button } from '@nostube/widgets/components/button'
@@ -129,13 +129,13 @@ export function GlobalSearchBar({
 
   const navigateToVideoSearch = (query: string) => {
     if (!preserveSearchFilters || location.pathname !== '/search') {
-      navigate(`/search?q=${encodeURIComponent(query)}`)
+      void navigate(`/search?q=${encodeURIComponent(query)}`)
       return
     }
 
     const nextParams = new URLSearchParams(location.search)
     nextParams.set('q', query)
-    navigate(`/search?${nextParams.toString()}`)
+    void navigate(`/search?${nextParams.toString()}`)
   }
 
   const completeSearch = () => {
@@ -143,7 +143,7 @@ export function GlobalSearchBar({
     onSearch?.()
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault()
     const query = trimmedQuery
     if (!query) return
@@ -155,7 +155,7 @@ export function GlobalSearchBar({
       const profile = decodeProfilePointer(query)
       if (profile) {
         setSearchQuery('')
-        navigate(buildProfilePath(query))
+        void navigate(buildProfilePath(query))
         return
       }
     }
@@ -165,7 +165,7 @@ export function GlobalSearchBar({
       const tag = query.slice(1).trim()
       if (tag) {
         setSearchQuery('')
-        navigate(`/tag/${encodeURIComponent(tag)}`)
+        void navigate(`/tag/${encodeURIComponent(tag)}`)
         return
       }
     }
@@ -178,7 +178,7 @@ export function GlobalSearchBar({
   const handleProfileClick = (pubkey: string) => {
     completeSearch()
     setSearchQuery('')
-    navigate(buildProfileUrlFromPubkey(pubkey))
+    void navigate(buildProfileUrlFromPubkey(pubkey))
   }
 
   const handleHistoryClick = (query: string) => {

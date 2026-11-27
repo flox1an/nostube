@@ -273,18 +273,6 @@ export function recommendedVariants(
   )
 }
 
-/** @deprecated Use availableResolutions + buildVariants instead. */
-export function defaultVariants(
-  meta: TranscodeSourceMeta,
-  supportedCodecs: string[]
-): BrowserTranscodeVariant[] {
-  const supportsHevc = supportedCodecs.includes('hevc')
-  return buildVariants(
-    assignMp4ResolutionCodecs(defaultResolutions(meta, supportedCodecs), supportsHevc),
-    'mp4'
-  )
-}
-
 /**
  * Default target heights for the contribute dialog.
  * Returns the subset of available heights that should be pre-selected.
@@ -394,7 +382,7 @@ export const estimateMp4ConversionMemoryBytes = (meta: TranscodeSourceMeta) =>
 export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMeta> {
   if (!isWebCodecsSupported()) throw conversionProblem('noWebCodecs')
   // Lazy: mediabunny is a large chunk that only files needing conversion load.
-  const { Input, ALL_FORMATS, BlobSource, canEncodeVideo } = await import('mediabunny')
+  const { Input, ALL_FORMATS, BlobSource, canEncodeVideo, Quality } = await import('mediabunny')
   const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) })
   try {
     const read = await input
@@ -405,8 +393,8 @@ export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMet
     const { track, duration } = read
     if (!(await track.canDecode())) throw conversionProblem('cannotDecode')
     const meta: TranscodeSourceMeta = {
-      width: track.displayWidth,
-      height: track.displayHeight,
+      width: await track.getDisplayWidth(),
+      height: await track.getDisplayHeight(),
       duration,
       sizeMB: file.size / (1024 * 1024),
       bitrateMbps: (file.size * 8) / (duration * 1_000_000),
@@ -419,7 +407,7 @@ export async function probeMp4Conversion(file: File): Promise<TranscodeSourceMet
       MP4_CONVERSION_VARIANT.targetHeight
     )
     const bitrate = computeBrowserTranscodeVideoBitrate(width, height, 'balanced', meta)
-    if (!(await canEncodeVideo('avc', { width, height, bitrate }))) {
+    if (!(await canEncodeVideo('avc', { width, height, quality: new Quality({ bitrate }) }))) {
       throw conversionProblem('cannotEncode')
     }
     if (estimateMp4ConversionBytes(meta) > MP4_CONVERSION_MAX_BYTES) {
@@ -456,7 +444,7 @@ export async function transcodeFile(
 ): Promise<File> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat } =
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat, Quality } =
     await import('mediabunny')
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
@@ -487,13 +475,13 @@ export async function transcodeFile(
         width: targetWidth,
         height: targetHeight,
         fit: 'contain',
-        bitrate: targetBitrate,
+        quality: new Quality({ bitrate: targetBitrate }),
         codec: variant.codec as VideoCodec,
         hardwareAcceleration,
         keyFrameInterval: 2,
         forceTranscode: true,
       },
-      audio: { bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE },
+      audio: { quality: new Quality({ bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE }) },
       tags: {},
     })
 
@@ -549,6 +537,7 @@ export async function transcodeToHls(
     HlsOutputFormat,
     CmafOutputFormat,
     PathedTarget,
+    Quality,
   } = await import('mediabunny')
 
   const sink = await openTranscodeSink({
@@ -593,13 +582,13 @@ export async function transcodeToHls(
         width,
         height,
         fit: 'contain',
-        bitrate,
+        quality: new Quality({ bitrate }),
         codec: v.codec as VideoCodec,
         keyFrameInterval: HLS_TARGET_DURATION,
         forceTranscode: true,
       }
     }),
-    audio: { bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE },
+    audio: { quality: new Quality({ bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE }) },
   })
 
   if (!conversion.isValid) throw new Error('HLS conversion not valid')

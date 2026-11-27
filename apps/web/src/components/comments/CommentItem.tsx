@@ -59,7 +59,7 @@ export interface CommentItemProps {
   replyingTo?: string | null
   replyContent?: string
   onReplyContentChange?: (content: string) => void
-  onSubmitReply?: (e: React.FormEvent) => void
+  onSubmitReply?: (e: React.SyntheticEvent) => void
   onCancelReply?: () => void
   expandedComments: Set<string>
   onToggleExpanded: (commentId: string) => void
@@ -223,7 +223,7 @@ export const CommentItem = React.memo(function CommentItem({
                       onSelect={() => {
                         const event = eventStore.getEvent(comment.id)
                         if (event) {
-                          navigator.clipboard.writeText(JSON.stringify(event, null, 2))
+                          void navigator.clipboard.writeText(JSON.stringify(event, null, 2))
                         }
                       }}
                     >

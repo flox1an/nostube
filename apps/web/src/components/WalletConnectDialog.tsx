@@ -75,7 +75,7 @@ export const WalletConnectDialog = memo(function WalletConnectDialog({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && nwcConnectionString.trim()) {
-        handleConnectNWC()
+        void handleConnectNWC()
       }
     },
     [nwcConnectionString, handleConnectNWC]

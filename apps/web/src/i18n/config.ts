@@ -11,7 +11,7 @@ import zh from './locales/zh.json'
 import ja from './locales/ja.json'
 import { registerWidgetTranslations } from '@nostube/widgets/i18n'
 
-i18n
+void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({

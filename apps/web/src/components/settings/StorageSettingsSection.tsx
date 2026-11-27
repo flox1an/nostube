@@ -58,7 +58,7 @@ function CacheClearSection() {
       const isPersisted = await isStoragePersisted()
       if (!cancelled) setPersisted(isPersisted)
     }
-    run()
+    void run()
     return () => {
       cancelled = true
     }

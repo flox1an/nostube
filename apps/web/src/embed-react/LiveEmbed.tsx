@@ -94,7 +94,8 @@ export function LiveEmbed({
         >
           <span className="rounded bg-black/75 px-4 py-2 text-base font-semibold">
             {stream.status === 'planned'
-              ? stream.starts && stream.starts * 1000 > Date.now()
+              ? // eslint-disable-next-line react-hooks/purity -- the label must reflect the current time at render
+                stream.starts && stream.starts * 1000 > Date.now()
                 ? `Starts ${new Date(stream.starts * 1000).toLocaleString()}`
                 : 'This stream has not started yet'
               : 'This stream has ended'}

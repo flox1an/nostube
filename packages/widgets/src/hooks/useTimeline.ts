@@ -372,7 +372,7 @@ export function useTimeline(
     if (loaderRef.current !== loader) {
       loaderRef.current = loader
       let cancelled = false
-      ;(async () => {
+      void (async () => {
         await Promise.resolve()
         if (!cancelled) {
           reset()

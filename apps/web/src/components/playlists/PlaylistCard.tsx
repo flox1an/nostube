@@ -81,7 +81,7 @@ export function PlaylistCard({
     }
   }
 
-  const handleEditSave = async (e: React.FormEvent) => {
+  const handleEditSave = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsEditing(true)
     try {

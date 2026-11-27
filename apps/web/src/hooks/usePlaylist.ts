@@ -268,7 +268,7 @@ export function usePlaylists() {
       }
     }
 
-    decryptAndParse()
+    void decryptAndParse()
 
     return () => {
       cancelled = true

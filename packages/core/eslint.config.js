@@ -1,10 +1,12 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+import { typedRules } from '../../eslint.typed.js'
 
 // Core is "no React", not "no browser": IndexedDB, localStorage and workers are fine.
 export default tseslint.config(
   { ignores: ['dist'] },
+  typedRules(import.meta.dirname, { react: false }),
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.ts'],

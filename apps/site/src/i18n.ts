@@ -28,7 +28,7 @@ i18n.on('languageChanged', () => {
   document.documentElement.lang = i18n.resolvedLanguage ?? 'en'
 })
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   lng: browserLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]),
   supportedLngs,
   load: 'languageOnly',

@@ -1250,7 +1250,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           console.log('[UploadManager] Auto-resuming task:', task.id)
         }
         // Resume without callbacks - the upload page will connect when opened
-        resumeTranscode(task.id)
+        void resumeTranscode(task.id)
       }
     }
   }, [user, resumeTranscode])

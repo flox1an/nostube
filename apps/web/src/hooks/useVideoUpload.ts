@@ -640,6 +640,7 @@ export function useVideoUpload(
       setOriginalVideoInfo(info)
       onDraftChangeRef.current?.({
         originalVideoInfo: info,
+        // eslint-disable-next-line react-hooks/purity -- runs in an event handler, not during render
         updatedAt: Date.now(),
       })
     } catch (error) {
@@ -655,6 +656,7 @@ export function useVideoUpload(
       setOriginalVideoInfo(fallbackInfo)
       onDraftChangeRef.current?.({
         originalVideoInfo: fallbackInfo,
+        // eslint-disable-next-line react-hooks/purity -- runs in an event handler, not during render
         updatedAt: Date.now(),
       })
     }
@@ -1031,7 +1033,7 @@ export function useVideoUpload(
   }, [])
 
   const handleSubmit = async (
-    e: React.FormEvent
+    e: React.SyntheticEvent
   ): Promise<{ id: string; kind: number; pubkey: string; identifier: string } | undefined> => {
     e.preventDefault()
 

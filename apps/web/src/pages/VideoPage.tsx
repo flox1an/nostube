@@ -9,7 +9,8 @@ import { YouTubePlayer } from '@/components/YouTubePlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { AuthorLiveSuggestion } from '@/components/live/AuthorLiveSuggestion'
 import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import type React from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   processEvent,
   generateEventLink,
@@ -438,7 +439,7 @@ function VideoPageContent() {
   // Check availability on mount to find other servers
   useEffect(() => {
     if (video?.id) {
-      checkAvailability()
+      void checkAvailability()
     }
   }, [video?.id, checkAvailability])
 
@@ -560,7 +561,7 @@ function VideoPageContent() {
   // Handle mirror action - trigger availability check when dialog opens
   const handleMirror = () => {
     setMirrorDialogOpen(true)
-    checkAvailability()
+    void checkAvailability()
   }
 
   // Handle contribute action
@@ -604,7 +605,7 @@ function VideoPageContent() {
       if (video?.id && video.mediaSourceStatus === 'safe-declared-source') {
         markVideoAsMissing(video.id, urls)
       }
-      checkAvailability()
+      void checkAvailability()
     },
     [video, markVideoAsMissing, checkAvailability]
   )

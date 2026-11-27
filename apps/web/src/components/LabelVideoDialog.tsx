@@ -44,7 +44,7 @@ export function LabelVideoDialog({
   const [explanation, setExplanation] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
 
     if (!user) {

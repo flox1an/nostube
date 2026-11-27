@@ -57,7 +57,7 @@ function useDesktopAppHistory() {
       const nextEntry = current.entries[nextIndex]
       if (!nextEntry) return current
       pendingIndexRef.current = nextIndex
-      navigate(nextEntry.path)
+      void navigate(nextEntry.path)
       return current
     })
   }, [navigate])
@@ -68,7 +68,7 @@ function useDesktopAppHistory() {
       const nextEntry = current.entries[nextIndex]
       if (!nextEntry) return current
       pendingIndexRef.current = nextIndex
-      navigate(nextEntry.path)
+      void navigate(nextEntry.path)
       return current
     })
   }, [navigate])

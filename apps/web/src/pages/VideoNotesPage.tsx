@@ -310,7 +310,7 @@ export function VideoNotesPage() {
           publishAt: note.created_at,
           ...(people.length > 0 && { people }),
         })
-        navigate(`/upload?draft=${draft.id}&screen=details`)
+        void navigate(`/upload?draft=${draft.id}&screen=details`)
       } catch {
         toast({ title: t('upload.draft.maxDraftsReached'), variant: 'destructive', duration: 5000 })
       }

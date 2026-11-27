@@ -287,11 +287,11 @@ export function useNotifications() {
     if (!userPubkey) return
 
     // Initial fetch
-    fetchNotificationsRef.current?.()
+    void fetchNotificationsRef.current?.()
 
     // Set up polling
     const intervalId = setInterval(() => {
-      fetchNotificationsRef.current?.()
+      void fetchNotificationsRef.current?.()
     }, POLL_INTERVAL_MS)
 
     return () => {

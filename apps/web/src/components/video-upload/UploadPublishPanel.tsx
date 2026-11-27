@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type FormEvent } from 'react'
+import { useEffect, useMemo, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import type { VideoVariant } from '@/lib/video-processing'
@@ -36,7 +36,7 @@ export interface UploadPublishPanelProps {
   setPublishRelays: (v: string[] | null) => void
   isPublishing: boolean
   canPublish: boolean
-  handleSubmit: (e: FormEvent) => Promise<void>
+  handleSubmit: (e: SyntheticEvent) => Promise<void>
   previewEvent: PreviewEvent | null
   /** Scrolls the form to the field a checklist row is about. */
   onJump: (field: 'processing' | 'title' | 'thumbnail') => void

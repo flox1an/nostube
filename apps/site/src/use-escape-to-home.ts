@@ -19,7 +19,7 @@ export function useEscapeToHome() {
       )
         return
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return
-      navigate('/')
+      void navigate('/')
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)

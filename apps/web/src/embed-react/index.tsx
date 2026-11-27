@@ -346,7 +346,7 @@ function renderApp(
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initEmbed)
+  document.addEventListener('DOMContentLoaded', () => void initEmbed())
 } else {
-  initEmbed()
+  void initEmbed()
 }

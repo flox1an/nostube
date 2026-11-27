@@ -80,6 +80,7 @@ export function useStreamZapGoal(stream: LiveStream): ZapGoalState | undefined {
     const parsed = (events ?? [])
       .map((event: NostrEvent) => parseZapGoal(event))
       .filter((goal): goal is ZapGoal => goal !== null)
+    // eslint-disable-next-line react-hooks/purity -- picks the goal that is open right now
     const now = Math.floor(Date.now() / 1000)
     const goal = goalId
       ? parsed.find(g => g.id === goalId)

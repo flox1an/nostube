@@ -190,7 +190,7 @@ export const BrowserTranscodeStep = forwardRef<
   }, [backgroundState])
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
-    analyze(file)
+    void analyze(file)
   }, [analyze, backgroundState?.status, file, supported])
 
   useEffect(() => {

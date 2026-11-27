@@ -53,7 +53,7 @@ export function useAsyncError<TArgs extends unknown[], TReturn>(
   const retry = useCallback(() => {
     if (retryCount < maxRetries && lastArgs) {
       setRetryCount(prev => prev + 1)
-      execute(...lastArgs)
+      void execute(...lastArgs)
     }
   }, [execute, lastArgs, maxRetries, retryCount])
 

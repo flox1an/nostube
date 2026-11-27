@@ -368,7 +368,7 @@ export function useTrustScoreProvider() {
     }
 
     // Reconnect with new identity
-    disconnectContextVM()
+    void disconnectContextVM()
 
     // Flush any pubkeys that were requested before the key was available
     if (pendingPubkeys.size > 0) {

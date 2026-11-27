@@ -3,14 +3,17 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { matchFilters, nip19, type Filter, type NostrEvent } from 'nostr-tools'
 import { Subject, filter } from 'rxjs'
-import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
+import {
+  ExtensionAccount,
+  NostrConnectAccount,
+  PrivateKeyAccount,
+} from 'applesauce-accounts/accounts'
 import { AccountManager } from 'applesauce-accounts'
 import {
   ExtensionSigner,
   NostrConnectProvider,
   NostrConnectSigner,
   PrivateKeySigner,
-  SimpleSigner,
 } from 'applesauce-signers'
 import {
   loadActiveAccount,
@@ -32,9 +35,9 @@ describe('account persistence', () => {
   })
 
   it('restores an active nsec account during the same browser session', async () => {
-    const signer = new SimpleSigner(privateKey)
+    const signer = new PrivateKeySigner(privateKey)
     const pubkey = await signer.getPublicKey()
-    const account = new SimpleAccount(pubkey, signer)
+    const account = new PrivateKeyAccount(pubkey, signer)
     const manager = new AccountManager()
 
     saveAccountToStorage(account, 'nsec', nsec)

@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import type React from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { type VideoType } from '@nostube/core'
 import { type VideoEvent } from '@nostube/core/video-event'
 import { useAppContext } from '@/hooks/useAppContext'

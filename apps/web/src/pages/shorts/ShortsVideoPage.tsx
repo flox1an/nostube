@@ -863,7 +863,7 @@ export function ShortsVideoPage() {
         event.preventDefault()
         startSettlingToIndex(currentVideoIndex - 1)
       } else if (event.key === 'Escape') {
-        navigate('/shorts')
+        void navigate('/shorts')
       }
     }
 
@@ -915,7 +915,7 @@ export function ShortsVideoPage() {
         pendingUrlUpdateRef.current = currentVideo.link
         // Use startTransition to make this non-blocking for interactions
         startTransition(() => {
-          navigate(newPath, { replace: true })
+          void navigate(newPath, { replace: true })
         })
       }, 150)
     }

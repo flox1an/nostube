@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { nip19 } from 'nostr-tools'
 import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
@@ -40,7 +40,7 @@ function IdentityCard({
     if (account) await nostrPost('/admin/bind-nostr', account)
   }
 
-  const exportKey = async (e: FormEvent) => {
+  const exportKey = async (e: SyntheticEvent) => {
     e.preventDefault()
     setError(null)
     setBusy(true)

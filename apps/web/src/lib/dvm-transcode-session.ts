@@ -252,6 +252,7 @@ export class DVMTranscodeSession {
           } as Filter,
         ])
         .subscribe({
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- rxjs ignores the returned promise; failures are handled inside
           next: async event => {
             if (typeof event === 'string') return
             const nostrEvent = event as NostrEvent
@@ -433,6 +434,7 @@ export class DVMTranscodeSession {
           } as Filter,
         ])
         .subscribe({
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- rxjs ignores the returned promise; failures are handled inside
           next: async event => {
             if (typeof event === 'string') return
             found = true

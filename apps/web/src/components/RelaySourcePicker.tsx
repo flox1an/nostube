@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -398,7 +398,7 @@ export function RelaySourcePicker() {
                   value="action:settings"
                   onSelect={() => {
                     close()
-                    navigate(BROWSE_SETTINGS_PATH)
+                    void navigate(BROWSE_SETTINGS_PATH)
                   }}
                   className={itemClass}
                 >
@@ -521,7 +521,7 @@ function AddRelayForm({ initialValue, onDone }: { initialValue: string; onDone: 
   }
   const error = touched && result && 'error' in result ? result.error : null
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SyntheticEvent) => {
     event.preventDefault()
     setTouched(true)
     if (!result || !('source' in result)) return

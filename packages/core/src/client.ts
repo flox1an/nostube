@@ -4,7 +4,7 @@ import { createEventLoaderForStore } from 'applesauce-loaders/loaders'
 import { kinds, type Filter, type NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents, deleteEvent, deleteReplaceable } from 'nostr-idb'
 import type { NostrIDBDatabase } from 'nostr-idb/database'
-import { presistEventsToCache } from 'applesauce-core/helpers'
+import { persistEventsToCache } from 'applesauce-core/helpers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
 import {
   Observable,
@@ -380,7 +380,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
   if (debug) console.log('📡 Configured unified EventStore loader with relays:', defaultRelays)
 
   // Save new events to the cache. Kind 5 tombstones are cached explicitly in loaders.
-  presistEventsToCache(eventStore, cacheEvents)
+  persistEventsToCache(eventStore, cacheEvents)
 
   // Relay pool methods for NostrConnectSigner (NIP-46) and applesauce-wallet-connect. The caller
   // registers them globally; the client does not touch NostrConnectSigner itself.

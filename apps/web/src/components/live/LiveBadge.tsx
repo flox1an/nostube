@@ -28,6 +28,7 @@ export function LiveStatusBadge({
   className?: string
 }) {
   const { t, i18n } = useTranslation()
+  // eslint-disable-next-line react-hooks/purity -- the label must reflect the current time at render
   const upcoming = stream.status === 'planned' && stream.starts && stream.starts * 1000 > Date.now()
   const label =
     stream.status === 'ended'

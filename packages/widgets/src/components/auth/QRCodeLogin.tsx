@@ -91,7 +91,7 @@ export function QRCodeLogin({
       const account = new NostrConnectAccount(pubkey, signer)
 
       // Add to account manager
-      await accountManager.addAccount(account)
+      accountManager.addAccount(account)
       accountManager.setActive(account)
 
       // Build bunker URI for persistence using signer properties
@@ -100,7 +100,7 @@ export function QRCodeLogin({
       if (!remotePubkey) {
         throw new Error('Failed to get remote signer pubkey')
       }
-      const bunkerUri = buildBunkerUri(remotePubkey, relays, signer.secret)
+      const bunkerUri = buildBunkerUri(remotePubkey, relays, signer.connectSecret)
 
       // Persist account
       saveAccountToStorage(account, 'bunker', bunkerUri)
@@ -120,7 +120,7 @@ export function QRCodeLogin({
 
   // Generate QR code on mount
   useEffect(() => {
-    generateQRCode()
+    void generateQRCode()
 
     return () => {
       // Cleanup on unmount
@@ -131,7 +131,7 @@ export function QRCodeLogin({
   const handleRefresh = () => {
     setNostrConnectUri(null)
     setCopied(false)
-    generateQRCode()
+    void generateQRCode()
   }
 
   const handleCopy = async () => {
@@ -208,7 +208,7 @@ export function QRCodeLogin({
       {showQr && (
         <div className="p-4 bg-white rounded-xl">
           {nostrConnectUri ? (
-            <QRCodeSVG value={nostrConnectUri} size={200} level="M" includeMargin={false} />
+            <QRCodeSVG value={nostrConnectUri} size={200} level="M" marginSize={0} />
           ) : (
             <div className="w-[200px] h-[200px] flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

@@ -174,7 +174,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
   const debouncedSaveToNostr = useMemo(
     () =>
       debounce((itemsToSave: T[]) => {
-        saveToNostrRef.current(itemsToSave)
+        void saveToNostrRef.current(itemsToSave)
       }, debounceMs),
     [debounceMs]
   )
@@ -216,7 +216,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
       const fresh = getItemsFromStorage<T>(storageKey)
 
       if (isMilestone?.(updates)) {
-        saveToNostrRef.current(fresh)
+        void saveToNostrRef.current(fresh)
       } else {
         debouncedSaveToNostr(fresh)
       }
@@ -231,7 +231,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
 
       // Always immediate Nostr sync on delete
       const fresh = getItemsFromStorage<T>(storageKey)
-      saveToNostrRef.current(fresh)
+      void saveToNostrRef.current(fresh)
     },
     [storageKey, bumpVersion]
   )
@@ -253,40 +253,42 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
       pubkey: user.pubkey,
       identifier: nostrIdentifier,
       relays: privateRelays,
-    }).subscribe(async event => {
-      if (!event) return
-      try {
-        let plaintext = event.content
-        if (user.signer.nip44) {
-          try {
-            plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
-          } catch {
-            // Legacy unencrypted event — use raw content
-          }
-        }
-
-        const parsed = JSON.parse(plaintext)
-        // Backwards compat: accept "drafts" or "items"
-        const nostrItems: T[] = parsed.drafts || parsed.items || []
-
-        const merged = mergeItemsFromNostr<T>(storageKey, nostrItems, event.created_at)
-
-        // Only save if the merge produced different content
-        const localItems = getItemsFromStorage<T>(storageKey)
-        if (JSON.stringify(merged) !== JSON.stringify(localItems)) {
-          saveItemsToStorage(storageKey, merged)
-          bumpVersion()
-
-          if (import.meta.env.DEV) {
-            console.log(
-              `[useDraftPersistence:${storageKey}] merged ${nostrItems.length} Nostr items`
-            )
-          }
-        }
-      } catch (error) {
-        console.error(`[useDraftPersistence:${storageKey}] Failed to parse NIP-78 event:`, error)
-      }
     })
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- rxjs ignores the returned promise; failures are handled inside
+      .subscribe(async event => {
+        if (!event) return
+        try {
+          let plaintext = event.content
+          if (user.signer.nip44) {
+            try {
+              plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
+            } catch {
+              // Legacy unencrypted event — use raw content
+            }
+          }
+
+          const parsed = JSON.parse(plaintext)
+          // Backwards compat: accept "drafts" or "items"
+          const nostrItems: T[] = parsed.drafts || parsed.items || []
+
+          const merged = mergeItemsFromNostr<T>(storageKey, nostrItems, event.created_at)
+
+          // Only save if the merge produced different content
+          const localItems = getItemsFromStorage<T>(storageKey)
+          if (JSON.stringify(merged) !== JSON.stringify(localItems)) {
+            saveItemsToStorage(storageKey, merged)
+            bumpVersion()
+
+            if (import.meta.env.DEV) {
+              console.log(
+                `[useDraftPersistence:${storageKey}] merged ${nostrItems.length} Nostr items`
+              )
+            }
+          }
+        } catch (error) {
+          console.error(`[useDraftPersistence:${storageKey}] Failed to parse NIP-78 event:`, error)
+        }
+      })
 
     return () => sub.unsubscribe()
   }, [user?.pubkey, user?.signer, pool, privateRelays, storageKey, nostrIdentifier, bumpVersion])

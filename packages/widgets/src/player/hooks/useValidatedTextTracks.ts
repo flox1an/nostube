@@ -108,7 +108,7 @@ export function useValidatedTextTracks(textTracks: TextTrack[]): UseValidatedTex
     })
 
     let created: ValidatedTextTrack[] = []
-    validateTracks(controller.signal).then(validated => {
+    void validateTracks(controller.signal).then(validated => {
       if (controller.signal.aborted) {
         validated.forEach(track => URL.revokeObjectURL(track.validatedUrl))
         return

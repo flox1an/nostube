@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import { typedRules } from '../../eslint.typed.js'
 import htmlEslint from '@html-eslint/eslint-plugin'
 import htmlParser from '@html-eslint/parser'
 import customRules from './eslint-rules/index.js'
@@ -18,6 +19,7 @@ export default tseslint.config(
       'src-tauri',
     ],
   },
+  typedRules(import.meta.dirname),
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

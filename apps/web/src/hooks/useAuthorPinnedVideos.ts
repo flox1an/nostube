@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { lastValueFrom } from 'rxjs'
 import type { NostrEvent } from 'nostr-tools'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@nostube/core/video-event'
@@ -63,9 +64,9 @@ export function useAuthorPinnedVideos({
               eventStore: eventStoreInstance,
               extraRelays: relays,
             })
-            return loader({ kind, pubkey: author, identifier })
-              .toPromise()
-              .catch(() => null)
+            return lastValueFrom(loader({ kind, pubkey: author, identifier }), {
+              defaultValue: undefined,
+            }).catch(() => null)
           }
 
           if (!ref.id) return null
@@ -75,9 +76,9 @@ export function useAuthorPinnedVideos({
             eventStore: eventStoreInstance,
             extraRelays: relays,
           })
-          return loader({ id: ref.id })
-            .toPromise()
-            .catch(() => null)
+          return lastValueFrom(loader({ id: ref.id }), { defaultValue: undefined }).catch(
+            () => null
+          )
         })
 
         const loadedEvents = (await Promise.all(fetches)).filter((e): e is NostrEvent => Boolean(e))
@@ -95,7 +96,7 @@ export function useAuthorPinnedVideos({
       }
     }
 
-    loadPinnedVideos()
+    void loadPinnedVideos()
     return () => {
       cancelled = true
     }

@@ -218,7 +218,7 @@ async function tryParseFromRange(
     }
 
     // Cancel the rest of the download
-    reader.cancel()
+    void reader.cancel()
 
     // Combine chunks into a single buffer
     const combined = new Uint8Array(Math.min(totalBytes, maxBytes))

@@ -91,7 +91,7 @@ export function EditLiveStreamDialog({
     ended: t('liveEdit.statusEnded', 'Ended'),
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     try {

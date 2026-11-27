@@ -234,7 +234,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     ) {
       autoProcessed.current = true
       onPersist?.()
-      handleUrlVideoProcessing(videoUrl)
+      void handleUrlVideoProcessing(videoUrl)
     }
   }, [
     inputMethod,
@@ -408,14 +408,14 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   // ── Publish ───────────────────────────────────────────────────────────────
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     try {
       const publishedEvent = await originalHandleSubmit(e)
       if (publishedEvent) {
         deleteDraft(draft.id)
         const eventLink = generateEventLink(publishedEvent, publishedEvent.identifier)
-        navigate(buildVideoPath(eventLink, 'video'))
+        void navigate(buildVideoPath(eventLink, 'video'))
       }
     } catch (error) {
       console.error('Publish failed:', error)
@@ -428,7 +428,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     (files: File[]) => {
       setInputMethod('file')
       onPersist?.()
-      onDrop(files)
+      void onDrop(files)
     },
     [onPersist, onDrop, setInputMethod]
   )
@@ -456,7 +456,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const wrappedOnUrlProcess = useCallback(
     (url: string) => {
       onPersist?.()
-      handleUrlVideoProcessing(url)
+      void handleUrlVideoProcessing(url)
     },
     [onPersist, handleUrlVideoProcessing]
   )
@@ -465,7 +465,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     (files: File[]) => {
       setInputMethod('file')
       onPersist?.()
-      handleAddVideo(files)
+      void handleAddVideo(files)
     },
     [onPersist, handleAddVideo, setInputMethod]
   )

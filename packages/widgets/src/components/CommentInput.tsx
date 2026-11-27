@@ -7,7 +7,7 @@ import { EmojiPicker } from './EmojiPicker'
 interface CommentInputProps {
   value: string
   onChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
+  onSubmit: (e: React.SyntheticEvent) => void
   onCancel?: () => void
   placeholder?: string
   submitLabel?: string
@@ -60,7 +60,7 @@ export const CommentInput = React.memo(function CommentInput({
   }, [onChange, onCancel])
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    (e: React.SyntheticEvent) => {
       e.preventDefault()
       if (!value.trim() || disabled) return
       onSubmit(e)

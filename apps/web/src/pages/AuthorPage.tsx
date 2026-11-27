@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { lastValueFrom } from 'rxjs'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@nostube/core/nip19'
 import { isNip05 } from '@nostube/core/nip05-bunker'
@@ -169,16 +170,17 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
                   eventStore: eventStoreInstance,
                   extraRelays: videoRelays,
                 })
-                return loader({
-                  kind: parseInt(parts[0], 10),
-                  pubkey: parts[1],
-                  identifier: parts.slice(2).join(':'),
+                return lastValueFrom(
+                  loader({
+                    kind: parseInt(parts[0], 10),
+                    pubkey: parts[1],
+                    identifier: parts.slice(2).join(':'),
+                  }),
+                  { defaultValue: undefined }
+                ).catch(err => {
+                  console.warn(`Failed to fetch address ${ref.address}:`, err)
+                  return null
                 })
-                  .toPromise()
-                  .catch(err => {
-                    console.warn(`Failed to fetch address ${ref.address}:`, err)
-                    return null
-                  })
               }
             }
 
@@ -186,12 +188,10 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
               eventStore: eventStoreInstance,
               extraRelays: videoRelays,
             })
-            return loader({ id: ref.id })
-              .toPromise()
-              .catch(err => {
-                console.warn(`Failed to fetch event ${ref.id}:`, err)
-                return null
-              })
+            return lastValueFrom(loader({ id: ref.id }), { defaultValue: undefined }).catch(err => {
+              console.warn(`Failed to fetch event ${ref.id}:`, err)
+              return null
+            })
           })
 
           const fetchedEvents = (await Promise.all(fetchPromises)).filter(Boolean)
@@ -263,8 +263,7 @@ function AuthorPageContent({ profileData }: { profileData: ProfilePointer | null
           const chunk = missingIds.slice(i, i + CHUNK_SIZE)
           await Promise.all(
             chunk.map(id =>
-              loader({ id })
-                .toPromise()
+              lastValueFrom(loader({ id }), { defaultValue: undefined })
                 .then(e => e && eventStoreInstance.add(e))
                 .catch(() => {})
             )

@@ -33,7 +33,7 @@ export function NostrHandlerPage() {
     let cancelled = false
     const go = (route: NostrHandlerRoute) => {
       if (cancelled) return
-      if (route.type === 'navigate') navigate(route.to, { replace: true })
+      if (route.type === 'navigate') void navigate(route.to, { replace: true })
       else if (route.type === 'external') window.location.replace(route.url)
       else setInvalid(true)
     }
@@ -56,7 +56,7 @@ export function NostrHandlerPage() {
           { defaultValue: undefined }
         ).catch(() => undefined)
     // Not found here: njump.me asks more relays.
-    loaded.then(event => go(routeForKind(route.identifier, event?.kind)))
+    void loaded.then(event => go(routeForKind(route.identifier, event?.kind)))
 
     return () => {
       cancelled = true

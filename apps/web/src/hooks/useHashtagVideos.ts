@@ -151,13 +151,17 @@ export function useHashtagVideos({
     const controller = new AbortController()
     const serviceUrl = config.searchServiceUrl || SEARCH_SERVICE_URL
 
-    fetchTagResults(tag, controller.signal, serviceUrl, selectedPubkey, config.nsfwFilter).then(
-      result => {
-        if (!controller.signal.aborted && result.ok) {
-          setExternalVideos(result.data)
-        }
+    void fetchTagResults(
+      tag,
+      controller.signal,
+      serviceUrl,
+      selectedPubkey,
+      config.nsfwFilter
+    ).then(result => {
+      if (!controller.signal.aborted && result.ok) {
+        setExternalVideos(result.data)
       }
-    )
+    })
 
     return () => controller.abort()
   }, [tag, config.searchServiceUrl, selectedPubkey, config.nsfwFilter])
@@ -323,7 +327,7 @@ export function useHashtagVideos({
       queueMicrotask(() => setLoadingLabels(false))
     }
 
-    fetchLabeledVideos()
+    void fetchLabeledVideos()
   }, [
     labeledVideoIds,
     pool,

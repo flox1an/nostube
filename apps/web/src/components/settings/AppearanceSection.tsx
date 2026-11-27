@@ -24,7 +24,7 @@ export function AppearanceSection() {
   const [isIosInstallOpen, setIsIosInstallOpen] = useState(false)
 
   const handleLanguageChange = (lng: string) => {
-    i18n.changeLanguage(lng)
+    void i18n.changeLanguage(lng)
   }
 
   return (

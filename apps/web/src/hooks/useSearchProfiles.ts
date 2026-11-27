@@ -31,6 +31,7 @@ function peopleHitToProfileResult(hit: PeopleHit): ProfileResult {
     profile: {
       name: hit.name ?? undefined,
       display_name: hit.display_name ?? undefined,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- the search index still returns username
       username: hit.username ?? undefined,
       about: hit.about ?? undefined,
       picture: hit.picture ?? undefined,

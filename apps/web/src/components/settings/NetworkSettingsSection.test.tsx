@@ -26,8 +26,10 @@ function Harness() {
     videoType: 'videos',
     nsfwFilter: 'hide',
   })
+  /* eslint-disable react-hooks/immutability -- test harness hands the live state to the mocked app context */
   store.config = config
   store.update = updater => setConfig(updater)
+  /* eslint-enable react-hooks/immutability */
   return <ServiceEndpointsSubSection />
 }
 

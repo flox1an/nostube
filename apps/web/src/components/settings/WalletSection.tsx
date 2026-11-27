@@ -85,7 +85,7 @@ export function WalletSection() {
   const handleKeyDownNWC = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && nwcConnectionString.trim()) {
-        handleConnectNWC()
+        void handleConnectNWC()
       }
     },
     [nwcConnectionString, handleConnectNWC]
@@ -273,7 +273,7 @@ export function WalletSection() {
                               onSelect={() => handleAddMint(mint)}
                               onMouseDown={e => {
                                 e.preventDefault()
-                                handleAddMint(mint)
+                                void handleAddMint(mint)
                               }}
                               className="cursor-pointer"
                             >

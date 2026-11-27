@@ -182,7 +182,7 @@ export function ProfileCard({
   useEffect(() => {
     if (!nip05) return
     let cancelled = false
-    verifyNip05(nip05, pubkey).then(ok => {
+    void verifyNip05(nip05, pubkey).then(ok => {
       if (ok && !cancelled) setVerified(`${pubkey} ${nip05}`)
     })
     return () => {

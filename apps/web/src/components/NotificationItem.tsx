@@ -15,6 +15,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   const profile = useProfile({ pubkey: notification.commenterPubkey })
 
   const displayName =
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- old kind 0 events still carry displayName
     profile?.displayName || profile?.name || notification.commenterPubkey.slice(0, 8)
 
   const relativeTime = formatDistance(new Date(notification.timestamp * 1000), new Date(), {

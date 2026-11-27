@@ -54,6 +54,7 @@ export function PhaseProfileStep({ onComplete, onSkip }: PhaseProfileStepProps) 
 
   useEffect(() => {
     setForm({
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- old kind 0 events still carry displayName
       name: metadata?.display_name || metadata?.displayName || metadata?.name || '',
       about: metadata?.about || '',
       picture: metadata?.picture || '',

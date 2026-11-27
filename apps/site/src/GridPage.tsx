@@ -34,11 +34,11 @@ export function VideoLinks({
 
   const select = (video: VideoEvent) => {
     if (gate.isLocked(video)) setPending(video)
-    else navigate(videoPath(video))
+    else void navigate(videoPath(video))
   }
   const confirmAge = () => {
     gate.confirm()
-    if (pending) navigate(videoPath(pending))
+    if (pending) void navigate(videoPath(pending))
     setPending(null)
   }
 
@@ -208,7 +208,7 @@ export function SearchBox() {
       onSubmit={e => {
         e.preventDefault()
         const q = query.trim()
-        if (q) navigate(`/search?q=${encodeURIComponent(q)}`)
+        if (q) void navigate(`/search?q=${encodeURIComponent(q)}`)
       }}
     >
       <Input

@@ -13,8 +13,8 @@ function osPrefersDark(matches: boolean) {
     matches,
     media: query,
     onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
+    addListener: vi.fn(), // eslint-disable-line @typescript-eslint/no-deprecated -- MediaQueryList requires it
+    removeListener: vi.fn(), // eslint-disable-line @typescript-eslint/no-deprecated -- MediaQueryList requires it
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),

@@ -94,7 +94,7 @@ export function DvmTranscodeAlert({
   useEffect(() => {
     if (isResuming && !hasResumedRef.current && status === 'idle') {
       hasResumedRef.current = true
-      resumeTranscode()
+      void resumeTranscode()
     }
   }, [isResuming, status, resumeTranscode])
 
@@ -198,7 +198,14 @@ export function DvmTranscodeAlert({
       for (const v of sortedVariants) {
         codecMap[v.resolution] = v.codec
       }
-      startTranscode(inputUrl, video.duration, resolutions, codecMap, dvmPubkey, onPaymentRequired)
+      void startTranscode(
+        inputUrl,
+        video.duration,
+        resolutions,
+        codecMap,
+        dvmPubkey,
+        onPaymentRequired
+      )
     }
   }
 

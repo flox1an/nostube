@@ -94,7 +94,7 @@ export function usePlaylistDetails(
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       await Promise.resolve()
       if (cancelled) {
         return
@@ -179,7 +179,7 @@ export function usePlaylistDetails(
     let cancelled = false
 
     if (!playlistEvent || !playlistEvent.content) {
-      ;(async () => {
+      void (async () => {
         await Promise.resolve()
         if (!cancelled) {
           setDecryptedTags(null)
@@ -193,7 +193,7 @@ export function usePlaylistDetails(
 
     // Only the owner can decrypt
     if (!user?.pubkey || playlistEvent.pubkey !== user.pubkey || !user.signer?.nip44) {
-      ;(async () => {
+      void (async () => {
         await Promise.resolve()
         if (!cancelled) {
           setDecryptedTags(null)
@@ -205,7 +205,7 @@ export function usePlaylistDetails(
       }
     }
 
-    ;(async () => {
+    void (async () => {
       try {
         const plaintext = await user.signer!.nip44!.decrypt(user.pubkey, playlistEvent.content)
         const tags: string[][] = JSON.parse(plaintext)
@@ -311,7 +311,7 @@ export function usePlaylistDetails(
     let cancelled = false
     const allMissingIds = [...missingEventRefs.map(r => r.id), ...missingAddressRefs.map(r => r.id)]
 
-    ;(async () => {
+    void (async () => {
       await Promise.resolve()
       if (cancelled) return
       setLoadingVideoIds(new Set(allMissingIds))

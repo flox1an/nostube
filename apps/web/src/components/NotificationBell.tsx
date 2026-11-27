@@ -37,7 +37,7 @@ export function NotificationBell() {
       markVideoNotificationAsRead(notification.id)
 
       // Navigate to video page with comment query parameter
-      navigate(
+      void navigate(
         buildVideoUrl(notification.videoEventId, 'video', { comment: notification.commentId })
       )
     } else if (isUploadNotification(notification)) {
@@ -45,13 +45,13 @@ export function NotificationBell() {
       markUploadNotificationAsRead(notification.id)
 
       // Navigate to upload page with the draft
-      navigate(`/upload?draft=${notification.draftId}`)
+      void navigate(`/upload?draft=${notification.draftId}`)
     } else if (isZapNotification(notification)) {
       // Mark as read
       markZapNotificationAsRead(notification.id)
 
       // Navigate to video page
-      navigate(buildVideoUrl(notification.videoEventId, 'video'))
+      void navigate(buildVideoUrl(notification.videoEventId, 'video'))
     }
   }
 

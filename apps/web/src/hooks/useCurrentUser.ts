@@ -1,6 +1,10 @@
 import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
-import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, SimpleSigner } from 'applesauce-signers'
+import {
+  ExtensionAccount,
+  PrivateKeyAccount,
+  NostrConnectAccount,
+} from 'applesauce-accounts/accounts'
+import { ExtensionSigner, PrivateKeySigner } from 'applesauce-signers'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { connectBunker, nostrConnectClient } from '@nostube/core/nostr-connect-client'
 import {
@@ -35,7 +39,7 @@ export function useCurrentUser() {
     const pubkey = await signer.getPublicKey()
     const account = new ExtensionAccount(pubkey, signer)
 
-    await accountManager.addAccount(account)
+    accountManager.addAccount(account)
     accountManager.setActive(account)
 
     saveAccountToStorage(account, 'extension')
@@ -45,11 +49,11 @@ export function useCurrentUser() {
   const loginWithNsec = async (nsec: string) => {
     if (!accountManager) throw new Error('Account manager not available')
 
-    const signer = SimpleSigner.fromKey(nsec)
+    const signer = PrivateKeySigner.fromKey(nsec)
     const pubkey = await signer.getPublicKey()
-    const account = new SimpleAccount(pubkey, signer)
+    const account = new PrivateKeyAccount(pubkey, signer)
 
-    await accountManager.addAccount(account)
+    accountManager.addAccount(account)
     accountManager.setActive(account)
 
     saveAccountToStorage(account, 'nsec', nsec)
@@ -68,7 +72,7 @@ export function useCurrentUser() {
     const pubkey = await signer.getPublicKey()
     const account = new NostrConnectAccount(pubkey, signer)
 
-    await accountManager.addAccount(account)
+    accountManager.addAccount(account)
     accountManager.setActive(account)
 
     saveAccountToStorage(account, 'bunker', bunkerUri)

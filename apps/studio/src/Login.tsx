@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AccountsProvider } from 'applesauce-react/providers'
 import { Button } from '@nostube/widgets/components/button'
@@ -39,7 +39,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     }
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = (e: SyntheticEvent) => {
     e.preventDefault()
     void run(() => logIn(password))
   }

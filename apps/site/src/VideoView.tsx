@@ -252,6 +252,7 @@ function VideoDetails({
           current={video}
           onReplay={() => {
             if (!mediaElement) return
+            // eslint-disable-next-line react-hooks/immutability -- the media element is a DOM node held in state, not React data
             mediaElement.currentTime = 0
             void Promise.resolve(mediaElement.play()).catch(() => {})
           }}

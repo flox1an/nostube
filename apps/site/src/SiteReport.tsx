@@ -68,7 +68,7 @@ function ReportButton({
     setError(null)
   }
 
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setBusy(true)
     setError(null)

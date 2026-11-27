@@ -27,7 +27,7 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) =>
 )
 
 // Check if cache should be cleared before starting the app
-checkAndClearCache().then(wasCleared => {
+void checkAndClearCache().then(wasCleared => {
   if (wasCleared && import.meta.env.DEV) {
     console.log('Cache was cleared, app will now initialize with fresh cache')
   }

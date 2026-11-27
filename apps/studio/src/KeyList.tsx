@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type SyntheticEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { nip19 } from 'nostr-tools'
 import { NIP05_REGEX, queryProfile } from 'nostr-tools/nip05'
@@ -60,7 +60,7 @@ export function KeyList({
     .map(line => line.trim())
     .filter(Boolean)
 
-  const add = async (e: FormEvent) => {
+  const add = async (e: SyntheticEvent) => {
     e.preventDefault()
     const value = input.trim()
     if (!value) return

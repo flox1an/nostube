@@ -15,10 +15,12 @@ export function DesktopPlayerPage() {
     let disposed = false
     let unlisten: (() => void) | undefined
 
-    void listen<string>('desktop-player-route', event => navigate(event.payload)).then(stop => {
-      if (disposed) stop()
-      else unlisten = stop
-    })
+    void listen<string>('desktop-player-route', event => void navigate(event.payload)).then(
+      stop => {
+        if (disposed) stop()
+        else unlisten = stop
+      }
+    )
 
     return () => {
       disposed = true

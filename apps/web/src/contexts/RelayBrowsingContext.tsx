@@ -288,7 +288,7 @@ export function RelayBrowsingProvider({ children }: { children: ReactNode }) {
         location.pathname === '/' ||
         location.pathname === '/shorts' ||
         location.pathname.startsWith('/category/')
-      navigate({
+      void navigate({
         pathname: feedPath ? location.pathname : '/',
         search: sourceSearch(next, feedPath ? location.search : ''),
       })

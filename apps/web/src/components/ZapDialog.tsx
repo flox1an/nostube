@@ -219,7 +219,7 @@ export const ZapDialog = memo(function ZapDialog({
           <div className="flex flex-col items-center space-y-4">
             {/* QR Code */}
             <div className="p-4 bg-white rounded-xl">
-              <QRCodeSVG value={invoice.toUpperCase()} size={200} level="M" includeMargin={false} />
+              <QRCodeSVG value={invoice.toUpperCase()} size={200} level="M" marginSize={0} />
             </div>
 
             {/* Copy button */}

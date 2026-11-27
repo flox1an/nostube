@@ -383,7 +383,7 @@ async function tryParseMetadataFromRange(
         totalBytes += value.length
       }
 
-      reader.cancel()
+      void reader.cancel()
 
       const combined = new Uint8Array(Math.min(totalBytes, maxBytes))
       let offset = 0

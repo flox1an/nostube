@@ -26,7 +26,7 @@ i18n.on('languageChanged', () => {
   }
 })
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   lng: storedLanguage() ?? (typeof navigator === 'undefined' ? 'en' : navigator.language),
   supportedLngs: Object.keys(widgetResources),
   load: 'languageOnly',

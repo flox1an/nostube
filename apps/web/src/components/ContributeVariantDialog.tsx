@@ -364,7 +364,7 @@ export function ContributeVariantDialog({
     if (!sourceVariant || !video || !videoEvent) return
     const dTag = videoEvent.tags.find(tag => tag[0] === 'd')?.[1]
     const relayHint = ''
-    contribution.start({
+    void contribution.start({
       sourceVariant,
       targetHeights: selectedHeights,
       supportsHevc,

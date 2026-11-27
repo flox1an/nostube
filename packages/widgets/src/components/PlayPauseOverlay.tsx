@@ -14,7 +14,7 @@ interface PlayPauseOverlayProps {
    * Set to true before user-triggered play/pause to show overlay.
    * Automatically reset to false after overlay is shown.
    */
-  userInitiatedRef?: React.MutableRefObject<boolean>
+  userInitiatedRef?: React.RefObject<boolean>
 }
 
 // Display duration for play icon (2x longer than pause)

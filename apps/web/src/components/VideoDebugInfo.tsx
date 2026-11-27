@@ -849,7 +849,7 @@ export function VideoDebugInfo({
   useEffect(() => {
     // Only trigger when dialog opens (transitions from false to true)
     if (open && !prevOpenRef.current && allVariants.length > 0) {
-      checkAllAvailabilityRef.current()
+      void checkAllAvailabilityRef.current()
     }
     prevOpenRef.current = open
   }, [open, allVariants.length])

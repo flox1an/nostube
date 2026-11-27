@@ -57,7 +57,7 @@ export function usePlaylistNavigation({
     const route = isDesktopPlayer
       ? buildDesktopPlayerUrl(prevPlaylistVideo.link, { playlist: playlistParam })
       : buildVideoUrl(prevPlaylistVideo.link, 'video', { playlist: playlistParam })
-    navigate(route)
+    void navigate(route)
   }, [playlistParam, prevPlaylistVideo, navigate, onPlayPosReset, isDesktopPlayer])
 
   // Navigate to next video
@@ -67,14 +67,14 @@ export function usePlaylistNavigation({
     const route = isDesktopPlayer
       ? buildDesktopPlayerUrl(nextPlaylistVideo.link, { playlist: playlistParam })
       : buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam })
-    navigate(route)
+    void navigate(route)
   }, [playlistParam, nextPlaylistVideo, navigate, onPlayPosReset, isDesktopPlayer])
 
   // Handle video end (auto-advance to next video)
   const handlePlaylistVideoEnd = useCallback(() => {
     if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
     onPlayPosReset()
-    navigate(
+    void navigate(
       isDesktopPlayer
         ? buildDesktopPlayerUrl(nextPlaylistVideo.link, { playlist: playlistParam, autoplay: true })
         : buildVideoUrl(nextPlaylistVideo.link, 'video', {

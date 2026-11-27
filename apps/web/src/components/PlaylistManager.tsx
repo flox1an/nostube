@@ -85,7 +85,7 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
           id: video.id,
           kind: video.kind,
         })
-    navigate(buildVideoUrl(nevent, 'video', { playlist: playlistParam }))
+    void navigate(buildVideoUrl(nevent, 'video', { playlist: playlistParam }))
   }
 
   return (
@@ -226,7 +226,7 @@ export function PlaylistManager() {
     setEditDialogOpen(true)
   }
 
-  const handleEditSave = async (e: React.FormEvent) => {
+  const handleEditSave = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!playlistToEdit) return
     setIsEditing(true)

@@ -22,6 +22,7 @@ export function ZapGoalBar({
 }) {
   const { t } = useTranslation()
   const profile = useProfile({ pubkey: goal.pubkey })
+  // eslint-disable-next-line react-hooks/purity -- the label must reflect the current time at render
   const closed = goal.closedAt !== undefined && goal.closedAt <= Math.floor(Date.now() / 1000)
   const canZap = !closed && hasLightningAddress(profile)
 

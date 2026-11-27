@@ -217,20 +217,23 @@ export function EditVideoDialog({
   }
 
   // Compute preview event reactively for the diff view
-  const buildUpdatedEventCb = useCallback(buildUpdatedEvent, [
-    imetaTags,
-    title,
-    description,
-    tags,
-    language,
-    contentWarningEnabled,
-    contentWarningReason,
-    videoEvent,
-  ])
+  const buildUpdatedEventCb = useCallback(
+    () => buildUpdatedEvent(),
+    [
+      imetaTags,
+      title,
+      description,
+      tags,
+      language,
+      contentWarningEnabled,
+      contentWarningReason,
+      videoEvent,
+    ]
+  )
 
   const previewEvent = useMemo(() => buildUpdatedEventCb(), [buildUpdatedEventCb])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
 
     if (!user) {

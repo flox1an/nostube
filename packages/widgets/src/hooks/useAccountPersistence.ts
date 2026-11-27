@@ -1,12 +1,11 @@
 import type { IAccount } from 'applesauce-accounts'
 import { type AccountManager } from 'applesauce-accounts'
-import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
 import {
-  ExtensionSigner,
-  NostrConnectSigner,
-  PrivateKeySigner,
-  SimpleSigner,
-} from 'applesauce-signers'
+  ExtensionAccount,
+  NostrConnectAccount,
+  PrivateKeyAccount,
+} from 'applesauce-accounts/accounts'
+import { ExtensionSigner, NostrConnectSigner, PrivateKeySigner } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
 import { allowSignerRelays } from '@nostube/core/instance-config'
@@ -257,7 +256,7 @@ export async function restoreAccount(
           return null
         }
 
-        const signer = new SimpleSigner(decoded.data)
+        const signer = new PrivateKeySigner(decoded.data)
         const pubkey = await signer.getPublicKey()
         if (pubkey !== accountData.pubkey) {
           console.warn('Nsec pubkey does not match stored pubkey')
@@ -265,7 +264,7 @@ export async function restoreAccount(
           return null
         }
 
-        return new SimpleAccount(pubkey, signer)
+        return new PrivateKeyAccount(pubkey, signer)
       }
 
       case 'bunker': {

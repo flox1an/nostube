@@ -429,7 +429,7 @@ export function ThumbnailSection({
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  handleUrlSubmit()
+                  void handleUrlSubmit()
                 }
               }}
             />

@@ -1,7 +1,11 @@
 import { useContext } from 'react'
 import { AccountsContext } from 'applesauce-react'
-import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-signers'
+import {
+  ExtensionAccount,
+  NostrConnectAccount,
+  PrivateKeyAccount,
+} from 'applesauce-accounts/accounts'
+import { ExtensionSigner, NostrConnectSigner, PrivateKeySigner } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
 import { saveAccountToStorage, saveActiveAccount } from './useAccountPersistence'
 import { isNip05, resolveNip05ToBunkerUri } from '@nostube/core/nip05-bunker'
@@ -38,11 +42,11 @@ export function useLoginActions() {
           throw new Error('Failed to decode nsec. Please check the format.')
         }
 
-        const signer = new SimpleSigner(decodedKey)
+        const signer = new PrivateKeySigner(decodedKey)
         const pubkey = await signer.getPublicKey()
-        const account = new SimpleAccount(pubkey, signer)
+        const account = new PrivateKeyAccount(pubkey, signer)
 
-        await accountManager.addAccount(account)
+        accountManager.addAccount(account)
         accountManager.setActive(account)
 
         // Persist account metadata in localStorage and key only for this tab session
@@ -61,11 +65,11 @@ export function useLoginActions() {
         }
 
         const { privateKey, nsec } = await decryptNcryptsec(_ncryptsec, password)
-        const signer = new SimpleSigner(privateKey)
+        const signer = new PrivateKeySigner(privateKey)
         const pubkey = await signer.getPublicKey()
-        const account = new SimpleAccount(pubkey, signer)
+        const account = new PrivateKeyAccount(pubkey, signer)
 
-        await accountManager.addAccount(account)
+        accountManager.addAccount(account)
         accountManager.setActive(account)
 
         saveAccountToStorage(account, 'nsec', nsec)
@@ -111,7 +115,7 @@ export function useLoginActions() {
         const pubkey = await signer.getPublicKey()
         const account = new NostrConnectAccount(pubkey, signer)
 
-        await accountManager.addAccount(account)
+        accountManager.addAccount(account)
         accountManager.setActive(account)
 
         // Persist account with bunker URI
@@ -133,7 +137,7 @@ export function useLoginActions() {
         const pubkey = await signer.getPublicKey()
         const account = new ExtensionAccount(pubkey, signer)
 
-        await accountManager.addAccount(account)
+        accountManager.addAccount(account)
         accountManager.setActive(account)
 
         // Persist extension account

@@ -53,7 +53,7 @@ export function ReportDialog({
   const [reason, setReason] = useState<WebReportReason>('spam')
   const [details, setDetails] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const tags = buildReportTags({ type: reportType, id: contentId, author: contentAuthor }, reason)

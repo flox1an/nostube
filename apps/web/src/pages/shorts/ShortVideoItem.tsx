@@ -9,11 +9,9 @@
  */
 import { memo, useMemo, useCallback } from 'react'
 import { type VideoEvent } from '@nostube/core/video-event'
-import { useAppContext, useIsPortrait } from '@/hooks'
+import { useIsPortrait } from '@/hooks'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
-import { useValidUrl } from '@/hooks/useValidUrl'
-import { UserBlossomServersModel } from 'applesauce-common/models'
-import { useEventModel } from 'applesauce-react/hooks'
+import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
 
 export interface ShortVideoItemProps {
   video: VideoEvent
@@ -48,26 +46,8 @@ export const ShortVideoItem = memo(
     blocked = false,
     registerIntersectionRef,
   }: ShortVideoItemProps) {
-    const { config } = useAppContext()
-
-    // Resolve thumbnail URL — owner's Blossom servers first, then user's config servers.
-    const rawOwnerServersResult = useEventModel(
-      UserBlossomServersModel,
-      video.pubkey ? [video.pubkey] : null
-    )
-    const rawOwnerServers = useMemo(() => rawOwnerServersResult ?? [], [rawOwnerServersResult])
-    const allBlossomServers = useMemo(() => {
-      const ownerServers = rawOwnerServers.map(url => url.toString())
-      const configServers = config.blossomServers?.map(s => s.url) ?? []
-      return [...ownerServers, ...configServers]
-    }, [rawOwnerServers, config.blossomServers])
-
-    const { validUrl: thumbnailUrl } = useValidUrl({
-      urls: video.images,
-      blossomServers: allBlossomServers,
-      resourceType: 'image',
-      enabled: true,
-    })
+    const { ladder } = useMediaUrls({ urls: video.images, mediaType: 'image', enabled: true })
+    const thumbnailUrl = ladder.currentUrl
 
     const thumbnailCascade = useImageCascade({
       src: thumbnailUrl,

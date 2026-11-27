@@ -44,9 +44,9 @@ export function Header({ transparent = false }: HeaderProps) {
   const handleBack = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx
     if (typeof idx === 'number' && idx > 0) {
-      navigate(-1)
+      void navigate(-1)
     } else {
-      navigate('/')
+      void navigate('/')
     }
   }
 

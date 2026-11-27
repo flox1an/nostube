@@ -158,7 +158,7 @@ export function RelaySettingsSection() {
           placeholder={t('settings.relays.addPlaceholder')}
           value={newRelayUrl}
           onChange={e => setNewRelayUrl(e.target.value)}
-          onKeyPress={e => {
+          onKeyDown={e => {
             if (e.key === 'Enter') {
               handleAddRelay()
             }

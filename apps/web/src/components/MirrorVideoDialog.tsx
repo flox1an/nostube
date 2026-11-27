@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -287,9 +287,9 @@ export function MirrorVideoDialog({
   }, [selectedBlobs, allBlobs])
 
   // Check availability when dialog opens
-  useMemo(() => {
+  useEffect(() => {
     if (open && allVariants.length > 0) {
-      checkAllAvailability()
+      void checkAllAvailability()
     }
     // Reset selections when dialog opens/closes
     if (open) {

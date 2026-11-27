@@ -8,7 +8,8 @@ import {
   computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
   defaultContributeResolutions,
-  defaultVariants,
+  defaultResolutions,
+  buildVariants,
   recommendedVariants,
   shouldAutoOptimise,
   repairDuplicateAvcNalHeadersInMp4,
@@ -259,7 +260,17 @@ describe('assignMp4ResolutionCodecs', () => {
   })
 })
 
-describe('defaultVariants', () => {
+// The default MP4 plan: default resolutions, codec per resolution, then variants.
+const defaultVariants = (meta: TranscodeSourceMeta, supportedCodecs: string[]) =>
+  buildVariants(
+    assignMp4ResolutionCodecs(
+      defaultResolutions(meta, supportedCodecs),
+      supportedCodecs.includes('hevc')
+    ),
+    'mp4'
+  )
+
+describe('default MP4 variants', () => {
   it('produces HEVC 1080p primary + AVC 480p fallback for 4K source', () => {
     const variants = defaultVariants({ ...baseMeta, width: 3840, height: 2160, bitrateMbps: 80 }, [
       'hevc',

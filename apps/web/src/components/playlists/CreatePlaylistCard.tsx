@@ -35,7 +35,7 @@ export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps
   const hasNip44 = Boolean(user?.signer?.nip44)
   const canCreatePrivate = hasNip44 && privateRelays.length > 0
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
@@ -166,7 +166,7 @@ export function CreatePlaylistDialog({
   const hasNip44 = Boolean(user?.signer?.nip44)
   const canCreatePrivate = hasNip44 && privateRelays.length > 0
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!name.trim()) return
     setIsSubmitting(true)

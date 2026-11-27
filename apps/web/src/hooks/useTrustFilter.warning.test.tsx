@@ -18,6 +18,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 let latest: { enabled: boolean; filterButton: ReactElement }
 function Harness() {
+  // eslint-disable-next-line react-hooks/globals -- test harness exposes the latest render to assertions
   latest = useTrustFilter(null)
   return <TooltipProvider delayDuration={0}>{latest.filterButton}</TooltipProvider>
 }

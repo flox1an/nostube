@@ -110,7 +110,7 @@ export function useVideoPlayPosition({
       setInitialPlayPos(0)
     }
 
-    resolve()
+    void resolve()
     return () => {
       cancelled = true
     }
@@ -125,7 +125,7 @@ export function useVideoPlayPosition({
     const duration = actualDurationRef.current || videoDuration || 0
 
     const savePosition = () => {
-      writePlayPosition(user.pubkey, videoId, { time: currentPlayPos, duration })
+      void writePlayPosition(user.pubkey, videoId, { time: currentPlayPos, duration })
       lastWriteRef.current = Date.now()
       invalidatePlayPosCache(videoId, user.pubkey)
     }

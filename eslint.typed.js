@@ -16,12 +16,13 @@ export const typedRules = (dir, { react = true } = {}) => ({
     '@typescript-eslint/await-thenable': 'error',
     '@typescript-eslint/no-deprecated': 'error',
     ...(react ? reactHooks.configs.recommended.rules : {}),
+    // Only reports where the React Compiler would skip a component; we do not run the compiler.
+    ...(react ? { 'react-hooks/preserve-manual-memoization': 'off' } : {}),
     // React Compiler advice, not bugs: warn until the patterns are reworked.
     ...(react
       ? {
           'react-hooks/set-state-in-effect': 'warn',
           'react-hooks/refs': 'warn',
-          'react-hooks/preserve-manual-memoization': 'warn',
         }
       : {}),
   },

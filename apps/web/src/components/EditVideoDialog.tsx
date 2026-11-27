@@ -158,7 +158,7 @@ export function EditVideoDialog({
    * Build the updated event from current form state.
    * Extracted so it can be used for both preview and actual publish.
    */
-  const buildUpdatedEvent = () => {
+  const buildUpdatedEvent = useCallback(() => {
     // Preserve all tags EXCEPT the ones we're replacing
     const replacedTagKeys = ['title', 'alt', 't', 'L', 'l', 'content-warning', 'imeta']
     const preservedTags = videoEvent.tags.filter(tag => !replacedTagKeys.includes(tag[0]))
@@ -214,24 +214,19 @@ export function EditVideoDialog({
       content: description.trim(),
       tags: newTags,
     }
-  }
+  }, [
+    imetaTags,
+    title,
+    description,
+    tags,
+    language,
+    contentWarningEnabled,
+    contentWarningReason,
+    videoEvent,
+  ])
 
   // Compute preview event reactively for the diff view
-  const buildUpdatedEventCb = useCallback(
-    () => buildUpdatedEvent(),
-    [
-      imetaTags,
-      title,
-      description,
-      tags,
-      language,
-      contentWarningEnabled,
-      contentWarningReason,
-      videoEvent,
-    ]
-  )
-
-  const previewEvent = useMemo(() => buildUpdatedEventCb(), [buildUpdatedEventCb])
+  const previewEvent = useMemo(() => buildUpdatedEvent(), [buildUpdatedEvent])
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()

@@ -8,7 +8,7 @@
 
 const REQUESTED_KEY = 'nostube_persist_requested'
 
-export function isStandalone(): boolean {
+function isStandalone(): boolean {
   return (
     window.matchMedia?.('(display-mode: standalone)').matches === true ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true

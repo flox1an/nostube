@@ -3,9 +3,9 @@ import { extractBlossomHash } from '@nostube/core/video-event'
 import { normalizeServerUrl } from '@nostube/core/blossom-utils'
 import type { BlossomServer } from '@nostube/core'
 
-export type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
+type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
 
-export interface ServerInfo {
+interface ServerInfo {
   url: string // Normalized server URL (no trailing slash)
   name: string // Human-readable name (hostname)
   source: 'video-url' | 'config' | 'user' // Where we found this server

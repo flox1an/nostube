@@ -81,34 +81,6 @@ export function useNostrQuery(
 }
 
 /**
- * Subscribes to a single Nostr event by ID. Automatically fetches from relays via the
- * global event loader configured in `core.ts` if the event is not already in the store.
- *
- * @example
- * const { event, isLoading } = useNostrEvent(eventId)
- */
-export function useNostrEvent(id: string | null): {
-  event: NostrEvent | null
-  isLoading: boolean
-} {
-  const eventStore = useEventStore()
-  const [timedOut, setTimedOut] = useState(false)
-
-  const event = use$(() => (id ? eventStore.event(id) : of(undefined)), [eventStore, id])
-
-  useEffect(() => {
-    if (!id) return
-    setTimedOut(false)
-    const timeout = setTimeout(() => setTimedOut(true), 10_000)
-    return () => clearTimeout(timeout)
-  }, [id])
-
-  const isLoading = !!id && event === undefined && !timedOut
-
-  return { event: event ?? null, isLoading }
-}
-
-/**
  * Convenience: subscribe to a single event via filters (e.g. a replaceable event).
  * Returns the first matching event from the store.
  */

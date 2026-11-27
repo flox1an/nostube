@@ -7,9 +7,9 @@ import { useCurrentUser } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
-export type NavigationSection = 'navigation' | 'library' | 'configuration'
+type NavigationSection = 'navigation' | 'library' | 'configuration'
 
-export interface NavigationMenuItem {
+interface NavigationMenuItem {
   id: string
   label: string
   icon: LucideIcon

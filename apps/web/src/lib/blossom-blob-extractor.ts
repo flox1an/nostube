@@ -1,7 +1,7 @@
 import type { VideoEvent, VideoVariant, TextTrack } from '@nostube/core/video-event'
 import { extractBlossomHash } from '@nostube/core/video-event'
 
-export type BlobType = 'video' | 'thumbnail' | 'subtitle'
+type BlobType = 'video' | 'thumbnail' | 'subtitle'
 
 export interface BlossomBlob {
   type: BlobType
@@ -43,7 +43,7 @@ export function deduplicateVariants(variants: VideoVariant[]): VideoVariant[] {
 /**
  * Convert TextTrack to VideoVariant for unified processing
  */
-export function textTrackToVariant(textTrack: TextTrack): VideoVariant {
+function textTrackToVariant(textTrack: TextTrack): VideoVariant {
   const { sha256 } = extractBlossomHash(textTrack.url)
   return {
     url: textTrack.url,

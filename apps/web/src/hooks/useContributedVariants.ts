@@ -6,9 +6,9 @@ import { useAppContext } from '@/hooks/useAppContext'
 import { relayPool } from '@/nostr/core'
 import { extractBlossomHash, type VideoEvent, type VideoVariant } from '@nostube/core/video-event'
 
-export type ContributedMediaType = 'video' | 'image' | 'subtitle' | 'audio' | 'other'
+type ContributedMediaType = 'video' | 'image' | 'subtitle' | 'audio' | 'other'
 
-export type ContributedVariantDebugStatus =
+type ContributedVariantDebugStatus =
   'accepted' | 'checking' | 'duplicate' | 'invalid' | 'unavailable'
 
 export interface ContributedVariantDebugRecord {

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
 import type { ContentSafetyGate as ContentSafetyGateState } from '@nostube/core/content-safety'
 
-export type ContentSafetyScreenState = 'hidden' | 'loading'
+type ContentSafetyScreenState = 'hidden' | 'loading'
 
 interface ContentSafetyGateProps {
   state: ContentSafetyScreenState

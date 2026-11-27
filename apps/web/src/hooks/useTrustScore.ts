@@ -509,34 +509,4 @@ export function useGlobalScores(pubkeys: string[]): Map<string, number | null> {
   }, [pubkeyKey, version])
 }
 
-/**
- * Get the global NosTube score for a pubkey.
- * This is the average of the 4 video validators (activity, community,
- * engagement, viewer) — a non-personalized platform score for feature gating.
- */
-export function useGlobalScore(pubkey: string | undefined): {
-  globalScore: number | null
-  isLoading: boolean
-} {
-  const [, forceUpdate] = useState(0)
-
-  useEffect(() => {
-    return subscribe(() => forceUpdate(n => n + 1))
-  }, [])
-
-  useEffect(() => {
-    if (pubkey) requestTrustScore(pubkey)
-  }, [pubkey])
-
-  const cached = pubkey ? getMemCached(pubkey) : null
-  // Loading if we have a pubkey but no cached result and it hasn't been confirmed missing
-  const isLoading = pubkey ? !cached && !confirmedMissing.has(pubkey) : false
-
-  return {
-    globalScore: cached ? getGlobalScore(cached) : null,
-    isLoading,
-  }
-}
-
 // Re-export for direct use
-export { getGlobalScore } from '@/nostr/contextvm'

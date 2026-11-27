@@ -78,5 +78,3 @@ export function useDialogState<T = undefined>(initialOpen = false) {
     clearData: () => setData(undefined),
   }
 }
-
-export type DialogState<T = undefined> = ReturnType<typeof useDialogState<T>>

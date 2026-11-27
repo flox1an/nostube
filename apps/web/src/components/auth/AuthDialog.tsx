@@ -36,5 +36,3 @@ export function AuthDialog({ relays, clientName, ...props }: WebAuthDialogProps)
     />
   )
 }
-
-export default AuthDialog

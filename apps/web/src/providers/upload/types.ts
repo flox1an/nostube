@@ -5,7 +5,7 @@
  */
 
 import type { DVMTranscodeSession } from '@/lib/dvm-transcode-session'
-import type { UploadTask, TranscodeState } from '@/types/upload-manager'
+import type { UploadTask } from '@/types/upload-manager'
 import type { UploadDraft } from '@/types/upload-draft'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { TranscodeCodec, DvmBid } from '@/lib/dvm-utils'
@@ -79,11 +79,6 @@ export interface UploadManagerContextType {
   hasActiveUploads: boolean
   activeTaskCount: number
 }
-
-/**
- * Helper type for transcode state updates
- */
-export type TranscodeStateUpdate = Partial<TranscodeState>
 
 /**
  * Queue info passed during multi-resolution processing

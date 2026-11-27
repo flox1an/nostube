@@ -13,14 +13,7 @@ export const TAP_TARGET = 'relative after:absolute after:inset-x-0 after:-inset-
 export const SHELF_SCROLLER = '-mx-4 overflow-x-auto scrollbar-hide px-3 sm:mx-0 sm:px-0'
 
 export type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
-export const AUTHOR_TABS: Tabs[] = [
-  'overview',
-  'videos',
-  'shorts',
-  'playlists',
-  'liked',
-  'following',
-]
+const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
 
 export function isAuthorTab(tab: string | undefined): tab is Tabs {
   return !!tab && AUTHOR_TABS.includes(tab as Tabs)

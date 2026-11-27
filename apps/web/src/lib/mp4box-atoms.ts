@@ -7,36 +7,10 @@
 import type { ISOFile } from 'mp4box'
 
 /**
- * iTunes metadata atom types (4-character codes converted to hex)
- * These are stored in the ilst box under moov/udta/meta/ilst
- */
-export const ITUNES_ATOMS = {
-  // Standard iTunes atoms (©xxx format)
-  TITLE: 0xa96e616d, // ©nam
-  ARTIST: 0xa9415254, // ©ART (channel/creator)
-  ALBUM: 0xa9616c62, // ©alb
-  ALBUM_ARTIST: 0x61415254, // aART
-  COMMENT: 0xa9636d74, // ©cmt
-  YEAR: 0xa9646179, // ©day
-  COMPOSER: 0xa9777274, // ©wrt
-  GENRE: 0xa967656e, // ©gen
-  LYRICS: 0xa96c7972, // ©lyr
-
-  // Non-standard atoms (string keys)
-  DESCRIPTION: 'desc', // Short description
-  LONG_DESCRIPTION: 'ldes', // Long description
-  KEYWORDS: 'keyw', // Keywords/tags
-  CATEGORY: 'catg', // Category
-
-  // Custom keys marker
-  CUSTOM: '----', // Custom metadata container
-} as const
-
-/**
  * Data atom type flags
  * Indicates how to interpret the data payload
  */
-export const DATA_TYPES = {
+const DATA_TYPES = {
   UTF8: 1, // UTF-8 string
   UTF16: 2, // UTF-16 string
   SJIS: 3, // Shift-JIS string
@@ -65,7 +39,7 @@ export interface ThumbnailData {
  * Parse a data atom from an iTunes metadata box
  * iTunes metadata structure: container atom → data atom → actual value
  */
-export function parseDataAtom(box: any): string | null {
+function parseDataAtom(box: any): string | null {
   try {
     // iTunes metadata atoms contain a 'data' box with the actual value
     if (!box || !box.data) {
@@ -162,7 +136,7 @@ function imageToDataUrl(imageBytes: Uint8Array, mimeType: string): string {
  * Extract thumbnail from covr atom (album artwork)
  * Returns image data as a data URL for display
  */
-export function extractThumbnail(ilst: any): ThumbnailData | null {
+function extractThumbnail(ilst: any): ThumbnailData | null {
   try {
     if (!ilst) {
       return null
@@ -267,7 +241,7 @@ export function extractThumbnail(ilst: any): ThumbnailData | null {
  * Extract thumbnail from free/skip boxes
  * Some encoders store thumbnails in free space boxes
  */
-export function extractThumbnailFromFreeBoxes(mp4boxfile: ISOFile): ThumbnailData | null {
+function extractThumbnailFromFreeBoxes(mp4boxfile: ISOFile): ThumbnailData | null {
   try {
     const boxes = (mp4boxfile as any).boxes
     if (!boxes || !Array.isArray(boxes)) {
@@ -338,7 +312,7 @@ export function extractThumbnailFromFile(mp4boxfile: ISOFile): ThumbnailData | n
  * Parse custom metadata keys (----:com.apple.iTunes:key_name format)
  * Returns a map of key names to values
  */
-export function parseCustomKeys(ilst: any): Record<string, string> {
+function parseCustomKeys(ilst: any): Record<string, string> {
   const customData: Record<string, string> = {}
 
   try {
@@ -438,19 +412,6 @@ export function getIlstBox(mp4boxfile: ISOFile): any | null {
     return null
   }
 }
-
-/**
- * Standard MP4 metadata box types (used by FFmpeg/Lavf)
- * These are different from iTunes ilst atoms
- */
-export const STANDARD_MP4_ATOMS = {
-  TITLE: 'titl', // or ©nam in some encoders
-  ARTIST: 'auth', // or ©ART
-  DESCRIPTION: 'dscp', // or desc
-  COMMENT: 'cprt', // copyright/comment
-  DATE: 'yrrc', // year
-  ALBUM: 'albm', // album
-} as const
 
 /**
  * Parse a standard MP4 metadata box (not iTunes format)

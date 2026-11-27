@@ -85,38 +85,6 @@ function isFresh(entry: StoredEntry, now: number): boolean {
 }
 
 /**
- * Fetch a single cached validation entry for the given playlist address.
- *
- * Returns `null` when no entry exists, the entry is for a different event id,
- * or the entry has expired (past TTL).
- */
-export async function getCached(
-  address: string,
-  eventId: string
-): Promise<CachedValidation | null> {
-  try {
-    const db = await openDB()
-    const now = Date.now()
-    return await new Promise<CachedValidation | null>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly')
-      const store = tx.objectStore(STORE_NAME)
-      const req = store.get(address)
-      req.onsuccess = () => {
-        const entry = req.result as StoredEntry | undefined
-        if (!entry || entry.eventId !== eventId || !isFresh(entry, now)) {
-          resolve(null)
-          return
-        }
-        resolve({ eventId: entry.eventId, status: entry.status, ts: entry.ts })
-      }
-      req.onerror = () => reject(req.error)
-    })
-  } catch {
-    return null
-  }
-}
-
-/**
  * Batch-fetch cached validation entries.
  *
  * Returns a `Map` keyed by playlist `address`, populated only with entries
@@ -178,47 +146,6 @@ export async function setCached(
       for (const { address, eventId, status } of entries) {
         const stored: StoredEntry = { address, eventId, status, ts: now }
         store.put(stored)
-      }
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  } catch {
-    // best-effort
-  }
-}
-
-/** Drop every cached validation. Intended for settings / debug flows. */
-export async function clearAll(): Promise<void> {
-  try {
-    const db = await openDB()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite')
-      tx.objectStore(STORE_NAME).clear()
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  } catch {
-    // best-effort
-  }
-}
-
-/** Remove entries past the maximum retention window (60 days). */
-export async function pruneExpired(): Promise<void> {
-  const MAX_AGE = 1000 * 60 * 60 * 24 * 60
-  try {
-    const db = await openDB()
-    const now = Date.now()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite')
-      const store = tx.objectStore(STORE_NAME)
-      const req = store.openCursor()
-      req.onsuccess = () => {
-        const cursor = req.result
-        if (cursor) {
-          const entry = cursor.value as StoredEntry
-          if (now - entry.ts >= MAX_AGE) cursor.delete()
-          cursor.continue()
-        }
       }
       tx.oncomplete = () => resolve()
       tx.onerror = () => reject(tx.error)

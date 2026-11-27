@@ -2,8 +2,6 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
 import type { ProcessedReportEvent } from '@nostube/core/reports'
 
-export type { ProcessedReportEvent }
-
 /**
  * Reports (kind 1984) by one author, read from the local event store. Only the
  * author's own reports may act on what the app shows: a stranger's report must

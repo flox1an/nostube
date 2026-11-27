@@ -21,9 +21,9 @@ import type { VideoEvent } from '@nostube/core/video-event'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
 /** Minimum personalized trust score (0–1) to pass the filter */
-export const MIN_PERSONAL_SCORE = 0.4
+const MIN_PERSONAL_SCORE = 0.4
 /** Minimum global NosTube score (0–1) to pass the filter */
-export const MIN_GLOBAL_SCORE = 0.2
+const MIN_GLOBAL_SCORE = 0.2
 export type TrustFilterInput = {
   authorPubkey: string
   currentUserPubkey?: string

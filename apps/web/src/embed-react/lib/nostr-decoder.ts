@@ -1,6 +1,6 @@
 import { nip19 } from 'nostr-tools'
 
-export interface EventIdentifier {
+interface EventIdentifier {
   type: 'event'
   data: {
     id: string
@@ -8,7 +8,7 @@ export interface EventIdentifier {
   }
 }
 
-export interface AddressIdentifier {
+interface AddressIdentifier {
   type: 'address'
   data: {
     kind: number
@@ -69,7 +69,7 @@ export function decodeVideoIdentifier(identifier: string): DecodedIdentifier | n
 /**
  * Get default relay list
  */
-export function getDefaultRelays(): string[] {
+function getDefaultRelays(): string[] {
   return ['wss://relay.divine.video', 'wss://relay.primal.net']
 }
 

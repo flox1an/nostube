@@ -13,7 +13,7 @@ export const SEARCH_SERVICE_URL = 'https://search.nostu.be'
  */
 export const isSearchOff = () => getInstanceConfig() !== null
 
-export type SearchErrorCode = 'preset_unavailable'
+type SearchErrorCode = 'preset_unavailable'
 
 /**
  * Result of an external search API call.

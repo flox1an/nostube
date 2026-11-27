@@ -29,7 +29,7 @@ function setFlag(key: string) {
   }
 }
 
-export interface Step {
+interface Step {
   id: string
   done: boolean
   href: string

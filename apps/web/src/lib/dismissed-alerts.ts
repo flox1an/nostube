@@ -35,10 +35,3 @@ export function isAlertDismissed(
 export function dismissAlert(videoId: string, alertType: 'availability' | 'transformation'): void {
   cache.set(videoId, { ...cache.getStale(videoId), [alertType]: Date.now() })
 }
-
-/**
- * Clear dismissed state for a specific video
- */
-export function clearDismissedAlerts(videoId: string): void {
-  cache.delete(videoId)
-}

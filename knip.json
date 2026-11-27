@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [".agents/**", "skills/**", "docs/**", "apps/server/**"],
+  "workspaces": {
+    ".": {},
+    "apps/web": {
+      "entry": ["index.html", "embed.html", "scripts/*.ts", "public/*.js", "src/instance-main.ts"],
+      "project": ["src/**/*.{ts,tsx,css}", "server/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": ["lint-staged"]
+    },
+    "apps/site": {
+      "project": ["src/**/*.{ts,tsx,css}"]
+    },
+    "apps/studio": {
+      "project": ["src/**/*.{ts,tsx,css}"]
+    },
+    "packages/core": {
+      "entry": ["src/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/widgets": {
+      "entry": ["src/**/*.{ts,tsx,css}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}

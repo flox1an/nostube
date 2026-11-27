@@ -1,17 +1,12 @@
-import {
-  getPlayPosition,
-  setPlayPosition,
-  type PlayPositionData,
-  type PlayPositionEntry,
-} from './play-position-db'
+import { getPlayPosition, setPlayPosition, type PlayPositionData } from './play-position-db'
 
-export type { PlayPositionData, PlayPositionEntry }
+export type { PlayPositionData }
 
 /**
  * Parse stored play position from a raw JSON string (legacy localStorage migration).
  * Handles both JSON format and legacy plain-number format.
  */
-export function parseStoredPosition(saved: string | null): PlayPositionData | null {
+function parseStoredPosition(saved: string | null): PlayPositionData | null {
   if (!saved) return null
 
   if (saved.startsWith('{')) {
@@ -38,7 +33,6 @@ export function parseStoredPosition(saved: string | null): PlayPositionData | nu
 
 // L1 in-memory cache — populated on first read, invalidated on write
 const playPosCache = new Map<string, PlayPositionData | null>()
-let cacheVersion = 0
 
 export function invalidatePlayPosCache(videoId?: string, pubkey?: string) {
   if (videoId && pubkey) {
@@ -46,15 +40,10 @@ export function invalidatePlayPosCache(videoId?: string, pubkey?: string) {
   } else {
     playPosCache.clear()
   }
-  cacheVersion++
 }
 
 export function getPlayPosCache() {
   return playPosCache
-}
-
-export function getCacheVersion() {
-  return cacheVersion
 }
 
 /**
@@ -124,6 +113,5 @@ export async function writePlayPosition(
 ): Promise<void> {
   const cacheKey = `${pubkey}:${videoId}`
   playPosCache.set(cacheKey, data)
-  cacheVersion++
   await setPlayPosition(pubkey, videoId, data)
 }

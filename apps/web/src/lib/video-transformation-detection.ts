@@ -2,36 +2,6 @@ import { type VideoVariant } from '@nostube/core/video-event'
 import { isCodecSupported } from '@nostube/core/codec-compatibility'
 
 /**
- * Extract quality/resolution from variant data
- * Priority: quality field > parse from dimensions
- *
- * @param variant - Video variant object
- * @returns Quality string (e.g., "1080p") or undefined
- */
-export function getQualityFromVariant(variant: VideoVariant): string | undefined {
-  // First check quality field (preferred)
-  if (variant.quality) {
-    return variant.quality
-  }
-
-  // Fall back to parsing dimensions
-  if (variant.dimensions) {
-    const [width, height] = variant.dimensions.split('x').map(Number)
-    const resolution = Math.max(width, height)
-
-    if (resolution >= 3840) return '4K'
-    if (resolution >= 2560) return '2K'
-    if (resolution >= 1920) return '1080p'
-    if (resolution >= 1280) return '720p'
-    if (resolution >= 854) return '480p'
-    if (resolution >= 640) return '360p'
-    return `${resolution}p`
-  }
-
-  return undefined
-}
-
-/**
  * Extract resolution height as number from quality or dimensions
  *
  * @param variant - Video variant object

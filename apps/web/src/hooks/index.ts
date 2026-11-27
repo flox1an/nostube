@@ -8,25 +8,14 @@
 // ACCOUNT PERSISTENCE (utilities, not hooks)
 // ============================================================================
 export {
-  restoreAccountsToManager,
   saveActiveAccount,
   removeAccountFromStorage,
-  saveAccountToStorage,
-  loadAccountsFromStorage,
-  loadActiveAccount,
-  canRestoreExtensionAccount,
-  restoreAccount,
-  clearAllAccounts,
 } from '@nostube/widgets/hooks/useAccountPersistence'
-export type { AccountMethod, PersistedAccount } from '@nostube/widgets/hooks/useAccountPersistence'
 
 // ============================================================================
 // AUTH & USER
 // ============================================================================
 export { useCurrentUser } from './useCurrentUser'
-export { useLoginActions } from '@nostube/widgets/hooks/useLoginActions'
-export { useLoggedInAccounts } from './useLoggedInAccounts'
-export type { Account } from './useLoggedInAccounts'
 
 // ============================================================================
 // PROFILE & SOCIAL
@@ -43,35 +32,29 @@ export { useLikedEvents } from './useLikedEvents'
 export { useAuthorLikedVideos } from './useAuthorLikedVideos'
 export { useCommentCount } from './useCommentCount'
 export { useBlockedPubkeys, useReportedPubkeys } from './useReportedPubkeys'
-export type { ReportedPubkeys } from './useReportedPubkeys'
-export { useReports } from './useReports'
-export type { ProcessedReportEvent } from './useReports'
-export { useTrustScore, useTrustScores, useTrustScoreProvider } from './useTrustScore'
 
 // ============================================================================
 // VIDEO PLAYBACK & PLAYER
 // ============================================================================
-export { default as useVideoTimeline } from './useVideoTimeline'
+
 export { useVideoPlayPosition } from './useVideoPlayPosition'
 export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
 export { useVideoHistory } from './useVideoHistory'
-export type { VideoHistoryEntry } from './useVideoHistory'
+
 export { useVideoViewTracking } from './useVideoViewTracking'
 export { useViewEventSweeper } from './useViewEventSweeper'
-export { useVideoNotes } from './useVideoNotes'
-export type { VideoNote } from './useVideoNotes'
+
 export { useContinueWatching } from './useContinueWatching'
 export { useUltraWideVideo } from './useUltraWideVideo'
 export { useCinemaMode } from './useCinemaMode'
 export { usePreloadVideoData } from './usePreloadVideoData'
-export { useVideoPrefetch } from './useVideoPrefetch'
+
 export { useMissingVideos } from './useMissingVideos'
 
 // ============================================================================
 // VIDEO SERVER & AVAILABILITY
 // ============================================================================
 export { useVideoServerAvailability } from './useVideoServerAvailability'
-export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
 
 // ============================================================================
 // VIDEO STATISTICS & EVENTS
@@ -82,7 +65,7 @@ export { useEventStats, useUserReactionStatus } from './useEventStats'
 // PLAYLIST
 // ============================================================================
 export { usePlaylists, useUserPlaylists } from './usePlaylist'
-export type { Playlist, Video } from './usePlaylist'
+export type { Playlist } from './usePlaylist'
 export { useGlobalPlaylists } from './useGlobalPlaylists'
 export type { GlobalPlaylist } from './useGlobalPlaylists'
 export { usePlaylistDetails } from './usePlaylistDetails'
@@ -92,8 +75,8 @@ export { usePlaylistNavigation } from './usePlaylistNavigation'
 // WALLET & ZAPS
 // ============================================================================
 // export { useWallet } from './useWallet';
-export { useZap } from './useZap'
-export { useEventZaps, useVideoZaps } from '@nostube/widgets/hooks/useEventZaps'
+
+export { useEventZaps } from '@nostube/widgets/hooks/useEventZaps'
 export { useZappedEvents } from './useZappedEvents'
 
 // ============================================================================
@@ -102,7 +85,6 @@ export { useZappedEvents } from './useZappedEvents'
 export { useVideoUpload } from './useVideoUpload'
 export { useUserBlossomServers } from './useUserBlossomServers'
 export { useTagIndex } from './useTagIndex'
-export type { TagIndexEntry } from './useTagIndex'
 
 // ============================================================================
 // CONFIG & PRESETS
@@ -112,7 +94,7 @@ export { useSelectedPreset } from './useSelectedPreset'
 // ============================================================================
 // RELAY & NOSTR
 // ============================================================================
-export { useAppContext, useAppContextSafe } from './useAppContext'
+export { useAppContext } from './useAppContext'
 export { useNostrPublish } from './useNostrPublish'
 export { useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
 export { useReadRelays } from './useReadRelays'
@@ -121,16 +103,11 @@ export { useUserRelays, useInteractionRelays } from './useUserRelays'
 // ============================================================================
 // UI UTILITIES
 // ============================================================================
-export { useDebounce } from './useDebounce'
+
 export { useDialogState } from './useDialogState'
-export type { DialogState } from './useDialogState'
-export { useFormDialog } from './useFormDialog'
-export { useLocalStorage } from './useLocalStorage'
-export { useQueryParams } from './useQueryParams'
-export { useToast, toast } from './useToast'
+
+export { useToast } from './useToast'
 export { useInfiniteScroll } from './useInfiniteScroll'
-export { useScrollDirection } from './useScrollDirection'
-export { useWindowWidth } from './useWindowWidth'
+
 export { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 export { useIsPortrait } from './useIsPortrait'
-export { useAsyncAction } from './useAsyncAction'

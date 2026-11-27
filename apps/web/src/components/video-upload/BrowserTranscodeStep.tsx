@@ -52,7 +52,7 @@ export interface BrowserTranscodeStepHandle {
   start: () => void
 }
 
-export interface BrowserTranscodePrimaryActionState {
+interface BrowserTranscodePrimaryActionState {
   label: string
   disabled: boolean
   visible: boolean

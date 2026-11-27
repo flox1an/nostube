@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 
 /** A request the studio made: method, path (no query), parsed JSON body, and what it sent. */
-export interface AdminCall {
+interface AdminCall {
   method: string
   path: string
   url: URL

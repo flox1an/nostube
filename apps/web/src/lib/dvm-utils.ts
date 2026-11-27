@@ -21,15 +21,6 @@ export const RESOLUTION_DIMENSIONS: Record<string, string> = {
  * Available resolutions for transcoding (ordered high to low)
  */
 export const AVAILABLE_RESOLUTIONS = ['1080p', '720p', '480p', '360p', '240p'] as const
-export type TranscodeResolution = (typeof AVAILABLE_RESOLUTIONS)[number]
-
-/**
- * Result of transcode check
- */
-export interface TranscodeCheckResult {
-  needed: boolean
-  reason: string
-}
 
 export interface TranscodeRecommendation {
   message: string
@@ -69,31 +60,6 @@ export function getTranscodeRecommendation(video: VideoVariant): TranscodeRecomm
     message:
       'Creating additional versions improves compatibility across devices and network conditions.',
   }
-}
-
-/**
- * Check if a video should be offered for transcoding
- *
- * Triggers when:
- * - Resolution exceeds 1080p (either dimension > 1080)
- * - Video codec is problematic: hev1, av01, vp09, vp9
- *
- * Compatible codecs that don't trigger: avc1 (H.264), hvc1 (HEVC variant that works on iOS)
- */
-export function shouldOfferTranscode(video: VideoVariant): TranscodeCheckResult {
-  const [width, height] = video.dimension.split('x').map(Number)
-
-  if (width > 1080 || height > 1080) {
-    return { needed: true, reason: 'Video is higher than 1080p' }
-  }
-
-  const codec = video.videoCodec?.toLowerCase() || ''
-  const problematicCodecs = ['hev1', 'av01', 'vp09', 'vp9']
-  if (problematicCodecs.some(c => codec.startsWith(c))) {
-    return { needed: true, reason: 'Video codec may not play on all devices' }
-  }
-
-  return { needed: false, reason: '' }
 }
 
 /**
@@ -218,13 +184,6 @@ export function parseDvmBid(event: NostrEvent): DvmBid | null {
     cashu: cashuTag?.[1],
     eventId: event.id,
   }
-}
-
-/**
- * Check if content appears to be NIP-04 encrypted (base64?iv=base64 format)
- */
-export function isNip04Encrypted(content: string): boolean {
-  return content.includes('?iv=')
 }
 
 /**

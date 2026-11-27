@@ -52,7 +52,7 @@ export function logSubscriptionClosed(id: string) {
   }
 }
 
-export function logSubscriptionStats() {
+function logSubscriptionStats() {
   if (import.meta.env.DEV) {
     console.log(
       `[Relay] 📊 STATS`,

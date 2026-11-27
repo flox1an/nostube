@@ -9,7 +9,7 @@ import {
 } from '@nostube/widgets/components/dialog'
 import { cn } from '@/lib/utils'
 
-export interface OnboardingStepInfo {
+interface OnboardingStepInfo {
   id: string
   label: string
 }

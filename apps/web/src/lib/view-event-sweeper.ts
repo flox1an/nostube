@@ -8,13 +8,13 @@ import {
   resetPublishingToPending,
 } from './view-event-outbox'
 
-export const SWEEPER_INITIAL_DELAY_MS = 2_000
-export const SWEEPER_MAX_DELAY_MS = 5 * 60 * 1_000 // 5 min
-export const SWEEPER_MAX_RETRIES = 5
+const SWEEPER_INITIAL_DELAY_MS = 2_000
+const SWEEPER_MAX_DELAY_MS = 5 * 60 * 1_000 // 5 min
+const SWEEPER_MAX_RETRIES = 5
 const BACKOFF_MULTIPLIER = 2
 
 /** Exponential backoff delay for a given retry count, capped at 5 minutes. */
-export function backoffFor(retryCount: number): number {
+function backoffFor(retryCount: number): number {
   return Math.min(
     SWEEPER_INITIAL_DELAY_MS * Math.pow(BACKOFF_MULTIPLIER, retryCount),
     SWEEPER_MAX_DELAY_MS

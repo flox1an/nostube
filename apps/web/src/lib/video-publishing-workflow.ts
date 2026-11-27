@@ -1,6 +1,6 @@
 import type { UploadTask } from '@/types/upload-manager'
 
-export type WorkflowPhase =
+type WorkflowPhase =
   'validating' | 'uploading' | 'transcoding' | 'mirroring' | 'publishing' | 'done' | 'failed'
 
 export interface PublishedVideo {
@@ -17,19 +17,19 @@ export interface WorkflowState<Result = PublishedVideo> {
   error?: Error
 }
 
-export type WorkflowStateListener<Result> = (state: WorkflowState<Result>) => void
+type WorkflowStateListener<Result> = (state: WorkflowState<Result>) => void
 
-export type WorkflowStepContext<Result> = {
+type WorkflowStepContext<Result> = {
   state: WorkflowState<Result>
   reportProgress(progress: number): void
 }
 
-export type WorkflowStep<Result> = (context: WorkflowStepContext<Result>) => Promise<void> | void
-export type WorkflowPublishStep<Result> = (
+type WorkflowStep<Result> = (context: WorkflowStepContext<Result>) => Promise<void> | void
+type WorkflowPublishStep<Result> = (
   context: WorkflowStepContext<Result>
 ) => Promise<Result> | Result
 
-export interface VideoPublishingWorkflowSteps<Result = PublishedVideo> {
+interface VideoPublishingWorkflowSteps<Result = PublishedVideo> {
   validate: WorkflowStep<Result>
   upload: WorkflowStep<Result>
   transcode?: WorkflowStep<Result>

@@ -59,7 +59,7 @@ export interface MirrorAnnouncementSigner {
  * - a: Address for addressable events (kind:pubkey:d-tag)
  * - k: Kind of the referenced video event (addressable only)
  */
-export function buildFileMetadataEvent(options: MirrorAnnouncementOptions): EventTemplate {
+function buildFileMetadataEvent(options: MirrorAnnouncementOptions): EventTemplate {
   const { blob, mirrorResults, videoEvent, relayHint } = options
 
   if (mirrorResults.length === 0) {

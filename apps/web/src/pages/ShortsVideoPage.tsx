@@ -5,4 +5,4 @@
  * This file exists for backward compatibility with existing imports.
  */
 
-export { ShortsVideoPage, ShortVideoItem, type ShortVideoItemProps } from './shorts'
+export { ShortsVideoPage } from './shorts'

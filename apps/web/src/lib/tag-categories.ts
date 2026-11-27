@@ -138,26 +138,8 @@ export const TAG_CATEGORIES: TagCategory[] = [
 ]
 
 /**
- * Generate URL-safe slug from category name
- * "Technology & Innovation" -> "technology-and-innovation"
- */
-export function generateCategorySlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s*&\s*/g, '-and-')
-    .replace(/\s+/g, '-')
-}
-
-/**
  * Find category by slug
  */
 export function getCategoryBySlug(slug: string): TagCategory | undefined {
   return TAG_CATEGORIES.find(cat => cat.slug === slug)
-}
-
-/**
- * Get all category names for display
- */
-export function getAllCategoryNames(): string[] {
-  return TAG_CATEGORIES.map(cat => cat.name)
 }

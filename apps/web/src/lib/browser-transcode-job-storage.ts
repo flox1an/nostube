@@ -59,7 +59,7 @@ function notify(job: BrowserTranscodeJob): void {
   listeners.forEach(listener => listener(job))
 }
 
-export function getBrowserTranscodeJobs(): BrowserTranscodeJob[] {
+function getBrowserTranscodeJobs(): BrowserTranscodeJob[] {
   return getStorage().jobs
 }
 

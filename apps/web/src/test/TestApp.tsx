@@ -41,5 +41,3 @@ export function TestApp({ children }: TestAppProps) {
     </BrowserRouter>
   )
 }
-
-export default TestApp

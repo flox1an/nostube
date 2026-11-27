@@ -223,6 +223,3 @@ export function useEventZaps({
     isLoading: !hasLiveData && !cachedValue,
   }
 }
-
-// Backward compatibility alias
-export const useVideoZaps = useEventZaps

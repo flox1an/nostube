@@ -5,7 +5,7 @@ const DB_NAME = 'nostube-view-event-outbox'
 const DB_VERSION = 1
 const STORE_NAME = 'viewEvents'
 
-export type PendingViewEventStatus = 'pending' | 'publishing' | 'failed'
+type PendingViewEventStatus = 'pending' | 'publishing' | 'failed'
 
 export interface PendingViewEvent {
   /** Equals the signed Nostr event id — deterministic, prevents duplicate rows. */
@@ -149,33 +149,6 @@ export async function getRetryableEvents(viewerPubkey: string): Promise<PendingV
     }
     await done
     return results.sort((a, b) => a.createdAt - b.createdAt)
-  } catch {
-    return []
-  }
-}
-
-/** Legacy helper kept for the admin debug panel; returns all rows, optionally filtered by user. */
-export async function getPendingViewEvents(viewerPubkey?: string): Promise<PendingViewEvent[]> {
-  try {
-    const db = await openDB()
-    const { store, done } = idbTx(db, 'readonly')
-    const results: PendingViewEvent[] = []
-
-    const req = viewerPubkey
-      ? store
-          .index('viewerPubkey_status')
-          .openCursor(IDBKeyRange.bound([viewerPubkey, ''], [viewerPubkey, '\uffff']))
-      : store.index('createdAt').openCursor(undefined, 'next')
-
-    req.onsuccess = () => {
-      const cursor = req.result
-      if (cursor) {
-        results.push(cursor.value as PendingViewEvent)
-        cursor.continue()
-      }
-    }
-    await done
-    return results
   } catch {
     return []
   }

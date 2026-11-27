@@ -5,4 +5,3 @@
  */
 
 export { ShortsVideoPage } from './ShortsVideoPage'
-export { ShortVideoItem, type ShortVideoItemProps } from './ShortVideoItem'

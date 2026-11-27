@@ -462,7 +462,7 @@ function SaveLocallyField({
   )
 }
 
-export function SettingsUnchangedNote() {
+function SettingsUnchangedNote() {
   const { t } = useTranslation()
   return (
     <p className="text-xs text-muted-foreground">

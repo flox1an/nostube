@@ -122,7 +122,7 @@ export function generateQualityLabel(dimension: string): string {
 /**
  * Extract video metadata from a video element
  */
-export async function extractVideoMetadata(
+async function extractVideoMetadata(
   videoElement: HTMLVideoElement
 ): Promise<{ dimension: string; duration: number }> {
   await new Promise((resolve, reject) => {

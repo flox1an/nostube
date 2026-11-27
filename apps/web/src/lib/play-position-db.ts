@@ -1,7 +1,6 @@
 const DB_NAME = 'nostube-play-positions'
 const DB_VERSION = 1
 const STORE_NAME = 'positions'
-const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 90 // 90 days
 
 export interface PlayPositionEntry {
   key: string // `${pubkey}:${videoId}`
@@ -130,51 +129,5 @@ export async function getRecentlyPlayedVideos(
     })
   } catch {
     return []
-  }
-}
-
-/**
- * Export all play history for a pubkey — useful when building a Nostr event
- * to publish watch history.
- */
-export async function getAllPlayedVideos(pubkey: string): Promise<PlayPositionEntry[]> {
-  return getRecentlyPlayedVideos(pubkey, 0)
-}
-
-export async function pruneOldPositions(): Promise<void> {
-  try {
-    const db = await openDB()
-    const cutoff = Date.now() - MAX_AGE_MS
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite')
-      const store = tx.objectStore(STORE_NAME)
-      const request = store.openCursor()
-      request.onsuccess = () => {
-        const cursor = request.result
-        if (cursor) {
-          const entry = cursor.value as PlayPositionEntry
-          if (entry.lastPlayedAt < cutoff) cursor.delete()
-          cursor.continue()
-        }
-      }
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  } catch {
-    // ignore
-  }
-}
-
-export async function clearAllPlayPositions(): Promise<void> {
-  try {
-    const db = await openDB()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite')
-      tx.objectStore(STORE_NAME).clear()
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  } catch {
-    // ignore
   }
 }

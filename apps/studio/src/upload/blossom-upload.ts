@@ -5,7 +5,7 @@ import i18n from '../i18n'
 import type { SignedEvent } from '../signer'
 
 /** One piece of a large file: well inside the server's 60 s limit per request, far below its chunk cap. */
-export const CHUNK_SIZE = 8 * 1024 * 1024
+const CHUNK_SIZE = 8 * 1024 * 1024
 
 /** An error with a reason a person can read, and whether trying again could help. */
 export class UploadError extends Error {

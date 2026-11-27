@@ -27,6 +27,10 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      # Unused files, exports and dependencies, and imports a package.json does not declare.
+      - name: Check for dead code and undeclared dependencies
+        run: npm run knip
+
       - name: Check core, widgets, site and studio (lint, typecheck, test)
         run: |
           npm run lint --workspace @nostube/core --workspace @nostube/widgets --workspace @nostube/site --workspace @nostube/studio

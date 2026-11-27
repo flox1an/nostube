@@ -8,7 +8,7 @@ import { PublishError } from './sign'
 
 export type StepId =
   'convert' | 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'mirroring' | 'publish'
-export type StepStatus = 'pending' | 'running' | 'done' | 'error'
+type StepStatus = 'pending' | 'running' | 'done' | 'error'
 
 /** In order; the names shown are translated at render (`studio.upload.steps.*`). */
 export const STEPS: { id: StepId }[] = [
@@ -38,7 +38,7 @@ export interface UploadInput {
   convert?: TranscodeSourceMeta
 }
 
-export interface StepState {
+interface StepState {
   status: StepStatus
   /** 0 to 1 while the step runs and reports it. */
   progress?: number

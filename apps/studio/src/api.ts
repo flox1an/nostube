@@ -173,7 +173,7 @@ async function adminRequest<T = void>(
 }
 
 /** A refusal of the instance, with its HTTP status. */
-export class AdminError extends Error {
+class AdminError extends Error {
   constructor(
     readonly status: number,
     message: string
@@ -569,7 +569,7 @@ export async function unbindNostr(): Promise<void> {
   await adminRequest('/admin/unbind-nostr', { method: 'POST' })
 }
 
-export async function logout(): Promise<void> {
+async function logout(): Promise<void> {
   await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin', redirect: 'manual' })
 }
 

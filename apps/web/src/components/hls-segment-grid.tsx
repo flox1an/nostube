@@ -11,7 +11,7 @@ export type SegmentStatus =
   | 'error'
   | 'unavailable'
 
-export interface SegmentGridStream {
+interface SegmentGridStream {
   label: string
   statuses: SegmentStatus[]
 }

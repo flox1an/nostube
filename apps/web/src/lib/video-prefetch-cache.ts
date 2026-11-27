@@ -33,7 +33,7 @@
 const DEBUG_STORAGE_KEY = 'nostube:prefetch-debug'
 
 /** Enable verbose prefetch logging via `localStorage['nostube:prefetch-debug'] = 'true'`. */
-export function isPrefetchDebugEnabled(): boolean {
+function isPrefetchDebugEnabled(): boolean {
   if (typeof window === 'undefined') return false
   try {
     return window.localStorage.getItem(DEBUG_STORAGE_KEY) === 'true'

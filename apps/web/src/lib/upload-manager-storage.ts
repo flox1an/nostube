@@ -21,7 +21,7 @@ function getDefaultStorage(): UploadManagerStorage {
   }
 }
 
-export function getUploadManagerStorage(): UploadManagerStorage {
+function getUploadManagerStorage(): UploadManagerStorage {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return getDefaultStorage()
@@ -41,7 +41,7 @@ export function getUploadManagerStorage(): UploadManagerStorage {
   }
 }
 
-export function saveUploadManagerStorage(storage: UploadManagerStorage): void {
+function saveUploadManagerStorage(storage: UploadManagerStorage): void {
   try {
     storage.lastUpdated = Date.now()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storage))
@@ -58,11 +58,6 @@ export function saveUploadTasks(tasks: UploadTask[]): void {
   const storage = getUploadManagerStorage()
   storage.tasks = tasks
   saveUploadManagerStorage(storage)
-}
-
-export function getUploadTask(taskId: string): UploadTask | undefined {
-  const tasks = getUploadTasks()
-  return tasks.find(t => t.id === taskId)
 }
 
 export function updateUploadTask(

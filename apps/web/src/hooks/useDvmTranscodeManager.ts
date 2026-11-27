@@ -27,7 +27,7 @@ export interface StatusMessage {
   percentage?: number
 }
 
-export interface TranscodeProgress {
+interface TranscodeProgress {
   status: TranscodeStatus
   message: string
   eta?: number
@@ -46,7 +46,7 @@ export interface TranscodeProgress {
   }
 }
 
-export interface PersistableTranscodeState {
+interface PersistableTranscodeState {
   requestEventId: string
   dvmPubkey: string
   inputVideoUrl: string

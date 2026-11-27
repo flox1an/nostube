@@ -82,7 +82,7 @@ export interface SubscribeParams {
  * Build a VideoVariant from a parsed DVM result.
  * Exported so callers can use it for the "DVM finished while we were away" resume path.
  */
-export function buildDvmVideoVariant(
+function buildDvmVideoVariant(
   result: DvmResultContent,
   originalDuration?: number,
   requestedResolution?: string

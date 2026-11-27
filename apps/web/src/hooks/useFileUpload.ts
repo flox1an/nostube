@@ -13,12 +13,12 @@ export interface FileUploadOptions {
   signer: Signer
 }
 
-export interface FileUploadResult {
+interface FileUploadResult {
   uploadedBlobs: BlobDescriptor[]
   mirroredBlobs: BlobDescriptor[]
 }
 
-export interface UploadCallOptions {
+interface UploadCallOptions {
   /** Report into the caller's activity (several files, one operation) instead of a new one. */
   activity?: BlobActivity
   /** Enables retrying failed mirrors later; receives the copies the retry placed. */

@@ -14,7 +14,7 @@ export type UploadMediaAsset =
       highestStream?: HlsVariantStream
     }
 
-export function isHlsMasterVariant(video: VideoVariant): boolean {
+function isHlsMasterVariant(video: VideoVariant): boolean {
   return video.mimeType === 'application/vnd.apple.mpegurl' && (video.hlsVariants?.length ?? 0) > 0
 }
 
@@ -26,7 +26,7 @@ function getStreamQuality(stream: HlsVariantStream): number {
   return Number.isFinite(height) ? height : 0
 }
 
-export function getHighestHlsStream(video: VideoVariant): HlsVariantStream | undefined {
+function getHighestHlsStream(video: VideoVariant): HlsVariantStream | undefined {
   return video.hlsVariants
     ? [...video.hlsVariants].sort((a, b) => getStreamQuality(b) - getStreamQuality(a))[0]
     : undefined

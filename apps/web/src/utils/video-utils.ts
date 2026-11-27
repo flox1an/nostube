@@ -96,39 +96,6 @@ export function buildVideoUrlObject(
 }
 
 // Constants for ultra-wide video detection
-export const SIXTEEN_NINE_RATIO = 16 / 9
-export const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.05
-
-/**
- * Parse time parameter from URL
- * Supports seconds (e.g., "123"), mm:ss (e.g., "2:03"), or h:mm:ss (e.g., "1:02:03")
- */
-export function parseTimeParam(t: string | null): number {
-  if (!t) return 0
-  if (/^\d+$/.test(t)) {
-    // Simple seconds
-    return parseInt(t, 10)
-  }
-  // mm:ss or h:mm:ss
-  const parts = t.split(':').map(Number)
-  if (parts.some(isNaN)) return 0
-  if (parts.length === 2) {
-    // mm:ss
-    return parts[0] * 60 + parts[1]
-  }
-  if (parts.length === 3) {
-    // h:mm:ss
-    return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  }
-  return 0
-}
-
-/**
- * Encode URI component for URL building
- */
-export function encodeUrlParam(val: string): string {
-  return encodeURIComponent(val)
-}
 
 /**
  * Check if a video kind should loop

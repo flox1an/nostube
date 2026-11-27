@@ -21,12 +21,6 @@ interface StoredEntry {
   timestamp: number
 }
 
-/** Result of a cache lookup: the result (if any) and whether it's stale. */
-export interface CacheEntry {
-  result: TrustScoreResult | null
-  stale: boolean
-}
-
 let dbPromise: Promise<IDBDatabase> | null = null
 
 function openDB(): Promise<IDBDatabase> {

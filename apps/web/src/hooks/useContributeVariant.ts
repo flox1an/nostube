@@ -23,7 +23,7 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks/useAppContext'
 
-export type ContributeStatus =
+type ContributeStatus =
   | 'idle'
   | 'downloading'
   | 'analyzing'
@@ -34,13 +34,13 @@ export type ContributeStatus =
   | 'error'
   | 'cancelled'
 
-export interface ContributeVariantProgress {
+interface ContributeVariantProgress {
   variantLabel: string
   progress: number
   status: 'pending' | 'active' | 'done' | 'error'
 }
 
-export interface ContributeResult {
+interface ContributeResult {
   variantLabel: string
   dimension: string
   sizeMB: number
@@ -59,7 +59,7 @@ export interface UseContributeVariantReturn {
   reset: () => void
 }
 
-export interface ContributeParams {
+interface ContributeParams {
   sourceVariant: VideoVariant
   targetHeights: number[]
   supportsHevc: boolean

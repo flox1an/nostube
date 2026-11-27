@@ -4,7 +4,7 @@ import { DayPicker } from 'react-day-picker'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@nostube/widgets/components/button-variants'
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   align?: 'start' | 'center' | 'end'
 }
 

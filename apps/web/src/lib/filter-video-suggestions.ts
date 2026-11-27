@@ -43,7 +43,7 @@ export function filterVideoSuggestions(videos: VideoEvent[], options: FilterOpti
 }
 
 export const MAX_SAME_CREATOR_SUGGESTIONS = 3
-export const MAX_PER_CREATOR_GENERAL_SUGGESTIONS = 2
+const MAX_PER_CREATOR_GENERAL_SUGGESTIONS = 2
 
 /**
  * Splits suggestions into a capped "More from creator" section and a diverse discovery section

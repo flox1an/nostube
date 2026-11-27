@@ -10,10 +10,15 @@
   ],
   "scripts": {
     "prepare": "husky apps/web/.husky",
-    "format:check": "prettier --check apps/web apps/site apps/studio packages"
+    "format:check": "prettier --check apps/web apps/site apps/studio packages",
+    "knip": "knip"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "knip": "^6.48.0",
+    "prettier": "^3.10.1",
+    "typescript-eslint": "^8.73.0"
   },
   "overrides": {
     "react": "^19.2.8",

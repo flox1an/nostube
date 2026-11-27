@@ -5,7 +5,7 @@ export interface UserLevel {
   minScore: number
 }
 
-export const USER_LEVELS: UserLevel[] = [
+const USER_LEVELS: UserLevel[] = [
   { name: 'Grandmaster', colorClass: 'text-purple-500', bgClass: 'bg-purple-500', minScore: 0.9 },
   { name: 'Master', colorClass: 'text-amber-500', bgClass: 'bg-amber-500', minScore: 0.75 },
   { name: 'Adept', colorClass: 'text-blue-500', bgClass: 'bg-blue-500', minScore: 0.5 },

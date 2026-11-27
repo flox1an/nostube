@@ -15,10 +15,9 @@ import { runBrowserTranscodeJob } from '@nostube/core/browser-transcode-worker'
 import { encodableVideoCodecs, probeTranscodeSource } from '@/lib/codec-detection'
 import { beginUploadWork } from '@/lib/active-work'
 
-export type VideoTranscodeStatus =
-  'idle' | 'analyzing' | 'waiting' | 'transcoding' | 'done' | 'error'
+type VideoTranscodeStatus = 'idle' | 'analyzing' | 'waiting' | 'transcoding' | 'done' | 'error'
 
-export interface VariantProgress {
+interface VariantProgress {
   variant: BrowserTranscodeVariant
   progress: number
   status: 'pending' | 'active' | 'done' | 'error'

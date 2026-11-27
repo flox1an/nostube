@@ -28,7 +28,7 @@ function lastTag(event: NostrEvent, name: string): string | undefined {
 }
 
 /** NIP-25 tags of a like: the exact address of an addressable video plus its event id. */
-export function buildLikeTags(video: LikeTarget): string[][] {
+function buildLikeTags(video: LikeTarget): string[][] {
   const address = videoAddress(video)
   return [
     ...(address ? [['a', address]] : []),

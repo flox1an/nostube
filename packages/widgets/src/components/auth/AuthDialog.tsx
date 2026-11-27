@@ -102,5 +102,3 @@ export function AuthDialog({
     </Dialog>
   )
 }
-
-export default AuthDialog

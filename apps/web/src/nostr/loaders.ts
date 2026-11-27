@@ -3,22 +3,10 @@ import { type VideoType } from '@nostube/core'
 import { getKindsForType } from '@nostube/core/video-types'
 
 // Kind 21 (videos)
-export const videoLoader = () => {
-  const loader = getTimelineLoader('k21', { kinds: getKindsForType('videos'), limit: 50 })
-  return () => loader
-}
 
 // Kind 22 (shorts)
-export const shortsLoader = () => {
-  const loader = getTimelineLoader('k22', { kinds: getKindsForType('shorts'), limit: 50 })
-  return () => loader
-}
 
 // Combined 21+22 (all video content)
-export const allVideoLoader = () => {
-  const loader = getTimelineLoader('k21k22', { kinds: getKindsForType('all'), limit: 50 })
-  return () => loader
-}
 
 // By author (pubkey hex)
 export const authorVideoLoader = (pubkey: string, relays: string[]) => {
@@ -46,16 +34,5 @@ export const videoTypeLoader = (
 }
 
 // By video type and author
-export const authorVideoTypeLoader = (type: VideoType, pubkey: string) => {
-  const loader = getTimelineLoader(`k21:type:${type}:author:${pubkey}`, {
-    kinds: getKindsForType(type),
-    authors: [pubkey],
-  })
-  return () => loader
-}
 
 // Example: by hashtag/topic
-export const tagVideoLoader = (tag: string) => {
-  const loader = getTimelineLoader(`k21:tag:${tag}`, { kinds: getKindsForType('all'), '#t': [tag] })
-  return () => loader
-}

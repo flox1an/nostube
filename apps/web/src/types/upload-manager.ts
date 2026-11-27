@@ -5,7 +5,7 @@
  * and transcoding across the app.
  */
 
-export type UploadTaskStatus =
+type UploadTaskStatus =
   | 'pending' // Queued, not started
   | 'uploading' // Blossom upload in progress
   | 'mirroring' // Mirroring to additional servers
@@ -14,7 +14,7 @@ export type UploadTaskStatus =
   | 'error' // Failed
   | 'cancelled' // User cancelled
 
-export interface UploadProgress {
+interface UploadProgress {
   uploadedBytes: number
   totalBytes: number
   percentage: number
@@ -23,9 +23,9 @@ export interface UploadProgress {
   totalChunks?: number
 }
 
-export type TranscodePhase = 'transcoding' | 'uploading' | 'mirroring'
+type TranscodePhase = 'transcoding' | 'uploading' | 'mirroring'
 
-export interface StatusMessage {
+interface StatusMessage {
   timestamp: number
   message: string
   percentage?: number
@@ -65,7 +65,7 @@ export interface TranscodeState {
   }>
 }
 
-export interface UploadTaskError {
+interface UploadTaskError {
   message: string
   code?: string
   retryable: boolean

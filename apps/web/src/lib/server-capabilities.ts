@@ -16,7 +16,7 @@ export const CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const THROUGHPUT_WEIGHT = 0.3
 
 /** Smaller transfers are dominated by latency (thumbnails, HLS segments) and say little about speed. */
-export const MIN_THROUGHPUT_SAMPLE_BYTES = 4 * 1024 * 1024
+const MIN_THROUGHPUT_SAMPLE_BYTES = 4 * 1024 * 1024
 
 /** HTTP statuses with which a server says it has no `PUT /mirror` endpoint. */
 const MIRROR_UNSUPPORTED_STATUSES = new Set([404, 405, 501])

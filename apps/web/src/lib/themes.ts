@@ -3,7 +3,7 @@
  * Each theme defines colors for both light and dark modes
  */
 
-export interface ThemeColors {
+interface ThemeColors {
   light: {
     background: string
     foreground: string
@@ -57,7 +57,7 @@ export interface Theme {
 }
 
 // Default nostube theme (current colors from index.css)
-export const nostubeTheme: Theme = {
+const nostubeTheme: Theme = {
   id: 'nostube',
   name: 'Nostube',
   appTitle: {
@@ -157,7 +157,7 @@ export const oceanTheme: Theme = {
 }
 
 // Forest theme - Green colors
-export const forestTheme: Theme = {
+const forestTheme: Theme = {
   id: 'forest',
   name: 'Forest',
   colors: {
@@ -205,7 +205,7 @@ export const forestTheme: Theme = {
 }
 
 // Sunset theme - Orange/Red colors
-export const sunsetTheme: Theme = {
+const sunsetTheme: Theme = {
   id: 'sunset',
   name: 'Sunset',
   colors: {
@@ -253,7 +253,7 @@ export const sunsetTheme: Theme = {
 }
 
 // Monochrome theme - Neutral grays
-export const monochromeTheme: Theme = {
+const monochromeTheme: Theme = {
   id: 'monochrome',
   name: 'Monochrome',
   colors: {

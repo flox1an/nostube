@@ -1,4 +1,4 @@
-export type DesktopWindowKind = 'auth' | 'main' | 'player'
+type DesktopWindowKind = 'auth' | 'main' | 'player'
 
 export interface DesktopWindowCoordinator {
   focusMain(): Promise<void>

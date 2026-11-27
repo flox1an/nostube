@@ -4,36 +4,28 @@ import type { BlossomServer } from '@nostube/core'
 import { extractBlossomHash } from '@nostube/core/video-event'
 import { normalizeServerUrl } from '@nostube/core/blossom-utils'
 
-export type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
+type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
 
-export interface ServerInfo {
+interface ServerInfo {
   url: string // Normalized server URL (no trailing slash)
   name: string // Human-readable name (hostname)
   source: 'video-url' | 'config' | 'user' // Where we found this server
 }
 
-export interface ServerAvailability extends ServerInfo {
+interface ServerAvailability extends ServerInfo {
   status: ServerStatus
   statusCode?: number // HTTP status from HEAD request
   contentLength?: number // File size from Content-Length header
   lastChecked?: number // Timestamp of last check
 }
 
-export interface VariantAvailability {
+interface VariantAvailability {
   variant: VideoVariant
   label: string // e.g., "Video 1", "Video 2", "Thumbnail"
   serverList: ServerInfo[]
   serverAvailability: Map<string, ServerAvailability>
   checkAvailability: () => Promise<void>
   isChecking: boolean
-}
-
-// Text track variant for subtitle files
-export interface TextTrackVariant {
-  url: string
-  lang: string
-  hash?: string
-  fallbackUrls: string[]
 }
 
 interface UseMultiVideoServerAvailabilityParams {

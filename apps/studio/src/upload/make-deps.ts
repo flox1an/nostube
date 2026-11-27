@@ -25,8 +25,7 @@ const slug = (title: string) =>
     .slice(0, 40)
 
 /** `my-clip-3f9a1c2b`: readable, and unique among the creator's videos. */
-export const newIdentifier = (title: string) =>
-  `${slug(title) || 'video'}-${randomUUID().slice(0, 8)}`
+const newIdentifier = (title: string) => `${slug(title) || 'video'}-${randomUUID().slice(0, 8)}`
 
 /**
  * What the upload pipeline needs from the browser and the network, bound to the signer and the

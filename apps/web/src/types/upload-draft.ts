@@ -132,9 +132,3 @@ export interface UploadDraft {
   // Metadata
   thumbnailSource: 'generated' | 'upload'
 }
-
-export interface UploadDraftsData {
-  version: string
-  lastModified: number
-  drafts: UploadDraft[]
-}

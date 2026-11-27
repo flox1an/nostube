@@ -10,7 +10,7 @@ import { clearAllPersistentCaches } from './persistent-cache'
  * verdicts, and the registered persistent caches (e.g. the preset cache). Play positions,
  * the view-event outbox and the service-worker precache must survive a clear.
  */
-export const CACHE_DATABASE_NAMES = [
+const CACHE_DATABASE_NAMES = [
   'nostr-idb',
   'nostube-trust-scores',
   'nostube-playlist-validation',

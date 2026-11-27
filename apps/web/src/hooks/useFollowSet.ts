@@ -11,7 +11,7 @@ import { getKindsForType } from '@nostube/core/video-types'
 
 const BATCH_SIZE = 50 // Number of pubkeys to check per query
 
-export interface ImportProgress {
+interface ImportProgress {
   phase: 'idle' | 'checking' | 'importing' | 'done'
   checked: number
   total: number

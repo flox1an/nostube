@@ -104,7 +104,7 @@ export function playlistHasUnsafeVideo(
  * Used by callers (e.g. the playlist-validation hook) to load it from relays
  * and re-evaluate.
  */
-export interface UnresolvedPlaylistRef {
+interface UnresolvedPlaylistRef {
   /** Event id (for `e`-tag refs) or address string (`kind:pubkey:dtag` for `a`-tag refs). */
   id: string
   /** When true `id` is an address pointer (`kind:pubkey:dtag`). */

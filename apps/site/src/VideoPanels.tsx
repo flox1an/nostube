@@ -74,7 +74,7 @@ type Load =
   { status: 'loading' } | { status: 'failed' } | { status: 'ready'; cues: TranscriptCue[] }
 
 /** The track in the reader's language, else the first one. */
-export function pickTrack(tracks: TextTrack[], language: string): TextTrack | undefined {
+function pickTrack(tracks: TextTrack[], language: string): TextTrack | undefined {
   const base = language.split('-')[0].toLowerCase()
   return tracks.find(track => track.lang.split('-')[0].toLowerCase() === base) ?? tracks[0]
 }

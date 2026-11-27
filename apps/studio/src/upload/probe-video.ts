@@ -16,7 +16,7 @@ export interface VideoProbe {
 }
 
 /** Published as they are when this browser plays them; anything else is converted to MP4 first. */
-export const SUPPORTED_TYPES = ['video/mp4', 'video/webm']
+const SUPPORTED_TYPES = ['video/mp4', 'video/webm']
 
 /** What the file picker offers: any video, plus extensions some systems give no video type. */
 export const VIDEO_ACCEPT = { 'video/*': ['.mp4', '.m4v', '.webm', '.mov', '.mkv', '.avi'] }

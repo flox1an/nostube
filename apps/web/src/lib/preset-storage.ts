@@ -43,4 +43,4 @@ export function removeCachedPreset() {
   cache.delete('current')
 }
 
-export { CACHE_TTL, LOAD_TIMEOUT }
+export { LOAD_TIMEOUT }

@@ -1,7 +1,7 @@
 import type { EventTemplate } from 'nostr-tools'
 
 export const VIDEO_VIEW_EVENT_KIND = 22236
-export const MIN_VIEW_SECONDS = 1
+const MIN_VIEW_SECONDS = 1
 
 export type ViewEventSource =
   'video' | 'shorts' | 'home' | 'profile' | 'search' | 'playlist' | 'share' | 'unknown'

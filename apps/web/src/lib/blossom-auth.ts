@@ -13,7 +13,7 @@ export interface BlobDescriptor {
   url: string
 }
 
-export interface BlossomAuthEventTemplate {
+interface BlossomAuthEventTemplate {
   created_at: number
   kind: number
   content: string

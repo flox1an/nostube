@@ -94,5 +94,3 @@ export function AuthArea({ client, relays }: { client: NostubeClient; relays: st
     </>
   )
 }
-
-export default AuthArea

@@ -54,7 +54,7 @@ type LegacyRuntimeFields = {
   dvmTranscodeState?: unknown
 }
 
-export function stripRuntimeStateFromDraft(draft: UploadDraft & LegacyRuntimeFields): UploadDraft {
+function stripRuntimeStateFromDraft(draft: UploadDraft & LegacyRuntimeFields): UploadDraft {
   const sanitized = { ...draft }
   delete sanitized.browserTranscodeState
   delete sanitized.dvmTranscodeState

@@ -1,7 +1,7 @@
 import { postJson } from './api'
 
 /** An event the signer is asked to sign (NIP-01 without id, pubkey and signature). */
-export interface UnsignedEvent {
+interface UnsignedEvent {
   kind: number
   created_at: number
   tags: string[][]

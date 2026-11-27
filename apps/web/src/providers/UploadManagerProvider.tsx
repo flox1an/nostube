@@ -6,10 +6,4 @@
  */
 
 /* eslint-disable react-refresh/only-export-components */
-export {
-  UploadManagerProvider,
-  useUploadManager,
-  type UploadManagerContextType,
-  type TranscodeJob,
-  type ResolutionQueueInfo,
-} from './upload'
+export { UploadManagerProvider, useUploadManager } from './upload'

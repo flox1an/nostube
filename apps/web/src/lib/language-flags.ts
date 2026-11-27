@@ -7,7 +7,7 @@
  * Map ISO-639-1 language codes to country codes for flag display.
  * Uses the most common country association for each language.
  */
-export const languageToCountryCode: Record<string, string> = {
+const languageToCountryCode: Record<string, string> = {
   en: 'US',
   de: 'DE',
   fr: 'FR',
@@ -58,7 +58,7 @@ export const languageToCountryCode: Record<string, string> = {
  * countryCodeToFlag('US') // "🇺🇸"
  * countryCodeToFlag('DE') // "🇩🇪"
  */
-export function countryCodeToFlag(countryCode: string): string {
+function countryCodeToFlag(countryCode: string): string {
   const codePoints = countryCode
     .toUpperCase()
     .split('')
